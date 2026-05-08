@@ -1,0 +1,9 @@
+.cursor/hooks/playwright-install-guard.mjs
+  ai_agent 21-23,127-129,132-134,143-144,186
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "b7f5f268a09e02225cee61aa15d46ea0dc359635",
+  "prompts": {}
+}
