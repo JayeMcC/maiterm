@@ -1,0 +1,115 @@
+linked-tools/core/.agents/rules/editor/00-governance/no-filesystem-metadata-probes.mdc
+  s_f8c3644c396f55::t_7767fbf627af95 7
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-6,8-63
+linked-tools/core/.agents/rules/editor/00-governance/sync-files-terminology.mdc
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-7,9-16
+  s_f8c3644c396f55::t_7767fbf627af95 8
+linked-tools/core/.agents/rules/editor/20-workflow/commit-message-format.mdc
+  s_f8c3644c396f55::t_ea09b3c9101fb6 10
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-6,9,11-22
+  s_f8c3644c396f55::t_7767fbf627af95 7-8
+linked-tools/core/.agents/rules/editor/00-governance/agent-rules-canonical-location.mdc
+  s_f8c3644c396f55::t_ea09b3c9101fb6 15
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-6,8-13,17,19-23
+  s_f8c3644c396f55::t_134edb0c71eb78 14,16,18
+  s_f8c3644c396f55::t_7767fbf627af95 7
+linked-tools/core/.agents/rules/editor/10-project/skills-commands-architecture.mdc
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-51
+linked-tools/core/.agents/rules/editor/10-project/tools-repo-overseer.mdc
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-10,12-41
+  s_f8c3644c396f55::t_7767fbf627af95 11
+linked-tools/core/.agents/rules/editor/00-governance/no-canonical-location-prose.mdc
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-7,9-11
+  s_f8c3644c396f55::t_7767fbf627af95 8
+linked-tools/core/.agents/rules/editor/20-workflow/skill-run-steps-log.mdc
+  s_f8c3644c396f55::t_7767fbf627af95 8
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-7,9-65
+linked-tools/core/.agents/rules/editor/20-workflow/review-tool-discovery.mdc
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-19
+linked-tools/core/.agents/rules/editor/20-workflow/skill-run-preamble.mdc
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-9,11-36
+  s_f8c3644c396f55::t_7767fbf627af95 10
+linked-tools/core/forwood-vault/wiki/changes-archive/forwood-one-tools/forwood-one-tools-007.md
+  s_0f63b6f52faf57::t_2178ba8c3c5b73 1-298
+linked-tools/core/.agents/rules/editor/10-project/linked-tools-path-references.mdc
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-7,9-41
+  s_f8c3644c396f55::t_7767fbf627af95 8
+linked-tools/core/.agents/rules/editor/00-governance/no-prior-state-meta-in-updates.mdc
+  s_f8c3644c396f55::t_7767fbf627af95 8
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-7,9-19
+linked-tools/core/.agents/rules/editor/00-governance/agent-conventions.mdc
+  s_f8c3644c396f55::t_1d3b431881334a 55-56
+  s_f8c3644c396f55::t_ea09b3c9101fb6 9
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-5,7-8,10-54,57-137
+  s_f8c3644c396f55::t_7767fbf627af95 6
+linked-tools/core/.agents/rules/editor/20-workflow/changes-md-as-you-go.mdc
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-9,11-31
+  s_f8c3644c396f55::t_7767fbf627af95 10
+linked-tools/core/.agents/rules/editor/20-workflow/new-skill-authoring-linked-tools.mdc
+  s_f8c3644c396f55::t_7767fbf627af95 8
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-7,9-27
+linked-tools/core/.agents/rules/editor/10-project/tooling-sync-path-equivalence.mdc
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-7,9-75
+  s_f8c3644c396f55::t_7767fbf627af95 8
+linked-tools/core/.agents/rules/editor/10-project/agent-observability-channels.mdc
+  s_f8c3644c396f55::t_7767fbf627af95 8
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-7,9-67
+linked-tools/core/.agents/rules/editor/10-project/vscode-gitignored-paths.mdc
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-14
+linked-tools/core/.agents/rules/editor/20-workflow/editing-unicode-guide.mdc
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-11
+linked-tools/repos/forwood-one-tools/.agents/rules/editor/10-project/multi-repo-umbrella.mdc
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-6,8-11,13-55
+  s_f8c3644c396f55::t_ea09b3c9101fb6 12
+  s_f8c3644c396f55::t_7767fbf627af95 7
+linked-tools/core/.agents/rules/editor/10-project/personal-tooling-invocation.mdc
+  s_f8c3644c396f55::t_7767fbf627af95 8
+  s_f8c3644c396f55::t_ea09b3c9101fb6 26
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-7,9-13,15-25,27-50
+  s_f8c3644c396f55::t_1d3b431881334a 14
+linked-tools/core/.agents/rules/editor/10-project/agent-environment-guides.mdc
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-7,9-22
+  s_f8c3644c396f55::t_7767fbf627af95 8
+linked-tools/core/.agents/rules/editor/00-governance/no-sync-provenance-in-consumer-docs.mdc
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-7,9-23,26-45
+  s_f8c3644c396f55::t_ea09b3c9101fb6 24-25
+  s_f8c3644c396f55::t_7767fbf627af95 8
+linked-tools/core/.agents/rules/editor/10-project/forwood-vault.mdc
+  s_f8c3644c396f55::t_7767fbf627af95 7
+  s_f8c3644c396f55::t_ea09b3c9101fb6 41
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-6,8-40,42-43
+linked-tools/core/.agents/rules/editor/20-workflow/phase-resolve.mdc
+  s_53e38cfa34d140::t_0c44b0d0e0a4e3 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "6756b419ad15e0b400aee7bcb4e60213eaee55d4",
+  "prompts": {},
+  "sessions": {
+    "s_0f63b6f52faf57": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d44615dc-183b-4b5b-9db8-f3cfb3e32f83",
+        "model": "default"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_53e38cfa34d140": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4f3cbf78-cdf5-456a-a235-48671437b5ce",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_f8c3644c396f55": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "775a13ea-5412-4c2b-8c85-be03290cfbf2",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
