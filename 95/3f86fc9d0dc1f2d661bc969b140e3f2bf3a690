@@ -1,0 +1,9 @@
+scripts/playwright-cli/run-eap1066-headed-watch-flow.sh
+  ai_agent 1-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "953f86fc9d0dc1f2d661bc969b140e3f2bf3a690",
+  "prompts": {}
+}
