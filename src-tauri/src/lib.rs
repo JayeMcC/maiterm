@@ -8,7 +8,7 @@ pub const APP_DISPLAY_NAME: &str = if cfg!(debug_assertions) { "aiTermDev" } els
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 use state::{load_state, save_state, AppState, WindowData, Workspace};
-use state::persistence::{migrate_app_data, migrate_scrollback_to_db};
+use state::persistence::{load_memory_trend, migrate_app_data, migrate_scrollback_to_db};
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
 use tauri::menu::{AboutMetadata, MenuBuilder, MenuItem, SubmenuBuilder};
@@ -59,6 +59,14 @@ pub fn run() {
             Ok(n) if n > 0 => log::info!("Pruned {} orphan scrollback rows at startup", n),
             Ok(_) => {}
             Err(e) => log::warn!("Startup scrollback prune failed: {}", e),
+        }
+
+        // Seed memory trend ring buffer from disk so post-mortem analysis
+        // after a crash/restart still has the RSS history leading up to it.
+        let persisted_trend = load_memory_trend();
+        if !persisted_trend.is_empty() {
+            log::info!("Loaded {} memory trend samples from disk", persisted_trend.len());
+            *app_state.memory_samples.write() = persisted_trend;
         }
 
         // Ensure at least one window exists (fresh install)
@@ -274,6 +282,11 @@ pub fn run() {
                     claude_code::server::serve_server(server_handle, server_state, setup).await;
                 });
             }
+
+            // Background tasks owned by Rust (independent of any webview's
+            // event loop). See commands/scheduler.rs for the rationale.
+            commands::scheduler::spawn_backup_scheduler(app_state.clone());
+            commands::scheduler::spawn_memory_sampler(app_state.clone());
 
             app.on_menu_event(|app_handle, event| {
                 match event.id().as_ref() {

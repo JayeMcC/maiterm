@@ -84,37 +84,10 @@
     getCurrentWindow().setTitle(`aiTerm | ${ws.name}${suffix}`);
   });
 
-  // Scheduled backup timer — only runs on the main window
-  $effect(() => {
-    const dir = preferencesStore.backupDirectory;
-    const interval = preferencesStore.backupInterval;
-    if (!dir || interval === 'off' || !interval) return;
-    if (getCurrentWindow().label !== 'main') return;
-
-    const intervalMs: Record<string, number> = {
-      hourly: 3600_000,
-      daily: 86400_000,
-      weekly: 604800_000,
-      monthly: 2592000_000,
-    };
-    const ms = intervalMs[interval];
-    if (!ms) return;
-
-    const timer = setInterval(async () => {
-      try {
-        const path = await commands.runScheduledBackup();
-        logInfo(`Scheduled backup: ${path}`);
-        if (preferencesStore.backupTrimEnabled) {
-          const trimmed = await commands.trimOldBackups();
-          if (trimmed > 0) logInfo(`Trimmed ${trimmed} old backup(s)`);
-        }
-      } catch (e) {
-        logError(`Scheduled backup failed: ${e}`);
-      }
-    }, ms);
-
-    return () => clearInterval(timer);
-  });
+  // Scheduled backup timer lives in Rust now (commands/scheduler.rs) so it
+  // keeps firing even when this webview hangs. Manual "Backup now" buttons
+  // and the Claude Code MCP createBackup tool still go through the existing
+  // run_scheduled_backup / trim_old_backups commands.
 
   onMount(() => {
     // Attach console for dev mode (Rust logs appear in browser devtools)

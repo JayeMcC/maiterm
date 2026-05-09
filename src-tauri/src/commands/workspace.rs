@@ -1464,8 +1464,9 @@ pub fn export_state(state: State<'_, Arc<AppState>>, path: String, exclude_scrol
     Ok(())
 }
 
-#[tauri::command]
-pub fn run_scheduled_backup(state: State<'_, Arc<AppState>>) -> Result<String, String> {
+/// Body of `run_scheduled_backup`, callable directly from background tasks.
+/// Logs and returns the written backup path.
+pub(crate) fn do_scheduled_backup(state: &AppState) -> Result<String, String> {
     let app_data = state.app_data.read();
     let prefs = &app_data.preferences;
 
@@ -1504,7 +1505,12 @@ pub fn run_scheduled_backup(state: State<'_, Arc<AppState>>) -> Result<String, S
 }
 
 #[tauri::command]
-pub fn trim_old_backups(state: State<'_, Arc<AppState>>) -> Result<u32, String> {
+pub fn run_scheduled_backup(state: State<'_, Arc<AppState>>) -> Result<String, String> {
+    do_scheduled_backup(state.inner().as_ref())
+}
+
+/// Body of `trim_old_backups`, callable directly from background tasks.
+pub(crate) fn do_trim_old_backups(state: &AppState) -> Result<u32, String> {
     let app_data = state.app_data.read();
     let prefs = &app_data.preferences;
 
@@ -1557,6 +1563,11 @@ pub fn trim_old_backups(state: State<'_, Arc<AppState>>) -> Result<u32, String> 
         log::info!("Trimmed {} old backup(s)", deleted);
     }
     Ok(deleted)
+}
+
+#[tauri::command]
+pub fn trim_old_backups(state: State<'_, Arc<AppState>>) -> Result<u32, String> {
+    do_trim_old_backups(state.inner().as_ref())
 }
 
 #[tauri::command]
@@ -1998,23 +2009,7 @@ pub fn get_app_diagnostics(state: State<'_, Arc<AppState>>) -> serde_json::Value
     total_sys.refresh_memory();
     total_sys.refresh_cpu_all();
 
-    // Append memory sample (ring buffer, capped)
-    let rss = sys.process(pid).map(|p| p.memory()).unwrap_or(0);
-    {
-        let timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
-        let mut samples = state.memory_samples.write();
-        samples.push(crate::state::app_state::MemorySample {
-            timestamp_secs: timestamp,
-            rss_bytes: rss,
-        });
-        if samples.len() > crate::state::app_state::MEMORY_SAMPLE_CAP {
-            let drain = samples.len() - crate::state::app_state::MEMORY_SAMPLE_CAP;
-            samples.drain(..drain);
-        }
-    }
+    // memory_trend is populated by the periodic memory_sampler task — read only here.
     let memory_trend: Vec<crate::state::app_state::MemorySample> =
         state.memory_samples.read().clone();
 

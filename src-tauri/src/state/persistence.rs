@@ -73,6 +73,35 @@ fn get_temp_path() -> Option<PathBuf> {
     dirs::data_dir().map(|p| p.join(app_data_slug()).join("aiterm-state.tmp.json"))
 }
 
+fn get_memory_trend_path() -> Option<PathBuf> {
+    dirs::data_dir().map(|p| p.join(app_data_slug()).join("aiterm-memory-trend.json"))
+}
+
+/// Load persisted memory samples from disk. Returns empty Vec on any failure
+/// (missing file, parse error) — trend data is purely advisory.
+pub fn load_memory_trend() -> Vec<super::app_state::MemorySample> {
+    let Some(path) = get_memory_trend_path() else { return Vec::new() };
+    let Ok(bytes) = fs::read(&path) else { return Vec::new() };
+    serde_json::from_slice::<Vec<super::app_state::MemorySample>>(&bytes).unwrap_or_default()
+}
+
+/// Persist memory samples to disk. Errors are logged but not propagated —
+/// trend data is purely advisory and we don't want a bad disk to take down the sampler.
+pub fn save_memory_trend(samples: &[super::app_state::MemorySample]) {
+    let Some(path) = get_memory_trend_path() else { return };
+    if let Some(parent) = path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    match serde_json::to_vec(samples) {
+        Ok(bytes) => {
+            if let Err(e) = fs::write(&path, &bytes) {
+                log::warn!("Failed to write memory trend: {}", e);
+            }
+        }
+        Err(e) => log::warn!("Failed to serialize memory trend: {}", e),
+    }
+}
+
 /// Patch raw JSON to migrate old action_type values before deserialization.
 /// "alert" and "question" were briefly used as standalone action types before
 /// being consolidated into "set_tab_state" with a separate tab_state field.

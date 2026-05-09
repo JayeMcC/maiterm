@@ -30,10 +30,12 @@ pub struct PtyStats {
     pub bytes_read: AtomicU64,
 }
 
-pub const MEMORY_SAMPLE_CAP: usize = 60;
+/// Ring buffer cap for memory_samples. 720 samples × 60s cadence = 12h of history.
+/// At ~40 bytes per sample serialized, the on-disk JSON stays under ~30KB.
+pub const MEMORY_SAMPLE_CAP: usize = 720;
 
-/// Memory sample taken on each getDiagnostics call
-#[derive(Clone, serde::Serialize)]
+/// Memory sample emitted by the periodic memory_sampler task.
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct MemorySample {
     pub timestamp_secs: u64,
     pub rss_bytes: u64,
