@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.10.6
+
+- Add post-crash forensics for WebKit renderer crashes: a running-marker file is refreshed each minute and cleared on graceful exit, so the next launch can detect that the previous run died uncleanly (`previous_run.crashed` + `marker_mtime_secs` in `getDiagnostics`)
+- Scan `~/Library/Logs/DiagnosticReports/` (and Retired/) for matching aiTerm and `com.apple.WebKit.WebContent` crash dumps from the last 30 days; surface process, exception type, and termination reason via `getDiagnostics.crash_reports`
+- Capture unhandled webview errors and promise rejections to `aiterm.log` tagged `[WEBVIEW_ERROR]`, so JS errors that immediately precede a renderer crash are no longer silent
+- Fix tab strip scroll position on workspace restore (active tab is now scrolled into view)
+
 ## v1.10.5
 
 - Move scheduled backup timer from the webview to a Rust background task — backups now keep firing even if the main window's frontend hangs (which previously stopped the setInterval that drove them)
