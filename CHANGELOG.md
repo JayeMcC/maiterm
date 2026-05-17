@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.10.7
+
+- Fix QuickOpen (double-Alt) trying to list files over SSH on a local terminal that had merely *used* ssh earlier in the session (e.g. Claude Code running ssh via its Bash tool). SSH-vs-local detection now reads the controlling tty's foreground process group (tpgid) and only reports ssh when the pgid leader at that pid is itself an ssh/mosh/autossh process — subprocesses inherit the foreground app's pgid but aren't what the user is interacting with. Side note: `sudo ssh host` and `bash -c "ssh host"` are no longer auto-detected (leader is sudo/bash, not ssh)
+- Fix SSH MCP bridge slot leak when a tab is suspended: suspend kills the PTY but doesn't unmount TerminalPane, so `onDestroy` never fired and `disableBridge()` was being skipped — the shared `ssh -L` tunnel kept the suspended tab in its refcount
+
 ## v1.10.6
 
 - Add post-crash forensics for WebKit renderer crashes: a running-marker file is refreshed each minute and cleared on graceful exit, so the next launch can detect that the previous run died uncleanly (`previous_run.crashed` + `marker_mtime_secs` in `getDiagnostics`)
