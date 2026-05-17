@@ -210,26 +210,24 @@ function createWorkspacesStore() {
       const OLD_RESUME_COMMANDS = [
         'if [ -n "%claudeSessionId" ]; then claude --resume %claudeSessionId; elif [ -n "%claudeResumeCommand" ]; then %claudeResumeCommand; else claude --continue; fi',
         "if [ -n '%claudeSessionId' ]; then claude --resume %claudeSessionId; elif [ -n '%claudeResumeCommand' ]; then eval %claudeResumeCommand; else claude --continue; fi",
-        'claude --resume %claudeSessionId',
+        'claude --resume %claudeSessionId "/aiterm init"',
+      ];
+      // Skeletons of old templates that may have had %variables interpolated
+      // to literal values before being saved (older versions had this bug).
+      const OLD_RESUME_REGEXES = [
+        /^if \[ -n ['"].*['"] \]; then claude --resume .*; elif \[ -n ['"].*['"] \]; then (eval )?.*; else claude --continue; fi$/,
+        /^claude --resume \S+ "\/aiterm init"$/,
       ];
       for (const ws of workspaces) {
         for (const pane of ws.panes) {
           for (const tab of pane.tabs) {
             let migrated = false;
 
-            // Update old auto-resume command templates to current version
-            if (tab.auto_resume_command && OLD_RESUME_COMMANDS.includes(tab.auto_resume_command)) {
-              tab.auto_resume_command = CLAUDE_RESUME_COMMAND;
-              tab.auto_resume_remembered_command = CLAUDE_RESUME_COMMAND;
-              migrated = true;
-            }
-
-            // Repair wrongly interpolated commands — older versions resolved
-            // %variables before saving, producing literal values in the stored
-            // command. Detect by matching the template skeleton with any values
-            // and reset to the uninterpolated template.
-            if (tab.auto_resume_command && tab.auto_resume_command !== CLAUDE_RESUME_COMMAND
-              && /^if \[ -n ['"].*['"] \]; then claude --resume .*; elif \[ -n ['"].*['"] \]; then (eval )?.*; else claude --continue; fi$/.test(tab.auto_resume_command)) {
+            // Update old auto-resume command templates (including legacy
+            // interpolated forms) to the current version.
+            const cmd = tab.auto_resume_command;
+            if (cmd && cmd !== CLAUDE_RESUME_COMMAND
+              && (OLD_RESUME_COMMANDS.includes(cmd) || OLD_RESUME_REGEXES.some(re => re.test(cmd)))) {
               tab.auto_resume_command = CLAUDE_RESUME_COMMAND;
               tab.auto_resume_remembered_command = CLAUDE_RESUME_COMMAND;
               migrated = true;
@@ -1059,11 +1057,15 @@ function createWorkspacesStore() {
       const OLD_PATTERNS = [
         'if [ -n "%claudeSessionId" ]; then claude --resume %claudeSessionId; elif [ -n "%claudeResumeCommand" ]; then %claudeResumeCommand; else claude --continue; fi',
         "if [ -n '%claudeSessionId' ]; then claude --resume %claudeSessionId; elif [ -n '%claudeResumeCommand' ]; then eval %claudeResumeCommand; else claude --continue; fi",
-        'claude --resume %claudeSessionId',
+        'claude --resume %claudeSessionId "/aiterm init"',
       ];
-      if (tab.auto_resume_command && (
-        OLD_PATTERNS.includes(tab.auto_resume_command) ||
-        /^if \[ -n ['"].*['"] \]; then claude --resume .*; elif \[ -n ['"].*['"] \]; then (eval )?.*; else claude --continue; fi$/.test(tab.auto_resume_command)
+      const OLD_PATTERN_REGEXES = [
+        /^if \[ -n ['"].*['"] \]; then claude --resume .*; elif \[ -n ['"].*['"] \]; then (eval )?.*; else claude --continue; fi$/,
+        /^claude --resume \S+ "\/aiterm init"$/,
+      ];
+      const arCmd = tab.auto_resume_command;
+      if (arCmd && arCmd !== CLAUDE_RESUME_COMMAND && (
+        OLD_PATTERNS.includes(arCmd) || OLD_PATTERN_REGEXES.some(re => re.test(arCmd))
       )) {
         tab.auto_resume_command = CLAUDE_RESUME_COMMAND;
         tab.auto_resume_remembered_command = CLAUDE_RESUME_COMMAND;

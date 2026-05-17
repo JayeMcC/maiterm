@@ -206,7 +206,7 @@
               aiTerm integrates with Claude Code's hook system for real-time session awareness. Hooks fire on lifecycle events and report state back to aiTerm automatically.
             </p>
             <div class="tip-box">
-              <strong>Important:</strong> Claude must run <code>/aiterm init</code> at the start of each session to activate the integration. Auto-resume injects this automatically, so if you have auto-resume enabled you don't need to do anything. For new sessions without auto-resume, run <code>/aiterm init</code> manually.
+              <strong>Note:</strong> Integration activates automatically — the SessionStart hook tells Claude to call <code>initSession</code> on every new, resumed, forked, or compacted session. If Claude ever misses it, run <code>/aiterm init</code> manually to re-register the tab.
             </div>
             <div class="trigger-list">
               <div class="trigger-item">

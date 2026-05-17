@@ -1,7 +1,7 @@
 import type { Trigger, MatchMode } from '$lib/tauri/types';
 
 /** Shared Claude resume command — used by auto-resume presets and hooks-based auto-resume. */
-export const CLAUDE_RESUME_COMMAND = 'claude --resume %claudeSessionId "/aiterm init"';
+export const CLAUDE_RESUME_COMMAND = 'claude --resume %claudeSessionId';
 
 /** App-provided default trigger templates. Keyed by stable default_id. */
 export const DEFAULT_TRIGGERS: Record<string, Omit<Trigger, 'id' | 'enabled' | 'workspaces' | 'tabs' | 'default_id'> & { match_mode?: MatchMode }> = {
