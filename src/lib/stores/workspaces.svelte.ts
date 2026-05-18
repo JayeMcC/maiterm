@@ -513,6 +513,13 @@ function createWorkspacesStore() {
       if (ws?.import_highlight) {
         ws.import_highlight = false;
       }
+      // Record the now-visible active tab. push() dedups by tabId, so the
+      // sidebar's manual push that runs after this call is a safe no-op.
+      const activePane = ws?.active_pane_id ? ws.panes.find(p => p.id === ws.active_pane_id) : undefined;
+      if (activePane?.active_tab_id) {
+        const { navHistoryStore } = await import('$lib/stores/navHistory.svelte');
+        navHistoryStore.push({ workspaceId, paneId: activePane.id, tabId: activePane.active_tab_id });
+      }
     },
 
     async splitPane(workspaceId: string, targetPaneId: string, direction: SplitDirection) {
@@ -700,6 +707,13 @@ function createWorkspacesStore() {
       await commands.setActivePane(workspaceId, paneId);
       const ws = workspaces.find(w => w.id === workspaceId);
       if (ws) ws.active_pane_id = paneId;
+      // The visible active tab changes when the pane changes — record it
+      // so Cmd+[/] can step back through pane switches.
+      const pane = ws?.panes.find(p => p.id === paneId);
+      if (pane?.active_tab_id) {
+        const { navHistoryStore } = await import('$lib/stores/navHistory.svelte');
+        navHistoryStore.push({ workspaceId, paneId, tabId: pane.active_tab_id });
+      }
     },
 
     async createTab(workspaceId: string, paneId: string, name: string, options?: { append?: boolean }) {

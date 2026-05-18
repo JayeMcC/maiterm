@@ -203,6 +203,7 @@ pub fn run() {
             let duplicate_window_item = MenuItem::with_id(app, "duplicate_window", "Duplicate Window", true, Some("CmdOrCtrl+Shift+N"))?;
             let reload_tab_item = MenuItem::with_id(app, "reload_tab", "Reload Current Tab", true, None::<&str>)?;
             let reload_window_item = MenuItem::with_id(app, "reload_window", "Reload Current Window", true, None::<&str>)?;
+            let clear_nav_history_item = MenuItem::with_id(app, "clear_nav_history", "Clear Back/Forward History", true, None::<&str>)?;
             let help_item = MenuItem::with_id(app, "help", "Help", true, Some("CmdOrCtrl+/"))?;
             let check_updates_item = MenuItem::with_id(app, "check_updates", "Check for Updates…", true, None::<&str>)?;
             let report_bug_item = MenuItem::with_id(app, "report_bug", "Report Bug…", true, None::<&str>)?;
@@ -260,6 +261,7 @@ pub fn run() {
                 .close_window()
                 .separator()
                 .item(&reload_window_item)
+                .item(&clear_nav_history_item)
                 .build()?;
 
             let help_menu = SubmenuBuilder::new(app, "Help")
@@ -327,6 +329,16 @@ pub fn run() {
                         for (_, win) in app_handle.webview_windows() {
                             if win.is_focused().unwrap_or(false) {
                                 let _ = tauri::WebviewWindow::eval(&win, "window.location.reload()");
+                                break;
+                            }
+                        }
+                    }
+                    "clear_nav_history" => {
+                        // Each window has its own navHistoryStore; emit only to
+                        // the focused window so we don't wipe history elsewhere.
+                        for (_, win) in app_handle.webview_windows() {
+                            if win.is_focused().unwrap_or(false) {
+                                let _ = win.emit("clear-nav-history", ());
                                 break;
                             }
                         }

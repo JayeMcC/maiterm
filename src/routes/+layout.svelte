@@ -240,6 +240,12 @@
       updaterStore.checkForUpdates(false);
     }).then(unlisten => { unlistenCheckUpdates = unlisten; });
 
+    // Window > Clear Back/Forward History menu event
+    let unlistenClearNavHistory: (() => void) | undefined;
+    listen('clear-nav-history', () => {
+      navHistoryStore.clear();
+    }).then(unlisten => { unlistenClearNavHistory = unlisten; });
+
     // State backup menu events
     let unlistenExportState: (() => void) | undefined;
     listen('export_state', async () => {
@@ -792,6 +798,7 @@
       unlistenImportState?.();
       unlistenStateImported?.();
       unlistenCheckUpdates?.();
+      unlistenClearNavHistory?.();
       unlistenClaudeTool?.();
       unlistenClaudeConnection?.();
       claudeStateStore.destroy();

@@ -17,8 +17,15 @@ function createNavHistoryStore() {
   // Pointer into `history` during a Cmd+[/] walk. 0 = on current tab.
   // The list itself stays stable during a walk so back/forward don't oscillate.
   let walkIndex = $state(0);
+  // Module-scoped; safe under JS single-threading for normal walks, but an
+  // out-of-band activation (e.g. hook-driven setActiveTab) during the inner
+  // awaits of navigateToEntry could bypass this guard. Observed, not fixed.
   let navigating = false;
 
+  // Ghost entries: a terminal pushed while live can lose its PTY later
+  // (e.g. workspace suspend). findTab filters these out during walks, but
+  // the entry still occupies a MAX_HISTORY slot, so back/forward can feel
+  // like it silently skips. Observed, not fixed.
   function findTab(entry: NavEntry): boolean {
     const ws = workspacesStore.workspaces.find(w => w.id === entry.workspaceId);
     if (!ws) return false;
@@ -53,25 +60,29 @@ function createNavHistoryStore() {
     get canGoBack() { return walkIndex < history.length - 1; },
     get canGoForward() { return walkIndex > 0; },
 
+    // Callers invoke push() after `await import('navHistory')` + `await
+    // commands.*` — under rapid tab switching, IPC and dynamic-import
+    // resolution can interleave so push order doesn't strictly match
+    // click order. Observed, not fixed; would need a sync access path.
     push(entry: NavEntry) {
       if (navigating) return;
 
-      // Mid-walk: preserve the full forward/back chain instead of truncating.
+      // Mid-walk: rearrange the chain so the clicked tab becomes the current
+      // position. The previously-walked tab moves behind us, the forward
+      // chain stays ahead. If the entry already exists elsewhere in the
+      // chain, splice it out first so this is a true reorder, not a dup —
+      // a "teleport walkIndex to existing index" approach felt jumbled
+      // because Cmd+[ would then go back from an unexpected anchor.
       if (walkIndex > 0 && walkIndex < history.length) {
-        const existing = history.findIndex(e => e.tabId === entry.tabId);
-        if (existing >= 0) {
-          // Tab is already somewhere in the chain — just move the walk
-          // pointer there, leaving the rest of the chain intact.
-          walkIndex = existing;
-          return;
-        }
-        // New tab: inject at walkIndex, pushing the walked-to tab (and
-        // everything behind it) one slot deeper into back-history.
         const next = history.slice();
+        const existing = next.findIndex(e => e.tabId === entry.tabId);
+        if (existing >= 0) {
+          next.splice(existing, 1);
+          if (existing < walkIndex) walkIndex = walkIndex - 1;
+        }
         next.splice(walkIndex, 0, entry);
         if (next.length > MAX_HISTORY) next.length = MAX_HISTORY;
         history = next;
-        // walkIndex stays the same — it now points at the newly inserted entry.
         return;
       }
 
@@ -164,6 +175,23 @@ function createNavHistoryStore() {
       } else {
         walkIndex = 0;
       }
+    },
+
+    /**
+     * Wipe history and re-seed with the current active tab. Seeding is
+     * important: without it, the next tab switch would have nothing to fall
+     * back to and the moment-of-clearing tab would be unreachable via Cmd+[.
+     */
+    clear() {
+      const ws = workspacesStore.activeWorkspace;
+      const pane = workspacesStore.activePane;
+      const tab = workspacesStore.activeTab;
+      if (ws && pane && tab) {
+        history = [{ workspaceId: ws.id, paneId: pane.id, tabId: tab.id }];
+      } else {
+        history = [];
+      }
+      walkIndex = 0;
     },
 
     removeWorkspace(workspaceId: string) {
