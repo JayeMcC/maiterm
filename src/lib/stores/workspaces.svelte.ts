@@ -1353,6 +1353,11 @@ function createWorkspacesStore() {
       const sourcePane = sourceWs?.panes.find(p => p.id === sourcePaneId);
       if (!sourceWs || !sourcePane) return;
 
+      // Snapshot pre-move state so we can re-run the active-tab fallback with
+      // groupActiveTabs awareness (backend's tab_pos - 1 pick ignores suspension).
+      const movedTabWasActive = sourcePane.active_tab_id === sourceTabId;
+      const movedTabIndex = sourcePane.tabs.findIndex(t => t.id === sourceTabId);
+
       // Mark the PTY as preserved so the old TerminalPane's onDestroy
       // doesn't kill it when Svelte removes it from the source workspace's keyed each block
       const termInstance = terminalsStore.get(sourceTabId);
@@ -1375,6 +1380,18 @@ function createWorkspacesStore() {
         updatedSourcePane.active_tab_id = fallback;
         if (fallback) {
           await commands.setActiveTab(sourceWsId, sourcePaneId, fallback);
+        }
+      }
+
+      // If we moved the active tab, redo the active-tab pick using the same
+      // grouping-aware logic as deleteTab — backend just picks the adjacent
+      // tab in storage order, which ignores groupActiveTabs and lands on a
+      // suspended tab when a live one was the user's expectation.
+      if (movedTabWasActive && updatedSourcePane && updatedSourcePane.tabs.length > 0 && movedTabIndex >= 0) {
+        const preferred = pickNextActiveTab(updatedSourcePane.tabs, movedTabIndex);
+        if (preferred && preferred !== updatedSourcePane.active_tab_id) {
+          updatedSourcePane.active_tab_id = preferred;
+          await commands.setActiveTab(sourceWsId, sourcePaneId, preferred);
         }
       }
 
