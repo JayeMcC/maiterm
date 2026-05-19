@@ -8,7 +8,7 @@ pub const APP_DISPLAY_NAME: &str = if cfg!(debug_assertions) { "aiTermDev" } els
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 use state::{load_state, save_state, AppState, WindowData, Workspace};
-use state::persistence::{arm_running_marker, load_memory_trend, migrate_app_data, migrate_scrollback_to_db};
+use state::persistence::{arm_running_marker, load_memory_trend, log_previous_run_status, migrate_app_data, migrate_scrollback_to_db};
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
 use tauri::menu::{AboutMetadata, MenuBuilder, MenuItem, SubmenuBuilder};
@@ -121,6 +121,10 @@ pub fn run() {
     builder
         .manage(app_state.clone())
         .setup(move |app| {
+            // tauri-plugin-log is active by now — surface the warning that
+            // arm_running_marker() captured before the logger was ready.
+            log_previous_run_status();
+
             // Window title is set dynamically from the frontend (workspace name)
 
             // Restore additional windows beyond "main"

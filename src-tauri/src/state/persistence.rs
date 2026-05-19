@@ -97,7 +97,9 @@ use std::sync::OnceLock;
 static PREVIOUS_RUN: OnceLock<PreviousRunInfo> = OnceLock::new();
 
 /// Capture the previous run's state and arm the marker for this run.
-/// Call ONCE at startup before any other init that might crash.
+/// Call ONCE at startup before any other init that might crash. Does NOT log —
+/// tauri-plugin-log isn't initialized this early. Call `log_previous_run_status()`
+/// from inside the Tauri setup() closure to surface the warning.
 pub fn arm_running_marker() -> PreviousRunInfo {
     let info = PREVIOUS_RUN.get_or_init(|| {
         let Some(path) = get_crash_marker_path() else {
@@ -113,12 +115,6 @@ pub fn arm_running_marker() -> PreviousRunInfo {
         } else {
             None
         };
-        if crashed {
-            log::warn!(
-                "Previous run did not exit cleanly (running marker found, mtime_secs={:?})",
-                marker_mtime_secs
-            );
-        }
         PreviousRunInfo { crashed, marker_mtime_secs }
     }).clone();
 
@@ -127,6 +123,18 @@ pub fn arm_running_marker() -> PreviousRunInfo {
     touch_running_marker();
 
     info
+}
+
+/// Emit the previous-run warning if the marker survived. Call from inside the
+/// Tauri setup() closure, where tauri-plugin-log is guaranteed to be active.
+pub fn log_previous_run_status() {
+    let info = previous_run_info();
+    if info.crashed {
+        log::warn!(
+            "Previous run did not exit cleanly (running marker found, mtime_secs={:?})",
+            info.marker_mtime_secs
+        );
+    }
 }
 
 /// Read the cached previous-run info captured by arm_running_marker(). Returns
