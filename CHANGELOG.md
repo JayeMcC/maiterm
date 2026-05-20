@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.11.0
+
+- Add a workspace-level agent-state indicator to the sidebar, driven by Claude Code hooks (#2). The rolled-up workspace dot now mirrors the per-tab indicators — blue pulse while any agent is working, green once every agent in the workspace is done (waiting for input), and ❗ when an agent needs permission. Generic terminal output is demoted to a dim dot so a finished agent is no longer indistinguishable from any other line of output. Aggregation uses batch semantics (`permission > active > idle`): the dot only turns green when the whole workspace has settled, so green unambiguously means "done"
+- Fix back/forward history navigation, and add a Window > Clear Back/Forward History menu item
+- Fix `moveTabToWorkspace` ignoring grouped active tabs when choosing the new active tab after a move
+- Fix the crash-marker warning log being dropped because it was emitted before the logger was initialized
+
 ## v1.10.8
 
 - Drop the `/aiterm init` slash-command argument from the default Claude auto-resume command — recent Claude Code releases became unreliable about running the slash command on `--resume`, which is the dominant use case. The SessionStart hook (local and SSH) already tells Claude to call `initSession` on every new, resumed, forked, or compacted session, so the extra argument was redundant. Existing tabs with the old template form (including the legacy `claude --resume <interpolated-uuid> "/aiterm init"` variant from older releases) are auto-migrated to the new form on startup and on archived-tab restore
