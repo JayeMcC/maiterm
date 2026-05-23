@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.12.2
+
+- Fix terminal glyph ghosting — stale, overlapping glyphs that showed up on Claude Code spinners, diffs, and bold text. The cause was the xterm.js WebGL renderer compositing redrawn cells *over* the previous frame (its backbuffer is alpha-blended even though the terminal is opaque) instead of opaquely replacing them, so only redrawn cells ghosted and a refit cleared it. Switched the renderer from WebGL to Canvas, which clears each cell opaquely before drawing and so can't ghost — WebGL's scroll-perf advantage never applied here since aiTerm renders a single bounded viewport (scrollback:0). Falls back to xterm's built-in DOM renderer if the Canvas addon throws
+- Replace the sidebar footer's renderer status dot with a global Claude-agent indicator that rolls up agent state across *all* workspaces: red pulse = needs permission, accent pulse = working, green = finished & unread, hollow ring = all seen, dim = no agents. Click it to jump to a representative agent tab
+- Fix editor scroll-jump: a long file scrolled to the bottom via the scrollbar would jump back ~a screenful and drop the cursor on the wrong line when clicked. The browser's native "scroll the caret into view on focus" was yanking the viewport back to the old caret before CodeMirror mapped the click. Clicks now pre-focus the content with scrolling suppressed so the click maps to the correct line, and releasing the scrollbar without clicking restores the user's scroll position
+
 ## v1.12.1
 
 - Fix recently-changed state being lost when you install an update. The auto-updater's "Install & Restart" relaunches the app by hard-killing the process, which skipped the normal shutdown save path — so anything not yet flushed to disk (most visibly a just-renamed tab, which would revert to its `%title`, plus scrollback and window geometry) was discarded. The updater now saves window geometry, scrollback, and workspace state before relaunching
