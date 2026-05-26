@@ -1,0 +1,659 @@
+src/utils/e2e-paths.ts
+  ai_agent 1-287
+.agents/skills/investigate-hung/SKILL.md
+  ai_agent 1-160
+.agents/skills/speckit.plan/plan-template.md
+  ai_agent 1-104
+.agents/contexts/remix/routes.md
+  ai_agent 1-91
+.agents/skills/claudeception/SKILL.md
+  ai_agent 1-410
+.agents/memory/decisions.jsonl
+  ai_agent 1-3
+.agents/skills/skill-creator/scripts/aggregate_benchmark.py
+  ai_agent 1-401
+src/nodes/e2e-distill-walk.ts
+  ai_agent 1-255
+src/nodes/pick-story.ts
+  ai_agent 1-102
+.agents/views/session-handoff.md
+  ai_agent 1-91
+src/tools/edit-file.ts
+  ai_agent 1-37
+src/lessons/prng-validation.md
+  ai_agent 1-23
+src/project/detect.ts
+  ai_agent 1-121
+src/verify/verifier.ts
+  ai_agent 1-177
+src/utils/task-permissions.ts
+  ai_agent 1-65
+tests/nodes/e2e-split-manual-steps.test.ts
+  ai_agent 1-187
+tests/utils/tasks-parser.test.ts
+  ai_agent 1-265
+tests/nodes/pick-task.test.ts
+  ai_agent 1-38
+.agents/skills/skill-creator/references/schemas.md
+  ai_agent 1-430
+tsconfig.json
+  ai_agent 1-30
+.agents/templates/agent-file-template.md
+  ai_agent 1-28
+.agents/skills/executor-run-review/references/run-report-template.md
+  ai_agent 1-115
+src/llm/provider.ts
+  ai_agent 1-49
+tests/utils/load-base-definition.test.ts
+  ai_agent 1-19
+src/verify/parser.ts
+  ai_agent 1-92
+src/utils/e2e-partial-run.ts
+  ai_agent 1-157
+.agents/scripts/bash/create-new-feature.sh
+  ai_agent 1-220
+tests/nodes/simplify.test.ts
+  ai_agent 1-231
+src/verify/report.ts
+  ai_agent 1-133
+src/llm/index.ts
+  ai_agent 1-157
+.agents/skills/speckit.tasks/tasks-template.md
+  ai_agent 1-256
+tests/utils/e2e-paths.test.ts
+  ai_agent 1-143
+src/prompts/simplify-base.md
+  ai_agent 1-23
+src/nodes/implement.ts
+  ai_agent 1-141
+src/nodes/pick-task.ts
+  ai_agent 1-98
+.agents/_schema.yaml
+  ai_agent 1-89
+src/audit/session.ts
+  ai_agent 1-163
+.agents/rules/00-governance/atlassian-security.md
+  ai_agent 1-219
+.agents/skills/report-changes/workflow.md
+  ai_agent 1-413
+.agents/rules/10-project/atlassian-integration.md
+  ai_agent 1-52
+src/nodes/e2e-escalate.ts
+  ai_agent 1-88
+src/nodes/e2e-explore.ts
+  ai_agent 1-1440
+.agents/skills/claudeception/examples/typescript-circular-dependency/SKILL.md
+  ai_agent 1-237
+.agents/skills/skill-creator/scripts/improve_description.py
+  ai_agent 1-247
+src/integrations/bitbucket.ts
+  ai_agent 1-204
+.agents/rules/10-project/testing.md
+  ai_agent 1-103
+docs/modular-rules-architecture.md
+  ai_agent 1-388
+.claude/rules
+  ai_agent 1
+src/lessons/index.md
+  ai_agent 1-18
+src/nodes/plan-task.ts
+  ai_agent 1-113
+.agents/scripts/bash/setup-plan.sh
+  ai_agent 1-61
+src/state/index.ts
+  ai_agent 1-24
+.agents/phases/specify.md
+  ai_agent 1-64
+src/nodes/transition-epic-ready-for-qa.ts
+  ai_agent 1-97
+src/tools/glob-files.ts
+  ai_agent 1-35
+src/utils/index.ts
+  ai_agent 1-16
+src/llm/provider-factory.ts
+  ai_agent 1-55
+.agents/skills/speckit.taskstoissues/SKILL.md
+  ai_agent 1-33
+.agents/skills/speckit.specify/spec-template.md
+  ai_agent 1-115
+src/nodes/e2e-impl-fix.ts
+  ai_agent 1-191
+src/utils/extract-acs.ts
+  ai_agent 1-126
+src/utils/verification-mutation-lint.ts
+  ai_agent 1-195
+docs/goals.md
+  ai_agent 1-136
+tests/utils/ac-history.test.ts
+  ai_agent 1-256
+docs/jira-configuration.md
+  ai_agent 1-197
+src/llm/agentic-loop.ts
+  ai_agent 1-260
+docs/architecture.md
+  ai_agent 1-409
+tests/utils/e2e-verdict.test.ts
+  ai_agent 1-39
+.agents/memory/failures.yaml
+  ai_agent 1-5
+tests/utils/diag-evidence-pcli.test.ts
+  ai_agent 1-142
+src/fill-e2e/orchestrator.ts
+  ai_agent 1-584
+.agents/memory/learnings.jsonl
+  ai_agent 1-16
+src/graph/ac-inner-loop.ts
+  ai_agent 1-250
+.agents/skills/skill-creator/scripts/run_eval.py
+  ai_agent 1-310
+.agents/scripts/bash/update-agent-context.sh
+  ai_agent 1-799
+src/nodes/e2e-create-pr.ts
+  ai_agent 1-124
+src/utils/e2e-spec-rewind.ts
+  ai_agent 1-289
+src/utils/spec-progress.ts
+  ai_agent 1-57
+src/nodes/e2e-split-manual-steps.ts
+  ai_agent 1-326
+src/utils/pcli-replay.ts
+  ai_agent 1-324
+src/utils/scenarios.ts
+  ai_agent 1-141
+tests/nodes/webhook-trigger.test.ts
+  ai_agent 1-43
+docs/backpressure-reference-card.md
+  ai_agent 1-262
+.cursor/rules
+  ai_agent 1
+src/graph/workflow.ts
+  ai_agent 1-202
+tests/e2e/types/navigation-tree.ts
+  ai_agent 1-62
+docs/usage.md
+  ai_agent 1-297
+.agents/rules/00-governance/security.md
+  ai_agent 1-60
+src/nodes/story-qa.ts
+  ai_agent 1-470
+src/nodes/e2e-walk-for-ac.ts
+  ai_agent 1-690
+src/utils/ridealong.ts
+  ai_agent 1-683
+.agents/skills/report-changes/references/subagents.md
+  ai_agent 1-39
+bin/pcli-diag
+  ai_agent 1-31
+src/nodes/test-gen.ts
+  ai_agent 1-101
+src/utils/extract-acs-from-spec.ts
+  ai_agent 1-47
+.agents/rules/10-project/event-distribution.md
+  ai_agent 1-149
+README.md
+  ai_agent 1-228
+src/nodes/commit.ts
+  ai_agent 1-214
+src/integrations/index.ts
+  ai_agent 1-11
+src/utils/path-bootstrap.ts
+  ai_agent 1-61
+.agents/skills/speckit.implement/SKILL.md
+  ai_agent 1-137
+.agents/skills/skill-creator/assets/eval_review.html
+  ai_agent 1-146
+tests/utils/diag-evidence-spec.test.ts
+  ai_agent 1-96
+src/utils/e2e-wallclock.ts
+  ai_agent 1-29
+tests/utils/helper-trigger.test.ts
+  ai_agent 1-186
+tests/utils/verification-mutation-lint.test.ts
+  ai_agent 1-110
+.agents/skills/atlassian-confluence/SKILL.md
+  ai_agent 1-391
+.agents/rules/00-governance/tenant-isolation.md
+  ai_agent 1-127
+src/integrations/jira.ts
+  ai_agent 1-147
+src/fill-e2e/discover.ts
+  ai_agent 1-113
+tests/utils/pcli-trace.test.ts
+  ai_agent 1-173
+src/utils/diag-evidence-pcli.ts
+  ai_agent 1-306
+tests/utils/e2e-spec-rewind.test.ts
+  ai_agent 1-227
+.agents/skills/skill-creator/SKILL.md
+  ai_agent 1-485
+tests/integrations/jira.test.ts
+  ai_agent 1-27
+src/config/constants.ts
+  ai_agent 1-141
+src/tools/write-file.ts
+  ai_agent 1-22
+src/nodes/test.ts
+  ai_agent 1-188
+src/nodes/e2e-diagnose.ts
+  ai_agent 1-263
+src/utils/helper-trigger.ts
+  ai_agent 1-214
+vitest.config.ts
+  ai_agent 1-14
+src/utils/ac-history.ts
+  ai_agent 1-240
+.agents/skills/claudeception/resources/research-references.md
+  ai_agent 1-183
+.agents/skills/speckit.analyze/SKILL.md
+  ai_agent 1-188
+src/graph/edges.ts
+  ai_agent 1-400
+.agents/skills/skill-creator/scripts/quick_validate.py
+  ai_agent 1-103
+src/prompts/implement-base.md
+  ai_agent 1-35
+.env.example
+  ai_agent 1-119
+tests/utils/walk-resume.test.ts
+  ai_agent 1-190
+src/config/logger.ts
+  ai_agent 1-60
+.agents/skills/speckit.specify/SKILL.md
+  ai_agent 1-246
+.claude/hooks
+  ai_agent 1
+src/llm/tools.ts
+  ai_agent 1-336
+src/nodes/index.ts
+  ai_agent 1-32
+.agents/views/session-history.md
+  ai_agent 1-757
+.agents/contexts/typescript/general.md
+  ai_agent 1-94
+tests/utils/fresh-db-lint.test.ts
+  ai_agent 1-252
+src/graph/index.ts
+  ai_agent 1-4
+src/nodes/e2e-flake-check.ts
+  ai_agent 1-124
+src/llm/client.ts
+  ai_agent 1-34
+src/nodes/webhook-trigger.ts
+  ai_agent 1-171
+.agents/skills/skill-creator/scripts/run_loop.py
+  ai_agent 1-328
+src/utils/manual-steps.ts
+  ai_agent 1-125
+tests/utils/base-url-resolver.test.ts
+  ai_agent 1-181
+.agents/memory/metrics.md
+  ai_agent 1-71
+.agents/contexts/remix/_index.yaml
+  ai_agent 1-20
+src/project/index.ts
+  ai_agent 1
+package-lock.json
+  ai_agent 1-4505
+src/utils/changeignore.ts
+  ai_agent 1-215
+tests/fill-e2e/conformance.test.ts
+  ai_agent 1-180
+src/audit/index.ts
+  ai_agent 1-2
+tests/utils/ridealong.test.ts
+  ai_agent 1-246
+src/utils/walk-resume.ts
+  ai_agent 1-355
+tests/utils/helper-registry.test.ts
+  ai_agent 1-101
+tests/nodes/validate-project-state.test.ts
+  ai_agent 1-112
+.agents/skills/atlassian-bitbucket/SKILL.md
+  ai_agent 1-325
+src/tools/grep-files.ts
+  ai_agent 1-71
+src/webhook/server.ts
+  ai_agent 1-221
+src/verify/index.ts
+  ai_agent 1-104
+.agents/skills/skill-creator/agents/grader.md
+  ai_agent 1-223
+src/nodes/e2e-commit-evidence.ts
+  ai_agent 1-81
+.dockerignore
+  ai_agent 1-7
+.agents/phases/implement.md
+  ai_agent 1-60
+.agents/scripts/bash/check-prerequisites.sh
+  ai_agent 1-167
+.agents/skills/session-save/SKILL.md
+  ai_agent 1-129
+.agents/contexts/python/_index.yaml
+  ai_agent 1-20
+src/nodes/transition-in-progress.ts
+  ai_agent 1-49
+.agents/skills/atlassian-jira/SKILL.md
+  ai_agent 1-349
+src/graph/state-annotation.ts
+  ai_agent 1-219
+src/utils/helper-registry.ts
+  ai_agent 1-114
+.env.testing.example
+  ai_agent 1-25
+src/utils/pcli-trace.ts
+  ai_agent 1-378
+src/webhook/handler.ts
+  ai_agent 1-74
+src/nodes/e2e-verify-distilled-walk.ts
+  ai_agent 1-166
+src/scripts/e2e-replay.ts
+  ai_agent 1-223
+src/utils/learnings.ts
+  ai_agent 1-206
+src/nodes/test-spec.ts
+  ai_agent 1-104
+src/utils/spec-reader.ts
+  ai_agent 1-67
+.agents/contexts/python/testing.md
+  ai_agent 1-86
+src/nodes/e2e-run-specs.ts
+  ai_agent 1-112
+src/nodes/e2e-write-data-gen.ts
+  ai_agent 1-551
+tests/utils/task-permissions.test.ts
+  ai_agent 1-57
+tests/llm/agentic-loop.test.ts
+  ai_agent 1-25
+tests/state/reset.test.ts
+  ai_agent 1-47
+.agents/skills/speckit.checklist/checklist-template.md
+  ai_agent 1-40
+src/config/model-config.ts
+  ai_agent 1-85
+.claude/skills
+  ai_agent 1
+.agents/rules/10-project/frontend.md
+  ai_agent 1-176
+.gitignore
+  ai_agent 1,4,7-11,13-15,17,20-21,23,25
+docs/context-efficient-backpressure.md
+  ai_agent 1-308
+src/state/validate.ts
+  ai_agent 1-46
+.agents/skills/report-changes/references/index.md
+  ai_agent 1-3
+src/utils/tasks-parser.ts
+  ai_agent 1-294
+agents.md
+  ai_agent 1-103
+.agents/memory/constitution.md
+  ai_agent 1-121
+src/prompts/test-gen-base.md
+  ai_agent 1-16
+src/fill-e2e/report.ts
+  ai_agent 1-149
+src/lessons/ci-cd.md
+  ai_agent 1-28
+src/utils/creds-loader.ts
+  ai_agent 1-131
+tests/nodes/e2e-distill-walk.test.ts
+  ai_agent 1-114
+src/utils/backpressure.ts
+  ai_agent 1-254
+.agents/contexts/python/general.md
+  ai_agent 1-95
+.agents/skills/session-resume/SKILL.md
+  ai_agent 1-76
+.agents/contexts/remix/loaders.md
+  ai_agent 1-105
+tests/utils/changeignore.test.ts
+  ai_agent 1-153
+src/llm/types.ts
+  ai_agent 1-33
+docker-compose.yml
+  ai_agent 1-36
+src/config/index.ts
+  ai_agent 1-4
+Dockerfile
+  ai_agent 1-27
+.agents/tiers/team.md
+  ai_agent 1-67
+tests/utils/decompose-ac.test.ts
+  ai_agent 1-200
+.claude/commands/simplify.md
+  ai_agent 1-48
+.agents/skills/skill-creator/scripts/package_skill.py
+  ai_agent 1-136
+src/llm/providers/claude-provider.ts
+  ai_agent 1-158
+tests/utils/spec-progress.test.ts
+  ai_agent 1-111
+src/nodes/transition-story-ready-for-qa.ts
+  ai_agent 1-112
+src/utils/lessons.ts
+  ai_agent 1-54
+.agents/skills/bug-report/SKILL.md
+  ai_agent 1-220
+src/utils/repo.ts
+  ai_agent 1-140
+tests/e2e/tsconfig.json
+  ai_agent 1-18
+.agents/skills/claudeception/resources/skill-template.md
+  ai_agent 1-95
+.agents/rules/20-workflow/review.md
+  ai_agent 1-95
+src/utils/dry-run.ts
+  ai_agent 1-55
+.agents/rules/10-project/prisma.md
+  ai_agent 1-128
+.agents/scripts/bash/setup-symlinks.sh
+  ai_agent 1-89
+.agents/skills/skill-creator/eval-viewer/generate_review.py
+  ai_agent 1-471
+.agents/skills/speckit.clarify/SKILL.md
+  ai_agent 1-184
+config/litellm-config.yaml
+  ai_agent 1-34
+tests/fill-e2e/discover.test.ts
+  ai_agent 1-117
+tests/utils/extract-acs.test.ts
+  ai_agent 1-89
+.agents/rules/10-project/api.md
+  ai_agent 1-118
+src/scripts/e2e-start.ts
+  ai_agent 1-672
+docs/cli-agent-architecture.md
+  ai_agent 1-121
+src/tools/path-utils.ts
+  ai_agent 1-29
+.agents/rules/20-workflow/jira.md
+  ai_agent 1-52
+src/llm/providers/cursor-provider.ts
+  ai_agent 1-110
+src/llm/providers/litellm-provider.ts
+  ai_agent 1-72
+src/utils/decompose-ac.ts
+  ai_agent 1-230
+src/verify/checkbox.ts
+  ai_agent 1-72
+tests/fill-e2e/reset.test.ts
+  ai_agent 1-106
+.agents/skills/claudeception/examples/nextjs-server-side-error-debugging/SKILL.md
+  ai_agent 1-118
+.agents/skills/speckit.tasks/SKILL.md
+  ai_agent 1-170
+.agents/meta/rules-architecture.md
+  ai_agent 1-62
+src/nodes/e2e-reexplore-failing-step.ts
+  ai_agent 1-387
+tests/utils/helper-state.test.ts
+  ai_agent 1-67
+.agents/phases/plan.md
+  ai_agent 1-78
+.agents/skills/status/SKILL.md
+  ai_agent 1-144
+tests/utils/checkpoint.test.ts
+  ai_agent 1-136
+.agents/skills/executor-run-review/SKILL.md
+  ai_agent 1-191
+.agents/scripts/bash/common.sh
+  ai_agent 1-227
+src/lessons/playwright-config.md
+  ai_agent 1-43
+src/nodes/e2e-commit-specs.ts
+  ai_agent 1-91
+src/utils/checkpoint.ts
+  ai_agent 1-175
+.agents/skills/claudeception/examples/prisma-connection-pool-exhaustion/SKILL.md
+  ai_agent 1-161
+docker-entrypoint.sh
+  ai_agent 1-11
+.agents/contexts/typescript/react.md
+  ai_agent 1-90
+.agents/skills/claudeception/scripts/claudeception-activator.sh
+  ai_agent 1-39
+.agents/skills/skill-creator/LICENSE.txt
+  ai_agent 1-202
+src/nodes/create-story-pr.ts
+  ai_agent 1-130
+src/nodes/diagnose.ts
+  ai_agent 1-131
+.agents/skills/executor-run-review/references/code-review-template.md
+  ai_agent 1-109
+src/utils/base-url-resolver.ts
+  ai_agent 1-268
+.agents/skills/skill-creator/scripts/utils.py
+  ai_agent 1-47
+src/nodes/mutation-check.ts
+  ai_agent 1-237
+tests/nodes/e2e-plan-test-narrative.test.ts
+  ai_agent 1-111
+.agents/skills/claudeception/LICENSE
+  ai_agent 1-21
+src/nodes/e2e-collect-diagnostic-evidence.ts
+  ai_agent 1-272
+CHANGES.md
+  ai_agent 1-476
+src/state/contracts.ts
+  ai_agent 1-126
+src/utils/diag-evidence-spec.ts
+  ai_agent 1-192
+src/index.ts
+  ai_agent 1-444
+src/fill-e2e/conformance.ts
+  ai_agent 1-153
+src/nodes/fetch-existing-stories.ts
+  ai_agent 1-178
+src/state/decisions.ts
+  ai_agent 1-83
+package.json
+  ai_agent 1-49
+.agents/rules/20-workflow/commit.md
+  ai_agent 1-130
+src/state/schema.ts
+  ai_agent 1-321
+.agents/tiers/user.md
+  ai_agent 1-53
+src/tools/run-bash.ts
+  ai_agent 1-43
+src/lessons/noise-filter.md
+  ai_agent 1-82
+.agents/skills/cursor-model-config/SKILL.md
+  ai_agent 1-60
+CLAUDE.md
+  ai_agent 1-22
+src/state/defaults.ts
+  ai_agent 1-128
+tests/webhook/handler.test.ts
+  ai_agent 1-128
+.agents/skills/claudeception/WARP.md
+  ai_agent 1-54
+src/nodes/e2e-plan-test-narrative.ts
+  ai_agent 1-303
+src/nodes/e2e-write-verification.ts
+  ai_agent 1-477
+tests/utils/learnings.test.ts
+  ai_agent 1-129
+.agents/rules/10-project/programming-principles.md
+  ai_agent 1-29
+src/nodes/validate-project-state.ts
+  ai_agent 1-300
+src/nodes/simplify.ts
+  ai_agent 1-295
+.agents/skills/claudeception/README.md
+  ai_agent 1-187
+.agents/skills/skill-creator/scripts/generate_report.py
+  ai_agent 1-326
+.agents/phases/test.md
+  ai_agent 1-85
+.agents/skills/skill-creator/agents/comparator.md
+  ai_agent 1-202
+.agents/skills/speckit.constitution/SKILL.md
+  ai_agent 1-84
+src/llm/providers/spawn.ts
+  ai_agent 1-82
+.agents/rules/10-project/zod-validation.md
+  ai_agent 1-63
+.agents/tiers/project.md
+  ai_agent 1-80
+.agents/skills/speckit.plan/SKILL.md
+  ai_agent 1-90
+.agents/skills/skill-creator/agents/analyzer.md
+  ai_agent 1-274
+src/nodes/pick-ac.ts
+  ai_agent 1-112
+tests/nodes/mutation-check.test.ts
+  ai_agent 1-219
+src/integrations/jira-extended.ts
+  ai_agent 1-486
+src/utils/load-base-definition.ts
+  ai_agent 1-21
+src/state/reset.ts
+  ai_agent 1-45
+src/tools/read-file.ts
+  ai_agent 1-30
+src/utils/pcli-session.ts
+  ai_agent 1-75
+.agents/skills/speckit.checklist/SKILL.md
+  ai_agent 1-297
+src/nodes/e2e-qa.ts
+  ai_agent 1-88
+.agents/memory/metrics.yaml
+  ai_agent 1-13
+src/nodes/e2e-validate.ts
+  ai_agent 1-103
+src/utils/helper-state.ts
+  ai_agent 1-97
+src/utils/e2e-verdict.ts
+  ai_agent 1-48
+src/lessons/npm-scripts.md
+  ai_agent 1-29
+src/utils/e2e-fe-context.ts
+  ai_agent 1-113
+.agents/rules/00-governance/global.md
+  ai_agent 1-52
+.agents/skills/report-changes/SKILL.md
+  ai_agent 1-426
+.agents/contexts/typescript/_index.yaml
+  ai_agent 1-22
+.agents/hooks/claudeception-activator.sh
+  ai_agent 1-39
+.agents/skills/skill-creator/eval-viewer/viewer.html
+  ai_agent 1-1325
+tests/utils/scenarios.test.ts
+  ai_agent 1-171
+.agents/memory/adaptations.yaml
+  ai_agent 1-5
+src/utils/walk-status.ts
+  ai_agent 1-109
+src/utils/fresh-db-lint.ts
+  ai_agent 1-257
+tests/unit/noise-filter.spec.ts
+  ai_agent 1-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.1",
+  "base_commit_sha": "e3195889670519de83d034bfe97a2c46c482a5b4",
+  "prompts": {}
+}
