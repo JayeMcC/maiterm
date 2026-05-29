@@ -1,0 +1,11 @@
+src/integrations/bitbucket.ts
+  ai_agent 57-167
+src/integrations/jira-extended.ts
+  ai_agent 45-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "92867b571bbeee71698c96c80267a2a9af390b3c",
+  "prompts": {}
+}
