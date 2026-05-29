@@ -1,0 +1,25 @@
+linked-tools/core/forwood-vault/wiki/tickets/eap-2750/changes/forwood-one-002.md
+  s_65dd060ca7830f::t_43006b9b1f2e81 1-142
+linked-tools/core/forwood-vault/wiki/tickets/eap-2750/changes/forwood-one-001.md
+  s_65dd060ca7830f::t_a7421614d7a62e 1-467
+linked-tools/core/forwood-vault/wiki/tickets/eap-2789/changes/forwood-one-001.md
+  ai_agent 1-134
+linked-tools/core/forwood-vault/wiki/tickets/eap-2789/changes/forwood-one-002.md
+  ai_agent 1-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "dc808ce78bbc61b383584e18811bd93ec0ae395e",
+  "prompts": {},
+  "sessions": {
+    "s_65dd060ca7830f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "db2f4e58-848c-41fc-bf33-0d72f896620c",
+        "model": "default"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
