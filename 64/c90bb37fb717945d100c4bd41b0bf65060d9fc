@@ -1,0 +1,28 @@
+.gitignore
+  s_698a90b5ae8549::t_2037480c369c6c 25-26
+  s_8be76ea7a8e0e7::t_2b68600828aac9 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "64c90bb37fb717945d100c4bd41b0bf65060d9fc",
+  "prompts": {},
+  "sessions": {
+    "s_698a90b5ae8549": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8480dd80-4d0c-451c-9d5c-a4ecd980db01",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_8be76ea7a8e0e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9a986907-432a-4e69-a261-4a3948f850af",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
