@@ -1,0 +1,34 @@
+linked-tools/core/.agents/skills/speckit-step-flow/SKILL.md
+  s_002c6b1eb7eb17::t_badff5e874aefc 145,149,153,155-156,161-163,167,169-190
+  s_002c6b1eb7eb17::t_46c750bc46b463 140,146-148,150-152,154,157-160,164-166,168
+  s_002c6b1eb7eb17::t_e29d44b0671030 13
+  s_002c6b1eb7eb17::t_1b0bd06f03ebb0 141-142
+linked-tools/core/.agents/commands/speckit-step-flow.md
+  ai_agent 1
+linked-tools/core/.agents/skills/pre-commit-checks/SKILL.md
+  s_d8efa0151637ea::t_5796f6a61a62ec 1-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0c439459b7ed2c6d77330815f4bc840075725054",
+  "prompts": {},
+  "sessions": {
+    "s_002c6b1eb7eb17": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9224367b-ed13-4e08-b047-0457515d2e9e",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_d8efa0151637ea": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "62aed2df-0635-4d53-b607-aa6a118a2d2e",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
