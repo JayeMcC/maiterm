@@ -1,0 +1,56 @@
+linked-tools/repos/forwood-one-tools/scripts/personal-sync-devcontainer-setup/capture-forwood-one-devcontainer-reviewing.mjs
+  s_5a8a0b8ca6e784::t_05f7072787aaef 9
+  s_5a8a0b8ca6e784::t_380232b0c6fa98 17-19
+  s_5a8a0b8ca6e784::t_261113bb9e85b6 55,61-65
+  s_5a8a0b8ca6e784::t_67a72bfd337cef 26
+linked-tools/repos/forwood-one-tools/scripts/personal-sync-devcontainer-setup/templates/forwood-one-devcontainer-developing/.changesignore-content
+  s_5a8a0b8ca6e784::t_7fb4011bef886a 4-6
+  s_354cdbe45c3bc0::t_c4acb790be4bfc 7
+linked-tools/repos/forwood-one-tools/scripts/personal-sync-devcontainer-setup/dev-container-setup.md
+  s_5a8a0b8ca6e784::t_0f7db36b88812f 43
+  s_5a8a0b8ca6e784::t_ee111d489bfce6 45
+linked-tools/repos/forwood-one-tools/scripts/personal-sync-devcontainer-setup/README.md
+  s_5a8a0b8ca6e784::t_d0b5fc3600c873 5
+linked-tools/repos/forwood-one-tools/scripts/personal-sync-devcontainer-setup/templates/forwood-one-devcontainer-reviewing/.changesignore-content
+  s_5a8a0b8ca6e784::t_8673032ac5b4d1 3-5
+linked-tools/repos/forwood-one-tools/scripts/personal-sync-devcontainer-setup/templates/forwood-one-devcontainer/.changesignore-content
+  s_5a8a0b8ca6e784::t_7282bed333adfb 3-5
+linked-tools/repos/forwood-one-tools/scripts/personal-sync-devcontainer-setup/lib/workspace-snapshot.mjs
+  s_5a8a0b8ca6e784::t_ab98ab8c7d4e0c 197,210-211,218,220
+  s_5a8a0b8ca6e784::t_ca31e11029b660 9
+  s_5a8a0b8ca6e784::t_61e07246f809e5 15
+.cursor/skills/devcontainer-sync-park/SKILL.md
+  s_5a8a0b8ca6e784::t_1fa11d486a588b 16
+  s_5a8a0b8ca6e784::t_5b9826aea92983 18
+linked-tools/repos/forwood-one-tools/scripts/personal-sync-devcontainer-setup/lib/append-devcontainer-changesignore.mjs
+  s_5a8a0b8ca6e784::t_c91fa36e85a6db 154-158
+  s_5a8a0b8ca6e784::t_608ee7ea730e06 18-24
+linked-tools/repos/forwood-one-tools/scripts/personal-sync-devcontainer-setup/capture-forwood-one-devcontainer-developing.mjs
+  s_5a8a0b8ca6e784::t_dcf9bc3f293cde 16-18
+  s_5a8a0b8ca6e784::t_4ce5282f30060f 25
+  s_5a8a0b8ca6e784::t_90c77cc0334944 54,60-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "53cfe77fcf5bd8904533e6786ee3eaf6593470cd",
+  "prompts": {},
+  "sessions": {
+    "s_354cdbe45c3bc0": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "60d0484d-bbe1-4850-9489-be90ab4ce795",
+        "model": "default"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_5a8a0b8ca6e784": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "1c378401-157f-4195-9bdb-f84dd272cac7",
+        "model": "default"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
