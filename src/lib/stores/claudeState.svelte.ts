@@ -199,17 +199,24 @@ function createClaudeStateStore() {
       return null;
     },
 
-    /** Global rollup across ALL Claude sessions in every workspace. Returns the
-     *  highest-priority state, the ordered list of every tab in that state (so the
-     *  footer dot can cycle through them on repeated clicks), and how many agents
-     *  are in that state. `tabId` is the first/representative tab. Priority:
-     *  permission > active > idle-unread > idle-read. Returns null when no Claude
-     *  sessions exist anywhere. Powers the always-visible "global agent" dot in
-     *  the sidebar footer. */
-    getGlobalClaudeState(): { state: WorkspaceClaudeState; tabId: string; tabIds: string[]; count: number } | null {
+    /** Highest-priority rollup across Claude sessions, optionally scoped to a set
+     *  of tab IDs. Returns the dominant state, the ordered list of every tab in
+     *  that state (so the footer dot can cycle through them on repeated clicks),
+     *  and how many agents are in that state. `tabId` is the first/representative
+     *  tab. Priority: permission > active > idle-unread > idle-read. Returns null
+     *  when no matching Claude sessions exist. Powers the always-visible "global
+     *  agent" dot in the sidebar footer.
+     *
+     *  Hook events broadcast to every window (`app_handle.emit`), so each window's
+     *  session map holds agents from ALL windows. Pass `scope` — the current
+     *  window's tab IDs — to keep the footer dot window-scoped and independent;
+     *  without it the dot would count foreign-window agents and clicks couldn't
+     *  navigate to them (`navigateToTab` only searches this window's workspaces). */
+    getGlobalClaudeState(scope?: ReadonlySet<string>): { state: WorkspaceClaudeState; tabId: string; tabIds: string[]; count: number } | null {
       const permTabs: string[] = [], activeTabs: string[] = [];
       const unreadTabs: string[] = [], readTabs: string[] = [];
       for (const [tabId, s] of sessions) {
+        if (scope && !scope.has(tabId)) continue;
         if (s.state === 'permission') permTabs.push(tabId);
         else if (s.state === 'active') activeTabs.push(tabId);
         else if (s.state === 'idle') (s.read ? readTabs : unreadTabs).push(tabId);

@@ -100,8 +100,20 @@
   // even with the sidebar collapsed or workspaces below the fold. Click jumps to
   // a tab of the dominant state; with more than one, repeated clicks cycle
   // through them (see cycleToAgent).
+  // Every tab ID owned by this window. Claude hook events broadcast to all
+  // windows, so the global session map includes agents from other windows; scope
+  // the footer dot to this window's tabs so each window's dot is independent and a
+  // click can always navigate to its target (navigateToTab only searches here).
+  const windowTabIds = $derived.by(() => {
+    const ids = new Set<string>();
+    for (const ws of workspacesStore.workspaces)
+      for (const pane of ws.panes)
+        for (const t of pane.tabs) ids.add(t.id);
+    return ids;
+  });
+
   const agentDot = $derived.by((): { color: 'accent' | 'green' | 'red' | 'dim'; pulse: boolean; hollow: boolean; tooltip: string; targets: string[] } => {
-    const g = claudeStateStore.getGlobalClaudeState();
+    const g = claudeStateStore.getGlobalClaudeState(windowTabIds);
     if (!g) return { color: 'dim', pulse: false, hollow: false, tooltip: 'No active agents', targets: [] };
     const n = g.count;
     const cycleHint = n > 1 ? ' (click to cycle)' : '';
