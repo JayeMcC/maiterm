@@ -38,7 +38,12 @@ futures-util = { version = "0.3", default-features = false, features = ["sink", 
 axum = { version = "0.8", features = ["ws"] }
 rand = "0.8"
 libc = "0.2"
-notify = { version = "7", default-features = false, features = ["macos_kqueue"] }
+# macOS backend MUST be FSEvents, not kqueue. We watch a file's PARENT directory
+# (to catch atomic write-temp-then-rename saves). kqueue opens one fd per file in
+# the watched dir, so a tab on a file inside a large dir (e.g. node_modules/lodash,
+# 600+ files) exhausts the process fd limit and breaks the MCP listener's accept().
+# FSEvents is path-based and costs ~1 fd per watch regardless of directory size.
+notify = { version = "7", default-features = false, features = ["macos_fsevent"] }
 notify-debouncer-mini = "0.5"
 sysinfo = "0.33"
 alacritty_terminal = "0.25"
