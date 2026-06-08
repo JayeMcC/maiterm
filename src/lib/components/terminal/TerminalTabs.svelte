@@ -177,11 +177,16 @@
           .map(t => t.id)
       );
       const resumed: string[] = [];
-      if (liveSeeded && grouping) {
-        for (const t of pane.tabs) {
-          if (isTerminal(t) && liveNow.has(t.id) && !prevLive.has(t.id) && everLive.has(t.id)) {
-            resumed.push(t.id);
-          }
+      for (const t of pane.tabs) {
+        // Only tabs that just went live this tick are candidates.
+        if (!isTerminal(t) || !liveNow.has(t.id) || prevLive.has(t.id)) continue;
+        // Consume the archive-restore marker on this first live transition
+        // (whether or not grouping is on), so it never leaks into a later
+        // suspend→resume cycle of the same tab. A restored tab keeps the
+        // placement restoreArchivedTab gave it — don't promote it.
+        const justRestored = terminalsStore.consumeRestoredFromArchive(t.id);
+        if (liveSeeded && grouping && everLive.has(t.id) && !justRestored) {
+          resumed.push(t.id);
         }
       }
       for (const id of liveNow) everLive.add(id);
@@ -428,6 +433,11 @@
   }
 
   async function handleTabClick(tabId: string) {
+    // Clicking a tab also focuses its pane, so pane-targeted actions (Cmd+T,
+    // Cmd+D split, etc.) operate on the pane the user just interacted with.
+    if (workspacesStore.activeWorkspace?.active_pane_id !== pane.id) {
+      await workspacesStore.setActivePane(workspaceId, pane.id);
+    }
     await workspacesStore.setActiveTab(workspaceId, pane.id, tabId);
     scrollTabIntoView(tabId);
   }

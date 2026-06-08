@@ -1169,6 +1169,10 @@ function createWorkspacesStore() {
       pane.tabs.splice(insertIdx, 0, tab);
       pane.active_tab_id = tab.id;
       terminalsStore.markSpawning(tab.id);
+      // Restore picks this tab's placement (next to the active tab) on purpose;
+      // mark it so the active-group promotion effect leaves it there instead of
+      // treating it like a resumed-from-suspend tab and moving it to the end.
+      terminalsStore.markRestoredFromArchive(tab.id);
       import('$lib/stores/navHistory.svelte').then(m => {
         m.navHistoryStore.push({ workspaceId, paneId: pane.id, tabId });
       });

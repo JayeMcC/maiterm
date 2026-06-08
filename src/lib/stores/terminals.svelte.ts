@@ -60,6 +60,12 @@ function createTerminalsStore() {
   // Tabs whose PTY is being spawned — treated as "active" by the tab grouping
   // logic so they don't flash into the suspended group before registration.
   let spawningTabs = $state(new Set<string>());
+  // Tabs just restored from the archive. restoreArchivedTab gives them a
+  // deliberate placement (next to the active tab), so the active-group
+  // promotion effect in TerminalTabs must NOT yank them to the group boundary
+  // on their first live transition. One-shot: consumed the first time the tab
+  // goes live (unlike suspend→resume, which should still be promoted).
+  const restoredFromArchive = new Set<string>();
 
   function emitOscChange(tabId: string, osc: OscState) {
     for (const fn of oscListeners) fn(tabId, osc);
@@ -75,6 +81,8 @@ function createTerminalsStore() {
     clearDirty(tabId: string) { dirtyTabs.delete(tabId); },
     markSpawning(tabId: string) { spawningTabs = new Set(spawningTabs).add(tabId); },
     isSpawning(tabId: string) { return spawningTabs.has(tabId); },
+    markRestoredFromArchive(tabId: string) { restoredFromArchive.add(tabId); },
+    consumeRestoredFromArchive(tabId: string): boolean { return restoredFromArchive.delete(tabId); },
     canvasRendererLoaded(tabId: string) { canvasTabs = new Set(canvasTabs).add(tabId); },
     canvasRendererUnloaded(tabId: string) { const s = new Set(canvasTabs); s.delete(tabId); canvasTabs = s; },
 
@@ -148,6 +156,7 @@ function createTerminalsStore() {
         instances: instances.size,
         canvas_renderer_tabs: canvasTabs.size,
         spawning_tabs: spawningTabs.size,
+        restored_from_archive: restoredFromArchive.size,
         split_contexts: splitContexts.size,
         preserved_pty_ids: preservedPtyIds.size,
         osc_listeners: oscListeners.size,
