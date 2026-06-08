@@ -18,21 +18,31 @@ import { error as logError, info as logInfo } from '@tauri-apps/plugin-log';
  * Identity is stamped by aiTerm (not self-asserted), so the recipient always knows
  * a message is from a peer agent — never confused for the human operator.
  *
- * Delivery readiness model (decoupled from claudeState's active/idle, which is
- * unreliable for a freshly-forked agent — SessionStart fires `active` but no `Stop`
- * fires on boot):
- *   - `ready`            — the pane is booted far enough to accept a prompt. Caller
- *                          is ready immediately (existing agent); the forked partner
- *                          becomes ready SETTLE_MS after its SessionStart.
- *   - `busy`             — we injected a message and are awaiting its Stop. Prevents
- *                          double-injection mid-turn.
- *   - `hasCompletedTurn` — once the pane has emitted a Stop, claudeState's
- *                          active/idle becomes trustworthy and we defer to it.
+ * Handshake (tight + routing-proof): a forked session resumes the target's
+ * transcript, which already contains the target's `initSession` — so the fork
+ * believes it is already initialized (as the wrong tab) and never re-binds its new
+ * MCP connection, leaving its aiTerm tools unusable. So after the fork's Claude
+ * comes up we inject a directive forcing it to re-`initSession` as ITS OWN tab. The
+ * opener (caller → "introduce yourself") then fires off the fork's real
+ * `claude-init-session` event, which proves the fork is up, on THIS instance, and
+ * tool-capable — not a flaky `SessionStart` hook.
+ *
+ * Delivery readiness model: `ready` (accepts prompts — caller immediately; fork once
+ * it initializes), `busy` (a message was injected, awaiting its Stop — prevents
+ * mid-turn double-injection), `hasCompletedTurn` (after a Stop, claudeState's
+ * active/idle is trustworthy and we defer to it).
+ *
+ * Links are self-healing: at send time the recipient must still have a live Claude
+ * session with the same session id recorded at link time; otherwise the link is
+ * broken cleanly instead of routing into a dead/wrong target.
  */
 
-const SETTLE_MS = 2500;        // forked partner boot → ready delay (TUI input settle)
-const INJECT_GAP_MS = 120;     // gap between bracketed-paste and the submitting CR
-const BUSY_TIMEOUT_MS = 300_000; // safety: auto-clear busy if no Stop ever arrives
+const INJECT_GAP_MS = 120;           // gap between bracketed-paste and the submitting CR
+const BUSY_TIMEOUT_MS = 300_000;     // safety: auto-clear busy if no Stop ever arrives
+const FORK_BOOT_POLL_MS = 500;       // poll interval while waiting for the fork's Claude to register
+const FORK_BOOT_TIMEOUT_MS = 15_000; // cap on waiting for the fork to boot before priming anyway
+const FORK_SETTLE_MS = 1500;         // extra settle after the fork registers, so its TUI accepts input
+const FORK_INIT_TIMEOUT_MS = 25_000; // if the fork never re-inits on this instance, tell the caller
 
 interface LinkEntry {
   /** The tab this agent is linked to. */
@@ -41,6 +51,10 @@ interface LinkEntry {
   partnerLabel: string;
   /** Conversation turn counter (incremented on each message this tab sends). */
   turn: number;
+  /** Partner's Claude session id at link time — if it changes/disappears, the link
+   *  is stale (peer restarted or died) and must be broken. Set for the caller once
+   *  the fork initializes; set up front for the fork (it knows the caller). */
+  partnerSessionId?: string;
 }
 
 interface DeliveryState {
@@ -60,10 +74,8 @@ function createAgentLinkStore() {
   const links = new Map<string, LinkEntry>();
   // Delivery state is keyed by the RECIPIENT tab.
   const delivery = new Map<string, DeliveryState>();
-  // Forked partners awaiting their boot→ready transition + opener-into-caller.
+  // Forked partners awaiting init → opener-into-caller (keyed by fork tab id).
   const pendingOpeners = new Map<string, { callerTabId: string }>();
-  // Partners whose ready timer is already scheduled (SessionStart can fire twice).
-  const readyScheduled = new Set<string>();
   // Best-effort cwd label when live OSC cwd isn't available yet.
   const cwdHint = new Map<string, string>();
   // Reactive version bump so UI ($derived) can react to link changes.
@@ -196,6 +208,56 @@ function createAgentLinkStore() {
     );
   }
 
+  /** Directive injected into the fork to force it to re-initialize as its OWN tab
+   *  (a resumed/forked session otherwise inherits the target's initSession and never
+   *  re-binds its new MCP connection, so its aiTerm tools stay unusable). */
+  function buildForkInitDirective(forkTabId: string, peerLabel: string): string {
+    return (
+      `⟦AGENT-LINK⟧ You are now a FORKED peer agent in a NEW aiTerm tab (id ${forkTabId}). ` +
+      `This is a fresh tab with a fresh MCP connection, so you must re-initialize: call your aiterm initSession tool with tabId "${forkTabId}" right now. ` +
+      `Disregard any tab id mentioned earlier in this conversation — you are "${forkTabId}" now.\n\n` +
+      `You have been linked to a peer AI agent ("${peerLabel}") via aiTerm Agent Link. ` +
+      `After initializing, reply with a one-line readiness note, then wait — the peer's message will arrive as a new prompt.`
+    );
+  }
+
+  /** Sent to the caller if the fork never re-initializes on this instance. */
+  function buildLinkFailedNote(forkTabId: string): string {
+    return (
+      `⟦AGENT-LINK⟧ The link to "${label(forkTabId)}" could not be completed — the forked agent did not initialize on this aiTerm instance ` +
+      `(it may have connected to a different one). You can run /aiterm init in the new pane and retry, or unlink and link again.`
+    );
+  }
+
+  /** After spawning a fork, wait for its Claude to register on THIS instance, then
+   *  inject the re-init directive. The handshake (opener → caller) fires separately,
+   *  when the fork's initSession actually lands (see the claude-init-session handler
+   *  in init()). If the fork never inits here, the caller is told rather than left
+   *  hanging. */
+  async function primeFork(forkTabId: string) {
+    for (let waited = 0; waited < FORK_BOOT_TIMEOUT_MS; waited += FORK_BOOT_POLL_MS) {
+      if (!pendingOpeners.has(forkTabId)) return;            // already handshaked / unlinked
+      if (claudeStateStore.getState(forkTabId)) break;        // fork's Claude is up on this instance
+      await sleep(FORK_BOOT_POLL_MS);
+    }
+    await sleep(FORK_SETTLE_MS);
+    if (!pendingOpeners.has(forkTabId)) return;
+
+    const peerLabel = links.get(forkTabId)?.partnerLabel ?? 'your linked peer';
+    const ok = await injectPrompt(forkTabId, buildForkInitDirective(forkTabId, peerLabel));
+    if (!ok) {
+      logError(`agentLink: failed to prime fork ${forkTabId.slice(0, 8)}`);
+      return;
+    }
+    // Backstop: if the fork doesn't re-init on this instance, don't leave the caller waiting.
+    setTimeout(() => {
+      const po = pendingOpeners.get(forkTabId);
+      if (!po) return;                                        // handshake completed
+      pendingOpeners.delete(forkTabId);
+      if (tabExists(po.callerTabId)) void deliver(po.callerTabId, buildLinkFailedNote(forkTabId));
+    }, FORK_INIT_TIMEOUT_MS);
+  }
+
   // ─── Lifecycle: link / unlink ────────────────────────────────────────────────
 
   function cleanup(tabId: string) {
@@ -204,7 +266,6 @@ function createAgentLinkStore() {
     delivery.delete(tabId);
     links.delete(tabId);
     pendingOpeners.delete(tabId);
-    readyScheduled.delete(tabId);
     cwdHint.delete(tabId);
   }
 
@@ -272,21 +333,24 @@ function createAgentLinkStore() {
 
       const partnerTabId = res.newTabId;
       const callerLabel = `${label(callerTabId)}`;
+      const callerSessionId = claudeStateStore.getState(callerTabId)?.sessionId;
 
       links.set(callerTabId, { partnerTabId, partnerLabel, turn: 0 });
-      links.set(partnerTabId, { partnerTabId: callerTabId, partnerLabel: callerLabel, turn: 0 });
+      // The fork's entry knows the caller's session id up front; the caller learns
+      // the fork's session id when the fork initializes (see init() handler).
+      links.set(partnerTabId, { partnerTabId: callerTabId, partnerLabel: callerLabel, turn: 0, partnerSessionId: callerSessionId });
       // Caller is an established agent (past its boot window) → trust claudeState
       // immediately (hasCompletedTurn) so the opener can't inject mid-turn. The
-      // forked partner has a genuine boot window (SessionStart fires active but no
-      // Stop), so it starts unready with hasCompletedTurn=false.
+      // forked partner becomes ready when its initSession lands.
       delivery.set(callerTabId, { ready: true, busy: false, hasCompletedTurn: true, queue: [] });
       delivery.set(partnerTabId, { ready: false, busy: false, hasCompletedTurn: false, queue: [] });
       if (target.cwd) cwdHint.set(partnerTabId, target.cwd);
       const callerCwd = getCwd(callerTabId);
       if (callerCwd) cwdHint.set(callerTabId, callerCwd);
-      // After the forked partner boots + settles, deliver the opener into the caller.
+      // The opener fires when the fork actually initializes; primeFork forces that init.
       pendingOpeners.set(partnerTabId, { callerTabId });
       bump();
+      void primeFork(partnerTabId);
 
       logInfo(`agentLink: linked ${callerTabId.slice(0, 8)} ⇄ ${partnerTabId.slice(0, 8)} (fork of ${target.sessionId.slice(0, 8)})`);
       return { ok: true, partnerTabId, partnerLabel };
@@ -301,7 +365,23 @@ function createAgentLinkStore() {
       const recipient = link.partnerTabId;
       if (!tabExists(recipient)) {
         this.unlink(senderTabId);
-        return { ok: false, error: 'The linked agent is no longer available (its tab was closed).' };
+        return { ok: false, error: 'The linked agent is no longer available (its tab was closed). Link closed.' };
+      }
+      // Self-healing: once we know the partner's session id, it must still be live
+      // and unchanged. A missing session = the peer ended; a different id = it
+      // restarted. Either way the link is stale — break it instead of injecting into
+      // a dead/wrong target. (Before the fork inits, partnerSessionId is unset, so we
+      // don't false-negative during establishment.)
+      if (link.partnerSessionId) {
+        const recipState = claudeStateStore.getState(recipient);
+        if (!recipState) {
+          this.unlink(senderTabId);
+          return { ok: false, error: 'The linked agent is no longer running (its session ended). Link closed.' };
+        }
+        if (recipState.sessionId !== link.partnerSessionId) {
+          this.unlink(senderTabId);
+          return { ok: false, error: 'The linked agent restarted with a new session, so the link is stale. Ask the human to relink.' };
+        }
       }
       if (!message || !message.trim()) {
         return { ok: false, error: 'Message is empty.' };
@@ -335,28 +415,22 @@ function createAgentLinkStore() {
     },
 
     async init() {
-      // Mark a forked partner ready and fire the opener into its caller.
-      const markPartnerReady = (partnerTabId: string) => {
-        const d = delivery.get(partnerTabId);
-        if (d && !d.ready) {
-          d.ready = true;
-          void flush(partnerTabId);
-        }
-        const po = pendingOpeners.get(partnerTabId);
-        if (po) {
-          pendingOpeners.delete(partnerTabId);
-          if (tabExists(po.callerTabId)) {
-            void deliver(po.callerTabId, buildOpener(po.callerTabId, partnerTabId));
-          }
-        }
-      };
-
-      // Forked partner came up → schedule its ready transition + opener.
-      const u1 = await listen<{ session_id: string; tab_id: string | null }>('claude-hook-session-start', (e) => {
-        const tabId = e.payload.tab_id;
-        if (!tabId || !pendingOpeners.has(tabId) || readyScheduled.has(tabId)) return;
-        readyScheduled.add(tabId);
-        setTimeout(() => markPartnerReady(tabId), SETTLE_MS);
+      // The fork's initSession landing is the handshake trigger: it proves the fork
+      // is up, on THIS instance, and tool-capable. Mark it ready and send the opener
+      // to the caller. (primeFork forces this init for resumed/forked sessions.)
+      const u1 = await listen<{ tab_id: string | null; session_id: string }>('claude-init-session', (e) => {
+        const { tab_id, session_id } = e.payload;
+        if (!tab_id) return;
+        const po = pendingOpeners.get(tab_id);
+        if (!po) return; // not a fork awaiting handshake
+        pendingOpeners.delete(tab_id);
+        // Record the fork's session id on the caller's entry (for staleness checks).
+        const callerLink = links.get(po.callerTabId);
+        if (callerLink) callerLink.partnerSessionId = session_id;
+        const d = delivery.get(tab_id);
+        if (d) { d.ready = true; void flush(tab_id); }
+        if (tabExists(po.callerTabId)) void deliver(po.callerTabId, buildOpener(po.callerTabId, tab_id));
+        logInfo(`agentLink: fork ${tab_id.slice(0, 8)} initialized → opener to caller ${po.callerTabId.slice(0, 8)}`);
       });
       unlisteners.push(u1);
 
@@ -388,7 +462,6 @@ function createAgentLinkStore() {
       links.clear();
       delivery.clear();
       pendingOpeners.clear();
-      readyScheduled.clear();
       cwdHint.clear();
     },
   };
