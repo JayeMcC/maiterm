@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.13.1
+
+- **Install the recommended Claude Code status line with `/maiterm statusline`.** One command sets up a compact status line showing host · current directory · git branch · model · reasoning effort · context-used %, so you get the same at-a-glance Claude Code context line we use. It's idempotent (safe to re-run) and works both locally and on SSH-bridged hosts. `/maiterm init` is also faster now — it uses a targeted tool lookup instead of scanning every connected MCP server
+- The "What's New" changelog modal now renders Markdown, so **bold**, *italic*, `code`, and links in release notes display formatted instead of showing their literal markup
+- Fix Windows release downloads being published with an empty version in their filename (a double-dash `maiterm--windows-…`) — the version-detection step ran under PowerShell instead of bash, so it produced no version
+
 ## v1.13.0
 
 - **aiTerm is now maiTerm.** New name, new look: a refreshed app icon and wordmark, theme-aware light/dark logos throughout the app, and a cleaner title bar that shows just the active workspace name with the maiTerm mark on the right. Your data carries over untouched — the app's underlying identifier is unchanged, so every workspace, tab, note, preference, and scrollback buffer is exactly where you left it, and the existing settings/state directories are reused as-is. No re-setup, no migration step
