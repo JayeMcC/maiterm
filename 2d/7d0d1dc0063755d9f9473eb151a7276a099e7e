@@ -1,0 +1,53 @@
+.agents/specs/actors/f1-actors.spec.yaml
+  s_e31c7a65767e05::t_eed9b695b0746e 146-221
+  s_00be4cd2f0942d::t_0eda2797e01eee 1-145
+scripts/regenerate-actor-snapshot.ts
+  s_00be4cd2f0942d::t_c5f5003ccf6900 1-2,5,15,17-18,22-27,30-31,57-62
+  s_00be4cd2f0942d::t_1e05e88eb44a43 3-4,6-14,16,19-21,28-29,32-56
+.agents/specs/authors/api-evidence.spec.md
+  s_00be4cd2f0942d::t_fd5677d5737703 150-153
+  s_00be4cd2f0942d::t_f4eae33fd5940d 1-47,56-62,67-149,154-221
+  s_00be4cd2f0942d::t_b38d3ed2454f8b 48-55,63-66
+.agents/specs/patterns/hierarchy-denial.spec.md
+  s_00be4cd2f0942d::t_0bf293754cfb8b 1-86
+.agents/specs/actors/f1-actors.snapshot.json
+  s_00be4cd2f0942d::t_6f04438a3237bb 1-74,131-133
+  s_e31c7a65767e05::t_847d6348789617 75-130
+.agents/specs/PLAN.md
+  s_00be4cd2f0942d::t_00287c49cc1575 1-139
+.agents/specs/README.md
+  s_00be4cd2f0942d::t_a9d76fe1176a36 1-55
+.agents/specs/example.spec.md
+  s_00be4cd2f0942d::t_3d85d29ac364b7 1-12
+.agents/specs/example.spec.yaml
+  s_00be4cd2f0942d::t_e5fc7db6a1ff56 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "2d7d0d1dc0063755d9f9473eb151a7276a099e7e",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_00be4cd2f0942d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3653879d-80f6-4ef5-afe9-30e3e186cbb7",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_e31c7a65767e05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d50d1d97-8621-45c8-aa17-41b3e65d5356",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
