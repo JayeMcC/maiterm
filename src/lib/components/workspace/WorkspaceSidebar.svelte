@@ -648,7 +648,7 @@
 
   .sidebar-logo {
     height: 20px;
-    aspect-ratio: 720 / 432;
+    aspect-ratio: 3700 / 2717;
     opacity: 0.7;
     pointer-events: none;
     background: var(--logo-mark-url, url(/logo-mark-light.png)) center / contain no-repeat;
