@@ -1,0 +1,46 @@
+scripts/setup-macos-timeout.sh
+  s_0d3d39ec3eac9e::t_f9593f856f99bf 1-93,95,99,101-105
+  s_0d3d39ec3eac9e::t_b1787042b8b830 94,96-98,100
+package.json
+  s_0d3d39ec3eac9e::t_c1e97f1ead90ef 12
+scripts/lib/mjs-block.ts
+  s_00be4cd2f0942d::t_cdec3fea489977 1-88
+bin/timeout
+  s_0d3d39ec3eac9e::t_369f42251df7bb 1-58
+.agents/rules/20-workflow/shell-timeout.md
+  s_0d3d39ec3eac9e::t_bd5b5fbf2ac566 27-34
+  s_0d3d39ec3eac9e::t_531a399aab7662 1-26,35-73
+scripts/zshrc/e2e-timeout.zsh
+  s_0d3d39ec3eac9e::t_7ef4922cd1143a 1-16
+.agents/rules/20-workflow/shell-cwd.md
+  s_00be4cd2f0942d::t_a8209b8965f07c 1-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "d9ca84fff0ad100cab2ae411ebdd459c93a69fbd",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_00be4cd2f0942d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3653879d-80f6-4ef5-afe9-30e3e186cbb7",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_0d3d39ec3eac9e": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "021f5eb4-afcc-4d77-b049-0a7e3e709334",
+        "model": "composer-2.5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
