@@ -18,7 +18,10 @@ export default defineConfig({
       head: [
         {
           tag: 'script',
-          content: `if (!localStorage.getItem('starlight-theme')) { localStorage.setItem('starlight-theme', 'dark'); document.documentElement.dataset.theme = 'dark'; }`,
+          // Default first-time visitors to dark. Only act when no choice is
+          // stored yet — Starlight stores "auto" as an empty string, so a
+          // falsy check would clobber it back to dark on every navigation.
+          content: `if (localStorage.getItem('starlight-theme') === null) { localStorage.setItem('starlight-theme', 'dark'); document.documentElement.dataset.theme = 'dark'; }`,
         },
       ],
       customCss: ['./src/styles/custom.css'],
