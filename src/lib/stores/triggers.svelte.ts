@@ -366,7 +366,15 @@ export async function handleEnableAutoResume(tabId: string, commandTemplate: str
     const ws = workspacesStore.workspaces.find(w => w.id === instance.workspaceId);
     const pane = ws?.panes.find(p => p.id === instance.paneId);
     const tab = pane?.tabs.find(t => t.id === tabId);
-    const existing = tab?.auto_resume_command ?? tab?.auto_resume_remembered_command ?? null;
+    const existingRaw = tab?.auto_resume_command ?? tab?.auto_resume_remembered_command ?? null;
+    // A `--fork-session` command is never a valid auto-resume command: it re-forks
+    // the ORIGINAL session into a brand-new session on every resume, losing this
+    // tab's own accumulated conversation and pinning the original (wrong) id. Agent
+    // Link uses it only to SPAWN the fork on first boot; once the fork has its own
+    // session id, resume must use the standard `claude --resume %claudeSessionId`
+    // template (claudeState sets %claudeSessionId to the fork's id before calling
+    // this). So never preserve a fork command — let the template take over.
+    const existing = existingRaw?.includes('--fork-session') ? null : existingRaw;
     const cmd = existing || (commandTemplate || null);
 
     // Prevent SSH context downgrade: if the tab already has an SSH auto-resume
