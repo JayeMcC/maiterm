@@ -27,6 +27,12 @@
   let selectedIndex = $state(0);
   let busy = $state(false);
   let errorMsg = $state<string | null>(null);
+  // 'fork' = fork the chosen session into a new split (default). 'existing' = link
+  // directly to the chosen running tab, no new pane (for when the split already exists).
+  let mode = $state<'fork' | 'existing'>('fork');
+  // Human-written context about the peer, fed into the calling agent's opener so it
+  // knows what the peer is for (instead of blindly firing questions).
+  let purpose = $state('');
 
   // Enumerate every terminal tab that has a live Claude session, except the
   // caller itself and any tab already in a link.
@@ -38,7 +44,13 @@
         for (const tab of pane.tabs) {
           if (tab.tab_type !== 'terminal') continue;
           if (tab.id === callerTabId) continue;
-          if (agentLinkStore.isLinked(tab.id)) continue;
+          if (agentLinkStore.isLinked(tab.id)) {
+            // Fork mode: never fork an already-linked tab. Existing mode: allow
+            // re-selecting the caller's OWN partner (to repair a failed relink), but
+            // not a tab linked to a third agent.
+            if (mode === 'fork') continue;
+            if (agentLinkStore.getPartnerTabId(tab.id) !== callerTabId) continue;
+          }
           const cs = claudeStateStore.getState(tab.id);
           if (!cs) continue;
           const osc = terminalsStore.getOsc(tab.id);
@@ -72,6 +84,8 @@
       selectedIndex = 0;
       errorMsg = null;
       busy = false;
+      mode = 'fork';
+      purpose = '';
     }
   });
 
@@ -84,7 +98,15 @@
     busy = true;
     errorMsg = null;
     try {
-      // SSH session? Capture its ssh command + remote cwd so the fork reconnects.
+      // Link directly to the existing tab — no fork, no new pane.
+      if (mode === 'existing') {
+        const res = await agentLinkStore.linkExistingTab(callerTabId, c.tabId, purpose);
+        if (!res.ok) { errorMsg = res.error; busy = false; return; }
+        onclose();
+        return;
+      }
+
+      // Fork mode: SSH session? Capture its ssh command + remote cwd so the fork reconnects.
       let sshCommand: string | null = null;
       let remoteCwd: string | null = null;
       let cwd = c.cwd;
@@ -107,7 +129,7 @@
         cwd,
         sshCommand,
         remoteCwd,
-      });
+      }, purpose);
       if (!res.ok) {
         errorMsg = res.error;
         busy = false;
@@ -125,6 +147,16 @@
     if (e.key === 'Escape') {
       e.preventDefault();
       onclose();
+      return;
+    }
+    // While typing the description, let the textarea own arrows/Enter (newlines);
+    // Cmd/Ctrl+Enter still links the current selection.
+    if ((e.target as HTMLElement)?.tagName === 'TEXTAREA') {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        const c = candidates[selectedIndex];
+        if (c) void choose(c);
+      }
       return;
     }
     if (e.key === 'ArrowDown') {
@@ -169,10 +201,41 @@
       <div class="header">
         <div class="title">Link to Agent</div>
         <div class="subtitle">
-          Fork another Claude session into a split beside
+          {#if mode === 'fork'}
+            Fork another Claude session into a split beside
+          {:else}
+            Link an already-running tab directly to
+          {/if}
           {#if callerName}<strong>{callerName}</strong>{:else}this tab{/if}.
           The two agents can then talk to each other.
         </div>
+        <div class="mode-toggle" role="radiogroup" aria-label="Link mode">
+          <button
+            class="mode-btn"
+            class:active={mode === 'fork'}
+            role="radio"
+            aria-checked={mode === 'fork'}
+            disabled={busy}
+            onclick={() => { mode = 'fork'; }}
+          >Fork into new pane</button>
+          <button
+            class="mode-btn"
+            class:active={mode === 'existing'}
+            role="radio"
+            aria-checked={mode === 'existing'}
+            disabled={busy}
+            onclick={() => { mode = 'existing'; }}
+          >Link existing tab</button>
+        </div>
+      </div>
+
+      <div class="purpose-field">
+        <textarea
+          bind:value={purpose}
+          rows="2"
+          disabled={busy}
+          placeholder="Describe this agent for your agent (optional) — what's it an expert on? How should your agent use it?"
+        ></textarea>
       </div>
 
       {#if errorMsg}
@@ -210,7 +273,7 @@
 
       <div class="footer">
         <span class="hint">↑↓ navigate · ↵ link · esc close</span>
-        {#if busy}<span class="hint">forking session…</span>{/if}
+        {#if busy}<span class="hint">{mode === 'fork' ? 'forking session…' : 'linking…'}</span>{/if}
       </div>
     </div>
   </div>
@@ -260,6 +323,70 @@
   .subtitle strong {
     color: var(--accent);
     font-weight: 600;
+  }
+
+  .mode-toggle {
+    display: flex;
+    gap: 4px;
+    margin-top: 10px;
+    padding: 3px;
+    background: var(--bg-dark);
+    border-radius: 6px;
+    width: fit-content;
+  }
+
+  .mode-btn {
+    padding: 4px 12px;
+    font-size: 0.78rem;
+    font-family: inherit;
+    border: none;
+    border-radius: 4px;
+    background: none;
+    color: var(--fg-dim);
+    cursor: pointer;
+  }
+
+  .mode-btn:hover:not(:disabled) {
+    color: var(--fg);
+  }
+
+  .mode-btn.active {
+    background: var(--bg-light);
+    color: var(--fg);
+    font-weight: 600;
+  }
+
+  .mode-btn:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+
+  .purpose-field {
+    padding: 8px 12px 0;
+  }
+
+  .purpose-field textarea {
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+    min-height: 38px;
+    padding: 7px 9px;
+    font-family: inherit;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--fg);
+    background: var(--bg-dark);
+    border: 1px solid var(--bg-light);
+    border-radius: 4px;
+  }
+
+  .purpose-field textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .purpose-field textarea::placeholder {
+    color: var(--fg-dim);
   }
 
   .error-banner {

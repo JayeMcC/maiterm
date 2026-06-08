@@ -45,7 +45,7 @@ const FORK_BOOT_TIMEOUT_MS = 15_000; // cap on waiting for the fork to boot befo
 const FORK_SETTLE_MS = 1500;         // extra settle after the fork registers, so its TUI accepts input
 const FORK_INIT_TIMEOUT_MS = 25_000; // if the fork never re-inits on this instance, tell the caller
 
-type LinkRole = 'caller' | 'fork';
+type LinkRole = 'caller' | 'fork' | 'peer';
 
 interface LinkEntry {
   /** The tab this agent is linked to. */
@@ -60,6 +60,9 @@ interface LinkEntry {
   partnerSessionId?: string;
   /** Whether this tab initiated the link or is the forked peer. */
   role: LinkRole;
+  /** Human-written description of the PARTNER (what it's expert on / how to use it),
+   *  fed into this tab's opener. In-memory only (one-time, not persisted). */
+  purpose?: string;
 }
 
 interface DeliveryState {
@@ -229,15 +232,30 @@ function createAgentLinkStore() {
     );
   }
 
-  function buildOpener(callerTabId: string, partnerTabId: string): string {
-    const partnerName = links.get(callerTabId)?.partnerLabel ?? label(partnerTabId);
+  function buildOpener(callerTabId: string, partnerTabId: string, forked = true): string {
+    const link = links.get(callerTabId);
+    const partnerName = link?.partnerLabel ?? label(partnerTabId);
     const cwd = getCwd(partnerTabId);
     const where = cwd ? ` (working in ${cwd})` : '';
+    const what = forked
+      ? `a peer AI agent forked with the FULL context of that session`
+      : `a peer AI agent running in another tab`;
+    const purpose = link?.purpose?.trim();
+    const ctx = purpose ? ` Your human operator describes it as: "${purpose}".` : '';
     return (
-      `⟦AGENT-LINK⟧ You are now linked to "${partnerName}"${where} — a peer AI agent forked with the FULL context of that session. ` +
-      `It can answer questions and do research about that codebase.\n\n` +
-      `Introduce yourself with the sendToLinkedAgent tool: say who you are, what you're working on, and why you're reaching out — then ask your first question. ` +
-      `The other agent's replies arrive here as new prompts. When you have what you need, just stop; no need to sign off.`
+      `⟦AGENT-LINK⟧ You are now linked to "${partnerName}"${where} — ${what}.${ctx}\n\n` +
+      `Don't message it yet. First check in with your human operator: tell them the link is ready, summarize in a sentence what this peer can help with, and propose 2-3 specific things you could ask it that are relevant to your current work. Then wait for the human to say what to consult it about.\n\n` +
+      `When the human gives the go-ahead, use the sendToLinkedAgent tool — open by identifying yourself (who you are, what you're working on) and why you're reaching out, then ask. The peer's replies arrive here as new prompts; when you have what you need, just stop.`
+    );
+  }
+
+  /** Heads-up delivered to an EXISTING tab that the human just linked into (it didn't
+   *  initiate and isn't a fork, so prime it like primeFork primes a fork). */
+  function buildExistingLinkNotice(peerLabel: string): string {
+    return (
+      `⟦AGENT-LINK⟧ You have been linked to a peer AI agent ("${peerLabel}") via aiTerm Agent Link — a peer agent in another tab, NOT your human operator. ` +
+      `It may reach out to consult you; its messages arrive here as new prompts. Reply with the sendToLinkedAgent tool. ` +
+      `There's nothing to do until its message arrives — carry on with your work.`
     );
   }
 
@@ -345,6 +363,7 @@ function createAgentLinkStore() {
     async establishLink(
       callerTabId: string,
       target: { sessionId: string; tabName: string; workspaceName: string; cwd: string | null; sshCommand?: string | null; remoteCwd?: string | null },
+      purpose?: string,
     ): Promise<{ ok: true; partnerTabId: string; partnerLabel: string } | { ok: false; error: string }> {
       const loc = resolveTab(callerTabId);
       if (!loc) return { ok: false, error: 'Caller tab not found.' };
@@ -368,7 +387,7 @@ function createAgentLinkStore() {
       const callerLabel = `${label(callerTabId)}`;
       const callerSessionId = claudeStateStore.getState(callerTabId)?.sessionId;
 
-      links.set(callerTabId, { partnerTabId, partnerLabel, turn: 0, role: 'caller' });
+      links.set(callerTabId, { partnerTabId, partnerLabel, turn: 0, role: 'caller', purpose: purpose?.trim() || undefined });
       // The fork's entry knows the caller's session id up front; the caller learns
       // the fork's session id when the fork initializes (see init() handler).
       links.set(partnerTabId, { partnerTabId: callerTabId, partnerLabel: callerLabel, turn: 0, partnerSessionId: callerSessionId, role: 'fork' });
@@ -390,6 +409,69 @@ function createAgentLinkStore() {
 
       logInfo(`agentLink: linked ${callerTabId.slice(0, 8)} ⇄ ${partnerTabId.slice(0, 8)} (fork of ${target.sessionId.slice(0, 8)})`);
       return { ok: true, partnerTabId, partnerLabel };
+    },
+
+    /**
+     * Link `callerTabId` to an ALREADY-RUNNING Claude tab — no fork, no new pane.
+     * For when the split is already set up (e.g. auto-relink failed but both agents
+     * are still live) and the human just wants to re-establish the bridge.
+     */
+    async linkExistingTab(
+      callerTabId: string,
+      targetTabId: string,
+      purpose?: string,
+    ): Promise<{ ok: true; partnerTabId: string; partnerLabel: string } | { ok: false; error: string }> {
+      if (callerTabId === targetTabId) return { ok: false, error: 'Cannot link a tab to itself.' };
+      const callerLoc = resolveTab(callerTabId);
+      const targetLoc = resolveTab(targetTabId);
+      if (!callerLoc) return { ok: false, error: 'Caller tab not found.' };
+      if (!targetLoc) return { ok: false, error: 'Target tab not found.' };
+
+      const targetState = claudeStateStore.getState(targetTabId);
+      if (!targetState) return { ok: false, error: 'The target tab has no running Claude session.' };
+      const callerState = claudeStateStore.getState(callerTabId);
+
+      const callerLabel = label(callerTabId);
+      const targetLabel = `${targetLoc.tab.name} · ${targetLoc.ws.name}`;
+
+      // Don't hijack a link the target already has with a DIFFERENT agent.
+      const targetPartner = links.get(targetTabId)?.partnerTabId;
+      if (targetPartner && targetPartner !== callerTabId) {
+        return { ok: false, error: `"${targetLabel}" is already linked to another agent. Unlink it there first.` };
+      }
+      // Abandon any stale link the caller has with a DIFFERENT agent (notify it).
+      const callerPartner = links.get(callerTabId)?.partnerTabId;
+      if (callerPartner && callerPartner !== targetTabId) this.unlink(callerTabId);
+
+      // Repairing an existing caller<->target pair (e.g. a failed auto-relink) →
+      // reconnect in place without re-introducing an ongoing conversation. Otherwise
+      // it's a fresh link → run the full intro flow.
+      const repairing = links.get(callerTabId)?.partnerTabId === targetTabId;
+      const callerTurn = links.get(callerTabId)?.turn ?? 0;
+      const targetTurn = links.get(targetTabId)?.turn ?? 0;
+
+      // Symmetric link between two established agents — both ready, both trust
+      // claudeState immediately, each records the other's live session id.
+      links.set(callerTabId, { partnerTabId: targetTabId, partnerLabel: targetLabel, turn: callerTurn, partnerSessionId: targetState.sessionId, role: 'caller', purpose: purpose?.trim() || undefined });
+      links.set(targetTabId, { partnerTabId: callerTabId, partnerLabel: callerLabel, turn: targetTurn, partnerSessionId: callerState?.sessionId, role: 'peer' });
+      delivery.set(callerTabId, { ready: true, busy: false, hasCompletedTurn: true, queue: [] });
+      delivery.set(targetTabId, { ready: true, busy: false, hasCompletedTurn: true, queue: [] });
+      const callerCwd = getCwd(callerTabId); if (callerCwd) cwdHint.set(callerTabId, callerCwd);
+      const targetCwd = getCwd(targetTabId); if (targetCwd) cwdHint.set(targetTabId, targetCwd);
+
+      bump();
+      void persistLink(callerTabId);
+      void persistLink(targetTabId);
+
+      if (repairing) {
+        logInfo(`agentLink: repaired existing link ${callerTabId.slice(0, 8)} ⇄ ${targetTabId.slice(0, 8)}`);
+      } else {
+        // Prime the target (it didn't initiate) and have the caller introduce itself.
+        void deliver(targetTabId, buildExistingLinkNotice(callerLabel));
+        void deliver(callerTabId, buildOpener(callerTabId, targetTabId, false));
+        logInfo(`agentLink: linked existing ${callerTabId.slice(0, 8)} ⇄ ${targetTabId.slice(0, 8)} (no fork)`);
+      }
+      return { ok: true, partnerTabId: targetTabId, partnerLabel: targetLabel };
     },
 
     /** Handle a sendToLinkedAgent tool call from `senderTabId`. */
@@ -562,7 +644,7 @@ function createAgentLinkStore() {
           partnerLabel: al.partner_label,
           turn: al.turn ?? 0,
           partnerSessionId: al.partner_session_id ?? undefined,
-          role: al.role === 'fork' ? 'fork' : 'caller',
+          role: al.role === 'fork' || al.role === 'peer' ? al.role : 'caller',
         });
         // Deliverable only once this tab's Claude is live. On a cold restart it isn't
         // up yet → ready=false; the init handler flips it on resume. If already live

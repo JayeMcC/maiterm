@@ -71,21 +71,36 @@ Claude Code CLI ←→ WebSocket/SSE ←→ axum server (Rust) ←→ Tauri even
 
 Lets two running Claude agents in different panes talk to each other. The human links
 the active tab to another running Claude session via the **Agent Link picker**
-(`Cmd+Shift+L`, or terminal context menu → "Link to Agent…"). aiTerm **forks** the
-target session (`claude --resume <id> --fork-session`) into a split pane beside the
-caller — an isolated peer with the target's full context that doesn't disturb the
-original. The agents then converse asynchronously via the `sendToLinkedAgent` tool;
-each message is injected as a real terminal turn in the recipient's pane, so the human
-watches the whole exchange and can interrupt with Esc.
+(`Cmd+Shift+L`, or terminal context menu → "Link to Agent…"). The agents then converse
+asynchronously via the `sendToLinkedAgent` tool; each message is injected as a real
+terminal turn in the recipient's pane, so the human watches the whole exchange and can
+interrupt with Esc.
+
+**Two link modes (picker toggle):**
+- **Fork into new pane** (default) — `establishLink()` forks the target session
+  (`claude --resume <id> --fork-session`) into a split pane beside the caller: an
+  isolated peer with the target's full context that doesn't disturb the original.
+- **Link existing tab** — `linkExistingTab()` links two already-running Claude tabs
+  directly, no fork/new pane (for when the split already exists, e.g. a failed
+  auto-relink). Idempotent: re-selecting the caller's own partner *repairs* a broken
+  link in place; it refuses to hijack a tab linked to a third agent.
+
+**Human-guided opener:** the picker has an optional textarea where the human describes
+the peer (what it's expert on / how to use it). The opener fed to the calling agent does
+NOT fire questions immediately — it tells the agent to check in with the human first
+(summarize what the peer offers, propose a few things it could ask) and wait for
+direction before using `sendToLinkedAgent`. The description is in-memory (one-time, not
+persisted).
 
 **Key files:**
 - `src/lib/stores/agentLink.svelte.ts` — link registry (keyed by tab_id, symmetric),
-  `establishLink()` (fork orchestration + handshake), `primeFork()` (auto-init directive),
-  `rehydrate()` (rebuild from persisted state), delivery gating, identity envelopes
+  `establishLink()` (fork + handshake), `linkExistingTab()` (no-fork link/repair),
+  `primeFork()` (auto-init directive), `rehydrate()` (rebuild from persisted state),
+  delivery gating, identity envelopes
 - `src/lib/stores/workspaces.svelte.ts` → `forkSessionIntoSplit()` — splits the caller's
   pane and boots the forked partner (reuses the clone/auto-resume spawn path with
   `setSplitContext({ fireAutoResume: true })`)
-- `src/lib/components/AgentLinkPicker.svelte` — session picker modal
+- `src/lib/components/AgentLinkPicker.svelte` — session picker modal (mode toggle + purpose textarea)
 - `claudeCode.svelte.ts` → `handleSendToLinkedAgent` / `handleGetLinkedAgent` dispatch
 - Persistence: `Tab.agent_link` (Rust `AgentLink` struct) via the `set_tab_agent_link`
   command — durable pairing written both sides
