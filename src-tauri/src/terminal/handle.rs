@@ -29,8 +29,6 @@ impl Dimensions for TermDimensions {
 /// Wraps one alacritty_terminal instance with its associated state.
 pub struct TerminalHandle {
     pub term: Term<AitermEventProxy>,
-    pub pty_id: String,
-    pub tab_id: String,
     pub osc_interceptor: OscInterceptor,
     /// VTE processor for feeding bytes to the terminal.
     pub processor: vte::ansi::Processor,
@@ -41,8 +39,6 @@ pub struct TerminalHandle {
 
 /// Create a new alacritty_terminal instance.
 pub fn create_terminal(
-    pty_id: &str,
-    tab_id: &str,
     cols: u16,
     rows: u16,
     scrollback_limit: usize,
@@ -64,8 +60,6 @@ pub fn create_terminal(
 
     TerminalHandle {
         term,
-        pty_id: pty_id.to_string(),
-        tab_id: tab_id.to_string(),
         osc_interceptor,
         processor,
         selection: None,

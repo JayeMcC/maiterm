@@ -281,9 +281,7 @@ pub fn spawn_pty(
             pty_sender: tx_for_proxy,
         };
 
-        let terminal_handle = create_terminal(
-            pty_id, tab_id, cols, rows, scrollback_limit, event_proxy,
-        );
+        let terminal_handle = create_terminal(cols, rows, scrollback_limit, event_proxy);
         state.terminal_registry.write().insert(pty_id.to_string(), terminal_handle);
     }
 
