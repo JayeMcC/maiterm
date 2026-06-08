@@ -32,3 +32,4 @@ TAURI_MCP_NOTES.md
 
 # Debug
 *.log
+.gstack/
