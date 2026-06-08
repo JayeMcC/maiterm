@@ -10,7 +10,7 @@ export default defineConfig({
         src: './src/assets/icon.png',
       },
       social: {
-        github: 'https://github.com/Flexmark-Intl/aiterm',
+        github: 'https://github.com/Flexmark-Intl/maiterm',
       },
       expressiveCode: {
         themes: ['tokyo-night'],

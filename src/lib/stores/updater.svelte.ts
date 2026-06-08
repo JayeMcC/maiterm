@@ -81,7 +81,7 @@ function createUpdaterStore() {
     loadingNotes = true;
     try {
       const currentVersion = await getVersion();
-      const res = await fetch('https://api.github.com/repos/Flexmark-Intl/aiterm/releases');
+      const res = await fetch('https://api.github.com/repos/Flexmark-Intl/maiterm/releases');
       if (!res.ok) throw new Error(`GitHub API: ${res.status}`);
       const releases: GitHubRelease[] = await res.json();
 

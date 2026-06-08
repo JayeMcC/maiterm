@@ -217,7 +217,7 @@ pub fn run() {
                 name: Some("maiTerm".into()),
                 version: Some(APP_VERSION.into()),
                 copyright: Some("© 2025 Flexmark International".into()),
-                credits: Some("A modern terminal emulator with workspace organization, split panes, and Claude Code integration.\n\nhttps://flexmark-intl.github.io/aiterm/".into()),
+                credits: Some("A modern terminal emulator with workspace organization, split panes, and Claude Code integration.\n\nhttps://maiterm.dev/".into()),
                 ..Default::default()
             };
 
@@ -370,7 +370,7 @@ pub fn run() {
                     "report_bug" => {
                         #[allow(deprecated)]
                         let _ = tauri_plugin_shell::ShellExt::shell(app_handle)
-                            .open("https://github.com/Flexmark-Intl/aiterm/issues/new?labels=bug&type=bug", None);
+                            .open("https://github.com/Flexmark-Intl/maiterm/issues/new?labels=bug&type=bug", None);
                     }
                     "check_updates" => {
                         // Emit to all windows so the focused one can handle it
@@ -379,7 +379,7 @@ pub fn run() {
                     "feature_request" => {
                         #[allow(deprecated)]
                         let _ = tauri_plugin_shell::ShellExt::shell(app_handle)
-                            .open("https://github.com/Flexmark-Intl/aiterm/issues/new?type=feature", None);
+                            .open("https://github.com/Flexmark-Intl/maiterm/issues/new?type=feature", None);
                     }
                     _ => {}
                 }

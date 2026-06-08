@@ -5,7 +5,7 @@ and counts update checks as anonymous active users.
 
 - **Live at:** `https://updates.maiterm.dev/latest.json`
 - **Account:** the project's Cloudflare account (ID kept out of this public repo — see the Cloudflare dashboard)
-- **Upstream manifest:** `https://github.com/Flexmark-Intl/aiterm/releases/latest/download/latest.json`
+- **Upstream manifest:** `https://github.com/Flexmark-Intl/maiterm/releases/latest/download/latest.json`
 
 The app points at this Worker first and the GitHub URL second
 (`src-tauri/tauri.conf.json` → `plugins.updater.endpoints`). If the Worker ever

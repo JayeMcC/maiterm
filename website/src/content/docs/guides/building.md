@@ -7,7 +7,7 @@ description: How to build maiTerm for development and production.
 
 ```bash
 # Clone the repository
-git clone https://github.com/Flexmark-Intl/aiterm.git
+git clone https://github.com/Flexmark-Intl/maiterm.git
 cd aiterm
 
 # Install dependencies

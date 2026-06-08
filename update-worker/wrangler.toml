@@ -15,7 +15,7 @@ routes = [
 # Canonical latest.json (the real updater manifest). The Worker proxies this
 # byte-for-byte; if it can't, it returns non-2XX so Tauri falls back to GitHub.
 [vars]
-UPSTREAM = "https://github.com/Flexmark-Intl/aiterm/releases/latest/download/latest.json"
+UPSTREAM = "https://github.com/Flexmark-Intl/maiterm/releases/latest/download/latest.json"
 
 # STATS_KEY is a secret, not stored here. Set it with:
 #   wrangler secret put STATS_KEY

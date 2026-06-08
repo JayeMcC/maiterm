@@ -597,8 +597,8 @@
   {/if}
 
   <div class="sidebar-footer">
-    <IconButton tooltip="Report Bug" size={24} style="border-radius:4px" onclick={() => shellOpen('https://github.com/Flexmark-Intl/aiterm/issues/new?labels=bug&type=bug')}><Icon name="bug" size={14} /></IconButton>
-    <IconButton tooltip="Feature Request" size={24} style="border-radius:4px" onclick={() => shellOpen('https://github.com/Flexmark-Intl/aiterm/issues/new?type=feature')}><Icon name="lightbulb" size={14} /></IconButton>
+    <IconButton tooltip="Report Bug" size={24} style="border-radius:4px" onclick={() => shellOpen('https://github.com/Flexmark-Intl/maiterm/issues/new?labels=bug&type=bug')}><Icon name="bug" size={14} /></IconButton>
+    <IconButton tooltip="Feature Request" size={24} style="border-radius:4px" onclick={() => shellOpen('https://github.com/Flexmark-Intl/maiterm/issues/new?type=feature')}><Icon name="lightbulb" size={14} /></IconButton>
     <span style="flex:1"></span>
     <Tooltip text={agentDot.tooltip}>
       <button
