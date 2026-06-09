@@ -1,0 +1,27 @@
+linked-tools/core/scripts/personal-tooling-sync/README.md
+  s_fa161b2e607650::t_e8ff81bebcc062 89
+linked-tools/core/scripts/personal-tooling-sync/helpers/layout/package-paths.mjs
+  s_fa161b2e607650::t_e8ff81bebcc062 52
+linked-tools/core/scripts/personal-tooling-sync/helpers/targets.mjs
+  s_fa161b2e607650::t_e8ff81bebcc062 29,37,308
+linked-tools/core/scripts/personal-tooling-sync/personal-tooling.mjs
+  s_fa161b2e607650::t_e8ff81bebcc062 21-22
+linked-tools/core/docs/agent-environment/devcontainer-sync.md
+  s_fa161b2e607650::t_e8ff81bebcc062 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "4e3f4f8bf2de7510dacbbd869b5535143295c8cc",
+  "prompts": {},
+  "sessions": {
+    "s_fa161b2e607650": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5cc8a47c-675d-4602-8b0f-0cb695415d9b",
+        "model": "composer-2.5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
