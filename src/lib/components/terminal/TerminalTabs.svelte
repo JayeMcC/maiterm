@@ -173,6 +173,11 @@
   const everLive = new Set<string>();
   let prevLive = new Set<string>();
   let liveSeeded = false;
+  // A suspended tab activated under active-grouping gets reordered into the
+  // active group once its PTY registers (below). The pre-promotion scroll is
+  // deferred until then via this guard so we scroll to the final slot, not the
+  // tab's old suspended-group position. Set in handleTabClick, consumed here.
+  let pendingPromoteScrollId: string | null = null;
   $effect(() => {
     void terminalsStore.instanceVersion;
     const grouping = preferencesStore.groupActiveTabs;
@@ -200,6 +205,13 @@
       prevLive = liveNow;
       liveSeeded = true;
       for (const id of resumed) workspacesStore.promoteResumedTab(workspaceId, pane.id, id);
+      // Once the just-activated tab is live (and any promotion reorder above has
+      // landed), scroll it into view — handleTabClick deferred this scroll. Skip
+      // if the user has since switched away (their new tab already scrolled).
+      if (pendingPromoteScrollId && liveNow.has(pendingPromoteScrollId)) {
+        if (pendingPromoteScrollId === pane.active_tab_id) scrollTabIntoView(pendingPromoteScrollId);
+        pendingPromoteScrollId = null;
+      }
     });
   });
 
@@ -446,7 +458,17 @@
       await workspacesStore.setActivePane(workspaceId, pane.id);
     }
     await workspacesStore.setActiveTab(workspaceId, pane.id, tabId);
-    scrollTabIntoView(tabId);
+    // A suspended terminal under active-grouping will be reordered into the
+    // active group once its PTY registers; defer the scroll to the promotion
+    // effect so it lands on the final slot rather than the suspended-group spot.
+    const tab = pane.tabs.find(t => t.id === tabId);
+    const isTerm = !!tab && (tab.tab_type === 'terminal' || !tab.tab_type);
+    const isLive = !!(terminalsStore.get(tabId) || terminalsStore.isSpawning(tabId));
+    if (isTerm && !isLive && preferencesStore.groupActiveTabs) {
+      pendingPromoteScrollId = tabId;
+    } else {
+      scrollTabIntoView(tabId);
+    }
   }
 
   function scrollTabIntoView(tabId: string) {
@@ -488,7 +510,11 @@
   let prevActiveTabId: string | null = null;
   $effect(() => {
     const activeId = pane.active_tab_id;
-    if (activeId && activeId !== prevActiveTabId) scrollTabIntoView(activeId);
+    // Skip the tab whose scroll is deferred to the promotion effect (a resumed
+    // suspended tab) — scrolling now would target its pre-promotion position.
+    if (activeId && activeId !== prevActiveTabId && activeId !== pendingPromoteScrollId) {
+      scrollTabIntoView(activeId);
+    }
     prevActiveTabId = activeId ?? null;
   });
 
