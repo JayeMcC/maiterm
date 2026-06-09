@@ -713,8 +713,13 @@ pub struct Preferences {
     pub shell_integration_default_migrated: bool,
     #[serde(default)]
     pub custom_themes: Vec<serde_json::Value>,
-    #[serde(default)]
+    #[serde(default = "default_true")]
     pub restore_session: bool,
+    /// One-time marker for the "restore_session default-on" migration. Once set,
+    /// the migration never re-flips it, so a user who deliberately turns Restore
+    /// on Relaunch off stays off across launches.
+    #[serde(default)]
+    pub restore_session_default_migrated: bool,
     /// Legacy field kept for migration deserialization only.
     #[serde(default, skip_serializing)]
     #[allow(dead_code)]
@@ -845,7 +850,8 @@ impl Default for Preferences {
             shell_integration: true,
             shell_integration_default_migrated: true,
             custom_themes: Vec::new(),
-            restore_session: false,
+            restore_session: true,
+            restore_session_default_migrated: true,
             notify_on_completion: false,
             notification_mode: default_notification_mode(),
             notify_min_duration: default_notify_min_duration(),

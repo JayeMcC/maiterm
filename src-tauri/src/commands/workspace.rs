@@ -731,6 +731,8 @@ pub fn set_preferences(app: tauri::AppHandle, state: State<'_, Arc<AppState>>, m
         // next launch, undoing a deliberate opt-out. Preserve the stored value.
         preferences.shell_integration_default_migrated =
             app_data.preferences.shell_integration_default_migrated;
+        preferences.restore_session_default_migrated =
+            app_data.preferences.restore_session_default_migrated;
         app_data.preferences = preferences.clone();
         app_data.clone()
     };

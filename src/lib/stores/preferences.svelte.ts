@@ -27,7 +27,7 @@ function createPreferencesStore() {
   let shellTitleIntegration = $state(false);
   let shellIntegration = $state(false);
   let customThemes = $state<Theme[]>([]);
-  let restoreSession = $state(false);
+  let restoreSession = $state(true);
   let notificationMode = $state('auto');
   let notifyMinDuration = $state(30);
   let notesFontSize = $state(13);
@@ -156,7 +156,7 @@ function createPreferencesStore() {
       shellTitleIntegration = prefs.shell_title_integration;
       shellIntegration = prefs.shell_integration ?? false;
       customThemes = prefs.custom_themes ?? [];
-      restoreSession = prefs.restore_session ?? false;
+      restoreSession = prefs.restore_session ?? true;
       // Migration: derive notification_mode from old notify_on_completion if absent
       if (prefs.notification_mode) {
         notificationMode = prefs.notification_mode;
@@ -524,7 +524,7 @@ function createPreferencesStore() {
       shellTitleIntegration = prefs.shell_title_integration;
       shellIntegration = prefs.shell_integration ?? false;
       customThemes = prefs.custom_themes ?? [];
-      restoreSession = prefs.restore_session ?? false;
+      restoreSession = prefs.restore_session ?? true;
       if (prefs.notification_mode) {
         notificationMode = prefs.notification_mode;
       } else {

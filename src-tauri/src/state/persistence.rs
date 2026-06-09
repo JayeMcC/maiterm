@@ -302,6 +302,15 @@ pub fn migrate_app_data(data: &mut AppData) {
         log::info!("Migration: enabled shell_integration (Command Completion) by default");
     }
 
+    // One-time default-on flip for Restore on Relaunch. Restores terminal
+    // sessions/scrollback on launch. Runs once per profile; honors a later
+    // manual opt-out.
+    if !data.preferences.restore_session_default_migrated {
+        data.preferences.restore_session = true;
+        data.preferences.restore_session_default_migrated = true;
+        log::info!("Migration: enabled restore_session (Restore on Relaunch) by default");
+    }
+
     // Migrate from old single-window format to multi-window format
     if data.windows.is_empty() {
         if let Some(old_workspaces) = data.workspaces.take() {
