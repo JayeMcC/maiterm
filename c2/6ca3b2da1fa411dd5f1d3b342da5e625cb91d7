@@ -1,0 +1,25 @@
+.gitignore
+  s_1a63c94f044bcb::t_635d2deb212c19 383
+  s_1a63c94f044bcb::t_45a5e95ce8b949 377
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "c26ca3b2da1fa411dd5f1d3b342da5e625cb91d7",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_1a63c94f044bcb": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "a2174942-08d0-4f1b-b9b5-be325f9df2bc",
+        "model": "composer-2.5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
