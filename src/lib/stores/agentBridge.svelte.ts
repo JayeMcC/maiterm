@@ -40,6 +40,7 @@ import { error as logError, info as logInfo } from '@tauri-apps/plugin-log';
 
 const INJECT_GAP_MS = 120;           // gap between bracketed-paste and the submitting CR
 const BUSY_TIMEOUT_MS = 300_000;     // safety: auto-clear busy if no Stop ever arrives
+const DRAIN_TICK_MS = 1500;          // queue-drain backstop: re-attempt queued delivery while idle
 const FORK_BOOT_POLL_MS = 500;       // poll interval while waiting for the fork's Claude to register
 const FORK_BOOT_TIMEOUT_MS = 15_000; // cap on waiting for the fork to boot before priming anyway
 const FORK_SETTLE_MS = 1500;         // extra settle after the fork registers, so its TUI accepts input
@@ -89,6 +90,8 @@ function createAgentBridgeStore() {
   // Reactive version bump so UI ($derived) can react to bridge changes.
   let version = $state(0);
   const unlisteners: (() => void)[] = [];
+  // Backstop poller, live only while some tab has queued messages (see ensureDrainPump).
+  let drainTimer: ReturnType<typeof setInterval> | undefined;
 
   function bump() { version++; }
 
@@ -165,9 +168,14 @@ function createAgentBridgeStore() {
 
   // ─── Delivery gating ──────────────────────────────────────────────────────────
 
-  function deliverable(tabId: string): boolean {
+  function deliverable(tabId: string, trustIdle = false): boolean {
     const d = delivery.get(tabId);
     if (!d || !d.ready || d.busy) return false;
+    // `trustIdle`: the caller KNOWS the tab just went idle (a Stop hook fired) — don't
+    // re-consult claudeState, which is updated by a SEPARATE listener on the same Stop
+    // event and may still read 'active' if it hasn't run yet. Re-gating on it here
+    // raced the queue into a deadlock (recipient idle, no further Stop, sender waiting).
+    if (trustIdle) return true;
     // Post-boot: claudeState is trustworthy — require a LIVE, idle session. No live
     // state means the partner is dormant/resuming, so queue (don't inject into a
     // shell). Boot window (pre first Stop): trust `ready`.
@@ -191,32 +199,71 @@ function createAgentBridgeStore() {
     }, BUSY_TIMEOUT_MS);
   }
 
+  /** The `busy` latch is set when we inject and cleared on the recipient's next Stop.
+   *  If that Stop is ever missed (e.g. it arrived with an unresolved tab_id), an idle,
+   *  quiescent recipient produces no further events to clear it — so every later send
+   *  queues forever. claudeState is the source of truth for "mid-turn": if it reports
+   *  the tab is idle, any lingering busy latch is stale → clear it so the queue drains. */
+  function clearStaleBusy(tabId: string) {
+    const d = delivery.get(tabId);
+    if (!d || !d.busy) return;
+    const st = claudeStateStore.getState(tabId);
+    if (st && st.state === 'idle') {
+      d.busy = false;
+      if (d.busyTimer) { clearTimeout(d.busyTimer); d.busyTimer = undefined; }
+    }
+  }
+
+  /** Run the drain backstop while any tab has queued messages. Event-driven flush
+   *  (a Stop/re-init on the recipient) handles the common case; this poller covers the
+   *  one case events can't — a message queued against a recipient that is idle and
+   *  quiescent (it's waiting on US), so it will never emit another event to trigger a
+   *  flush. Self-stops once all queues are empty, so it idles at zero cost. */
+  function pumpQueues() {
+    let anyQueued = false;
+    for (const [tabId, d] of delivery) {
+      if (d.queue.length === 0) continue;
+      anyQueued = true;
+      clearStaleBusy(tabId);
+      void flush(tabId);
+    }
+    if (!anyQueued && drainTimer) { clearInterval(drainTimer); drainTimer = undefined; }
+  }
+
+  function ensureDrainPump() {
+    if (!drainTimer) drainTimer = setInterval(pumpQueues, DRAIN_TICK_MS);
+  }
+
   /** Deliver framed text to a tab, or queue it if the tab isn't deliverable. */
   async function deliver(tabId: string, text: string): Promise<'delivered' | 'queued' | 'failed'> {
     const d = delivery.get(tabId);
     if (!d) return 'failed';
+    clearStaleBusy(tabId);
     if (!deliverable(tabId)) {
       d.queue.push(text);
+      ensureDrainPump();
       return 'queued';
     }
     const ok = await injectPrompt(tabId, text);
     if (!ok) {
       d.queue.push(text);
+      ensureDrainPump();
       return 'queued';
     }
     setBusy(tabId);
     return 'delivered';
   }
 
-  /** Try to deliver the next queued message to a tab (called when it goes idle). */
-  async function flush(tabId: string) {
+  /** Try to deliver the next queued message to a tab. `trustIdle` (set when a Stop
+   *  just fired) skips the claudeState re-check that would otherwise race the Stop. */
+  async function flush(tabId: string, trustIdle = false) {
     const d = delivery.get(tabId);
-    if (!d || !deliverable(tabId)) return;
+    if (!d || !deliverable(tabId, trustIdle)) return;
     const next = d.queue.shift();
     if (next === undefined) return;
     const ok = await injectPrompt(tabId, next);
     if (ok) setBusy(tabId);
-    else d.queue.unshift(next);
+    else { d.queue.unshift(next); ensureDrainPump(); }
   }
 
   // ─── Envelopes (identity stamped by maiTerm) ──────────────────────────────────
@@ -601,7 +648,9 @@ function createAgentBridgeStore() {
         d.ready = true;
         d.busy = false;
         if (d.busyTimer) { clearTimeout(d.busyTimer); d.busyTimer = undefined; }
-        void flush(tabId);
+        // trustIdle: a Stop is authoritative proof this tab is now idle — don't re-gate
+        // on claudeState, which is updated by a separate listener on this same event.
+        void flush(tabId, true);
       });
       unlisteners.push(u2);
 
@@ -670,6 +719,7 @@ function createAgentBridgeStore() {
     destroy() {
       for (const u of unlisteners) u();
       unlisteners.length = 0;
+      if (drainTimer) { clearInterval(drainTimer); drainTimer = undefined; }
       for (const d of delivery.values()) if (d.busyTimer) clearTimeout(d.busyTimer);
       bridges.clear();
       delivery.clear();
