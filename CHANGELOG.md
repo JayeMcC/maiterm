@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.14.0
+
+- **Restore on Relaunch is now on by default.** maiTerm reopens your terminal sessions and scrollback when you relaunch, so you pick up exactly where you left off. It switches on automatically once; if you'd previously turned it off — or turn it off now — that choice sticks and is never silently re-enabled
+- **Agent Bridge picker is now searchable and sorted by recent activity.** When you create a bridge, candidate agents are listed most-recently-active first, with a search box to filter by tab name, workspace, or path — much faster when you have many agents running. It also tells you when an agent isn't listed yet (an agent only appears once it has registered with maiTerm, i.e. made a tool call or run `/maiterm init`). The terminal context-menu item is now "Create Agent Bridge…"
+- Fix Agent Bridge dropping over and over between two agents on the same machine. Local agents connect over an HTTP transport that, without a per-session id, made them all share a single connection slot — so whichever agent acted most recently "owned" it and the others' tool calls landed on the wrong tab, which an agent reported as the bridge being dropped. Each agent now gets its own session id, so a bridge stays pointed at the right peer without having to re-run `/maiterm init`
+- Fix two bridged agents deadlocking when one queued a message for the other mid-task. A queued message could sit undelivered when the recipient went idle waiting on the sender, leaving both agents stuck waiting on each other. Queued messages now drain as soon as the recipient is free, in both directions
+- Fix the tab strip scrolling to the wrong place when you resume a suspended tab — it no longer snaps to the slot the tab held before it was promoted into the active group
+- With "group active tabs" on, a tab now joins the active group on its first manual unsuspend instead of requiring a second one
+- Internal: the MCP server Claude Code connects to is now keyed `maiterm` (was `aiterm`) in `~/.claude.json`, so the agent's tool list and status reflect the current name. Existing integrations keep working — the old key is migrated automatically
+
 ## v1.13.3
 
 - **Search and per-tab age in the hidden-tabs menu.** The overflow menu for tabs that scroll out of view now has a search box to filter by name and shows how long each suspended terminal has been idle, matching the archive list. The popup is wider and taller so longer names fit
