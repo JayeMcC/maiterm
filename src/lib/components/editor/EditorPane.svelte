@@ -6,7 +6,7 @@
   import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
   import { foldGutter, indentOnInput, bracketMatching, foldKeymap, foldAll, unfoldAll } from '@codemirror/language';
   import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
-  import { search, searchKeymap, highlightSelectionMatches, getSearchQuery } from '@codemirror/search';
+  import { search, searchKeymap, highlightSelectionMatches, getSearchQuery, searchPanelOpen } from '@codemirror/search';
   import { ViewPlugin } from '@codemirror/view';
   import { contentSmartQuoteFix } from '$lib/utils/smartQuotes';
   import type { EditorFileInfo } from '$lib/tauri/types';
@@ -108,6 +108,17 @@
     });
     return true;
   }
+
+  // Cmd+G opens goto-line unless the find panel is open, where it must stay
+  // "find next" (Cmd+F → Cmd+G is the standard macOS find cycle).
+  const gotoLineKeymap = [
+    { key: 'Ctrl-g', mac: 'Ctrl-g', run: () => openGotoLine(), preventDefault: true },
+    {
+      key: 'Mod-g',
+      run: (view: EditorView) => (searchPanelOpen(view.state) ? false : openGotoLine()),
+      preventDefault: true,
+    },
+  ];
 
   function closeGotoLine() {
     gotoOpen = false;
@@ -560,6 +571,7 @@
             search({ top: true }),
             contentSmartQuoteFix,
             keymap.of([
+              ...gotoLineKeymap,
               ...closeBracketsKeymap,
               ...defaultKeymap,
               ...searchKeymap,
@@ -1128,7 +1140,7 @@
             };
           }),
           keymap.of([
-            { key: 'Ctrl-g', mac: 'Ctrl-g', run: () => openGotoLine(), preventDefault: true },
+            ...gotoLineKeymap,
             ...closeBracketsKeymap,
             ...defaultKeymap,
             ...searchKeymap,
