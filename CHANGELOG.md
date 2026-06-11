@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.15.0
+
+- **Composer dock — write prompts like a human.** A per-tab, autogrowing multi-line input docked below the terminal, built for composing long prompts for Claude Code (or any CLI) without fighting the shell's single-line editing. Enter inserts newlines, Cmd+Enter sends, and Esc returns focus to the terminal. When the foreground app has bracketed paste on (Claude Code, zsh, modern readline) the whole block is sent as one literal paste that submits once; otherwise lines are sent raw. Drafts persist per tab across switches and restarts, and Cmd+Shift+C toggles the dock. It's on by default (configurable under Tabs)
+- **Attach files and screenshots to a prompt as chips.** Paste a copied screenshot or Finder files, or drop files onto the open dock, and they appear as chips above the input instead of raw paths — with image thumbnails, dedup, and one-click removal. On send, the paths are appended to your text (raw for Claude sessions, shell-escaped for plain shells); for SSH sessions the files are uploaded to the remote host first and referenced by their remote path
+- **Suspended tabs show their last session behind the resume overlay.** Instead of a blank panel, a suspended terminal now displays its previous scrollback behind a frosted-glass resume overlay, so you can see what the tab held before bringing it back
+- **Edit Markdown table cells in place in notes.** In the rendered notes preview, click a table cell to edit it directly — Enter or blur commits, Esc cancels, and Tab/Shift+Tab move between cells. Only the edited cell's bytes are rewritten, so the rest of the document stays byte-identical
+- **Cmd+G goes to a line number in the editor.** While the search panel is open Cmd+G stays find-next; otherwise it opens go-to-line
+
 ## v1.14.0
 
 - **Restore on Relaunch is now on by default.** maiTerm reopens your terminal sessions and scrollback when you relaunch, so you pick up exactly where you left off. It switches on automatically once; if you'd previously turned it off — or turn it off now — that choice sticks and is never silently re-enabled
