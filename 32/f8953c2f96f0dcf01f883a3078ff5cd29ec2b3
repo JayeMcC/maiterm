@@ -1,0 +1,12 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "32f8953c2f96f0dcf01f883a3078ff5cd29ec2b3",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
