@@ -1,0 +1,47 @@
+skill-library/tools-maintenance/generate-tools-index/references/index-sections.md
+  s_4e9ea33086dc68::t_20aae02e97f143 12
+  s_4e9ea33086dc68::t_d41b4ab83c723e 23
+skill-library/tools-maintenance/generate-workflows/SKILL.md
+  s_4e9ea33086dc68::t_8592ed8500c123 30
+skill-library/tools-maintenance/generate-tools-index/SKILL.md
+  s_4e9ea33086dc68::t_84de94b2095aa3 30
+skill-library/tools-maintenance/overlay-park/references/eval-profile.md
+  s_4e9ea33086dc68::t_ecd9083c41a3db 27
+skill-library/tools-maintenance/skill-lint/reference/skills-layout.md
+  s_4e9ea33086dc68::t_0a1945dce0eba6 25-31
+  s_4e9ea33086dc68::t_3910bb14cf48ac 33-38,43-49,51,69-73,76-81,84-85
+  s_4e9ea33086dc68::t_24aa48e8fb9b43 11-24,32,93-95
+  s_4e9ea33086dc68::t_7f187286873698 39-42,50,52-68,74-75,82-83,86-92
+skill-library/tools-maintenance/skill-creator/SKILL.md
+  s_4e9ea33086dc68::t_4fccae77de9ede 13-15,18,20
+  s_4e9ea33086dc68::t_7d45ad52119bce 16-17,19
+skill-library/terse-output/caveman/SKILL.md
+  s_4e9ea33086dc68::t_92599240835e85 1-72
+skill-library/tools-maintenance/overlay-park/references/core-profile.md
+  s_4e9ea33086dc68::t_b8c2505481794a 22-31,33-35,38
+  s_4e9ea33086dc68::t_60a02b6ebf735a 32,36-37,39
+skill-library/tools-maintenance/generate-workflows/references/workflows-sections.md
+  s_4e9ea33086dc68::t_c98578f05985e4 45
+  s_4e9ea33086dc68::t_50b8ae6790d23d 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "81af7b399b72192cf13c760e78499f58bb6ff658",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_4e9ea33086dc68": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "eaae79ea-935d-44ce-9b9d-d9c72e0b26d5",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
