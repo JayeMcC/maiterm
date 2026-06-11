@@ -1,0 +1,177 @@
+scripts/personal-sync-devcontainer-setup/lib/devcontainer-mappings.mjs
+  s_9cc28807d0c8b3::t_c1fa72b70c7757 5-7
+scripts/personal-sync-devcontainer-setup/templates/forwood-one-tests_core/.agents/rules/editor/no-e2e-soft-skip.mdc
+  s_0133f9ca4f9c8f::t_30bb49542728ec 1-16
+scripts/personal-tooling-sync/helpers/targets.mjs
+  s_0133f9ca4f9c8f::t_30bb49542728ec 9-13,26-29,34-37,41-45,49-50,54-55,60,65,69-71,73-85,87-103,105-108,115-120,124-127,129-131,133-139,141-143,145-160,162-177,179-194,202-213,221,230-237,239-254,256-288,290-292,296-308
+scripts/personal-tooling-sync/helpers/store.mjs
+  s_0133f9ca4f9c8f::t_30bb49542728ec 9-10,13-19,24-37,41-48,55-80,84-98,102-108,112-118,125-126,128-151,153,157-162,166-172,174-176,178,180-181,183-199
+scripts/personal-tooling-sync/helpers/sync/engine/sync-target.mjs
+  s_0133f9ca4f9c8f::t_30bb49542728ec 5-7,10-13,18-23,25-27,29-33,35,37-39,41-42
+scripts/personal-sync-devcontainer-setup/templates/forwood-one_core/dockerignore
+  s_0133f9ca4f9c8f::t_30bb49542728ec 1-16
+scripts/personal-tooling-sync/helpers/sync/engine/ignores.mjs
+  s_0133f9ca4f9c8f::t_30bb49542728ec 15,20-40,45-58
+scripts/terminal/tint-terminal-path-based-on-repo-path/install.sh
+  s_6947b41c1d0345::t_b4c6a72ee41e4e 4-5
+scripts/personal-sync-devcontainer-setup/lib/core-layer.mjs
+  s_9cc28807d0c8b3::t_450cf76b1b3c04 6
+  s_9cc28807d0c8b3::t_484231d95843e1 1-5,7-8,12,15,17-32,34-42,48-50,52-53,59-63,69-70,73-74,76-89
+  s_9cc28807d0c8b3::t_0f3e4096f5f94b 9-11,13-14,16,33,43-44,47,51,54-55,64-68,71-72,75
+  s_9cc28807d0c8b3::t_f431254b86f54d 45-46,56-58
+scripts/personal-sync-devcontainer-setup/README.md
+  s_9cc28807d0c8b3::t_4382b6251180dd 25
+  s_9cc28807d0c8b3::t_b0fa6189a879c4 5-9,11-15,19-21,23-24,27
+  s_9cc28807d0c8b3::t_7bc9ba2aead50f 10,16,22
+scripts/personal-tooling-sync/personal-tooling.mjs
+  s_6947b41c1d0345::t_8536c220e7152d 6-8
+  s_6947b41c1d0345::t_5788de9e7034b5 79,81
+  s_6947b41c1d0345::t_9c572769ef5283 87
+scripts/personal-tooling-sync/helpers/sync/commands.mjs
+  s_0133f9ca4f9c8f::t_30bb49542728ec 6-13,20-30,34-46,50-52,56-61,66-81,83-100
+scripts/personal-tooling-sync/helpers/sync/engine/tooling.mjs
+  s_0133f9ca4f9c8f::t_30bb49542728ec 6-10,12,16-34,39-70,85-101,105,109,113-122,126-149,153-165,169-177,185-205,213-264,272-382,386-406,410-420,424-435,439-448,452-462
+scripts/personal-sync-devcontainer-setup/templates/forwood-one-tests_core/.agents/skills/test-generate/references/readme-template.md
+  s_0133f9ca4f9c8f::t_30bb49542728ec 1-103
+scripts/personal-sync-devcontainer-setup/lib/append-devcontainer-changesignore.mjs
+  s_9cc28807d0c8b3::t_abecaf9de17aa2 153
+  s_9cc28807d0c8b3::t_421436b24628c2 194
+  s_9cc28807d0c8b3::t_75000faa8659df 20
+  s_9cc28807d0c8b3::t_cee7f8774b499c 12-19,21-23
+  s_9cc28807d0c8b3::t_ab3e930b48d0ab 154-164
+scripts/personal-sync-devcontainer-setup/templates/forwood-one-tests_core/.agents/skills/test-codegen/SKILL.md
+  s_0133f9ca4f9c8f::t_30bb49542728ec 1-233
+scripts/personal-sync-devcontainer-setup/lib/apply-template-manifest.mjs
+  s_9cc28807d0c8b3::t_52fa5145447f68 118-147
+  s_9cc28807d0c8b3::t_d599ac08b88ae5 185-198
+scripts/personal-sync-devcontainer-setup/templates/forwood-one_core/.changesignore-content
+  s_9cc28807d0c8b3::t_a11984a5046779 1-2
+scripts/personal-sync-devcontainer-setup/templates/forwood-one-tests_core/.agents/skills/test-generate/references/test-script-template.md
+  s_0133f9ca4f9c8f::t_30bb49542728ec 1-182
+scripts/personal-sync-devcontainer-setup/templates/README.md
+  s_9cc28807d0c8b3::t_f72964964b85e9 3-34,37-61
+  s_9cc28807d0c8b3::t_ed8124bfacb290 36
+scripts/personal-sync-devcontainer-setup/apply.mjs
+  s_9cc28807d0c8b3::t_ce25405ae63d18 163
+  s_9cc28807d0c8b3::t_56185ea940f54c 8-12,14-22,24-30,38,40,47,55-56,66,81-95,108-112,123-125,128,134-141,143,145-147,150-151,161,164-167,169,172,178,184,186-210
+  s_9cc28807d0c8b3::t_34032cbdcbedee 39
+  s_9cc28807d0c8b3::t_cd398c01062c37 1-7,13,23,31-37,41-46,48-54,57-65,67-79,96-107,113-122,126-127,129-133,142,144,148-149,152-160,162,168,170-171,173-177,179-183,185,211-213
+  s_9cc28807d0c8b3::t_e28491cf6fa681 80
+scripts/personal-sync-devcontainer-setup/templates/forwood-one_core/.devcontainer/postgres/standby-entrypoint.sh
+  s_0133f9ca4f9c8f::t_30bb49542728ec 1-46
+scripts/personal-sync-devcontainer-setup/templates/forwood-one-tests_core/README.md
+  s_9cc28807d0c8b3::t_84295afccdc26e 13-19
+  s_9cc28807d0c8b3::t_9793acad1662b5 1-3
+  s_6947b41c1d0345::t_317679b6e07ad0 24
+scripts/personal-sync-devcontainer-setup/lib/forwood-one-tools-root.mjs
+  s_a40d1a8c079dc8::t_8bedbb5b2eefac 67,79
+  s_6947b41c1d0345::t_317679b6e07ad0 68
+  s_6947b41c1d0345::t_b6e364f4ea38b0 77
+scripts/personal-sync-devcontainer-setup/templates/forwood-one-tests_core/.agents/skills/test-generate/references/data-setup-template.md
+  s_0133f9ca4f9c8f::t_30bb49542728ec 1-116
+scripts/personal-sync-devcontainer-setup/templates/forwood-one_core/.devcontainer/init-dbs/01-create-devtenant3.sql
+  s_0133f9ca4f9c8f::t_30bb49542728ec 1-3
+scripts/personal-tooling-sync/helpers/env.mjs
+  s_0133f9ca4f9c8f::t_30bb49542728ec 9-10,14-39
+scripts/personal-tooling-sync/helpers/sync/unlink-managed.mjs
+  s_0133f9ca4f9c8f::t_30bb49542728ec 8-11,16-19,21-36,38-43
+scripts/terminal/tint-terminal-path-based-on-repo-path/tint-terminal-path-based-on-repo-path.zsh
+  s_0133f9ca4f9c8f::t_30bb49542728ec 1-76
+scripts/personal-sync-devcontainer-setup/templates/forwood-one-tests_core/AGENTS.md
+  s_9cc28807d0c8b3::t_605294c98135ef 68
+scripts/personal-sync-devcontainer-setup/lib/workspace-snapshot.mjs
+  s_9cc28807d0c8b3::t_2e8d79428e1e85 32
+scripts/personal-tooling-sync/helpers/sync/engine/tools-env-into-main.mjs
+  s_0133f9ca4f9c8f::t_30bb49542728ec 18-35,43-45,47-55,57-58,60-68,70-72,74-81,83-92,94-96,98-99
+scripts/personal-tooling-sync/helpers/sync/engine/verify-sync.mjs
+  s_0133f9ca4f9c8f::t_30bb49542728ec 11-13,24-29,31-35,37-42,52,54-56,58-60,62,73-95,97-126
+scripts/personal-sync-devcontainer-setup/templates/forwood-one-tests_core/.agents/rules/10-project/testing.md
+  s_0133f9ca4f9c8f::t_30bb49542728ec 1-218
+scripts/personal-tooling-sync/helpers/sync/engine/git-tracked.mjs
+  s_0133f9ca4f9c8f::t_30bb49542728ec 5,7-8,17-36,44-52,56-59,64-74,78-81
+scripts/personal-tooling-sync/helpers/sync/engine/state.mjs
+  s_0133f9ca4f9c8f::t_30bb49542728ec 11-15,20-35,39-41,45-92,96-101,105-109
+scripts/personal-sync-devcontainer-setup/templates/forwood-one_core/.devcontainer/postgres/pg_hba.conf
+  s_0133f9ca4f9c8f::t_30bb49542728ec 1-24
+scripts/personal-sync-devcontainer-setup/templates/forwood-one_core/scripts/devcontainer-entrypoint.sh
+  s_0133f9ca4f9c8f::t_30bb49542728ec 1-23
+scripts/personal-tooling-sync/helpers/layout/linked-merge.mjs
+  s_0133f9ca4f9c8f::t_30bb49542728ec 2-7,11,21-26,30-35,40-45,50-55,59,65-78,83,87-90,92-104,106-108,110,114,118-137,145-146,150,155-177
+scripts/terminal/tint-terminal-path-based-on-repo-path/README.md
+  s_0133f9ca4f9c8f::t_30bb49542728ec 1
+scripts/personal-sync-devcontainer-setup/capture.mjs
+  s_9cc28807d0c8b3::t_c542ad050971f7 3-4,6-8,10,14-18,20,24-39,41-44,46-49,51-126
+  s_9cc28807d0c8b3::t_e1645ba64c1a30 9,11-13
+  s_9cc28807d0c8b3::t_c0bdb819d4ff0a 40,45,50
+scripts/personal-tooling-sync/README.md
+  s_6947b41c1d0345::t_a14ee87cffca60 21,26-30,33
+scripts/personal-sync-devcontainer-setup/templates/forwood-one-tests_core/.agents/rules/editor/red-test-screenshot-and-link.mdc
+  s_0133f9ca4f9c8f::t_30bb49542728ec 1-33
+scripts/personal-sync-devcontainer-setup/templates/forwood-one-tests_core/apply-manifest.json
+  s_0133f9ca4f9c8f::t_30bb49542728ec 1-10
+scripts/personal-tooling-sync/helpers/layout/package-paths.mjs
+  s_6947b41c1d0345::t_c30600d228f95e 4-6
+scripts/personal-sync-devcontainer-setup/lib/resolve-devcontainer-targets.mjs
+  s_9cc28807d0c8b3::t_284a1b4cf1a6c0 3
+scripts/personal-sync-devcontainer-setup/templates/forwood-one-tests_core/.agents/skills/test-generate/SKILL.md
+  s_0133f9ca4f9c8f::t_30bb49542728ec 1-267
+scripts/personal-tooling-sync/scripts/resolve-linked-tools-consumer-conflicts.mjs
+  s_0133f9ca4f9c8f::t_30bb49542728ec 9,19-21,25,30-35,40-43,45-52,54-73,77-78,82-111,115-116,118-121,123-127,129-133,135-154,156-162
+scripts/personal-sync-devcontainer-setup/dev-container-setup.md
+  s_9cc28807d0c8b3::t_fcfa024c4c9496 5-9,11-12,14-50,56,62-89,94-116
+  s_9cc28807d0c8b3::t_b18fc58ce719a4 10,13
+  s_9cc28807d0c8b3::t_74628d172f9345 117
+  s_9cc28807d0c8b3::t_a1c515d2fc4a66 90
+  s_9cc28807d0c8b3::t_60ef6f8d3ac4d0 59
+  s_9cc28807d0c8b3::t_1c35c9fa8c677f 52-55,57-58,60
+  s_9cc28807d0c8b3::t_b051f0fabfe1f4 91
+scripts/personal-tooling-sync/helpers/link-utils.mjs
+  s_0133f9ca4f9c8f::t_30bb49542728ec 7-12,16-24,28-40,44-51,55
+scripts/terminal/setup-terminal-preferences-in-container/setup-terminal-preferences-in-container.sh
+  s_0133f9ca4f9c8f::t_30bb49542728ec 1-197
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "6a03c6365f502400ac2b150f31c32952bb1fc1eb",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_0133f9ca4f9c8f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f7b249c-cb2f-42de-b16f-d4abe003d778",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_6947b41c1d0345": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "94a5392d-fc5f-4f95-8969-f3fb48719ae9",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_9cc28807d0c8b3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "83519ffb-8397-4e43-82af-24f940dfbc78",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_a40d1a8c079dc8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "172ff549-d07f-4a89-8009-adc9ed85add3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
