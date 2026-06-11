@@ -1,0 +1,171 @@
+.vscode/tasks.json
+  s_a40d1a8c079dc8::t_d8d01187fa28bd 35
+  s_9cc28807d0c8b3::t_6a0cdd4965c390 47
+  s_9cc28807d0c8b3::t_322f22ebf9f1cb 61,63
+  s_9cc28807d0c8b3::t_a25196fe23c6fd 49
+  s_9cc28807d0c8b3::t_090b66b9bcf112 119
+  s_9cc28807d0c8b3::t_2a63ab2832c785 77
+  s_9cc28807d0c8b3::t_92aa6e210bec61 91
+  s_a40d1a8c079dc8::t_6f50853ebfc24c 7
+  s_a40d1a8c079dc8::t_2058f12a21087e 21
+  s_9cc28807d0c8b3::t_594b0840c06d0e 133
+  s_9cc28807d0c8b3::t_c2f2edf9b1c511 105
+docs/agent-environment
+  s_0133f9ca4f9c8f::t_13b7a2f8e65a11 1
+.cursorignore
+  s_9cc28807d0c8b3::t_55aef03cd21f74 353-355
+  s_cf9932eea4f083::t_edcff9cb87ba62 25,42,80-102,113-121,123-144,146-197
+  s_6947b41c1d0345::t_9bc7720c2be592 377
+  s_6947b41c1d0345::t_98bb440c079024 378-379
+AGENTS.md
+  s_a40d1a8c079dc8::t_58f4042318cd3b 92-96
+  s_cf9932eea4f083::t_a5e182998459de 6,68,81-83
+  s_cf9932eea4f083::t_6ff018225dadfb 15-16,32-40,42,48,102,104-107
+  s_a40d1a8c079dc8::t_f59a743121b835 19-20
+  s_cf9932eea4f083::t_b22932b08c70cd 41,43-47
+  s_cf9932eea4f083::t_6bfac70f313f3e 21-23
+docs/workflows.md
+  s_91907203c1b872::t_12fda155cbf07f 38
+  s_91907203c1b872::t_32c9fe1d75d573 51
+  s_91907203c1b872::t_4dee7a855530d8 321-329
+  s_cf9932eea4f083::t_6ff018225dadfb 15-18,29-31,42-44,55-57,68-69,80-82,93-94,105,116-118,129-131,142-144,155-158,169-172,183-186,197-200,211-213,224-226,237-240,251-252,263-266,277-278,301-303,314-316,340-342,353-355,366-368,373,375,378-380,404-407,418-420,444-445,456-457,468-471,482-487,498-501,512-514,525-527,538-540,553-554,565-566,577-578,589-590,601-602,613-614,625-626,637-639,650-653,664-667,678-680,691-692,703-705,716-718,729-733,744-746,757-760
+  s_91907203c1b872::t_6ff0a958100461 3,5
+  s_d134bb5461d8af::t_df7abd97ba00ed 547,551-552
+  s_9cc28807d0c8b3::t_5ceb800e6981b5 633
+  s_91907203c1b872::t_68452f71cad148 151
+  s_91907203c1b872::t_49115beb976d24 283-290
+  s_91907203c1b872::t_b45110415bf8e4 765
+  s_91907203c1b872::t_420ee40d1679d9 385,387,391-393
+  s_91907203c1b872::t_f04e4d8a7b2e29 425,427,431-433
+CONTEXT.md
+  s_cf9932eea4f083::t_9c1565ea530036 43,46
+  s_cf9932eea4f083::t_af6fe8217535eb 95,98-102
+  s_cf9932eea4f083::t_5b5da2411a3460 107-110
+  s_cf9932eea4f083::t_6828ed9c79b0c9 88,90,111-113
+  s_cf9932eea4f083::t_4ed8d67b9984f5 27-30,32-39
+  s_cf9932eea4f083::t_678b4c036a79c0 18-26,31,58,63-65
+  s_cf9932eea4f083::t_a5e182998459de 44
+  s_cf9932eea4f083::t_46bc4e9f141e0a 68,70-71,73
+  s_cf9932eea4f083::t_00ebac20ca0da2 72,74-81
+  s_cf9932eea4f083::t_91f132c80ff800 59,62
+  s_cf9932eea4f083::t_e1b0d704f9323c 96-97
+  s_cf9932eea4f083::t_f5390e741ab447 1-17
+  s_cf9932eea4f083::t_641c04f1c8b1a7 91-94,103-106
+  s_cf9932eea4f083::t_dfdbeedb5e30c0 45
+  s_cf9932eea4f083::t_ccb2dae67a3d9c 66-67,69,82-83
+  s_cf9932eea4f083::t_ffae0302986ed0 47,49-50
+  s_cf9932eea4f083::t_6747a606ce90d2 40-42,55-57
+  s_cf9932eea4f083::t_fcebf0141b62d3 51-54
+  s_cf9932eea4f083::t_8e5c6f83b31b22 60-61
+  s_cf9932eea4f083::t_14def44527a93e 48
+  s_cf9932eea4f083::t_3dd8b1a48e0a99 84-87,89
+.env.example
+  s_6947b41c1d0345::t_996f72cdeca1f3 33
+README.md
+  s_9cc28807d0c8b3::t_cd8cba14ae7691 202-203,206-208
+  s_9cc28807d0c8b3::t_7f4a583afee40d 245-246,248,250-251
+  s_9cc28807d0c8b3::t_c1e9f9be7fd733 19-20,24,34-37,44,46-53,56
+  s_d134bb5461d8af::t_7bf156d5663d5d 83
+  s_cf9932eea4f083::t_6ff018225dadfb 25-33,38-41,43,45,54,57-63,65-69,71-73,76-82,84-92,94-99,101-103,105-108,120-124,126-129,131-141,143,145,147-150,159-180,192-196,198-200,204-205,209-210,212-214,216-219,221-222,224-227,229-233,235,241-244,259,278
+  s_91907203c1b872::t_ae5fe101f2f96c 74-75
+todo.md
+  h_0e239642edda1b 1,3-9,11-18,21-22,24,27,29,31,33-34
+docs/getting-started.md
+  s_a40d1a8c079dc8::t_6ebbd80df0d1a6 29-31
+  s_cf9932eea4f083::t_6ff018225dadfb 17-19,48
+  s_cf9932eea4f083::t_a5e182998459de 52
+  s_d134bb5461d8af::t_74b3ac869b69e6 60
+.gitignore
+  s_6947b41c1d0345::t_91509a09b09187 408-409
+  s_6947b41c1d0345::t_d9e791c1da1dcc 407
+  s_cf9932eea4f083::t_edcff9cb87ba62 58,75,113-135,146-154,156-177,179-231
+  s_9cc28807d0c8b3::t_55aef03cd21f74 39-44
+docs/linked-tools-index.md
+  s_6947b41c1d0345::t_02e98721921ce1 112
+  s_91907203c1b872::t_537ddc6e877827 70
+  s_9cc28807d0c8b3::t_01a51173a84f17 36
+  s_9cc28807d0c8b3::t_7c631703ecb495 21-22,25
+  s_6947b41c1d0345::t_6c5a186b418932 117
+  s_9cc28807d0c8b3::t_e74fbd46b9ad8b 61
+  s_9cc28807d0c8b3::t_6c87189e3267a8 126
+  s_cf9932eea4f083::t_a5e182998459de 33-34,40,84,94-95,97
+  s_6947b41c1d0345::t_9105070e31c7de 127
+  s_6947b41c1d0345::t_da2dd0d914a7cb 128
+  s_9cc28807d0c8b3::t_10ef8b0e99d310 136
+  s_9cc28807d0c8b3::t_ade3db09e17e4d 13
+  s_9cc28807d0c8b3::t_6b501346059685 35
+  s_9cc28807d0c8b3::t_8ac873de84f929 47
+  s_d134bb5461d8af::t_962a9248e46a09 93
+  s_91907203c1b872::t_106d130f22fd1c 166
+  s_9cc28807d0c8b3::t_54215d2f63c34c 57
+  s_91907203c1b872::t_6e4e4dd7417698 32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "5932f16d95c3b8ca8490ac2b7a25ed67b3e0e16f",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_0133f9ca4f9c8f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f7b249c-cb2f-42de-b16f-d4abe003d778",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_6947b41c1d0345": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "94a5392d-fc5f-4f95-8969-f3fb48719ae9",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_91907203c1b872": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "0338c9fd-f52a-48aa-b30a-f98ea828a338",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_9cc28807d0c8b3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "83519ffb-8397-4e43-82af-24f940dfbc78",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_a40d1a8c079dc8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "172ff549-d07f-4a89-8009-adc9ed85add3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_cf9932eea4f083": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9e21c60d-a6fc-4c15-91f5-aeb86f4271ef",
+        "model": "default"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_d134bb5461d8af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "13ef0c14-4f7a-40e9-a2c0-4713f784c314",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
