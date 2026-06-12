@@ -1,0 +1,39 @@
+src/graph/review-state-annotation.ts
+  s_d9071b20c4f57b::t_b5a994e03425db 117-122
+src/graph/review-edges.ts
+  s_d9071b20c4f57b::t_b5a994e03425db 45-46,140-144,149-156
+src/nodes/review-classify-verification-plan.ts
+  s_d9071b20c4f57b::t_b5a994e03425db 1-64
+src/nodes/review-curate-gaps.ts
+  s_d9071b20c4f57b::t_b5a994e03425db 13-14,29,36-39,43,49
+src/nodes/review-pick-gap.ts
+  s_d9071b20c4f57b::t_b5a994e03425db 16-17,27-28,36-39,41,43-44,46,51
+src/review/phases.ts
+  s_d9071b20c4f57b::t_b5a994e03425db 71-72,104-105
+src/review/state.ts
+  s_d9071b20c4f57b::t_b5a994e03425db 97-104,110-114,117
+src/utils/triage-ac-modality.ts
+  s_d9071b20c4f57b::t_b5a994e03425db 99-106,112-143,161,168-184
+src/graph/review-loop.ts
+  s_d9071b20c4f57b::t_b5a994e03425db 47,77,81,145,147-149
+src/utils/verification-plan.ts
+  s_d9071b20c4f57b::t_b5a994e03425db 1-64
+src/nodes/review-extract-acs.ts
+  s_d9071b20c4f57b::t_b5a994e03425db 4-5,7-8,45-48,52-53,63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "a5429b3440879976b18b73fecfccd69ee7882467",
+  "prompts": {},
+  "sessions": {
+    "s_d9071b20c4f57b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "33cb174e-472e-4800-a99c-0551f529065f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
