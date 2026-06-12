@@ -1,0 +1,70 @@
+.agents/skills/prd-review
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+.agents/skills/tools-comparison
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+.agents/skills/caveman
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+.agents/skills/solution-design
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+.agents/skills/figma-extract
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+scripts/personal-tooling-sync/helpers/sync/engine/skill-library-links.mjs
+  s_4e9ea33086dc68::t_25ea06d73dde5e 37
+  s_4e9ea33086dc68::t_7761771e85c3f5 12,15-17
+.agents/skills/tests-overlay-sync
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+scripts/personal-tooling-sync/helpers/sync/engine/verify-sync.mjs
+  s_4e9ea33086dc68::t_f2431cb86f1443 76
+scripts/personal-tooling-sync/helpers/layout/linked-merge.mjs
+  s_4e9ea33086dc68::t_feddfb6e9ed343 95
+  s_4e9ea33086dc68::t_aa50478f532b30 5-8
+  s_4e9ea33086dc68::t_ab07c847996541 127
+  s_4e9ea33086dc68::t_d416d314ebccd1 72-73
+.agents/skills/figma-api
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+.agents/skills/caveman-commit
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+.agents/skills/generate-tools-index
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+.agents/skills/caveman-help
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+.agents/skills/generate-readme
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+.agents/skills/caveman-review
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+.agents/skills/devcontainer-sync-park
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+.agents/skills/overlay-park
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+.agents/skills/caveman-compress
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+.agents/skills/generate-workflows
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+.agents/skills/todo-cleanup
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+.agents/skills/tools-repo-manager
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+.agents/skills/subagent-scan
+  s_4e9ea33086dc68::t_b746531407ba3d 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "c26cf31ba9c7eb297fb655707aa3fd94b5d2a487",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_4e9ea33086dc68": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "eaae79ea-935d-44ce-9b9d-d9c72e0b26d5",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
