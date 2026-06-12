@@ -1,0 +1,19 @@
+linked-tools/core/.agents/rules/editor/10-project/look-for-missing-tooling-in-branches.mdc
+  s_dc969cb3b38e4f::t_2739eb44bf0501 1-73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "7e2920893dd6524eef7a18794377a2eaa1c267b1",
+  "prompts": {},
+  "sessions": {
+    "s_dc969cb3b38e4f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4e71e973-1752-488e-8634-d53d83f8c78d",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
