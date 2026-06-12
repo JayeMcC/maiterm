@@ -62,6 +62,25 @@
   let imageEl = $state<HTMLImageElement | null>(null);
   let imageScrollEl = $state<HTMLDivElement | null>(null);
   let altKeyHeld = $state(false);
+
+  /** Background behind the image — lets transparent PNGs be seen regardless of the app theme. Persisted globally. */
+  type ImageBg = 'dark' | 'light' | 'checker';
+  const IMAGE_BG_KEY = 'aiterm.imageViewerBg';
+  const IMAGE_BG_ORDER: ImageBg[] = ['dark', 'light', 'checker'];
+  const IMAGE_BG_LABEL: Record<ImageBg, string> = { dark: 'Dark', light: 'Light', checker: 'Checkerboard' };
+  function loadImageBg(): ImageBg {
+    try {
+      const v = localStorage.getItem(IMAGE_BG_KEY);
+      if (v === 'dark' || v === 'light' || v === 'checker') return v;
+    } catch { /* localStorage may be unavailable */ }
+    return 'dark';
+  }
+  let imageBg = $state<ImageBg>(loadImageBg());
+  function cycleImageBg() {
+    const i = IMAGE_BG_ORDER.indexOf(imageBg);
+    imageBg = IMAGE_BG_ORDER[(i + 1) % IMAGE_BG_ORDER.length];
+    try { localStorage.setItem(IMAGE_BG_KEY, imageBg); } catch { /* ignore */ }
+  }
   let wordWrap = $state(false);
   const wrapCompartment = new Compartment();
 
@@ -1358,10 +1377,17 @@
           <button class="zoom-label" class:zoom-fit={imageZoom === 0} onclick={zoomFit} title="Fit to window">{displayZoom}%</button>
           <IconButton tooltip="Zoom in" style="width:22px;height:20px;border-radius:3px;font-size: 1.077rem" onclick={() => zoomIn()} disabled={displayZoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]}>+</IconButton>
         </div>
+        <span class="info-sep"></span>
+        <IconButton tooltip={`Background: ${IMAGE_BG_LABEL[imageBg]} — click to change (for transparent images)`} style="width:22px;height:20px;border-radius:3px" onclick={cycleImageBg}>
+          <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5" />
+            <path d="M8 1.75 A6.25 6.25 0 0 1 8 14.25 Z" fill="currentColor" />
+          </svg>
+        </IconButton>
       </div>
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="image-scroll" bind:this={imageScrollEl} onclick={handleImageClick} oncontextmenu={handleImageContextMenu} onmousemove={handleImageMouseMove} onmouseleave={handleImageMouseLeave}>
+      <div class="image-scroll" class:bg-light={imageBg === 'light'} class:bg-checker={imageBg === 'checker'} bind:this={imageScrollEl} onclick={handleImageClick} oncontextmenu={handleImageContextMenu} onmousemove={handleImageMouseMove} onmouseleave={handleImageMouseLeave}>
         <img
           bind:this={imageEl}
           src={imageDataUrl}
@@ -1668,6 +1694,22 @@
     min-height: 0;
     cursor: none;
     /* Center small images via margin auto on the img; large images scroll naturally */
+  }
+
+  /* Background switcher — default (dark) inherits the theme; these override for transparent images */
+  .image-scroll.bg-light {
+    background: #ffffff;
+  }
+
+  .image-scroll.bg-checker {
+    background-color: #ffffff;
+    background-image:
+      linear-gradient(45deg, #c4c4c4 25%, transparent 25%),
+      linear-gradient(-45deg, #c4c4c4 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #c4c4c4 75%),
+      linear-gradient(-45deg, transparent 75%, #c4c4c4 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
   }
 
   .image-scroll img {
