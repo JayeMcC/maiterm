@@ -1,0 +1,44 @@
+scripts/personal-tooling-sync/helpers/sync/engine/skill-library-links.mjs
+  s_4e9ea33086dc68::t_9fc71590555fd1 34
+  s_4e9ea33086dc68::t_cf72538212acfb 1-11,14-33,35-254
+  s_4e9ea33086dc68::t_a305194304b79c 12-13
+scripts/personal-tooling-sync/helpers/layout/linked-merge.mjs
+  s_4e9ea33086dc68::t_97eab3fd7b2c83 4-7,9-12
+  s_4e9ea33086dc68::t_02c5da1cc6d412 86-87
+  s_4e9ea33086dc68::t_459f3d0832b9c5 143
+  s_4e9ea33086dc68::t_441b8794831460 41-57
+  s_4e9ea33086dc68::t_8ef4f0c6db621d 88-89
+  s_4e9ea33086dc68::t_8ec93a9749bb6d 170-172
+  s_4e9ea33086dc68::t_993a96ae4466d2 111
+  s_4e9ea33086dc68::t_e2451407c7e102 28
+scripts/personal-tooling-sync/helpers/sync/commands.mjs
+  s_4e9ea33086dc68::t_8c265fe24b35b4 68
+scripts/personal-tooling-sync/helpers/targets.mjs
+  s_4e9ea33086dc68::t_b78d69e45a1e2f 298-299
+scripts/personal-tooling-sync/helpers/sync/engine/verify-sync.mjs
+  s_4e9ea33086dc68::t_5ed41e88e5d273 73-81
+scripts/personal-tooling-sync/helpers/sync/engine/tooling.mjs
+  s_4e9ea33086dc68::t_c00d6086836afc 311-315
+  s_4e9ea33086dc68::t_6369ec1d69a493 91-94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "fcfefb67f771cc8b87dfdee6592fb6ec036979bb",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_4e9ea33086dc68": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "eaae79ea-935d-44ce-9b9d-d9c72e0b26d5",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

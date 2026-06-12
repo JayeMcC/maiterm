@@ -1,0 +1,25 @@
+linked-tools/repos/forwood-one-tools/scripts/personal-sync-devcontainer-setup/apply-forwood-one-devcontainer-reviewing.mjs
+  s_fa161b2e607650::t_d21c67312089d4 46-53,107
+linked-tools/repos/forwood-one-tools/scripts/personal-sync-devcontainer-setup/templates/forwood-one-devcontainer-reviewing/.env.example
+  s_fa161b2e607650::t_d21c67312089d4 33-43,74-75
+linked-tools/repos/forwood-one-tools/scripts/personal-sync-devcontainer-setup/templates/forwood-one-devcontainer-reviewing/.changesignore-content
+  s_fa161b2e607650::t_d21c67312089d4 2-3,6-7,9,11
+linked-tools/repos/forwood-one-tools/scripts/personal-sync-devcontainer-setup/templates/forwood-one-devcontainer-reviewing/.devcontainer/docker-compose.yml
+  s_fa161b2e607650::t_d21c67312089d4 10-24,45,69-70,73-74,86-94,103-120,125,138-169,178-192,197,209-239,283,285,288-298
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "5ee4f96f3dd7fd84dc0f9df6481aef280a264ca3",
+  "prompts": {},
+  "sessions": {
+    "s_fa161b2e607650": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5cc8a47c-675d-4602-8b0f-0cb695415d9b",
+        "model": "composer-2.5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

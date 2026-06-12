@@ -1,0 +1,172 @@
+.agents/skills/respond-to-ai-review
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/rules/20-workflow
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/migrate-skill
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/commit-diff-coverage
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/tdd
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/devcontainer-logs
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/hooks/playwright-install-guard.mjs
+  s_cf9932eea4f083::t_6ff018225dadfb 5-10,23-31,39-94,98-102,107-113,121-140,144-156,160-165,169-173,177,181,186,188-189,194-195,199-204,209-215
+.agents/skills/edit-article
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/setup-matt-pocock-skills
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/migrate-to-shoehorn
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/report-changes
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/speckit-step-flow
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/commands/generate-workflows.md
+  s_91907203c1b872::t_34b326d6628b87 1-7
+.agents/skills/apply-pr-review
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/playwright-workflows
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/bitbucket-pr-comment
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/pre-commit-checks
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/personal-tooling-sync-fix
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/writing-shape
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/improve-codebase-architecture
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/bitbucket-pr-inline-per-changed-file
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/bitbucket-build-failure
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/writing-fragments
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/clear-skill-logs
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/decompose-orchestrator
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/to-prd
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/rules/00-governance
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/handoff
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/scaffold-exercises
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/grill-me
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/scan-bitbucket-pr
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/skill-eval
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/skill-lint
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/ubiquitous-language
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/rules/editor/00-governance
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/report-prompt-context
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/hooks/README.md
+  s_cf9932eea4f083::t_6ff018225dadfb 9,24-25,30-31,49-51
+.agents/skills/generate-workflows/references/workflows-sections.md
+  s_91907203c1b872::t_5a03b272388f6d 1-48
+.agents/skills/qa
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/review
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/setup-pre-commit
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/scan-jira-ticket
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/grill-with-docs
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/obsidian-vault
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/hooks/package-json-edit-guard.mjs
+  s_cf9932eea4f083::t_6ff018225dadfb 18-20,25-35,39-50,54-64,66-92,96-101,105-109,113,117,122,124-129,135-136,141-147
+.agents/rules/editor/20-workflow
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/git-guardrails-claude-code
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/to-issues
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/visual-regression
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/devcontainer-sync-park/SKILL.md
+  s_0133f9ca4f9c8f::t_30bb49542728ec 4-5,7,10,12,14
+.agents/skills/vault-query
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/skill-creator
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/request-refactor-plan
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/zoom-out
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/triage
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/write-a-skill
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/tooling-engagement-status-report
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/diagnose
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/meta
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/teach
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/writing-beats
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/generate-workflows/workflow.md
+  s_91907203c1b872::t_b67b53ab0d7407 1-37
+.agents/skills/prototype
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/generate-tickets
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/vault-lint
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+.agents/skills/generate-workflows/SKILL.md
+  s_91907203c1b872::t_d453fd7260aea7 1-51
+.agents/skills/design-an-interface
+  s_0133f9ca4f9c8f::t_93606899e1ff10 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "44ff2f2f50c6e78e1c5ccdf6bd968b879456d4de",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_0133f9ca4f9c8f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f7b249c-cb2f-42de-b16f-d4abe003d778",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_91907203c1b872": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "0338c9fd-f52a-48aa-b30a-f98ea828a338",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_cf9932eea4f083": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9e21c60d-a6fc-4c15-91f5-aeb86f4271ef",
+        "model": "default"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

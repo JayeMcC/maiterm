@@ -1,0 +1,19 @@
+linked-tools/core/scripts/bw-helpers.sh
+  s_fa161b2e607650::t_2ce8729e28ac0c 1-220
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "7759055094fdd48cb13ea32a8cf37b78675fe6df",
+  "prompts": {},
+  "sessions": {
+    "s_fa161b2e607650": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5cc8a47c-675d-4602-8b0f-0cb695415d9b",
+        "model": "composer-2.5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

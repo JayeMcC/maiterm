@@ -1,0 +1,20 @@
+AGENTS.md
+  s_e1aaec626bb1bc::t_ac6760a13e7abe 43,47-50
+  s_e1aaec626bb1bc::t_4b11b9b98fec22 86-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "b25d236e201420acebcc896c79a857cadac3bec7",
+  "prompts": {},
+  "sessions": {
+    "s_e1aaec626bb1bc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6fd44e7c-d5ae-4a51-87f8-5e18b0f87425",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

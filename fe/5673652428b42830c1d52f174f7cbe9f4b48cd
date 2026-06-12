@@ -1,0 +1,19 @@
+linked-tools/core/.agents/skills/speckit-step-flow/SKILL.md
+  s_fa161b2e607650::t_bd8b34184e2b2b 4,13,21,38,40,50-61,77-78,91-150,199-201,210,214,216,222,255-259,268-356,363-365
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "fe5673652428b42830c1d52f174f7cbe9f4b48cd",
+  "prompts": {},
+  "sessions": {
+    "s_fa161b2e607650": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5cc8a47c-675d-4602-8b0f-0cb695415d9b",
+        "model": "composer-2.5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

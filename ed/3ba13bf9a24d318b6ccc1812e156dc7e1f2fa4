@@ -1,0 +1,513 @@
+linked-tools/core/.agents/skills/decompose-orchestrator/references/inventory-template.md
+  s_cf9932eea4f083::t_6ff018225dadfb 3-5
+linked-tools/repos/forwood-one-tests/docs/regression-pipeline.md
+  s_cf9932eea4f083::t_6ff018225dadfb 13-17,72,128-131,152-156,178-180,190-193,237-277,297-298
+linked-tools/core/.agents/skills/speckit-step-flow/references/bugfix-pr-body-tests.md
+  s_cf9932eea4f083::t_636c9f79a46839 1,3
+linked-tools/core/.agents/skills/tdd/references/mocking.md
+  s_cf9932eea4f083::t_6ff018225dadfb 27,32-33,44-46,51
+linked-tools/core/.agents/skills/devcontainer-logs/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 6,27-34,46-48,114-117
+linked-tools/core/.agents/skills/skill-lint/reference/subagents.md
+  s_cf9932eea4f083::t_6ff018225dadfb 16-18,22-23
+  s_cf9932eea4f083::t_a5e182998459de 36
+linked-tools/core/.agents/skills/generate-tickets/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 6,32-34,42-44,46,48-50,53-57,61-66,70-72,76-78,80,82-84,86,88-90,94-96
+linked-tools/repos/forwood-one-tests/.agents/skills/test-codegen-verification/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 7,24-26,60-61,63,65-66,68,70-71,73,75-77,79,81-82,84,86,122-130,148-151,153-155,157-159,161,175,182-184
+linked-tools/repos/forwood-one-tests/.agents/skills/test-codegen/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 33-34,36,38-39,41,43-44,46,48-49,51,53-54,82-87,94-95,105-106,112-113,145-148,150-151,153-154,160,171-172,213-216,218
+linked-tools/repos/forwood-one-tests/docs/test-generation-flow-2.md
+  s_cf9932eea4f083::t_6ff018225dadfb 29-36,41,53-54,56-59,81-83,116-124,151,161-163,166-168,171-173,232-233,258-260,295-297,299-310,365-371,431-438,494-505,507-509,511-512,514-516,518-528
+  s_a40d1a8c079dc8::t_d0e32f385a645a 39
+linked-tools/repos/forwood-one/docs/guides/adding-frontend-features.md
+  s_cf9932eea4f083::t_6ff018225dadfb 41-45,48-51,54-56,59-61,110-113,117-119,121-126,128-131,135-147,157-160,166-167,169-176,180-181,183,187-188,190,194-196,198-202,206-207,209,224,240-241,246-254,259-275,280-299,322-351,363-389,397-401,409,411-413,432-433,437-438,443-446,451-480,485-520,525-551,556-582,596-599,604,608-612,617-619,645-652,669-672,679-681,695-698,702-735,746-748,752-792,819-822,835-860,873-901,917-919,923-975,989-1024,1028-1051,1063-1089,1099-1100,1102,1104-1107,1109-1110,1125-1154,1170-1212,1226,1230-1231,1233-1236,1309-1310,1312,1323-1324,1329-1330,1342,1344-1348
+linked-tools/repos/forwood-one-tests/.agents/skills/test-generate/references/data-setup-template.md
+  s_cf9932eea4f083::t_6ff018225dadfb 7-12,15-44,87-89,92-101
+linked-tools/repos/forwood-one-tests/.agents/skills/playwright-cli/references/playwright-browsers-path.md
+  s_a40d1a8c079dc8::t_d2f1e50eb83aef 55
+linked-tools/core/.agents/skills/visual-regression/references/codified-spec-template.md
+  s_cf9932eea4f083::t_6ff018225dadfb 12-13,32-59,77
+linked-tools/core/docs/agent-environment/files-and-symlinks.md
+  s_6947b41c1d0345::t_123de6110c4d94 28
+  s_a40d1a8c079dc8::t_ad928890f4e59c 18
+linked-tools/repos/forwood-one-tests/.agents/skills/test-generate-verification/workflow.md
+  s_cf9932eea4f083::t_6ff018225dadfb 43-44,46-50,93-94,96,98-99,101,103-104,106,108-109,111,113-116,118,120-121,123,125-126,192-208,211-247
+linked-tools/core/.agents/commands/skill-lint.md
+  s_cf9932eea4f083::t_a5e182998459de 9
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/10-project/playwright-repo-context.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 120-121,128-130
+linked-tools/repos/forwood-one/.agents/skills/ticket-branch-split/references/split-proposal-template.md
+  s_cf9932eea4f083::t_6ff018225dadfb 78
+linked-tools/core/.agents/skills/setup-matt-pocock-skills/references/domain.md
+  s_cf9932eea4f083::t_6ff018225dadfb 21-22,31,33-38
+linked-tools/repos/forwood-one-tests/scripts/e2e-develop-harness/README.md
+  s_cf9932eea4f083::t_6ff018225dadfb 32-43
+linked-tools/repos/forwood-one-tests/docs/regression-pipeline-2.md
+  s_cf9932eea4f083::t_6ff018225dadfb 29-33,88,144-147,168-172,194-196,206-209,253-293,313-314
+linked-tools/core/.agents/skills/report-prompt-context/workflow.md
+  s_cf9932eea4f083::t_6ff018225dadfb 38-40,43-45,72-73
+linked-tools/core/.agents/skills/report-changes/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 9,54-55,62-64,205-206,288,307,320-321,336,343-344,385-387,405-407,409
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/10-project/red-test-screenshot-and-link.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 4-8,19-20,23-25
+linked-tools/repos/forwood-one/.vscode/scripts/tasks/api-dev-with-workspace-watch.mjs
+  s_cf9932eea4f083::t_6ff018225dadfb 12-16,25-26,35,37,39-40,43-47,51-57,61-67,72-76,83-110,114-119,128-129,133-139,143-144,147-148,152-153,157-184,188-198
+linked-tools/repos/forwood-one-tests/.agents/skills/playwright-cli/references/local-diagnostic-harness.md
+  s_cf9932eea4f083::t_6ff018225dadfb 60-73,126-128
+linked-tools/core/.agents/skills/prototype/references/UI.md
+  s_cf9932eea4f083::t_6ff018225dadfb 64-69
+linked-tools/repos/forwood-one-tests/AGENTS.md
+  s_cf9932eea4f083::t_6ff018225dadfb 8-17,19-27,32-35,37,52-53,95-97,99-101,131-135,208-211
+  s_9cc28807d0c8b3::t_aeeed607eece94 68
+linked-tools/core/.agents/skills/skill-creator/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 23-24,75,86-87,89-91,113-115,159-167,202-205,223-225,238-241,247-257,283-288,353-354,376-378,393-397,488-489
+linked-tools/core/.agents/skills/commit-diff-coverage/workflow.md
+  s_cf9932eea4f083::t_6ff018225dadfb 30,32-33,43-44,46-47,49-50,59-61,63-66,68-69
+linked-tools/repos/forwood-one-tests/.agents/skills/test-codegen-verification/references/subagents.md
+  s_cf9932eea4f083::t_a5e182998459de 37
+linked-tools/core/docs/agent-environment/moving-files-into-linked-tools.md
+  s_6947b41c1d0345::t_123de6110c4d94 27
+  s_cf9932eea4f083::t_ec2537d6ff730f 25
+  s_a40d1a8c079dc8::t_628a8581f41367 16,18,29,42
+  s_cf9932eea4f083::t_66d94f204a15c7 40
+linked-tools/core/.agents/rules/editor/10-project/linked-tools-path-references.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 3,14,17-21
+  s_6947b41c1d0345::t_f71fd084818d8d 15,23,27,37,45
+  s_a40d1a8c079dc8::t_2867a153e393cb 41
+linked-tools/core/.agents/skills/report-prompt-context/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 5
+linked-tools/repos/forwood-one/.agents/commands/speckit.bugfix-docs.md
+  s_cf9932eea4f083::t_f7c41c4969cde0 46
+linked-tools/core/.agents/rules/editor/20-workflow/review-tool-discovery.mdc
+  s_a40d1a8c079dc8::t_6b12ce7e22752f 21
+  s_cf9932eea4f083::t_6ff018225dadfb 14-15
+linked-tools/core/.agents/skills/speckit-step-flow/references/pr-manual-tests.md
+  s_cf9932eea4f083::t_1d601e222000c7 24
+  s_cf9932eea4f083::t_c9c0db0f55c52b 26
+  s_cf9932eea4f083::t_9ddeb7d8898a00 1,3,5
+  s_cf9932eea4f083::t_6ff018225dadfb 56-57
+linked-tools/core/.agents/skills/teach/references/RESOURCES-FORMAT.md
+  s_cf9932eea4f083::t_6ff018225dadfb 13,15,20,22
+linked-tools/repos/forwood-one/docs/guides/remote-multi-container-setup.md
+  s_cf9932eea4f083::t_6ff018225dadfb 112,114,136,143,145-147,192
+linked-tools/repos/forwood-one/docs/guides/adding-frontend-features-2.md
+  s_cf9932eea4f083::t_6ff018225dadfb 57-61,64-67,70-72,75-77,126-129,133-135,137-142,144-147,151-163,173-176,182-183,185-192,196-197,199,203-204,206,210-212,214-218,222-223,225,240,256-257,262-270,275-291,296-315,338-367,379-405,413-417,425,427-429,448-449,453-454,459-462,467-496,501-536,541-567,572-598,612-615,620,624-628,633-635,661-668,685-688,695-697,711-714,718-751,762-764,768-808,835-838,851-876,889-917,933-935,939-991,1005-1040,1044-1067,1079-1105,1115-1116,1118,1120-1123,1125-1126,1141-1170,1186-1228,1242,1246-1247,1249-1252,1325-1326,1328,1339-1340,1345-1346,1358,1360-1364
+linked-tools/repos/forwood-one-tests/.agents/skills/e2e-fresh-pass/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 6
+linked-tools/core/.agents/rules/editor/skill-authoring-standard.md
+  s_cf9932eea4f083::t_a5e182998459de 13
+linked-tools/repos/forwood-one/docs/guides/multi-stack-local-dev.md
+  s_cf9932eea4f083::t_6ff018225dadfb 31,33-40,63-64,91,93-94
+linked-tools/repos/forwood-one/.agents/skills/ticket-change-triage/references/subagents.md
+  s_cf9932eea4f083::t_a5e182998459de 35
+linked-tools/core/.agents/skills/visual-regression/scripts/compare.mjs
+  s_cf9932eea4f083::t_6ff018225dadfb 7-13,17-18,25-29,33,39-67,73-74,77-78
+linked-tools/core/.agents/skills/commit-diff-coverage/references/subagents.md
+  s_cf9932eea4f083::t_a5e182998459de 39
+linked-tools/repos/forwood-one/docs/standards/02-getting-started-2.md
+  s_cf9932eea4f083::t_6ff018225dadfb 53,76-78,84-85,92,94-97,102-103,178,180,216,218-223,238,248,263,265-267,283,285-286,294-295
+linked-tools/core/.agents/skills/scan-bitbucket-pr/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 5,21-24,33-35,39-41,43,45-47
+linked-tools/core/.agents/rules/editor/10-project/agent-environment-guides.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+linked-tools/core/.agents/skills/bitbucket-pr-comment/references/rest-cli.md
+  s_cf9932eea4f083::t_6ff018225dadfb 27-28,47-52
+linked-tools/core/.agents/skills/respond-to-ai-review/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 6,53-56,58-59,61-62,64-65,67-69
+linked-tools/core/.agents/skills/visual-regression/references/report-template.md
+  s_cf9932eea4f083::t_6ff018225dadfb 13-16,47,49-52,75-76,78
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/20-workflow/harness-violation-patch-not-promise.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+linked-tools/core/.agents/skills/visual-regression/workflow.md
+  s_cf9932eea4f083::t_6ff018225dadfb 30-31,37-38,42-43,58-59,174-175,203-223,231,234,239,246,250-295,313-333,341,344,349,356,360-398,410-414,435-438
+linked-tools/core/docs/agent-environment/devcontainer-sync.md
+  s_cf9932eea4f083::t_a5e182998459de 10,28
+  s_9cc28807d0c8b3::t_2559377b3ed687 18-19
+  s_9cc28807d0c8b3::t_8a0b2061671cc4 6
+linked-tools/core/.agents/skills/speckit-step-flow/SKILL.md
+  s_cf9932eea4f083::t_fd7257a000de87 363
+  s_cf9932eea4f083::t_330acd6352f93c 222-224
+  s_cf9932eea4f083::t_abd9a3643d1a2e 44
+  s_cf9932eea4f083::t_6ff018225dadfb 6,27-31,131,232-236,246-248,251-259,261,263,265-268,365-368,377,380-385
+  s_cf9932eea4f083::t_07738363a482df 359-362,364,369-376,378-379,386-401,406-407
+linked-tools/repos/forwood-one/.agents/skills/ticket-change-triage/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 7,31-33,36-38,41-44,47-52,55-56
+linked-tools/core/.agents/skills/tdd/references/deep-modules.md
+  s_cf9932eea4f083::t_6ff018225dadfb 9,11-15,23,25
+linked-tools/repos/forwood-one-tests/.agents/skills/explore-encode-playwright/references/playwright-cli-helpers-library.md
+  s_cf9932eea4f083::t_6ff018225dadfb 10-13,53-54,56,63-64,125-126,138-139
+linked-tools/repos/forwood-one-tests/.agents/skills/test-codegen-verification/workflow.md
+  s_cf9932eea4f083::t_6ff018225dadfb 15-17,49-50,52,54-55,57,59-60,62,64-66,68,70-71,73,75,111-119,137-140,142-144,146-148,150,164,171-173
+linked-tools/repos/forwood-one-tests/.agents/skills/playwright-cli/references/running-code.md
+  s_cf9932eea4f083::t_6ff018225dadfb 9-10,19-20,25-26,31,40-45,50-52,61,66,71,76,85,90,95,100,109-110,115-116,125-130,139-140,145,154,159,164,169,178-184,189-190,199-204,213-219,224-230
+linked-tools/repos/forwood-one-tests/.vscode/scripts/run-personal-tooling.sh
+  s_a40d1a8c079dc8::t_91ef13ab5faa87 2,6-7,9,17,19,21,24,26,32,34
+  s_6947b41c1d0345::t_123de6110c4d94 8
+linked-tools/core/.agents/skills/clear-skill-logs/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 5
+linked-tools/core/.agents/skills/bitbucket-pr-inline-per-changed-file/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 4-7,11
+linked-tools/core/.agents/skills/improve-codebase-architecture/references/HTML-REPORT.md
+  s_cf9932eea4f083::t_6ff018225dadfb 10-32,67-74
+linked-tools/core/.agents/skills/apply-pr-review/workflow.md
+  s_cf9932eea4f083::t_6ff018225dadfb 22-23,116-117
+linked-tools/core/.agents/rules/editor/10-project/tools-repo-overseer.mdc
+  s_cf9932eea4f083::t_a5e182998459de 15,29
+  s_d134bb5461d8af::t_beae1213191d25 25
+  s_cf9932eea4f083::t_6ff018225dadfb 3-6
+linked-tools/core/.agents/commands/generate-tickets.md
+  s_cf9932eea4f083::t_6ff018225dadfb 3-4
+linked-tools/core/.agents/skills/solution-researcher.md
+  s_cf9932eea4f083::t_6ff018225dadfb 40-41,43-44,53-59
+linked-tools/repos/forwood-one-tests/tests/e2e/bugfix/forms/EAP-1066/manual-playwright-cli-verification-response-path.md
+  s_cf9932eea4f083::t_6ff018225dadfb 26,31-32
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/10-project/playwright-cli-helpers-ticket-stories.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+linked-tools/core/.agents/commands/vault-query.md
+  s_cf9932eea4f083::t_6ff018225dadfb 3-5
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/00-governance/spec-failure-playwright-cli-headed-persistent-proof.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+  s_a40d1a8c079dc8::t_3632dee54d4cac 29
+linked-tools/core/.agents/skills/visual-regression/references/element-flow-mapping.md
+  s_cf9932eea4f083::t_6ff018225dadfb 8-9
+linked-tools/core/.agents/rules/editor/20-workflow/commit-message-format.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 4
+linked-tools/repos/forwood-one/docs/standards/05-frontend-engineering-standards.md
+  s_cf9932eea4f083::t_6ff018225dadfb 16,18-24,48-66,68-75,82,84-88,127-129,131-133,135-136,163,165,167,183,185-189,196-204,206-210,212,228-229,244-246,257-260,268,270-271,294-295,322-325,352,368-377,397,411-427,478,482-486
+linked-tools/repos/forwood-one-tests/.agents/skills/test-generate/references/test-script-template.md
+  s_cf9932eea4f083::t_6ff018225dadfb 8-11,56,59,123-126,173,176
+linked-tools/core/.agents/rules/editor/20-workflow/skill-run-preamble.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 3-4
+linked-tools/core/.agents/rules/20-workflow/personal-tooling-store.md
+  s_cf9932eea4f083::t_6ff018225dadfb 4,20-21
+linked-tools/core/.agents/skills/report-changes/references/subagents.md
+  s_cf9932eea4f083::t_a5e182998459de 39
+linked-tools/repos/forwood-one/.agents/skills/ticket-branch-split/workflow.md
+  s_cf9932eea4f083::t_6ff018225dadfb 27-29,31-33,35-37
+linked-tools/core/.agents/skills/apply-pr-review/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 8
+linked-tools/core/.agents/skills/tdd/references/interface-design.md
+  s_cf9932eea4f083::t_6ff018225dadfb 7-9,11-15,19-21,23-27,30-31
+linked-tools/repos/forwood-one/.agents/skills/ticket-change-triage/workflow.md
+  s_cf9932eea4f083::t_6ff018225dadfb 22-24,27-29,32-35,38-43,46-47
+linked-tools/core/.agents/skills/bitbucket-build-failure/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 7,9,51-58
+linked-tools/core/docs/agent-environment/workspace-and-cwd.md
+  s_cf9932eea4f083::t_a5e182998459de 30
+linked-tools/core/docs/agent-environment/playwright-workflows.md
+  s_cf9932eea4f083::t_6ff018225dadfb 30-31,33-34,36-37,39-40,42-43
+linked-tools/core/.agents/skills/prototype/references/LOGIC.md
+  s_cf9932eea4f083::t_6ff018225dadfb 48
+linked-tools/core/.agents/rules/20-workflow/no-unsolicited-tests-repo-docs.md
+  s_cf9932eea4f083::t_6ff018225dadfb 8-10,12,41-42,45-46
+  s_cf9932eea4f083::t_a5e182998459de 29
+linked-tools/repos/forwood-one-tests/docs/testing-combinations-strategy-2.md
+  s_cf9932eea4f083::t_6ff018225dadfb 34-37
+linked-tools/repos/forwood-one-tests/.agents/skills/test-generate-verification/references/subagents.md
+  s_cf9932eea4f083::t_a5e182998459de 42
+  s_cf9932eea4f083::t_6ff018225dadfb 25-30
+linked-tools/core/.agents/commands/decompose-orchestrator.md
+  s_cf9932eea4f083::t_6ff018225dadfb 3-4
+linked-tools/core/.agents/skills/write-a-skill/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 20-23,26-28,31-33,39-43
+linked-tools/core/.agents/skills/ubiquitous-language/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 24-26,40,42,47,50
+linked-tools/core/.agents/skills/migrate-to-shoehorn/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 43-46,50-56,66-70,108,110-112,117-119,122-127
+linked-tools/repos/forwood-one-tests/.agents/skills/playwright-cli/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 38,40,47-49,51,57,169-180,182,188-190,279-282,288-293,301-308,314-319,327-329,386-387
+linked-tools/core/.agents/skills/triage/references/OUT-OF-SCOPE.md
+  s_cf9932eea4f083::t_6ff018225dadfb 44-45
+linked-tools/core/.agents/skills/generate-tickets/scripts/walk-epic-tree.mjs
+  s_cf9932eea4f083::t_6ff018225dadfb 13-38,42-50,54-68,72-77,82-83,89-109,113-129,133-145,149-150,154,158-204,208-209
+linked-tools/core/.agents/skills/personal-tooling-sync-fix/SKILL.md
+  s_6947b41c1d0345::t_123de6110c4d94 15
+  s_a40d1a8c079dc8::t_17d4f473c94282 4
+  s_cf9932eea4f083::t_6ff018225dadfb 6
+linked-tools/core/.agents/skills/skill-eval/references/coverage-report-template.md
+  s_cf9932eea4f083::t_e6b41d4108aafd 13,16
+  s_cf9932eea4f083::t_ccf0ea63522347 29-37
+  s_cf9932eea4f083::t_a5e182998459de 14-15
+  s_cf9932eea4f083::t_d9d7246f85ea87 12
+linked-tools/repos/forwood-one-tests/.agents/skills/test-generate/references/readme-template.md
+  s_cf9932eea4f083::t_6ff018225dadfb 8-12,64-66,98-100,102-103
+linked-tools/repos/forwood-one-tests/.agents/skills/test-run-verification/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 7,24-27,59-60,62,64-65,67,69-70,72,74-78,80,82-83,85,87,130,135,153-161,164
+linked-tools/repos/forwood-one-tests/.agents/skills/playwright-cli/references/storage-state.md
+  s_cf9932eea4f083::t_6ff018225dadfb 35-55,116-119,167-171,213-216,224-226
+linked-tools/core/.agents/skills/decompose-orchestrator/SKILL.md
+  s_9cc28807d0c8b3::t_17ed2866dcfa35 4
+  s_cf9932eea4f083::t_6ff018225dadfb 8
+  s_9cc28807d0c8b3::t_485fac392e876e 39
+  s_9cc28807d0c8b3::t_8ae1ad5300fe7e 19
+linked-tools/core/.agents/skills/skill-lint/evals/fixtures/violation-skill/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 4
+linked-tools/core/.agents/skills/skill-eval/references/runner-via-task.md
+  s_cf9932eea4f083::t_6ff018225dadfb 33-34,37,43-47
+linked-tools/repos/forwood-one/.agents/skills/ticket-branch-split/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 6,35-37,39-41,43-45
+linked-tools/core/.agents/skills/scan-jira-ticket/scripts/scan-issue.mjs
+  s_cf9932eea4f083::t_6ff018225dadfb 10-35,39-47,51-58,62-67,72-73,81-82,84-88,90-97,99-106,108-109
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/10-project/no-e2e-soft-skip.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 4
+linked-tools/core/.agents/skills/triage/references/AGENT-BRIEF.md
+  s_cf9932eea4f083::t_6ff018225dadfb 89-90,96,127-128,130,136,138
+linked-tools/core/.agents/skills/setup-matt-pocock-skills/references/triage-labels.md
+  s_cf9932eea4f083::t_6ff018225dadfb 5,7-11
+linked-tools/core/.agents/skills/scan-jira-ticket/workflow.md
+  s_cf9932eea4f083::t_6ff018225dadfb 14-16,25-27,31-33
+linked-tools/repos/forwood-one-tests/docs/test-generation-flow.md
+  s_cf9932eea4f083::t_6ff018225dadfb 13-20,25,37-38,40-43,65-67,100-108,135,145-147,150-152,155-157,216-217,242-244,279-281,283-294,349-355,415-422,478-489,491-493,495-496,498-500,502-512
+  s_a40d1a8c079dc8::t_68ded060bb02ca 23
+linked-tools/core/.agents/rules/editor/10-project/tooling-sync-path-equivalence.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 3,43
+  s_a40d1a8c079dc8::t_db8b954decd61b 14,19,36,50,67
+  s_6947b41c1d0345::t_123de6110c4d94 51
+linked-tools/core/.agents/skills/devcontainer-logs/workflow.md
+  s_cf9932eea4f083::t_6ff018225dadfb 19-26,38-40,106-109
+linked-tools/core/.agents/skills/tdd/references/tests.md
+  s_cf9932eea4f083::t_6ff018225dadfb 10-13,32-34,50-52,57-59
+linked-tools/core/.agents/skills/visual-regression/scripts/bootstrap-action-ids.mjs
+  s_cf9932eea4f083::t_6ff018225dadfb 10,13-14,22-29,33-37,41-48,56-57,61-62,67-68,71-72,77-78,84-85,91,93-94,99-100,106-108,112-190
+linked-tools/core/.agents/skills/speckit-step-flow/references/feature-pr-body-tests.md
+  s_cf9932eea4f083::t_734ee1fb00fbf2 1,3
+linked-tools/core/.agents/skills/skill-lint/scripts/lint-skill.mjs
+  s_cf9932eea4f083::t_6ff018225dadfb 7-8,16-30,34-43,47-63,68-73,78,83,87,92-128,136-167,171-181,185-187,191-221,225-246,250-258,263-269,273-278,282-285,289-310,314-322,326-330,337-357,361-363,367-369,373-592,596-705
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/20-workflow/playwright-ticket-red-mode.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+  s_a40d1a8c079dc8::t_304da17a4da43b 51
+linked-tools/repos/forwood-one-tests/.agents/skills/playwright-cli/references/test-generation.md
+  s_cf9932eea4f083::t_6ff018225dadfb 42-49
+linked-tools/core/.agents/skills/pre-commit-checks/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 5,31
+linked-tools/repos/forwood-one/.agents/skills/split-pr/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 5
+linked-tools/core/.agents/rules/editor/20-workflow/changes-md-as-you-go.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 3-5
+linked-tools/repos/forwood-one-tests/tests/e2e/bugfix/forms/EAP-1066/pcli-create-action-session-log.md
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+linked-tools/core/.agents/skills/report-changes/workflow.md
+  s_cf9932eea4f083::t_6ff018225dadfb 43-44,51-53,194-195,277,296,309-310,325,332-333,372-374,392-394,396
+linked-tools/core/.agents/skills/vault-query/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 7,55-72,92,147-148,152-156,160
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/00-governance/e2e-red-playwright-cli-before-edit.mdc
+  s_a40d1a8c079dc8::t_2f3545da3c67e9 143
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+linked-tools/core/.agents/rules/editor/00-governance/sync-files-terminology.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+  s_6947b41c1d0345::t_123de6110c4d94 14
+linked-tools/repos/forwood-one/.agents/commands/speckit.correct.md
+  s_cf9932eea4f083::t_6ff018225dadfb 3-4,6-7,11-13,15,62-64,99-100,103-104,107-108
+linked-tools/core/.agents/skills/caveman/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 4-7
+linked-tools/core/.agents/skills/scan-bitbucket-pr/workflow.md
+  s_cf9932eea4f083::t_6ff018225dadfb 14-17,26-28,32-34,36,38-40
+linked-tools/core/.agents/skills/visual-regression/references/comparator.md
+  s_cf9932eea4f083::t_6ff018225dadfb 13-19,23,44-48,55-58,63-78,89-93,102-116
+linked-tools/repos/forwood-one/docs/guides/remote-multi-container-setup-2.md
+  s_cf9932eea4f083::t_6ff018225dadfb 128,130,152,159,161-163,208
+linked-tools/core/.agents/skills/bitbucket-pr-inline-per-changed-file/workflow.md
+  s_cf9932eea4f083::t_6ff018225dadfb 19-21
+linked-tools/core/.agents/skills/decompose-orchestrator/references/decomposition/tools-repo-manager-outline.md
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+linked-tools/repos/forwood-one-tests/.agents/skills/test-generate-verification/references/ai-test-review-playwright-authoring.md
+  s_cf9932eea4f083::t_6ff018225dadfb 13-16
+linked-tools/repos/forwood-one-tests/.agents/skills/test-generate/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 30-31,33,35-36,38,40-41,43,45-46,48,50-51,53,55-56,144-145,148,167,169-170,172-173,176-178,199-201,204-209,220-223
+linked-tools/repos/forwood-one/docs/standards/08-testing-standards.md
+  s_cf9932eea4f083::t_6ff018225dadfb 10-12,19,21-22,52-65,90-91
+linked-tools/core/.agents/skills/migrate-skill/workflow.md
+  s_cf9932eea4f083::t_6618db07c34cb6 9
+linked-tools/core/.agents/skills/skill-eval/workflow.md
+  s_cf9932eea4f083::t_a5e182998459de 19
+  s_cf9932eea4f083::t_6a076e7353832f 27
+  s_cf9932eea4f083::t_6ff018225dadfb 8,10-11,21-26
+  s_cf9932eea4f083::t_3ade405f5384ba 7
+  s_cf9932eea4f083::t_15771a678d26e3 9
+linked-tools/core/.agents/skills/speckit-step-flow/references/default-base-branch.md
+  s_cf9932eea4f083::t_ef0e229cc43187 1
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+linked-tools/core/.agents/skills/skill-lint/scripts/run-skill-lint-all.mjs
+  s_cf9932eea4f083::t_6ff018225dadfb 7,10-13,15,23-37,41-61,65-74,76-90,92-95,97,99-100,102-113,115,117-130,132-152,154-156
+linked-tools/core/.agents/skills/vault-query/workflow.md
+  s_cf9932eea4f083::t_6ff018225dadfb 21,36,41-42
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/10-project/main-app-data-testid-policy.md
+  s_cf9932eea4f083::t_6ff018225dadfb 3-4,6-10,16
+linked-tools/repos/forwood-one-tests/.agents/skills/test-run/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 20-22,68-72,78-80,86-96,98,113,115-117,124,126-129,161,171,185,187,190,192,194-196,198,200-201,203,205-206,208,211,241,246,250,254,311-321,337-338,340-341,344,378-379
+linked-tools/core/.agents/rules/editor/00-governance/agent-conventions.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 98-99,121,123-126,128-129,131,133-134
+linked-tools/core/.agents/skills/bitbucket-build-failure/references/rest-cli.md
+  s_cf9932eea4f083::t_6ff018225dadfb 32,36,43,70,103,128-129
+linked-tools/core/.agents/skills/tdd/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 41-42,45-48,75,86
+linked-tools/repos/forwood-one-tests/.agents/skills/playwright-cli/references/session-management.md
+  s_cf9932eea4f083::t_6ff018225dadfb 38-39,48-49,58,116
+linked-tools/repos/forwood-one-tests/.agents/rules/10-project/testing.md
+  s_cf9932eea4f083::t_6ff018225dadfb 4-6,35,37-39,79-82,86-90,127,155-156,176-178,212
+linked-tools/core/.agents/rules/20-workflow/e2e-test-generation.md
+  s_cf9932eea4f083::t_6ff018225dadfb 3-4,6-10
+linked-tools/core/.agents/skills/generate-tickets/scripts/apply-tickets.mjs
+  s_cf9932eea4f083::t_6ff018225dadfb 9-13,22-30,34-48,52-82,89-117,126-194,201-216,221-223,228,236-330,334,342-369,373-388,392-403,407-418,422-464,466,468-474,476,478-499,501-504,506-514,516-536,540-541
+linked-tools/core/.agents/skills/scan-bitbucket-pr/scripts/scan-pr.mjs
+  s_cf9932eea4f083::t_6ff018225dadfb 7-8,13-20,24-31,35-50,54-62,67-70,77-78,80-85,87-95,97-107,109-110
+linked-tools/core/.agents/skills/skill-lint/MAINTAINERS.md
+  s_cf9932eea4f083::t_a5e182998459de 34,73
+linked-tools/repos/forwood-one/docs/standards/08-testing-standards-2.md
+  s_cf9932eea4f083::t_6ff018225dadfb 26-28,35,37-38,68-81,106-107
+linked-tools/core/.agents/skills/git-guardrails-claude-code/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 54-66,74-86
+linked-tools/core/.agents/skills/vault-lint/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 7,25-27
+linked-tools/core/.agents/meta/rules-architecture.md
+  s_cf9932eea4f083::t_6ff018225dadfb 4-5,43-46,48-49,79,81,86-87,89,106,108,116-119,122,125,128,131-134,137-139,145-146,148,156,158-159,161-164,166-167,175,177,179,181,183,185-186,206,208,210,212,214
+  s_cf9932eea4f083::t_a5e182998459de 157,194,205,207,209
+linked-tools/core/.agents/rules/editor/20-workflow/skill-run-steps-log.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 3,40-41,43-45,47,49
+  s_a40d1a8c079dc8::t_1b3fee09f07d0e 22
+linked-tools/repos/forwood-one/docs/standards/02-getting-started.md
+  s_cf9932eea4f083::t_6ff018225dadfb 37,60-62,68-69,76,78-81,86-87,162,164,200,202-207,222,232,247,249-251,267,269-270,278-279
+linked-tools/repos/forwood-one/.vscode/scripts/add-qa-test-users.mjs
+  s_cf9932eea4f083::t_6ff018225dadfb 17-21,37-38,43,58,62-81,88-91,106-109,113-241,247-310,315,317-320,324-331,335-550,554-555
+linked-tools/core/.agents/skills/skill-eval/SKILL.md
+  s_cf9932eea4f083::t_c114f464640f7d 70,75
+  s_cf9932eea4f083::t_6ff018225dadfb 4-6,8,23-27
+linked-tools/core/.agents/skills/visual-regression/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 7,100-102,104-108,125,205,211-219
+linked-tools/core/.agents/rules/20-workflow/no-unsolicited-symlinks.md
+  s_a40d1a8c079dc8::t_0787464002b453 14
+linked-tools/repos/forwood-one-tests/docs/testing-combinations-strategy.md
+  s_cf9932eea4f083::t_6ff018225dadfb 18-21
+linked-tools/core/.agents/rules/editor/10-project/personal-tooling-invocation.mdc
+  s_a40d1a8c079dc8::t_1f763cc578061e 37
+  s_6947b41c1d0345::t_5d4c738c041f64 41
+  s_6947b41c1d0345::t_f71fd084818d8d 23,27,45
+  s_6947b41c1d0345::t_524644f01989e2 16-17
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+linked-tools/core/.agents/skills/bitbucket-pr-comment/SKILL.md
+  s_cf9932eea4f083::t_eb951d4221d96a 33
+  s_cf9932eea4f083::t_6ff018225dadfb 4-7,11
+linked-tools/core/.agents/rules/editor/20-workflow/new-skill-authoring-linked-tools.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 3,19-20
+  s_a40d1a8c079dc8::t_3f60b687a50c9b 24
+linked-tools/core/.agents/rules/editor/00-governance/no-sync-provenance-in-consumer-docs.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+  s_a40d1a8c079dc8::t_eb554341e4e6b6 18
+  s_6947b41c1d0345::t_123de6110c4d94 29
+linked-tools/core/.agents/rules/20-workflow/no-unsolicited-mobile-testing.md
+  s_cf9932eea4f083::t_6ff018225dadfb 10-12
+linked-tools/core/.agents/skills/triage/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 81-86
+linked-tools/core/.agents/skills/setup-pre-commit/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 62,72-78
+linked-tools/core/docs/agent-environment/personal-tooling-sync.md
+  s_a40d1a8c079dc8::t_f8e3d1a50a17ea 5,26
+  s_6947b41c1d0345::t_123de6110c4d94 9,37
+linked-tools/core/.agents/skills/migrate-skill/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 5
+linked-tools/repos/forwood-one-tests/test-scripts/manual/EAP-1066/playwright-cli-exploration.md
+  s_cf9932eea4f083::t_6ff018225dadfb 22-25,27-28,31-32,40-41
+linked-tools/core/.agents/skills/skill-eval/references/evals-schema.md
+  s_cf9932eea4f083::t_6ff018225dadfb 39-68
+linked-tools/core/.agents/skills/commit-diff-coverage/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 6,38,40-41,51-52,54-55,57-58,67-69,71-74,76-77
+linked-tools/core/docs/agent-environment/README.md
+  s_cf9932eea4f083::t_daab94a43b28b9 12
+linked-tools/repos/forwood-one-tests/.agents/skills/test-run-verification/workflow.md
+  s_cf9932eea4f083::t_6ff018225dadfb 15-18,49-50,52,54-55,57,59-60,62,64-68,70,72-73,75,77,120,125,143-151,154
+linked-tools/core/.agents/rules/editor/10-project/skills-commands-architecture.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 3-4,6-7
+linked-tools/repos/forwood-one/scripts/apply-local-ssh.sh
+  s_6947b41c1d0345::t_f32a189e8a0a34 6
+linked-tools/repos/forwood-one-tests/.agents/skills/test-generate-verification/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 7,59-60,62-66,82-85,87-91,93,146-147,149,151-152,154,156-157,159,161-162,164,166-169,171,173-174,176,178-179,244-250,253-277
+linked-tools/core/.agents/skills/scan-jira-ticket/SKILL.md
+  s_cf9932eea4f083::t_261f3758aafd0a 10
+  s_cf9932eea4f083::t_6ff018225dadfb 5,21-23,32-34,38-40
+  s_cf9932eea4f083::t_573930045203a2 25
+linked-tools/core/.agents/skills/personal-tooling-sync-fix/workflow.md
+  s_a40d1a8c079dc8::t_87ec5a6ba0e396 5
+  s_6947b41c1d0345::t_123de6110c4d94 26
+  s_cf9932eea4f083::t_6ff018225dadfb 41-42
+linked-tools/core/.agents/skills/grill-with-docs/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 36-38,48,50-55
+linked-tools/core/.agents/skills/tooling-engagement-status-report/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 23-24
+linked-tools/repos/forwood-one/docs/standards/05-frontend-engineering-standards-2.md
+  s_cf9932eea4f083::t_6ff018225dadfb 32,34-40,64-82,84-91,98,100-104,143-145,147-149,151-152,179,181,183,199,201-205,212-220,222-226,228,244-245,260-262,273-276,284,286-287,310-311,338-341,368,384-393,413,427-443,494,498-502
+linked-tools/core/.agents/skills/skill-lint/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 5,90-91,97-99,122-125,127,129,131-135,137-138,140-141,143-145,147-148,150-152,154-157,160-161
+  s_cf9932eea4f083::t_a5e182998459de 94,158,245
+  s_e993fbd714d633::t_458fa621800f2a 89
+  s_cf9932eea4f083::t_978a7bb4fd48a0 159
+linked-tools/repos/forwood-one-tests/file-2.md
+  s_cf9932eea4f083::t_6ff018225dadfb 135-136
+linked-tools/repos/forwood-one-tests/.agents/skills/playwright-cli/references/request-mocking.md
+  s_cf9932eea4f083::t_6ff018225dadfb 31-34,45-52,60-65,73,82-85
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/20-workflow/playwright-e2e-failure-troubleshooting.md
+  s_cf9932eea4f083::t_6ff018225dadfb 4-8,44-45,57-58,71-76
+linked-tools/core/.agents/rules/editor/20-workflow/code-readability-guard-clauses.mdc
+  s_cf9932eea4f083::t_6ff018225dadfb 17-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "ed3ba13bf9a24d318b6ccc1812e156dc7e1f2fa4",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_6947b41c1d0345": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "94a5392d-fc5f-4f95-8969-f3fb48719ae9",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_9cc28807d0c8b3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "83519ffb-8397-4e43-82af-24f940dfbc78",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_a40d1a8c079dc8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "172ff549-d07f-4a89-8009-adc9ed85add3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_cf9932eea4f083": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9e21c60d-a6fc-4c15-91f5-aeb86f4271ef",
+        "model": "default"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_d134bb5461d8af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "13ef0c14-4f7a-40e9-a2c0-4713f784c314",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_e993fbd714d633": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e5746880-ddfe-4aa5-87b8-193c66a1d7f4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
