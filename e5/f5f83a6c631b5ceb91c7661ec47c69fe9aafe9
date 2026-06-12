@@ -1,0 +1,33 @@
+src/utils/author-cli-evidence.ts
+  s_d9071b20c4f57b::t_61d766f3ae79a7 99-126,182-187,213-215
+src/utils/author-arrange-oracle.ts
+  s_d9071b20c4f57b::t_61d766f3ae79a7 1-309
+src/nodes/e2e-explore.ts
+  s_d9071b20c4f57b::t_61d766f3ae79a7 507-511
+src/utils/author-fe-arrange.ts
+  s_d9071b20c4f57b::t_61d766f3ae79a7 52-90,98-101
+src/utils/f1cli.ts
+  s_d9071b20c4f57b::t_61d766f3ae79a7 37-42,126-178,426
+src/nodes/review-dispatch-e2e-review.ts
+  s_d9071b20c4f57b::t_61d766f3ae79a7 4-5,34,46,49-58,60,62,70,100-102,119-120,123,129-132,137-138,140,187-200,203-213,216,218,222-256,258,262,265,267-277,329-389,402-403,410,425-441,515-525,532-571,581-582,595,667,685,916-992,997-998,1006-1008,1010-1036,1044,1069-1070,1078-1080,1082-1108,1111
+src/utils/assess-ac-feasibility.ts
+  s_d9071b20c4f57b::t_61d766f3ae79a7 1-305
+src/utils/author-source-evidence.ts
+  s_d9071b20c4f57b::t_61d766f3ae79a7 68-77,134-141,181-192,218-220,246-337
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "e5f5f83a6c631b5ceb91c7661ec47c69fe9aafe9",
+  "prompts": {},
+  "sessions": {
+    "s_d9071b20c4f57b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "33cb174e-472e-4800-a99c-0551f529065f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
