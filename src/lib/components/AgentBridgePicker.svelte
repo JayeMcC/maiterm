@@ -32,9 +32,9 @@
   // Free-text filter over tab name / workspace / cwd (for big agent fleets).
   let filter = $state('');
   let filterInput = $state<HTMLInputElement | null>(null);
-  // 'fork' = fork the chosen session into a new split (default). 'existing' = bridge
-  // directly to the chosen running tab, no new pane (for when the split already exists).
-  let mode = $state<'fork' | 'existing'>('fork');
+  // 'existing' = bridge directly to the chosen running tab, no new pane (default).
+  // 'fork' = fork the chosen session into a new split beside the caller.
+  let mode = $state<'fork' | 'existing'>('existing');
   // Human-written context about the peer, fed into the calling agent's opener so it
   // knows what the peer is for (instead of blindly firing questions).
   let purpose = $state('');
@@ -103,7 +103,7 @@
       selectedIndex = 0;
       errorMsg = null;
       busy = false;
-      mode = 'fork';
+      mode = 'existing';
       purpose = '';
       filter = '';
     }
@@ -238,20 +238,20 @@
         <div class="mode-toggle" role="radiogroup" aria-label="Bridge mode">
           <button
             class="mode-btn"
-            class:active={mode === 'fork'}
-            role="radio"
-            aria-checked={mode === 'fork'}
-            disabled={busy}
-            onclick={() => { mode = 'fork'; }}
-          >Fork into new pane</button>
-          <button
-            class="mode-btn"
             class:active={mode === 'existing'}
             role="radio"
             aria-checked={mode === 'existing'}
             disabled={busy}
             onclick={() => { mode = 'existing'; }}
           >Connect existing tab</button>
+          <button
+            class="mode-btn"
+            class:active={mode === 'fork'}
+            role="radio"
+            aria-checked={mode === 'fork'}
+            disabled={busy}
+            onclick={() => { mode = 'fork'; }}
+          >Fork into new pane</button>
         </div>
       </div>
 
