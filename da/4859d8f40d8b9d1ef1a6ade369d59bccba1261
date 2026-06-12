@@ -1,0 +1,23 @@
+.agents/scripts/bash/check-prerequisites.sh
+  s_d9071b20c4f57b::t_8a92bd72bdba79 106,112,119
+.agents/scripts/bash/create-new-feature.sh
+  s_d9071b20c4f57b::t_8a92bd72bdba79 206
+.agents/scripts/bash/setup-plan.sh
+  s_d9071b20c4f57b::t_8a92bd72bdba79 40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "da4859d8f40d8b9d1ef1a6ade369d59bccba1261",
+  "prompts": {},
+  "sessions": {
+    "s_d9071b20c4f57b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "33cb174e-472e-4800-a99c-0551f529065f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
