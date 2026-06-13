@@ -1,0 +1,43 @@
+specs/feature/PLAN-05__cli-llm-backend/quickstart.md
+  s_fdb4e548464e0f::t_1d678738673dcf 1-77
+specs/feature/PLAN-05__cli-llm-backend/checklists/requirements.md
+  s_fdb4e548464e0f::t_e2bb2e58eac8e7 1-44
+specs/feature/PLAN-05__cli-llm-backend/research.md
+  s_fdb4e548464e0f::t_18415bfa3542c4 1-119
+specs/feature/PLAN-05__cli-llm-backend/spec.md
+  s_fdb4e548464e0f::t_cb27e69a62c492 130
+  s_fdb4e548464e0f::t_6be876a499a321 8-12,16
+  s_fdb4e548464e0f::t_5c5c3c67ee781c 14
+  s_fdb4e548464e0f::t_f097c1c694f20c 143
+  s_fdb4e548464e0f::t_61c2337a818e23 144
+  s_fdb4e548464e0f::t_b1d562d9a98dca 1-7,17-129,131-140,142,145-153,155-178
+  s_fdb4e548464e0f::t_60610c0ff906ee 154
+  s_fdb4e548464e0f::t_83d64b4936e155 13
+  s_fdb4e548464e0f::t_1a69feca5e7d13 141
+  s_fdb4e548464e0f::t_2fdff63be6aef2 15
+specs/feature/PLAN-05__cli-llm-backend/plan.md
+  s_fdb4e548464e0f::t_cfd3fd39d2a004 1-114
+specs/feature/PLAN-05__cli-llm-backend/data-model.md
+  s_fdb4e548464e0f::t_c0d4fafe174126 1-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "a3b059a045a8c2b8123f6f2fb8f3535158eb08d2",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_fdb4e548464e0f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "cf3fdd53-bc3b-4b20-a1b8-758aad5d4c5f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
