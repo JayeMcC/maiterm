@@ -1,0 +1,42 @@
+skill-library/developing-ticket/speckit-flow-tools/SKILL.md
+  s_36596460844258::t_42a02dca99a559 71-72
+  s_36596460844258::t_6bc291ec52c2a7 70
+  s_cb3783f7107f3d::t_f7cf354a901199 85-92
+  s_36596460844258::t_cfc0faa834d4ae 102,110,119-125,127,129,135,138-141
+  s_36596460844258::t_7a1b282bb84a70 212-215
+  s_36596460844258::t_9054ccb8cbe883 104-108,111-118,136
+  s_cb3783f7107f3d::t_8a2a22b6f0f1b1 221-225
+  s_cb3783f7107f3d::t_de53689b594e3e 3
+  s_cb3783f7107f3d::t_a38aed3079ac78 15-23
+skill-library/developing-ticket/speckit-flow-tools/references/implement-runtime.md
+  s_36596460844258::t_9be620e5e9aac7 57-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "13ad343250f0374fa6b0c5a2b09380117dc227d6",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_36596460844258": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3c5863b9-4d11-4308-be03-ba64880f2ef9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_cb3783f7107f3d": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9e4f6f81-8045-438f-b69a-987641d60711",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
