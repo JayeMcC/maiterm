@@ -1,0 +1,37 @@
+scripts/cursor-agent-interceptor/install.sh
+  s_f9d753d5edfd96::t_3b6fec60dc8838 36-44,55-56,58-61,64,66-68,70
+  s_82312589c4187d::t_1e969201697ec2 3-8,14,20-28,72-148
+scripts/cursor-agent-interceptor/README.md
+  s_82312589c4187d::t_0b919a1de6f1c2 13-17,25-45
+scripts/cursor-agent-interceptor/cursor-agent-interceptor.zsh
+  s_f9d753d5edfd96::t_6fdc4761723012 88-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "298fa34c620b4bf591aef853855e9fbd16bbeaae",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_82312589c4187d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "71559c86-5ae6-4701-a73b-7a4c0104c97d",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_f9d753d5edfd96": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7c6a7758-18d8-49d7-9746-3fecf4c2dc1d",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
