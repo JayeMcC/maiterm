@@ -1,0 +1,21 @@
+tests/evidence/planner/component-route-cache.test.ts
+  s_7d356ed1988a96::t_649a8dde775dc3 1-51
+src/evidence/planner/component-route-cache.ts
+  s_7d356ed1988a96::t_934f3e50994615 1-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "12e77280af3386523d2ffebbef7699136e48d2d9",
+  "prompts": {},
+  "sessions": {
+    "s_7d356ed1988a96": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "8a1f0cda-d4a8-4c90-a9e4-520ac4291ea5",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
