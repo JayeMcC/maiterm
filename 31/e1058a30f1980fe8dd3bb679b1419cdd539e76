@@ -1,0 +1,14 @@
+todo.md
+  h_0e239642edda1b 3,8-11,15,28-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "31e1058a30f1980fe8dd3bb679b1419cdd539e76",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
