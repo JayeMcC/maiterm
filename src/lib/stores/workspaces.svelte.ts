@@ -1817,11 +1817,19 @@ function createWorkspacesStore() {
       if (!newTab) return;
 
       // Mark split context so auto-resume command fires on mount (reload = full restore).
-      // If the live PTY had no SSH (e.g. connection died), fall back to persisted auto-resume SSH settings.
+      // Auto-resume settings are explicit user intent and win over the live-captured
+      // split context: if the user configured an SSH command / remote CWD, reload must
+      // honor it (e.g. they pointed auto-resume at a renamed remote folder). The live
+      // capture only fills gaps the user didn't pin. If auto-resume isn't configured,
+      // fall back to the live capture entirely.
       const splitCtx = terminalsStore.consumeSplitContext(newTab.id);
       if (splitCtx) {
         const ctx = { ...splitCtx, fireAutoResume: true };
-        if (!ctx.sshCommand && sourceTab.auto_resume_ssh_command) {
+        const arEnabled = sourceTab.auto_resume_enabled ?? true;
+        // Use the persisted auto-resume SSH command + remote CWD when the user has it
+        // enabled (explicit intent — wins over the live capture), or when the live SSH
+        // has died and the persisted command is the only thing left to reconnect with.
+        if (sourceTab.auto_resume_ssh_command && (arEnabled || !ctx.sshCommand)) {
           ctx.sshCommand = sourceTab.auto_resume_ssh_command;
           ctx.remoteCwd = sourceTab.auto_resume_remote_cwd ?? ctx.remoteCwd;
         }
