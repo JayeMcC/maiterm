@@ -1,0 +1,24 @@
+scripts/personal-sync-devcontainer-setup/lib/resolve-devcontainer-targets.mjs
+  s_36596460844258::t_65acbf14850214 4,7-9,15,17,33,37,41-42,44,47-48,51-55,58,70,82,100,104,108-109,111,114-115,118-122,125,137,149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "4092999ac8bfd23c513444efb5de4a8c5dc15d40",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_36596460844258": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3c5863b9-4d11-4308-be03-ba64880f2ef9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
