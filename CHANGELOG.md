@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.16.1
+
+- **Agent activity shows as three footer dots.** The sidebar's agent indicator was a single dot that only showed the highest-priority state, so a waiting agent could mask others that were still working or already finished. It's now up to three independent dots — working (blue), waiting (red), finished (green) — each clickable to cycle through every agent in that state. The sidebar is a touch wider (215px) to fit them while keeping workspace names readable; narrower saved widths snap up automatically.
+- Fix bridged agents not receiving messages mid-task. Messages meant for a busy agent were held until it fully stopped, so a missed stop signal could wedge them indefinitely — while a permission prompt (the one moment we must not interrupt) was incorrectly treated as deliverable. Messages now arrive whether the agent is working or idle and are held only for a human prompt, matching how Claude Code captures mid-turn input.
+- Fix the Agent Bridge breaking when a bridged tab was closed or reloaded. Closing a bridged tab left its partner pointing at a ghost, and Cmd+Shift+R reload orphaned the link entirely (one tab kept the ⇄ icon, the other lost it). Bridges now tear down cleanly on close and transfer across a reload, and a tab whose partner went away becomes immediately re-bridgeable without a restart.
+- Fix composer sends not submitting when files or screenshots are attached. The submit keystroke was swallowed while Claude Code asynchronously loaded the attachment paths; it's now sent as a separate keystroke after a short settle window. Text-only sends are unchanged.
+- Fix dropped or pasted files with spaces in their name not resolving to attachments in a Claude session that maiTerm hadn't yet recognized as Claude. Composer attachments now always send the literal file path, matching the terminal's own drag-and-drop convention.
+- Fix Cmd+Shift+R reload of an SSH tab ignoring an auto-resume remote directory you'd explicitly set, reconnecting to the live session's current directory instead. A configured auto-resume SSH command and remote directory now take priority on reload.
+
 ## v1.16.0
 
 - **Move tabs between panes without cloning.** Three new ways to rearrange your split layout — all move the existing tab (PTY intact, no respawn) instead of duplicating it. Drag a tab onto another pane's tab bar to drop it there; drag onto a pane's body to move into the center zone or create a new split on the edge you drop on (left, right, top, or bottom). For keyboard-first use, right-click any tab for "Move to New Split Right/Down" and per-pane move items — the first tab-level context menu in maiTerm.
