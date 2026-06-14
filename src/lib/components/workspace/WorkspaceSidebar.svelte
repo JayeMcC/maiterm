@@ -95,11 +95,11 @@
     }
   }
 
-  // Global Claude-agent rollup for the always-visible footer dot. Aggregates
-  // every agent across all workspaces so "does anything need me?" is glanceable
-  // even with the sidebar collapsed or workspaces below the fold. Click jumps to
-  // a tab of the dominant state; with more than one, repeated clicks cycle
-  // through them (see cycleToAgent).
+  // Always-visible footer agent indicators. Up to three dots — working (blue),
+  // waiting-for-permission (red), finished-unread (green) — so "does anything
+  // need me?" is glanceable even with the sidebar collapsed or workspaces below
+  // the fold. Each dot is independent: clicking it jumps to a tab in that state,
+  // and repeated clicks cycle through every agent in that state (see cycleToAgent).
   // Every tab ID owned by this window. Claude hook events broadcast to all
   // windows, so the global session map includes agents from other windows; scope
   // the footer dot to this window's tabs so each window's dot is independent and a
@@ -112,32 +112,53 @@
     return ids;
   });
 
-  const agentDot = $derived.by((): { color: 'accent' | 'green' | 'red' | 'dim'; pulse: boolean; hollow: boolean; tooltip: string; targets: string[] } => {
-    const g = claudeStateStore.getGlobalClaudeState(windowTabIds);
-    if (!g) return { color: 'dim', pulse: false, hollow: false, tooltip: 'No active agents', targets: [] };
-    const n = g.count;
-    const cycleHint = n > 1 ? ' (click to cycle)' : '';
-    switch (g.state) {
-      case 'permission':
-        return { color: 'red', pulse: true, hollow: false, targets: g.tabIds,
-          tooltip: n === 1 ? '1 agent needs permission — click to open' : `${n} agents need permission — click to open${cycleHint}` };
-      case 'active':
-        return { color: 'accent', pulse: true, hollow: false, targets: g.tabIds,
-          tooltip: n === 1 ? '1 agent working — click to view' : `${n} agents working — click to view${cycleHint}` };
-      case 'idle-unread':
-        return { color: 'green', pulse: false, hollow: false, targets: g.tabIds,
-          tooltip: n === 1 ? '1 agent finished — click to review' : `${n} agents finished — click to review${cycleHint}` };
-      case 'idle-read':
-        return { color: 'green', pulse: false, hollow: true, targets: g.tabIds, tooltip: 'All agents idle' };
+  type FooterDot = {
+    color: 'accent' | 'green' | 'red' | 'dim';
+    pulse: boolean;
+    hollow: boolean;
+    tooltip: string;
+    targets: string[];
+  };
+
+  // Three fixed slots — left | center | right — each holding a dot or nothing.
+  // Home slots: working=left, waiting=center, finished=right. A lone signal sits
+  // in the center slot (a single dot reads better centered than shoved to a
+  // side); two or more keep their home slots, so "waiting" always anchors the
+  // middle and the others flank it. When nothing is signaling, a single resting
+  // dot occupies the center (hollow green = all done & seen, dim = no agents).
+  const footerDots = $derived.by((): (FooterDot | null)[] => {
+    const b = claudeStateStore.getClaudeStateBreakdown(windowTabIds);
+    const cycle = (c: number) => (c > 1 ? ' (click to cycle)' : '');
+
+    const working: FooterDot | null = b.active.length
+      ? { color: 'accent', pulse: true, hollow: false, targets: b.active,
+          tooltip: `${b.active.length === 1 ? '1 agent' : `${b.active.length} agents`} working — click to view${cycle(b.active.length)}` }
+      : null;
+    const waiting: FooterDot | null = b.permission.length
+      ? { color: 'red', pulse: true, hollow: false, targets: b.permission,
+          tooltip: `${b.permission.length === 1 ? '1 agent needs' : `${b.permission.length} agents need`} permission — click to open${cycle(b.permission.length)}` }
+      : null;
+    const finished: FooterDot | null = b.idleUnread.length
+      ? { color: 'green', pulse: false, hollow: false, targets: b.idleUnread,
+          tooltip: `${b.idleUnread.length === 1 ? '1 agent' : `${b.idleUnread.length} agents`} finished — click to review${cycle(b.idleUnread.length)}` }
+      : null;
+
+    const present = [working, waiting, finished].filter((d): d is FooterDot => d !== null);
+    if (present.length === 0) {
+      const resting: FooterDot = b.idleRead.length
+        ? { color: 'green', pulse: false, hollow: true, targets: b.idleRead, tooltip: 'All agents idle' }
+        : { color: 'dim', pulse: false, hollow: false, targets: [], tooltip: 'No active agents' };
+      return [null, resting, null];
     }
+    if (present.length === 1) return [null, present[0], null];
+    return [working, waiting, finished];
   });
 
-  // Cycle the footer dot through every agent in the dominant state. Anchored on
-  // the currently-viewed tab: if it's one of the targets, advance to the next
+  // Cycle one footer dot through every agent in its state. Anchored on the
+  // currently-viewed tab: if it's one of the targets, advance to the next
   // (wrapping); otherwise jump to the first. Stateless, so it self-corrects when
   // the target list shifts as agents change state.
-  function cycleToAgent() {
-    const targets = agentDot.targets;
+  function cycleToAgent(targets: string[]) {
     if (targets.length === 0) return;
     const currentIdx = targets.indexOf(workspacesStore.activeTab?.id ?? '');
     const next = currentIdx === -1 ? targets[0] : targets[(currentIdx + 1) % targets.length];
@@ -597,21 +618,33 @@
   {/if}
 
   <div class="sidebar-footer">
-    <IconButton tooltip="Report Bug" size={24} style="border-radius:4px" onclick={() => shellOpen('https://github.com/Flexmark-Intl/maiterm/issues/new?labels=bug&type=bug')}><Icon name="bug" size={14} /></IconButton>
-    <IconButton tooltip="Feature Request" size={24} style="border-radius:4px" onclick={() => shellOpen('https://github.com/Flexmark-Intl/maiterm/issues/new?type=feature')}><Icon name="lightbulb" size={14} /></IconButton>
-    <span style="flex:1"></span>
-    <Tooltip text={agentDot.tooltip}>
-      <button
-        class="footer-agent-dot"
-        class:clickable={agentDot.targets.length > 0}
-        onclick={cycleToAgent}
-      >
-        <StatusDot color={agentDot.color} pulse={agentDot.pulse} hollow={agentDot.hollow} />
-      </button>
-    </Tooltip>
-    <span style="flex:1"></span>
-    <IconButton tooltip="Preferences ({modSymbol},)" size={24} style="border-radius:4px" onclick={openPreferencesWindow}><Icon name="settings" size={14} /></IconButton>
-    <IconButton tooltip="Help ({modSymbol}/)" size={24} style="border-radius:4px" onclick={onhelp}><Icon name="help" size={14} /></IconButton>
+    <div class="footer-side">
+      <IconButton tooltip="Report Bug" size={24} style="border-radius:4px" onclick={() => shellOpen('https://github.com/Flexmark-Intl/maiterm/issues/new?labels=bug&type=bug')}><Icon name="bug" size={14} /></IconButton>
+      <IconButton tooltip="Feature Request" size={24} style="border-radius:4px" onclick={() => shellOpen('https://github.com/Flexmark-Intl/maiterm/issues/new?type=feature')}><Icon name="lightbulb" size={14} /></IconButton>
+    </div>
+    <span class="footer-spacer"></span>
+    <div class="footer-agent-cluster">
+      {#each footerDots as dot, i (i)}
+        <div class="footer-agent-slot">
+          {#if dot}
+            <Tooltip text={dot.tooltip}>
+              <button
+                class="footer-agent-dot"
+                class:clickable={dot.targets.length > 0}
+                onclick={() => cycleToAgent(dot.targets)}
+              >
+                <StatusDot color={dot.color} pulse={dot.pulse} hollow={dot.hollow} />
+              </button>
+            </Tooltip>
+          {/if}
+        </div>
+      {/each}
+    </div>
+    <span class="footer-spacer"></span>
+    <div class="footer-side">
+      <IconButton tooltip="Preferences ({modSymbol},)" size={24} style="border-radius:4px" onclick={openPreferencesWindow}><Icon name="settings" size={14} /></IconButton>
+      <IconButton tooltip="Help ({modSymbol}/)" size={24} style="border-radius:4px" onclick={onhelp}><Icon name="help" size={14} /></IconButton>
+    </div>
   </div>
 </aside>
 
@@ -966,19 +999,45 @@
     border-top: 1px solid var(--bg-light);
     padding: 6px 8px;
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+  }
+
+  /* Bug/Feature on the left, Preferences/Help on the right. The two groups are
+     equal width, so the centered agent cluster's middle slot lands at the
+     footer's horizontal center. */
+  .footer-side {
+    display: flex;
     gap: 4px;
   }
 
-  /* Wrapper that gives the global-agent dot a comfortable click target (sized
-     to match the adjacent icon buttons) while keeping it visually a bare dot. */
+  .footer-spacer {
+    flex: 1;
+  }
+
+  /* Three fixed slots so the dots hold their left | center | right positions
+     even when a slot is empty — the "waiting" dot stays anchored at the center. */
+  .footer-agent-cluster {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .footer-agent-slot {
+    width: 16px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Each occupied slot is a bare dot with a comfortable click target. */
   .footer-agent-dot {
     display: flex;
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    width: 24px;
-    height: 24px;
+    width: 100%;
+    height: 100%;
     background: none;
     border: none;
     margin: 0;

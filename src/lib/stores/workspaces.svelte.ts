@@ -11,6 +11,14 @@ import { getVariables } from '$lib/stores/triggers.svelte';
 import { CLAUDE_RESUME_COMMAND } from '$lib/triggers/defaults';
 import { disableBridge } from '$lib/stores/sshMcpBridge.svelte';
 
+/** Sidebar width bounds + default. The minimum reserves room for the footer's
+ *  three agent-status indicators (working / waiting / finished) alongside the
+ *  corner buttons while keeping workspace names readable — see WorkspaceSidebar's
+ *  footer layout. Keep in sync with `default_sidebar_width()` in Rust. */
+const SIDEBAR_MIN_WIDTH = 215;
+const SIDEBAR_MAX_WIDTH = 400;
+const SIDEBAR_DEFAULT_WIDTH = 215;
+
 /**
  * Extract the remote cwd from the terminal prompt using user-configured patterns.
  * Patterns are defined in preferences and compiled to regexes at runtime.
@@ -116,7 +124,7 @@ function createWorkspacesStore() {
   let windowLabel = $state<string>('');
   let workspaces = $state<Workspace[]>([]);
   let activeWorkspaceId = $state<string | null>(null);
-  let sidebarWidth = $state(180);
+  let sidebarWidth = $state(SIDEBAR_DEFAULT_WIDTH);
   let sidebarCollapsed = $state(false);
   let lastSwitchedAt = $state<Map<string, number>>(new Map());
   // Frontend-only: set of tab IDs with notes panel visible
@@ -192,7 +200,7 @@ function createWorkspacesStore() {
       windowLabel = data.label;
       workspaces = data.workspaces;
       activeWorkspaceId = data.active_workspace_id;
-      sidebarWidth = data.sidebar_width || 180;
+      sidebarWidth = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, data.sidebar_width || SIDEBAR_DEFAULT_WIDTH));
       sidebarCollapsed = data.sidebar_collapsed ?? false;
 
       // Seed notesVisible from persisted notes_open state
@@ -292,7 +300,7 @@ function createWorkspacesStore() {
     },
 
     setSidebarWidth(width: number) {
-      sidebarWidth = Math.max(120, Math.min(400, width));
+      sidebarWidth = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, width));
     },
 
     async saveSidebarWidth() {

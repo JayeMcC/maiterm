@@ -139,6 +139,21 @@ function createClaudeStateStore() {
     }
   }
 
+  /** Bucket every in-scope Claude session by state. Idle is split into
+   *  unread/read. Shared by the dominant-state rollup and the per-category
+   *  footer breakdown so the priority/bucketing logic lives in one place. */
+  function computeBreakdown(scope?: ReadonlySet<string>): { permission: string[]; active: string[]; idleUnread: string[]; idleRead: string[] } {
+    const permission: string[] = [], active: string[] = [];
+    const idleUnread: string[] = [], idleRead: string[] = [];
+    for (const [tabId, s] of sessions) {
+      if (scope && !scope.has(tabId)) continue;
+      if (s.state === 'permission') permission.push(tabId);
+      else if (s.state === 'active') active.push(tabId);
+      else if (s.state === 'idle') (s.read ? idleRead : idleUnread).push(tabId);
+    }
+    return { permission, active, idleUnread, idleRead };
+  }
+
   return {
     /** Diagnostic snapshot for getDiagnostics. */
     getInternalSizes() {
@@ -216,19 +231,21 @@ function createClaudeStateStore() {
      *  without it the dot would count foreign-window agents and clicks couldn't
      *  navigate to them (`navigateToTab` only searches this window's workspaces). */
     getGlobalClaudeState(scope?: ReadonlySet<string>): { state: WorkspaceClaudeState; tabId: string; tabIds: string[]; count: number } | null {
-      const permTabs: string[] = [], activeTabs: string[] = [];
-      const unreadTabs: string[] = [], readTabs: string[] = [];
-      for (const [tabId, s] of sessions) {
-        if (scope && !scope.has(tabId)) continue;
-        if (s.state === 'permission') permTabs.push(tabId);
-        else if (s.state === 'active') activeTabs.push(tabId);
-        else if (s.state === 'idle') (s.read ? readTabs : unreadTabs).push(tabId);
-      }
-      if (permTabs.length) return { state: 'permission', tabId: permTabs[0], tabIds: permTabs, count: permTabs.length };
-      if (activeTabs.length) return { state: 'active', tabId: activeTabs[0], tabIds: activeTabs, count: activeTabs.length };
-      if (unreadTabs.length) return { state: 'idle-unread', tabId: unreadTabs[0], tabIds: unreadTabs, count: unreadTabs.length };
-      if (readTabs.length) return { state: 'idle-read', tabId: readTabs[0], tabIds: readTabs, count: readTabs.length };
+      const { permission, active, idleUnread, idleRead } = computeBreakdown(scope);
+      if (permission.length) return { state: 'permission', tabId: permission[0], tabIds: permission, count: permission.length };
+      if (active.length) return { state: 'active', tabId: active[0], tabIds: active, count: active.length };
+      if (idleUnread.length) return { state: 'idle-unread', tabId: idleUnread[0], tabIds: idleUnread, count: idleUnread.length };
+      if (idleRead.length) return { state: 'idle-read', tabId: idleRead[0], tabIds: idleRead, count: idleRead.length };
       return null;
+    },
+
+    /** Per-state breakdown of Claude sessions in scope — every category at once,
+     *  unlike getGlobalClaudeState which collapses to the single dominant state.
+     *  Lets the sidebar footer show independent working / waiting / finished dots.
+     *  Each bucket is the ordered list of tab IDs in that state. See
+     *  getGlobalClaudeState for why `scope` matters (cross-window broadcast). */
+    getClaudeStateBreakdown(scope?: ReadonlySet<string>): { permission: string[]; active: string[]; idleUnread: string[]; idleRead: string[] } {
+      return computeBreakdown(scope);
     },
 
     /** Mark a finished (idle) Claude result as read — called when the user
