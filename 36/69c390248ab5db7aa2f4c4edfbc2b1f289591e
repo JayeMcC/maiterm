@@ -1,0 +1,57 @@
+tests/e2e/visual-regression/run.mjs
+  s_36596460844258::t_744c5103fc8005 155
+  s_36596460844258::t_8ecb92fe7f9ead 208-212
+  s_36596460844258::t_f45cc8051573de 1-42,44-48,50-88,94-154,156-160,163-202,213-220,223-227,229-240,242-243,245-246,252,260
+  s_36596460844258::t_d85372b1f749f1 161-162
+  s_36596460844258::t_9941218650658f 241
+  s_36596460844258::t_a51654f89b1dac 244,247-251,253-259,261
+  s_36596460844258::t_a51db4fa9c32fb 89-93
+  s_36596460844258::t_04ad05865d09c5 43,49
+  s_36596460844258::t_cc4c2990a077be 203-207
+  s_36596460844258::t_7ea0195446affc 221-222,228
+src/local.ts
+  s_36596460844258::t_87fd0cc11b4290 176-183
+src/types.ts
+  s_36596460844258::t_e37eaa2982b72c 89-97
+tests/e2e/visual-regression/fixture/src/Button.tsx
+  s_36596460844258::t_24dced625018db 1-27
+tests/e2e/visual-regression/fixture/.storybook/preview.ts
+  s_36596460844258::t_0ed09109229f9a 1
+src/config.ts
+  s_36596460844258::t_67333af3be4218 125
+  s_36596460844258::t_65483aef800062 229-231
+src/diffEngine.ts
+  s_36596460844258::t_9422762b0684e0 133-140,144-173
+  s_36596460844258::t_90d6d27b7c5f16 6
+  s_36596460844258::t_e9798073dcf10a 47-60,71,74,84-98
+test/config.test.ts
+  s_36596460844258::t_5aa9c2349ec5cf 131-159
+tests/e2e/visual-regression/fixture/.storybook/main.ts
+  s_36596460844258::t_e5149686dc5223 1-8
+tests/e2e/visual-regression/fixture/src/Button.stories.tsx
+  s_36596460844258::t_3fa2d70d465656 1-14
+tests/e2e/visual-regression/fixture/package.json
+  s_36596460844258::t_63d8434f645429 1-18
+tests/e2e/visual-regression/fixture/.gitignore
+  s_36596460844258::t_fde73adf914f10 1-3
+tests/e2e/visual-regression/README.md
+  s_36596460844258::t_6cb3d5e29f2efd 1-43
+tests/e2e/visual-regression/fixture/tsconfig.json
+  s_36596460844258::t_2b11c628848391 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "3669c390248ab5db7aa2f4c4edfbc2b1f289591e",
+  "prompts": {},
+  "sessions": {
+    "s_36596460844258": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3c5863b9-4d11-4308-be03-ba64880f2ef9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
