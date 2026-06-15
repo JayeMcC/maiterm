@@ -3,6 +3,8 @@
   import { terminalsStore } from '$lib/stores/terminals.svelte';
   import { claudeStateStore } from '$lib/stores/agentState.svelte';
   import { agentBridgeStore } from '$lib/stores/agentBridge.svelte';
+  import { getAdapter } from '$lib/agents/adapter';
+  import { getDescriptor } from '$lib/agents/descriptor';
   import { getPtyInfo } from '$lib/tauri/commands';
   import { error as logError } from '@tauri-apps/plugin-log';
 
@@ -22,8 +24,10 @@
     workspaceName: string;
     cwd: string | null;
     state: 'active' | 'idle' | 'permission';
-    /** Last Claude state change (ms) — for recency sorting. */
+    /** Last agent state change (ms) — for recency sorting. */
     lastActivity: number;
+    /** Runtime brand for the candidate row (e.g. 'Claude Code' | 'Codex'). */
+    runtimeLabel: string;
   }
 
   let selectedIndex = $state(0);
@@ -39,7 +43,7 @@
   // knows what the peer is for (instead of blindly firing questions).
   let purpose = $state('');
 
-  // Enumerate every terminal tab that has a live Claude session, except the
+  // Enumerate every terminal tab that has a live agent session, except the
   // caller itself and any tab already in a bridge.
   const candidates = $derived.by((): Candidate[] => {
     void agentBridgeStore.version; // re-evaluate when bridges change
@@ -62,6 +66,11 @@
           }
           const cs = claudeStateStore.getState(tab.id);
           if (!cs) continue;
+          // Fork is a Claude-only capability — a runtime that can't fork must not be
+          // offered as a fork target (Codex's fork is an in-TUI /fork, not a launch flag).
+          // Existing-tab bridging supports all runtimes (cross-runtime bridging is fine).
+          const runtime = workspacesStore.getTabRuntime(tab.id);
+          if (mode === 'fork' && !getAdapter(runtime).supportsFork) continue;
           const osc = terminalsStore.getOsc(tab.id);
           out.push({
             tabId: tab.id,
@@ -71,6 +80,7 @@
             cwd: osc?.cwd ?? osc?.promptCwd ?? null,
             state: cs.state,
             lastActivity: cs.updatedAt,
+            runtimeLabel: getDescriptor(runtime).displayName,
           });
         }
       }
@@ -232,7 +242,7 @@
         <div class="title">Agent Bridge</div>
         <div class="subtitle">
           {#if mode === 'fork'}
-            Fork another Claude session into a split beside
+            Fork another agent session into a split beside
           {:else}
             Connect an already-running tab directly to
           {/if}
@@ -287,12 +297,12 @@
 
       <div class="results">
         {#if !callerTabId}
-          <div class="status">Open this from a terminal tab running Claude.</div>
+          <div class="status">Open this from a terminal tab running an agent.</div>
         {:else if candidates.length === 0}
           <div class="status">
-            No other registered Claude agents found. An agent appears here once it has
+            No other registered agents found. An agent appears here once it has
             registered with maiTerm — i.e. it has made at least one tool call (or you ran
-            <code>/maiterm init</code> in its tab). Start Claude in another tab, let it take
+            <code>/maiterm init</code> in its tab). Start an agent in another tab, let it take
             one turn, then reopen this.
           </div>
         {:else if visibleCandidates.length === 0}
@@ -310,6 +320,7 @@
               <span class="info">
                 <span class="name-row">
                   <span class="tab-name">{c.tabName}</span>
+                  <span class="runtime-label">{c.runtimeLabel}</span>
                   <span class="ws-name">{c.workspaceName}</span>
                 </span>
                 {#if c.cwd}<span class="cwd" title={c.cwd}>{shortCwd(c.cwd)}</span>{/if}
@@ -560,10 +571,22 @@
     white-space: nowrap;
   }
 
+  .runtime-label {
+    font-size: 0.66rem;
+    color: var(--fg-dim);
+    background: var(--bg-dark);
+    padding: 1px 5px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
   .ws-name {
     font-size: 0.75rem;
     color: var(--fg-dim);
     flex-shrink: 0;
+    margin-left: auto;
   }
 
   .cwd {

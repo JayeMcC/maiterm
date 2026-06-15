@@ -96,7 +96,7 @@
     { id: 'notes' as const, label: 'Notes' },
     { id: 'notifications' as const, label: 'Notifications' },
     { id: 'triggers' as const, label: 'Triggers' },
-    { id: 'claude_code' as const, label: 'Claude Code' },
+    { id: 'claude_code' as const, label: 'AI Agents' },
     { id: 'backup' as const, label: 'Backup' },
     { id: 'updates' as const, label: 'Updates' },
     ...isMac() ? [{ id: 'permissions' as const, label: 'Permissions' }] : [],
@@ -1635,11 +1635,14 @@
           <p class="section-desc" style="margin-top: 8px;">No triggers configured.</p>
         {/if}
       {:else if activeSection === 'claude_code'}
-        <h3 class="section-heading">Claude Code IDE Integration</h3>
+        <h3 class="section-heading">AI Agent Integration</h3>
         <p class="section-desc">
-          When enabled, maiTerm starts a WebSocket server that allows Claude CLI to open files,
-          show diffs, and access editor state. Requires restart to take effect.
+          Connect AI coding agents to maiTerm. When enabled, maiTerm starts a local server
+          so an agent's CLI can open files, show diffs, and access editor state. Each runtime
+          is configured independently below. Requires restart to take effect.
         </p>
+
+        <h3 class="section-heading">Claude Code</h3>
 
         <div class="setting" style="align-items: flex-start;">
           <div>
@@ -1725,6 +1728,119 @@
               onclick={() => preferencesStore.setClaudeCodeIdeSsh(!preferencesStore.claudeCodeIdeSsh)}
               aria-pressed={preferencesStore.claudeCodeIdeSsh}
               aria-label="Toggle SSH IDE integration"
+            >
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
+        {/if}
+
+        <h3 class="section-heading">Codex</h3>
+
+        <div class="setting" style="align-items: flex-start;">
+          <div>
+            <label for="codex-ide">Enable Codex IDE integration</label>
+            <p class="setting-hint">
+              Starts the local server for OpenAI Codex to communicate with maiTerm. Codex is
+              opt-in and disabled by default. This writes Codex's MCP config to
+              <code>~/.codex/config.toml</code> (Claude uses <code>~/.claude.json</code>).
+            </p>
+          </div>
+          <button
+            id="codex-ide"
+            class="toggle"
+            class:active={preferencesStore.codexIde}
+            onclick={() => preferencesStore.setCodexIde(!preferencesStore.codexIde)}
+            aria-pressed={preferencesStore.codexIde}
+            aria-label="Toggle Codex IDE integration"
+          >
+            <span class="toggle-knob"></span>
+          </button>
+        </div>
+
+        {#if preferencesStore.codexIde}
+          <div class="setting" style="align-items: flex-start;">
+            <div>
+              <label for="codex-hooks">Codex lifecycle hooks</label>
+              <p class="setting-hint">
+                Registers lifecycle hooks so Codex reports session state to maiTerm
+                (active/idle/permission tab indicators). Requires restart.
+              </p>
+            </div>
+            <button
+              id="codex-hooks"
+              class="toggle"
+              class:active={preferencesStore.codexHooks}
+              onclick={() => preferencesStore.setCodexHooks(!preferencesStore.codexHooks)}
+              aria-pressed={preferencesStore.codexHooks}
+              aria-label="Toggle Codex lifecycle hooks"
+            >
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
+
+          {#if preferencesStore.codexHooks}
+            <div class="setting" style="align-items: flex-start;">
+              <div>
+                <label for="codex-auto-resume">Codex auto-resume</label>
+                <p class="setting-hint">
+                  Automatically captures session IDs and configures auto-resume when Codex
+                  initializes its maiTerm session. No screen-scraping triggers needed.
+                </p>
+              </div>
+              <button
+                id="codex-auto-resume"
+                class="toggle"
+                class:active={preferencesStore.codexAutoResume}
+                onclick={() => preferencesStore.setCodexAutoResume(!preferencesStore.codexAutoResume)}
+                aria-pressed={preferencesStore.codexAutoResume}
+                aria-label="Toggle Codex auto-resume"
+              >
+                <span class="toggle-knob"></span>
+              </button>
+            </div>
+
+            <div class="setting" style="align-items: flex-start;">
+              <div>
+                <label for="codex-hooks-bypass-trust">Skip the one-time Codex hook-trust prompt (advanced)</label>
+                <p class="setting-hint">
+                  Codex normally requires a one-time <code>/hooks</code> trust confirmation in
+                  its CLI before lifecycle hooks run. Enabling this suppresses that friction.
+                </p>
+              </div>
+              <button
+                id="codex-hooks-bypass-trust"
+                class="toggle"
+                class:active={preferencesStore.codexHooksBypassTrust}
+                onclick={() => preferencesStore.setCodexHooksBypassTrust(!preferencesStore.codexHooksBypassTrust)}
+                aria-pressed={preferencesStore.codexHooksBypassTrust}
+                aria-label="Toggle skipping the Codex hook-trust prompt"
+              >
+                <span class="toggle-knob"></span>
+              </button>
+            </div>
+          {/if}
+
+          <div class="setting" style="align-items: flex-start;">
+            <div>
+              <label for="codex-ide-ssh">Codex MCP bridge over SSH</label>
+              <p class="setting-hint">
+                Automatically creates a secure reverse SSH tunnel when you connect to a remote
+                server, so Codex running remotely can access your local maiTerm MCP tools
+                (workspace navigation, notes, tab context, auto-resume, etc.).
+              </p>
+              <p class="setting-hint" style="margin-top: 6px; opacity: 0.7;">
+                This registers maiTerm's MCP server in <code>~/.codex/config.toml</code> on the
+                remote server. No other software is installed. All traffic is encrypted through
+                your existing SSH connection.
+              </p>
+            </div>
+            <button
+              id="codex-ide-ssh"
+              class="toggle"
+              class:active={preferencesStore.codexIdeSsh}
+              onclick={() => preferencesStore.setCodexIdeSsh(!preferencesStore.codexIdeSsh)}
+              aria-pressed={preferencesStore.codexIdeSsh}
+              aria-label="Toggle Codex SSH MCP bridge"
             >
               <span class="toggle-knob"></span>
             </button>
