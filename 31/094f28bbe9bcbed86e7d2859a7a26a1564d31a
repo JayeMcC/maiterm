@@ -1,0 +1,187 @@
+skill-library/visual-design/visual-regression/SKILL.md
+  s_e078af93d4b3e2::t_51de11f6a39aae 1-327
+skill-library/repo-setup/setup-pre-commit/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-100
+skill-library/pr-workflow/plan-pr-split/workflow.md
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-63
+skill-library/visual-design/visual-regression/workflow.md
+  s_e078af93d4b3e2::t_51de11f6a39aae 1-459
+skill-library/pr-workflow/ingest-ai-test-review/evals/evals.json
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 1-81
+skill-library/pr-workflow/use-git-town/SKILL.md
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-48
+skill-library/skills-meta/skill-lint/evals/evals.json
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-75
+skill-library/planning/zoom-out/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-15
+skill-library/external-services/forwood-f1-cli/SKILL.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-70
+skill-library/sync-infrastructure/personal-tooling-sync-fix/workflow.md
+  s_e078af93d4b3e2::t_48746d0fca7e49 1-64
+skill-library/external-services/scan-bitbucket-pr/workflow.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-53
+skill-library/quality/playwright-workflows/SKILL.md
+  s_e078af93d4b3e2::t_51de11f6a39aae 1-30
+skill-library/external-services/bitbucket-build-failure/SKILL.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-77
+skill-library/writing/writing-shape/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-72
+skill-library/pr-workflow/pr-train-splitting/SKILL.md
+  s_e078af93d4b3e2::t_fe2922f8cd8970 141
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-140,142-157
+skill-library/quality/diagnose/SKILL.md
+  s_e078af93d4b3e2::t_51de11f6a39aae 1-132
+skill-library/pr-workflow/commit-diff-coverage/evals/evals.json
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 1-79
+skill-library/skills-meta/skill-eval/SKILL.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-94
+skill-library/documentation-generators/report-changes/SKILL.md
+  s_e078af93d4b3e2::t_6a03eb8a6cb368 1-426
+skill-library/external-services/bitbucket-pr-inline-per-changed-file/SKILL.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-34
+skill-library/skills-meta/decompose-orchestrator/SKILL.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-60
+skill-library/pr-workflow/prd-review/evals/evals.json
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 1-75
+skill-library/skills-meta/decompose-orchestrator/workflow.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-45
+skill-library/documentation-generators/generate-workflows/SKILL.md
+  s_e078af93d4b3e2::t_a7faf6589ae16e 30
+skill-library/skills-meta/handoff/SKILL.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-23
+skill-library/pr-workflow/commit-diff-coverage/workflow.md
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-101
+skill-library/pr-workflow/ingest-ai-test-review/workflow.md
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-207
+skill-library/teaching/scaffold-exercises/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-115
+skill-library/local-dev/tmux-md-view/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-160
+skill-library/planning/prototype/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-39
+skill-library/external-services/bitbucket-pr-inline-per-changed-file/workflow.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-27
+skill-library/teaching/teach/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-117
+skill-library/skills-meta/migrate-skill/workflow.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-75
+skill-library/pr-workflow/ingest-ai-test-review/SKILL.md
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-30
+skill-library/external-services/scan-bitbucket-pr/SKILL.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-60
+skill-library/documentation-generators/report-prompt-context/SKILL.md
+  s_e078af93d4b3e2::t_6a03eb8a6cb368 1-15
+skill-library/repo-setup/migrate-to-shoehorn/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-127
+skill-library/writing/writing-fragments/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-84
+skill-library/skills-meta/write-a-skill/SKILL.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-126
+skill-library/writing/obsidian-vault/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-68
+skill-library/planning/design-an-interface/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-103
+skill-library/skills-meta/skill-lint/SKILL.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-255
+skill-library/skills-meta/skill-eval/references/coverage-report-template.md
+  s_e078af93d4b3e2::t_f68be22ae853a4 1-35
+skill-library/external-services/bitbucket-pr-comment/SKILL.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-40
+skill-library/documentation-generators/report-changes/workflow.md
+  s_e078af93d4b3e2::t_6a03eb8a6cb368 1-413
+skill-library/documentation-generators/generate-workflows/references/workflows-sections.md
+  s_e078af93d4b3e2::t_b0c601dae137c4 44
+  s_e078af93d4b3e2::t_6fcf5517cc1c36 14
+skill-library/external-services/forwood-f1-cli/catalog-snapshot.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-4129
+skill-library/external-services/scan-bitbucket-pr/evals/evals.json
+  s_e078af93d4b3e2::t_1e3dcb6d3bc659 3
+skill-library/sync-infrastructure/devcontainer-logs/SKILL.md
+  s_e078af93d4b3e2::t_48746d0fca7e49 1-166
+skill-library/planning/grill-with-docs/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-94
+skill-library/documentation-generators/report-changes/evals/evals.json
+  s_e078af93d4b3e2::t_6a03eb8a6cb368 1-108
+skill-library/quality/tdd/SKILL.md
+  s_e078af93d4b3e2::t_51de11f6a39aae 1-124
+skill-library/pr-workflow/pr-train-splitting/package.json
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-10
+skill-library/quality/pre-commit-checks/SKILL.md
+  s_e078af93d4b3e2::t_51de11f6a39aae 1-70
+skill-library/skills-meta/skill-lint/MAINTAINERS.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-73
+skill-library/sync-infrastructure/devcontainer-logs/workflow.md
+  s_e078af93d4b3e2::t_48746d0fca7e49 1-154
+skill-library/external-services/bitbucket-pr-comment/workflow.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-6
+skill-library/pr-workflow/use-git-town/workflow.md
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-37
+skill-library/pr-workflow/plan-pr-split/evals/evals.json
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 1-97
+skill-library/writing/edit-article/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-22
+skill-library/pr-workflow/pr-train-splitting/evals/fixtures/README.md
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 1-149
+skill-library/pr-workflow/pr-train-splitting/evals/evals.json
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 1-71
+skill-library/skills-meta/skill-eval/workflow.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-21,23-73
+  s_e078af93d4b3e2::t_b01af804d6d3c5 22
+skill-library/planning/improve-codebase-architecture/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-90
+skill-library/pr-workflow/plan-pr-split/evals/fixtures/README.md
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 1-84,86-233
+  s_e078af93d4b3e2::t_f68be22ae853a4 85
+skill-library/skills-meta/skill-creator/SKILL.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-503
+skill-library/sync-infrastructure/personal-tooling-sync-fix/SKILL.md
+  s_e078af93d4b3e2::t_48746d0fca7e49 1-17
+skill-library/repo-setup/git-guardrails-claude-code/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-104
+skill-library/pr-workflow/prd-review/evals/fixtures/README.md
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 1-244
+skill-library/planning/grill-me/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-13
+skill-library/speckit/speckit-flow-tools/SKILL.md
+  s_e078af93d4b3e2::t_965aa0bf3d508b 1-248
+skill-library/pr-workflow/commit-diff-coverage/SKILL.md
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-109
+skill-library/skills-meta/migrate-skill/SKILL.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-14
+skill-library/skills-meta/tooling-engagement-status-report/SKILL.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-60
+skill-library/speckit/speckit-step-flow/SKILL.md
+  s_e078af93d4b3e2::t_965aa0bf3d508b 1-566
+skill-library/planning/ubiquitous-language/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-102
+skill-library/documentation-generators/report-prompt-context/workflow.md
+  s_e078af93d4b3e2::t_6a03eb8a6cb368 1-133
+skill-library/repo-setup/setup-matt-pocock-skills/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-131
+skill-library/repo-maintenance/clear-skill-logs/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-156
+skill-library/writing/writing-beats/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-60
+skill-library/pr-workflow/plan-pr-split/SKILL.md
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-70
+skill-library/quality/pre-commit-checks/evals/evals.json
+  s_e078af93d4b3e2::t_51de11f6a39aae 1-98
+skill-library/planning/request-refactor-plan/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "31094f28bbe9bcbed86e7d2859a7a26a1564d31a",
+  "prompts": {},
+  "sessions": {
+    "s_e078af93d4b3e2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93c1630f-9f15-4bd0-be17-5038e1c2afa1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
