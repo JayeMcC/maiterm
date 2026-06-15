@@ -1,0 +1,27 @@
+CLAUDE.md
+  s_d9071b20c4f57b::t_60d73059c0c842 25
+.agents/meta/rules-architecture.md
+  s_d9071b20c4f57b::t_60d73059c0c842 30-33
+.agents/scripts/bash/setup-symlinks.sh
+  s_d9071b20c4f57b::t_60d73059c0c842 2,5-6,24-26,39-40,50,53-55,63-65,67
+.gitignore
+  s_d9071b20c4f57b::t_60d73059c0c842 28-29
+agents.md
+  s_d9071b20c4f57b::t_60d73059c0c842 21-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "c499f2a6963f01895deb5c6e7ac9c21009a03676",
+  "prompts": {},
+  "sessions": {
+    "s_d9071b20c4f57b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "33cb174e-472e-4800-a99c-0551f529065f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

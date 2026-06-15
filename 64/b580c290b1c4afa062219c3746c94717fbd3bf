@@ -1,0 +1,29 @@
+src/utils/persist-probes.ts
+  s_d9071b20c4f57b::t_6986c5e1affec0 88-91,117-125
+src/utils/parse-gaps-md.ts
+  s_d9071b20c4f57b::t_6986c5e1affec0 1-59
+src/utils/sha-resume-context.ts
+  s_d9071b20c4f57b::t_6986c5e1affec0 1-25
+src/nodes/review-pick-doc.ts
+  s_d9071b20c4f57b::t_6986c5e1affec0 33-35,74-98,100-102,147-152
+src/utils/capture-status.ts
+  s_d9071b20c4f57b::t_6986c5e1affec0 1-40
+src/utils/incremental-resume.ts
+  s_d9071b20c4f57b::t_6986c5e1affec0 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "64b580c290b1c4afa062219c3746c94717fbd3bf",
+  "prompts": {},
+  "sessions": {
+    "s_d9071b20c4f57b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "33cb174e-472e-4800-a99c-0551f529065f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

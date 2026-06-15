@@ -1,0 +1,270 @@
+tests/specs/actors-snapshot.test.ts
+  s_00be4cd2f0942d::t_d6697085b3417c 1-117
+tests/nodes/review-dispatch-seed-entities.test.ts
+  s_8eea8f6d9a305f::t_538ff5a8bd24f4 1-20,29-120
+  s_00be4cd2f0942d::t_0b9583d5b4fb3c 21-28
+tests/nodes/review-compose-subclaims.test.ts
+  s_00be4cd2f0942d::t_2d94c06e84d778 142
+  s_00be4cd2f0942d::t_974764eb717949 264
+  s_00be4cd2f0942d::t_c6b00e535c9dc5 134,144-146
+  s_00be4cd2f0942d::t_bb937ff74bcf1c 194-196,220-221,245,286,313,315,329,373
+  s_00be4cd2f0942d::t_f19a53d0fc6a7a 82
+  s_4bcd84e72dcefb::t_2cff187e66b0e9 356-372,374-382,384,386-389,391-392,394-399
+  s_00be4cd2f0942d::t_b25e133142dc92 383,385,423-425,463
+  s_00be4cd2f0942d::t_cae65c32afd93c 390,393
+  s_00be4cd2f0942d::t_f0b1a34c1288cd 178-180
+  s_00be4cd2f0942d::t_63bc25bd41e75d 25-27
+  s_4bcd84e72dcefb::t_03d5fd91930f03 1,9-21,31-41,44-81,88-92,96-97,128-130,132,139,141,147-148,150-154,159,173-175,177,181-182,210-214,217-219,222-224,228-229,231-239,242-244,246-252,255-260,262,273-274,276-280,283-285,287-289,291-292,484-485
+  s_00be4cd2f0942d::t_fd3150f97eee9c 2-8
+  s_00be4cd2f0942d::t_767a94adaf975a 263,265-272
+  s_00be4cd2f0942d::t_54c19f1fd943d5 342-343
+  s_00be4cd2f0942d::t_64b29f84867b9b 101,111,121
+  s_00be4cd2f0942d::t_cd7edbdbed76d4 42-43,355,420
+  s_00be4cd2f0942d::t_e9cf69a40f9e59 296
+  s_00be4cd2f0942d::t_cd9e59a34beef6 434-435,446-462,464-465,469-483
+  s_00be4cd2f0942d::t_38c462773a87ae 28-30
+  s_00be4cd2f0942d::t_c6058edee6f081 135-138,140,143
+  s_4bcd84e72dcefb::t_a829b7e6247296 155-156,185-188,191-193,197-198,207-208,240-241,253-254,281-282
+  s_4bcd84e72dcefb::t_3d8f4c2d12369a 297-312,314,316-328,330-333,336-338,346-348,350-354,400-419,421-422,426-428,430-433
+  s_00be4cd2f0942d::t_92edbc244d5acd 334-335,349
+  s_00be4cd2f0942d::t_c1a92a0fb144d6 131,176,200,225,261,290,468
+  s_4bcd84e72dcefb::t_6622c6e2e54166 83-87,93-95,98-100,102-103,106-110,112-113,116-120,122-123,126-127,149,157-158,160-165,167-168,171-172,183-184,189-190,199,201-206,209,215-216,226-227,230,275,293-295,436-445,466-467
+  s_00be4cd2f0942d::t_29d7d9970a96ff 339-341,344-345
+  s_00be4cd2f0942d::t_cefff8f5d0537f 429
+  s_00be4cd2f0942d::t_7928bc4f4adecc 166
+  s_00be4cd2f0942d::t_0f280608ebbc4f 133
+  s_00be4cd2f0942d::t_1e1064696dd021 22-24
+  s_9261be7360713c::t_15e0e771d65624 104-105,114-115,124-125,169-170
+tests/nodes/review-ac-sort.test.ts
+  s_00be4cd2f0942d::t_3ee5f03cfabb8c 37
+  s_00be4cd2f0942d::t_63bc25bd41e75d 41,51
+  s_4bcd84e72dcefb::t_4f9eae3f0bb46e 159,163-164
+  s_00be4cd2f0942d::t_c1a92a0fb144d6 2,179
+  s_00be4cd2f0942d::t_38c462773a87ae 49-50
+  s_698a90b5ae8549::t_dc5c0f6dfdb449 20,25-29,40
+  s_00be4cd2f0942d::t_1e1064696dd021 38-39
+  s_00be4cd2f0942d::t_b9df474f5b34a2 42-48
+  s_698a90b5ae8549::t_609ffcdd5aea72 160-162,165-169
+  s_00be4cd2f0942d::t_28a2a42c74ec07 30-36
+  s_698a90b5ae8549::t_77706cd6bbeb2c 177,180
+tests/utils/property-tests.test.ts
+  s_00be4cd2f0942d::t_b25e133142dc92 110
+tests/specs/patterns.test.ts
+  s_00be4cd2f0942d::t_0cf49679c97520 1-126
+tests/utils/f1cli-seed-entities.test.ts
+  s_8eea8f6d9a305f::t_3aa73798294279 104-107,109-113
+  s_8eea8f6d9a305f::t_9f3d99326414aa 38-39,47-58
+  s_8eea8f6d9a305f::t_1c40b1f6de4bcb 141
+  s_8eea8f6d9a305f::t_22e52cfaa969e9 33,85-87,91-95,127
+  s_8eea8f6d9a305f::t_ad1e95b695b00a 166
+  s_00be4cd2f0942d::t_568fc832e447b6 114-123
+  s_8eea8f6d9a305f::t_0c1e7f06f31e6c 128-134
+  s_8eea8f6d9a305f::t_dee6b9057c2581 1-32,34-37,46,59-72,96-100,108,124-126,135-140,142-165,167-182
+  s_8eea8f6d9a305f::t_9ac7cf81b4579d 73-75,80-84
+  s_8eea8f6d9a305f::t_6d4a5653dec439 88-90
+  s_00be4cd2f0942d::t_aa058217606298 40-45
+  s_00be4cd2f0942d::t_0bb1dbb10854b9 76-79
+tests/graph/review-edges.test.ts
+  s_698a90b5ae8549::t_dfd2bf6d027640 61
+tests/nodes/review-dispatch-source-grep.test.ts
+  s_da42e87e5f69a8::t_9bffce4d6d3f9a 1-149,208
+  s_9261be7360713c::t_569bfa2f200f00 150-204,206-207
+  s_8eea8f6d9a305f::t_15661e436a2257 205
+tests/utils/author-cli-evidence-guard.test.ts
+  s_4bcd84e72dcefb::t_c8c079c4b1e2e2 1-79
+tests/specs/spec-loader.test.ts
+  s_00be4cd2f0942d::t_d83f03e521badc 1-69
+tests/utils/author-source-evidence.test.ts
+  s_da42e87e5f69a8::t_426d4b03e710f7 1-115
+tests/nodes/review-compose-reconcile.test.ts
+  s_4bcd84e72dcefb::t_f6d979ffc48999 128
+  s_4bcd84e72dcefb::t_7847a4b991b6e5 83,88-89,98-99
+  s_00be4cd2f0942d::t_c1a92a0fb144d6 130,143,173
+  s_00be4cd2f0942d::t_07834ca658c8bf 135
+  s_4bcd84e72dcefb::t_cf19e5df3ab615 161-162
+  s_00be4cd2f0942d::t_af97326240c923 141,144,146
+  s_00be4cd2f0942d::t_40720bd2ec4cbd 132-134,136-138,145
+  s_00be4cd2f0942d::t_6bf8932845b1b1 131
+  s_00be4cd2f0942d::t_cd7edbdbed76d4 7-8,93,182-183
+  s_00be4cd2f0942d::t_38c462773a87ae 31-33
+  s_8eea8f6d9a305f::t_1055257dc30060 34-42
+  s_00be4cd2f0942d::t_1e1064696dd021 25-27
+  s_00be4cd2f0942d::t_def328426ecc61 147
+  s_00be4cd2f0942d::t_b25e133142dc92 49
+  s_00be4cd2f0942d::t_63bc25bd41e75d 28-30
+  s_4bcd84e72dcefb::t_2d53ae79573166 1-6,9-24,43-48,50-82,84-87,90-92,94-97,100-127,129,139-140,142,152-160,163-172,174-181,184-185
+  s_00be4cd2f0942d::t_eeb53e4b224536 148-151
+tests/nodes/review-compose-format.test.ts
+  s_00be4cd2f0942d::t_b25e133142dc92 45
+  s_00be4cd2f0942d::t_f7e9a401bce573 144,156-162
+  s_00be4cd2f0942d::t_057ca8eb6942e2 147
+  s_00be4cd2f0942d::t_c1a92a0fb144d6 110,140,155,175
+  s_00be4cd2f0942d::t_63bc25bd41e75d 24-26
+  s_00be4cd2f0942d::t_38c462773a87ae 27-29
+  s_00be4cd2f0942d::t_99a5448915413d 111
+  s_00be4cd2f0942d::t_0c6cfd157464c6 165,176-183
+  s_4bcd84e72dcefb::t_e6ed05aa1fa468 91
+  s_4bcd84e72dcefb::t_4bf41eb1940b4f 1-20,39-44,46-90,92-97,99,101,103,105,107-109,127-134,137-139,141-143,145-146,148-149,152-154,163-164,166-170,173-174,184-185
+  s_00be4cd2f0942d::t_1e1064696dd021 21-23
+  s_00be4cd2f0942d::t_6fb8f81d05c3cc 112-116,123-124
+  s_8eea8f6d9a305f::t_ba11d1871ab653 30-38
+  s_4bcd84e72dcefb::t_5052a736019feb 98,100,102,104,106,135-136,150-151,171-172
+  s_00be4cd2f0942d::t_4dc5033488b4fd 117-122,125-126
+tests/specs/size-budget.test.ts
+  s_00be4cd2f0942d::t_bba317ae4292c8 1-61
+tests/utils/persist-probes.test.ts
+  s_8eea8f6d9a305f::t_5975cdc3369553 98
+  s_9261be7360713c::t_2bdcce00a1eda9 1-12,19-63,66,69-97,99-122
+  s_8eea8f6d9a305f::t_861b532f7b0870 64-65,67-68
+  s_9261be7360713c::t_c75ad4fc15b677 123-222
+  s_9261be7360713c::t_edb0dab7a8bc48 13-18
+tests/nodes/review-dispatch-ui-fallback.test.ts
+  s_698a90b5ae8549::t_0b976b7e70f52e 37,39,43-45
+  s_698a90b5ae8549::t_2ebfd3c36aa17c 1-36,38,40-42,46-90,92-106,109-127
+  s_698a90b5ae8549::t_5b267ca5a80f55 91
+  s_698a90b5ae8549::t_cd997cae123540 107-108
+tests/utils/api-route-extractor.test.ts
+  s_4bcd84e72dcefb::t_3fb7f991b10461 1-66
+tests/graph/review-e2e-integration.test.ts
+  s_698a90b5ae8549::t_7aa44b36889d7f 924
+  s_00be4cd2f0942d::t_80157658e3e9ce 544-549
+  s_698a90b5ae8549::t_9510df456a8d02 867,872-879
+  s_00be4cd2f0942d::t_bbb97999e0a367 555-556
+  s_698a90b5ae8549::t_25e0b22c712d93 187-193
+  s_00be4cd2f0942d::t_b25e133142dc92 850,855
+  s_698a90b5ae8549::t_6c95b13e74de54 206-207
+  s_698a90b5ae8549::t_9d144b319da44c 180-186
+  s_00be4cd2f0942d::t_35a53b97069d3d 349-356
+  s_00be4cd2f0942d::t_cd7edbdbed76d4 536,816,819,837,925
+  s_00be4cd2f0942d::t_21fcb4e6a6e8c6 982-985,987-988,990
+  s_00be4cd2f0942d::t_c1a92a0fb144d6 450,509,530,638,743,812,921,986
+  s_00be4cd2f0942d::t_3b3fa15b4bf63b 478-480
+  s_00be4cd2f0942d::t_97aef828727ced 335-341
+  s_00be4cd2f0942d::t_1b09eacdd959cf 538-539
+  s_698a90b5ae8549::t_e2b7a9457a2671 322-334
+  s_00be4cd2f0942d::t_43c869dd99f278 540-543,550
+  s_00be4cd2f0942d::t_47dbecd86f495a 557-559
+  s_698a90b5ae8549::t_2b9ad06e63c853 626-629
+  s_698a90b5ae8549::t_24fb073993599b 866,868-871,880-882,893-894,898-901,910-915
+  s_4bcd84e72dcefb::t_e05aec80ddd8a4 534-535,537
+  s_4bcd84e72dcefb::t_4ad7db8f013d39 533
+  s_698a90b5ae8549::t_d4cdd8b4a45ee7 896-897,902-909
+  s_00be4cd2f0942d::t_210a243256b7ab 342-348,357
+  s_00be4cd2f0942d::t_c6c12884cbb6e1 917-920,922-923
+tests/nodes/review-compose-checkpoint.test.ts
+  s_00be4cd2f0942d::t_cd7edbdbed76d4 49-50
+  s_00be4cd2f0942d::t_1e1064696dd021 25-27
+  s_00be4cd2f0942d::t_38c462773a87ae 31-33
+  s_00be4cd2f0942d::t_128d5f776150c5 1-24,34-48,51-217
+  s_00be4cd2f0942d::t_63bc25bd41e75d 28-30
+tests/nodes/review-compose-wire-evidence.test.ts
+  s_00be4cd2f0942d::t_cd7edbdbed76d4 53-54
+  s_4bcd84e72dcefb::t_ab4056f738413a 1-18,28-52,55-121,165
+  s_00be4cd2f0942d::t_63bc25bd41e75d 22-24
+  s_00be4cd2f0942d::t_38c462773a87ae 25-27
+  s_da42e87e5f69a8::t_f5fd67436d1fe6 122-164
+  s_00be4cd2f0942d::t_1e1064696dd021 19-21
+tests/nodes/review-dispatch-only-ac.test.ts
+  s_698a90b5ae8549::t_ff345b01ccbe88 25-30
+  s_698a90b5ae8549::t_cabd97eef45526 8-20
+  s_698a90b5ae8549::t_0860ff0864aa5b 1-7,21-24,31-83,85-88,105-106
+  s_4bcd84e72dcefb::t_df478e948ab0ed 84,89-104
+tests/utils/audit-not-covered.test.ts
+  s_00be4cd2f0942d::t_7294baa6aaf3f3 135-156,158-159
+  s_00be4cd2f0942d::t_f96f921b0c9c7f 157
+  s_8eea8f6d9a305f::t_b064d6b90a265c 1-25,27-134,160-213
+  s_00be4cd2f0942d::t_ed6f222b8a6499 26
+tests/utils/source-evidence-runner.test.ts
+  s_4bcd84e72dcefb::t_5d2b68bb9d267f 23-24
+  s_4bcd84e72dcefb::t_6b491d2b5997db 1-22,25-143,184
+  s_8eea8f6d9a305f::t_2a50cf76be2c65 144-183
+tests/llm/cursor-provider.test.ts
+  s_76944c162c8cf0::t_294feed6392d21 1-86
+tests/utils/f1cli-catalog.test.ts
+  s_698a90b5ae8549::t_719dc53d3378e6 1-101
+tests/nodes/review-compose-automation-backlog.test.ts
+  s_00be4cd2f0942d::t_c1a92a0fb144d6 109,125,136,149
+  s_00be4cd2f0942d::t_38c462773a87ae 28-30
+  s_00be4cd2f0942d::t_c1637f18d5931c 70-73
+  s_4bcd84e72dcefb::t_30cfdfb22be01c 137-140
+  s_00be4cd2f0942d::t_63bc25bd41e75d 25-27
+  s_00be4cd2f0942d::t_cd7edbdbed76d4 2,42-43
+  s_4bcd84e72dcefb::t_b3521ddfcc1105 69
+  s_00be4cd2f0942d::t_1e1064696dd021 22-24
+  s_4bcd84e72dcefb::t_51a241ffd4e4a0 1,3-21,31-41,44-68,74-108,110-124,126-135,141-148,150-152
+tests/graph/review-loop.test.ts
+  s_00be4cd2f0942d::t_c1a92a0fb144d6 105,137
+  s_698a90b5ae8549::t_01380c1b61a857 297-305
+  s_698a90b5ae8549::t_2fa354e09228ae 200-201
+  s_698a90b5ae8549::t_f47470442bf9dd 85-87
+  s_698a90b5ae8549::t_c71e9d46f15040 169
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "f1fd515290f3765c204e968dab3b6088774efe9c",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_00be4cd2f0942d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3653879d-80f6-4ef5-afe9-30e3e186cbb7",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_4bcd84e72dcefb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f97064eb-9d21-4fba-9dea-f7e730080f8f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_698a90b5ae8549": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8480dd80-4d0c-451c-9d5c-a4ecd980db01",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_76944c162c8cf0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3720c080-2e09-4286-8e78-7f26c37bdd38",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_8eea8f6d9a305f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dd3b4c29-15e7-4eae-8fd4-327d54be3250",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_9261be7360713c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c68ba058-8a30-431c-baf7-9be9a3868238",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_da42e87e5f69a8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7d642e7d-beaf-4edc-896e-95b3beb0a91d",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
