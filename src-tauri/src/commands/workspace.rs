@@ -41,11 +41,11 @@ pub fn exit_app(app: tauri::AppHandle, state: State<'_, Arc<AppState>>) {
     // previous_run_crashed=true in diagnostics.
     crate::state::persistence::clear_running_marker();
     // Shut down the Claude Code MCP server gracefully (releases the port)
-    if let Some(tx) = state.claude_code_shutdown.lock().take() {
+    if let Some(tx) = state.mcp_shutdown.lock().take() {
         let _ = tx.send(true);
     }
-    let port = *state.claude_code_port.read();
-    let auth = state.claude_code_auth.read().clone().unwrap_or_default();
+    let port = *state.mcp_port.read();
+    let auth = state.mcp_auth.read().clone().unwrap_or_default();
     if let Some(port) = port {
         crate::claude_code::lockfile::delete_lockfile(port, &auth);
     }

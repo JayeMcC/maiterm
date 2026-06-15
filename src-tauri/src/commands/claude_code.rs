@@ -11,7 +11,7 @@ pub fn claude_code_respond(
     request_id: String,
     result: Value,
 ) -> Result<(), String> {
-    let mut pending = state.claude_code_pending.write();
+    let mut pending = state.ide_pending.write();
     if let Some(tx) = pending.remove(&request_id) {
         let _ = tx.send(result);
         Ok(())
@@ -26,7 +26,7 @@ pub fn claude_code_notify_selection(
     state: State<'_, Arc<AppState>>,
     payload: Value,
 ) -> Result<(), String> {
-    let guard = state.claude_code_notify_tx.lock();
+    let guard = state.ide_notify_tx.lock();
     if let Some(tx) = guard.as_ref() {
         let json = serde_json::to_string(&payload).map_err(|e| e.to_string())?;
         tx.send(json).map_err(|e| e.to_string())

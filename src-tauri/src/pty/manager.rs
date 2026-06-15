@@ -66,7 +66,7 @@ pub fn spawn_pty(
 
         // Expose MCP server port so hooks can scope to this maiTerm instance
         // (prevents dev/prod cross-talk when both are running)
-        if let Some(port) = state.claude_code_port.read().as_ref() {
+        if let Some(port) = state.mcp_port.read().as_ref() {
             cmd.env("AITERM_PORT", port.to_string());
         }
 

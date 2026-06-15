@@ -194,13 +194,13 @@ pub fn kill_all_tunnels(state: &Arc<AppState>) {
 /// Get the local MCP server port (needed by frontend to construct tunnel).
 #[tauri::command]
 pub fn get_mcp_port(state: tauri::State<'_, Arc<AppState>>) -> Option<u16> {
-    *state.claude_code_port.read()
+    *state.mcp_port.read()
 }
 
 /// Get the MCP auth token (needed by frontend to write remote lockfile).
 #[tauri::command]
 pub fn get_mcp_auth(state: tauri::State<'_, Arc<AppState>>) -> Option<String> {
-    state.claude_code_auth.read().clone()
+    state.mcp_auth.read().clone()
 }
 
 /// The `/maiterm statusline` helper scripts, served from the same bundled

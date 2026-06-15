@@ -109,13 +109,13 @@ pub struct AppState {
     pub file_watchers: RwLock<HashMap<String, FileWatcherHandle>>,
     // In-flight SCP uploads: upload_id → cooperative cancel flag
     pub scp_uploads: RwLock<HashMap<String, std::sync::Arc<std::sync::atomic::AtomicBool>>>,
-    // Claude Code IDE integration
-    pub claude_code_port: RwLock<Option<u16>>,
-    pub claude_code_auth: RwLock<Option<String>>,
-    pub claude_code_pending: RwLock<HashMap<String, tokio::sync::oneshot::Sender<serde_json::Value>>>,
-    pub claude_code_connected: RwLock<bool>,
-    pub claude_code_notify_tx: parking_lot::Mutex<Option<tokio::sync::mpsc::UnboundedSender<String>>>,
-    pub claude_code_shutdown: parking_lot::Mutex<Option<tokio::sync::watch::Sender<bool>>>,
+    // Embedded MCP / IDE server (shared across agent runtimes; one server, one port/auth)
+    pub mcp_port: RwLock<Option<u16>>,
+    pub mcp_auth: RwLock<Option<String>>,
+    pub ide_pending: RwLock<HashMap<String, tokio::sync::oneshot::Sender<serde_json::Value>>>,
+    pub ide_connected: RwLock<bool>,
+    pub ide_notify_tx: parking_lot::Mutex<Option<tokio::sync::mpsc::UnboundedSender<String>>>,
+    pub mcp_shutdown: parking_lot::Mutex<Option<tokio::sync::watch::Sender<bool>>>,
     // SSH MCP tunnels: keyed by host_key (user@host)
     pub ssh_tunnels: RwLock<HashMap<String, SshTunnel>>,
     // Remote file watchers (SSH stat polling): keyed by tab_id
@@ -126,7 +126,7 @@ pub struct AppState {
     // Diagnostics
     pub pty_stats: RwLock<HashMap<String, PtyStats>>,
     pub memory_samples: RwLock<Vec<MemorySample>>,
-    // Claude Code hook sessions: session_id → session info
+    // Agent hook sessions (Claude/Codex/…): session_id → session info
     pub agent_sessions: RwLock<HashMap<String, AgentSessionInfo>>,
     // Pending session IDs from SessionStart HTTP hooks awaiting initSession to assign a tab
     pub pending_agent_sessions: RwLock<Vec<(String, Option<String>, Instant)>>, // (session_id, cwd, timestamp)
@@ -149,12 +149,12 @@ impl AppState {
             app_data: RwLock::new(AppData::default()),
             file_watchers: RwLock::new(HashMap::new()),
             scp_uploads: RwLock::new(HashMap::new()),
-            claude_code_port: RwLock::new(None),
-            claude_code_auth: RwLock::new(None),
-            claude_code_pending: RwLock::new(HashMap::new()),
-            claude_code_connected: RwLock::new(false),
-            claude_code_notify_tx: parking_lot::Mutex::new(None),
-            claude_code_shutdown: parking_lot::Mutex::new(None),
+            mcp_port: RwLock::new(None),
+            mcp_auth: RwLock::new(None),
+            ide_pending: RwLock::new(HashMap::new()),
+            ide_connected: RwLock::new(false),
+            ide_notify_tx: parking_lot::Mutex::new(None),
+            mcp_shutdown: parking_lot::Mutex::new(None),
             ssh_tunnels: RwLock::new(HashMap::new()),
             remote_file_watchers: RwLock::new(HashMap::new()),
             remote_watcher_running: std::sync::atomic::AtomicBool::new(false),

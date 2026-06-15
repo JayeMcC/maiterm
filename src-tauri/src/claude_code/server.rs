@@ -104,8 +104,8 @@ pub fn prepare_server(state: &Arc<AppState>) -> Option<ServerSetup> {
         .map(char::from)
         .collect();
 
-    *state.claude_code_port.write() = Some(port);
-    *state.claude_code_auth.write() = Some(auth.clone());
+    *state.mcp_port.write() = Some(port);
+    *state.mcp_auth.write() = Some(auth.clone());
 
     let workspace_folders = collect_workspace_folders(state);
     let hooks_enabled = state.app_data.read().preferences.claude_code_hooks;
@@ -137,7 +137,7 @@ pub async fn serve_server(app_handle: AppHandle, state: Arc<AppState>, setup: Se
     // Graceful shutdown signal — sender stored in AppState, triggered on app exit
     let (shutdown_tx, mut shutdown_rx) = tokio::sync::watch::channel(false);
     let mut reassert_shutdown = shutdown_tx.subscribe();
-    *state.claude_code_shutdown.lock() = Some(shutdown_tx);
+    *state.mcp_shutdown.lock() = Some(shutdown_tx);
 
     // Periodically re-assert our `~/.claude.json` entry so a clobber by the
     // co-owning `claude` CLI self-heals instead of leaving Claude Code dialing a
@@ -525,7 +525,7 @@ fn collect_workspace_folders(_state: &Arc<AppState>) -> Vec<String> {
 /// `app_handle.emit()` broadcasts globally and `listen()` catches both global +
 /// window events in Tauri 2, so we target each window individually.
 fn emit_connection_state(srv: &ServerState, connected: bool) {
-    *srv.state.claude_code_connected.write() = connected;
+    *srv.state.ide_connected.write() = connected;
     let payload = serde_json::json!({ "connected": connected });
     let app_data = srv.state.app_data.read();
     for win in &app_data.windows {
@@ -580,7 +580,7 @@ async fn handle_ws_connection(socket: WebSocket, srv: ServerState) {
 
     // response_tx: handle_message sends raw JSON here; main loop writes to WS
     let (response_tx, mut response_rx) = mpsc::unbounded_channel::<String>();
-    *srv.state.claude_code_notify_tx.lock() = Some(response_tx.clone());
+    *srv.state.ide_notify_tx.lock() = Some(response_tx.clone());
 
     let (mut ws_write, mut ws_read) = socket.split();
     let mut ping_interval = tokio::time::interval(PING_INTERVAL);
@@ -627,7 +627,7 @@ async fn handle_ws_connection(socket: WebSocket, srv: ServerState) {
     // Only clear the global notify channel if we still own it — a newer
     // transport session may have overwritten it while we were running.
     {
-        let mut guard = srv.state.claude_code_notify_tx.lock();
+        let mut guard = srv.state.ide_notify_tx.lock();
         if guard.as_ref().map(|tx| tx.same_channel(&response_tx)).unwrap_or(false) {
             *guard = None;
         }
@@ -744,7 +744,7 @@ async fn sse_get_handler(State(srv): State<ServerState>, headers: HeaderMap) -> 
         }
     });
     let notify_tx_owner = notify_tx.clone();
-    *srv.state.claude_code_notify_tx.lock() = Some(notify_tx);
+    *srv.state.ide_notify_tx.lock() = Some(notify_tx);
 
     connection_inc(&srv);
     log::debug!("Claude Code SSE client connected (session {}...)", &session_id[..8]);
@@ -796,7 +796,7 @@ async fn sse_get_handler(State(srv): State<ServerState>, headers: HeaderMap) -> 
         // Only clear the global notify channel if this session still owns it —
         // a newer session may have overwritten it while we were running.
         {
-            let mut guard = cleanup_srv.state.claude_code_notify_tx.lock();
+            let mut guard = cleanup_srv.state.ide_notify_tx.lock();
             if guard.as_ref().map(|tx| tx.same_channel(&notify_tx_owner)).unwrap_or(false) {
                 *guard = None;
             }
@@ -1154,7 +1154,7 @@ async fn process_message(
                     let request_id = uuid::Uuid::new_v4().to_string();
                     let (tx, rx) = oneshot::channel::<Value>();
                     state
-                        .claude_code_pending
+                        .ide_pending
                         .write()
                         .insert(request_id.clone(), tx);
 
@@ -1184,7 +1184,7 @@ async fn process_message(
                             Some(serde_json::to_string(&resp).unwrap())
                         }
                         Ok(Err(_)) => {
-                            state.claude_code_pending.write().remove(&request_id);
+                            state.ide_pending.write().remove(&request_id);
                             let resp = JsonRpcResponse::error(
                                 id,
                                 -32603,
@@ -1193,7 +1193,7 @@ async fn process_message(
                             Some(serde_json::to_string(&resp).unwrap())
                         }
                         Err(_) => {
-                            state.claude_code_pending.write().remove(&request_id);
+                            state.ide_pending.write().remove(&request_id);
                             let resp = JsonRpcResponse::error(
                                 id,
                                 -32603,
