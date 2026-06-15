@@ -1040,6 +1040,7 @@ pub async fn list_files(
         .build();
 
     let mut entries: Vec<(String, u64)> = Vec::new();
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
     for entry in walker {
         if entries.len() >= max {
             break;
@@ -1047,6 +1048,7 @@ pub async fn list_files(
         if let Ok(entry) = entry {
             if entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
                 if let Ok(rel) = entry.path().strip_prefix(&base) {
+                    let rel_str = rel.to_string_lossy().to_string();
                     let mtime = entry
                         .metadata()
                         .ok()
@@ -1054,8 +1056,33 @@ pub async fn list_files(
                         .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
                         .map(|d| d.as_secs())
                         .unwrap_or(0);
-                    entries.push((rel.to_string_lossy().to_string(), mtime));
+                    seen.insert(rel_str.clone());
+                    entries.push((rel_str, mtime));
                 }
+            }
+        }
+    }
+
+    // Always surface .env* files in the base directory, even when dotfiles or
+    // gitignored files are filtered out. They're among the most commonly edited
+    // config files and would otherwise be unreachable from Quick Open without
+    // toggling both the hidden and gitignore filters.
+    if let Ok(read_dir) = std::fs::read_dir(&base) {
+        for entry in read_dir.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if !name.starts_with(".env") || seen.contains(&name) {
+                continue;
+            }
+            if entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
+                let mtime = entry
+                    .metadata()
+                    .ok()
+                    .and_then(|m| m.modified().ok())
+                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0);
+                seen.insert(name.clone());
+                entries.push((name, mtime));
             }
         }
     }
@@ -1091,22 +1118,27 @@ pub async fn ssh_list_files(
         "find . -maxdepth 10 -path '*/.*' -prune -o -type f -print".to_string()
     };
 
+    // Always surface top-level .env* files regardless of the hidden/gitignore
+    // filters — they're commonly edited and would otherwise be unreachable.
+    // Duplicates (when the filters already include them) are removed below.
+    let env_lister = "ls -1p .env* 2>/dev/null | grep -v '/$'";
+
     // git ls-files --cached --others --exclude-standard lists tracked + untracked
     // files while respecting .gitignore. Plain `git ls-files` only shows tracked
     // files, missing anything not yet committed.
     // show_ignored: use find instead of git ls-files to bypass .gitignore entirely.
     let cmd = if no_ignore {
         format!(
-            "cd {} && {} | head -{}",
-            quoted, find_cmd, max
+            "cd {} && {{ {} | head -{}; {}; }}",
+            quoted, find_cmd, max, env_lister
         )
     } else {
         // Use git ls-files with fallback to find for non-git directories.
         // The `| head -1` test ensures we fall back if git ls-files returns empty
         // (e.g. empty repo with no tracked files at all).
         format!(
-            "cd {} && {{ out=$(git ls-files --cached --others --exclude-standard 2>/dev/null) && [ -n \"$out\" ] && echo \"$out\" || {}; }} | head -{}",
-            quoted, find_cmd, max
+            "cd {} && {{ {{ out=$(git ls-files --cached --others --exclude-standard 2>/dev/null) && [ -n \"$out\" ] && echo \"$out\" || {}; }} | head -{}; {}; }}",
+            quoted, find_cmd, max, env_lister
         )
     };
 
@@ -1129,10 +1161,12 @@ pub async fn ssh_list_files(
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
     let files: Vec<String> = stdout
         .lines()
         .filter(|line| !line.is_empty())
         .map(|line| line.strip_prefix("./").unwrap_or(line).to_string())
+        .filter(|f| seen.insert(f.clone()))
         .collect();
 
     Ok(files)

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { workspacesStore } from '$lib/stores/workspaces.svelte';
   import { terminalsStore } from '$lib/stores/terminals.svelte';
   import { getPtyInfo, listFiles, sshListFiles, isDirectory, sshIsDirectory } from '$lib/tauri/commands';
@@ -470,9 +471,14 @@
     loadFiles(false, prev);
   }
 
-  // Load files when modal opens
+  // Load files when modal opens.
+  // Only `open` is a reactive dependency — the body is untracked so that writing
+  // the showHidden/showIgnored preferences from the toggle buttons doesn't re-run
+  // this effect (which would wipe the search query and reload). See the
+  // "$effect reactive loops with stores" pitfall in CLAUDE.md.
   $effect(() => {
-    if (open) {
+    if (!open) return;
+    untrack(() => {
       query = '';
       selectedIndex = 0;
       error = null;
@@ -484,7 +490,7 @@
       showIgnored = preferencesStore.quickOpenShowIgnored;
       loadFiles();
       requestAnimationFrame(() => inputRef?.focus());
-    }
+    });
   });
 
   function toggleHidden() {
@@ -694,14 +700,14 @@
               <span class="base-path" title={basePath}>{basePath}</span>
             </div>
             <div class="input-actions">
-              <Tooltip text={showHidden ? 'Hide dotfiles' : 'Show dotfiles'}>
+              <Tooltip text={showHidden ? 'Dotfiles: shown · click to hide' : 'Dotfiles: hidden · click to show (.env always shows)'}>
                 <button
                   class="toggle-btn"
                   class:active={showHidden}
                   onclick={toggleHidden}
                 >.*</button>
               </Tooltip>
-              <Tooltip text={showIgnored ? 'Respect .gitignore' : 'Show gitignored files'}>
+              <Tooltip text={showIgnored ? 'Gitignored files: shown · click to hide' : 'Gitignored files: hidden · click to show (.env always shows)'}>
                 <button
                   class="toggle-btn"
                   class:active={showIgnored}
