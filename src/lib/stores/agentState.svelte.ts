@@ -6,6 +6,7 @@ import { workspacesStore } from './workspaces.svelte';
 import { activityStore } from './activity.svelte';
 import { dispatch } from './notificationDispatch';
 import { getResumeCommand } from '$lib/agents/resume';
+import { getDescriptor } from '$lib/agents/descriptor';
 import type { AgentRuntime, AgentState, WorkspaceAgentState } from '$lib/agents/types';
 
 /**
@@ -39,46 +40,19 @@ export interface AgentTabSession {
   updatedAt: number;
 }
 
-/** Build a human-readable action string from tool name + input. */
-function buildActionString(toolName: string, toolInput: Record<string, unknown> | null): string {
-  const detail = summarizeToolDetail(toolName, toolInput);
+/** Validate a hook payload's runtime field, defaulting to Claude. */
+function runtimeOf(payload: { runtime?: string }): AgentRuntime {
+  const r = payload.runtime;
+  return r === 'codex' || r === 'gemini' ? r : 'claude';
+}
+
+/** Build a human-readable action string from tool name + input, using the
+ *  runtime's tool summarizer for the detail portion. */
+function buildActionString(runtime: AgentRuntime, toolName: string, toolInput: Record<string, unknown> | null): string {
+  const detail = getDescriptor(runtime).summarizeTool(toolName, toolInput);
   const displayName = toolName.startsWith('mcp__') ? toolName.split('__').slice(2).join('__') : toolName;
   return detail ? `${displayName}: ${detail}` : displayName;
 }
-
-/** Extract a short detail from tool_input for display. */
-function summarizeToolDetail(toolName: string, toolInput: Record<string, unknown> | null): string | undefined {
-  if (!toolInput) return undefined;
-  switch (toolName) {
-    case 'Bash': {
-      const cmd = toolInput.command as string | undefined;
-      if (!cmd) return undefined;
-      return cmd.length > 50 ? cmd.slice(0, 47) + '...' : cmd;
-    }
-    case 'Edit':
-    case 'Write':
-    case 'Read': {
-      const fp = toolInput.file_path as string | undefined;
-      if (!fp) return undefined;
-      return fp.split('/').pop() || fp;
-    }
-    case 'Glob':
-    case 'Grep':
-      return toolInput.pattern as string | undefined;
-    case 'Agent':
-      return toolInput.description as string | undefined;
-    case 'WebFetch':
-    case 'WebSearch':
-      return (toolInput.query ?? toolInput.url) as string | undefined;
-    default:
-      return undefined;
-  }
-}
-
-/** How long (ms) to keep stale tool state before auto-clearing.
- *  If no PreToolUse/PostToolUse arrives within this window, we assume
- *  Claude was interrupted and clear the tool indicator. */
-const TOOL_STALE_TIMEOUT = 15_000;
 
 function createAgentStateStore() {
   // tabId → session info
@@ -87,15 +61,13 @@ function createAgentStateStore() {
   // tabId → timeout handle for stale tool detection
   const staleTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-  function setState(tabId: string, sessionId: string, state: AgentState, toolName?: string, toolDetail?: string) {
+  function setState(tabId: string, sessionId: string, state: AgentState, toolName?: string, toolDetail?: string, runtime: AgentRuntime = 'claude') {
     const current = sessions.get(tabId);
     if (current?.sessionId === sessionId && current?.state === state && current?.toolName === toolName) return;
     // Entering idle fresh = unread; staying idle preserves whatever read flag we had.
     const read = state === 'idle' ? (current?.state === 'idle' ? current.read : false) : undefined;
     sessions = new Map(sessions);
-    // runtime is hardcoded 'claude' for now — only Claude feeds this store today;
-    // a later stage threads the real runtime from hook payloads.
-    sessions.set(tabId, { runtime: 'claude', sessionId, state, toolName, toolDetail, read, updatedAt: Date.now() });
+    sessions.set(tabId, { runtime, sessionId, state, toolName, toolDetail, read, updatedAt: Date.now() });
 
     // Propagate permission state to activityStore tab state so workspace sidebar shows alert.
     // Clear alert when leaving permission state (but only if we set it).
@@ -114,7 +86,7 @@ function createAgentStateStore() {
           setState(tabId, sessionId, state);
           setVariable(tabId, 'claudeAction', '');
         }
-      }, TOOL_STALE_TIMEOUT));
+      }, getDescriptor(runtime).toolStaleTimeoutMs));
     }
   }
 
@@ -257,12 +229,13 @@ function createAgentStateStore() {
     },
 
     async init() {
-      const u1 = await listen<{ session_id: string; tab_id: string; source?: string }>('agent-hook-session-start', (e) => {
+      const u1 = await listen<{ session_id: string; tab_id: string; source?: string; runtime?: string }>('agent-hook-session-start', (e) => {
         const { session_id, tab_id, source } = e.payload;
         if (!tab_id) return;
-        setState(tab_id, session_id, 'active');
+        const runtime = runtimeOf(e.payload);
+        setState(tab_id, session_id, 'active', undefined, undefined, runtime);
         if (source === 'compact') {
-          dispatch('Claude Code', 'Compaction complete', 'info', { tabId: tab_id });
+          dispatch(getDescriptor(runtime).displayName, 'Compaction complete', 'info', { tabId: tab_id });
         }
         logInfo(`Claude state: session ${session_id.slice(0, 8)} started (${source ?? 'unknown'}) → tab ${tab_id.slice(0, 8)} = active`);
       });
@@ -277,35 +250,36 @@ function createAgentStateStore() {
       });
       unlisteners.push(u2);
 
-      const u3 = await listen<{ session_id: string; tab_id: string | null }>('agent-hook-stop', (e) => {
+      const u3 = await listen<{ session_id: string; tab_id: string | null; runtime?: string }>('agent-hook-stop', (e) => {
         const { session_id, tab_id } = e.payload;
         if (!tab_id) return;
-        setState(tab_id, session_id, 'idle');
+        setState(tab_id, session_id, 'idle', undefined, undefined, runtimeOf(e.payload));
         setVariable(tab_id, 'claudeAction', '');
       });
       unlisteners.push(u3);
 
-      const u4 = await listen<{ session_id: string; tab_id: string | null }>('agent-hook-user-prompt', (e) => {
+      const u4 = await listen<{ session_id: string; tab_id: string | null; runtime?: string }>('agent-hook-user-prompt', (e) => {
         const { session_id, tab_id } = e.payload;
         if (!tab_id) return;
         // Clear tool state — new prompt means previous operation ended (possibly interrupted)
-        setState(tab_id, session_id, 'active');
+        setState(tab_id, session_id, 'active', undefined, undefined, runtimeOf(e.payload));
         setVariable(tab_id, 'claudeAction', '');
       });
       unlisteners.push(u4);
 
-      const u5 = await listen<{ session_id: string; tab_id: string | null; notification_type: string }>('agent-hook-notification', (e) => {
+      const u5 = await listen<{ session_id: string; tab_id: string | null; notification_type: string; runtime?: string }>('agent-hook-notification', (e) => {
         const { session_id, tab_id, notification_type } = e.payload;
         if (!tab_id) return;
+        const runtime = runtimeOf(e.payload);
         if (notification_type === 'permission_prompt') {
-          setState(tab_id, session_id, 'permission');
-          dispatch('Claude Code', 'Needs permission approval', 'info', { tabId: tab_id });
+          setState(tab_id, session_id, 'permission', undefined, undefined, runtime);
+          dispatch(getDescriptor(runtime).displayName, 'Needs permission approval', 'info', { tabId: tab_id });
         } else if (notification_type === 'idle_prompt') {
-          setState(tab_id, session_id, 'idle');
+          setState(tab_id, session_id, 'idle', undefined, undefined, runtime);
           // Notification disabled — the Stop hook already notifies when Claude finishes,
           // and this fires at awkward moments (e.g. between tool calls). Re-enable if we
           // find a case where idle_prompt provides value beyond what Stop covers.
-          // dispatch('Claude Code', 'Waiting for input', 'info', { tabId: tab_id });
+          // dispatch(getDescriptor(runtime).displayName, 'Waiting for input', 'info', { tabId: tab_id });
         }
       });
       unlisteners.push(u5);
@@ -335,30 +309,32 @@ function createAgentStateStore() {
       unlisteners.push(u6);
 
       // PreToolUse: track which tool Claude is about to use + set %claudeAction variable
-      const u7 = await listen<{ session_id: string; tab_id: string | null; tool_name: string; tool_input: Record<string, unknown> | null }>('agent-hook-pre-tool-use', (e) => {
+      const u7 = await listen<{ session_id: string; tab_id: string | null; tool_name: string; tool_input: Record<string, unknown> | null; runtime?: string }>('agent-hook-pre-tool-use', (e) => {
         const { session_id, tab_id, tool_name, tool_input } = e.payload;
         if (!tab_id) return;
-        const action = buildActionString(tool_name, tool_input);
-        const detail = summarizeToolDetail(tool_name, tool_input);
-        setState(tab_id, session_id, 'active', tool_name, detail);
+        const runtime = runtimeOf(e.payload);
+        const action = buildActionString(runtime, tool_name, tool_input);
+        const detail = getDescriptor(runtime).summarizeTool(tool_name, tool_input);
+        setState(tab_id, session_id, 'active', tool_name, detail, runtime);
         setVariable(tab_id, 'claudeAction', action);
       });
       unlisteners.push(u7);
 
       // PostToolUse: tool finished, clear tool info (still active/thinking)
-      const u8 = await listen<{ session_id: string; tab_id: string | null; tool_name: string }>('agent-hook-post-tool-use', (e) => {
+      const u8 = await listen<{ session_id: string; tab_id: string | null; tool_name: string; runtime?: string }>('agent-hook-post-tool-use', (e) => {
         const { session_id, tab_id } = e.payload;
         if (!tab_id) return;
-        setState(tab_id, session_id, 'active');
+        setState(tab_id, session_id, 'active', undefined, undefined, runtimeOf(e.payload));
         setVariable(tab_id, 'claudeAction', '');
       });
       unlisteners.push(u8);
 
       // PreCompact: context compaction starting
-      const u9 = await listen<{ session_id: string; tab_id: string | null; trigger: string }>('agent-hook-pre-compact', (e) => {
+      const u9 = await listen<{ session_id: string; tab_id: string | null; trigger: string; runtime?: string }>('agent-hook-pre-compact', (e) => {
         const { tab_id, trigger } = e.payload;
         if (!tab_id) return;
-        dispatch('Claude Code', `Compacting conversation (${trigger})...`, 'info', { tabId: tab_id });
+        const runtime = runtimeOf(e.payload);
+        dispatch(getDescriptor(runtime).displayName, `Compacting conversation (${trigger})...`, 'info', { tabId: tab_id });
       });
       unlisteners.push(u9);
     },
