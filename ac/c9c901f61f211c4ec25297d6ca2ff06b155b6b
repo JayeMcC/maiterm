@@ -1,0 +1,42 @@
+scripts/personal-sync-devcontainer-setup/templates/forwood-one_core/.devcontainer/Dockerfile
+  s_594d29ad60234a::t_1b35185dfcde2f 18
+  s_594d29ad60234a::t_6115f19cbcb18a 48-51
+  s_594d29ad60234a::t_ddebcbca01ac00 53-54,56,58-62,75-77
+  s_9dd7958e5023c1::t_5055cb0be47db4 38-46
+scripts/personal-sync-devcontainer-setup/dev-container-setup.md
+  s_594d29ad60234a::t_855ba1df5dc14c 121-170
+scripts/personal-sync-devcontainer-setup/templates/forwood-one_core/.devcontainer/docker-compose.yml
+  s_594d29ad60234a::t_774d935071aa85 37-46
+  s_594d29ad60234a::t_0ef55bd0ed9bcb 27,30-36
+  s_594d29ad60234a::t_f9ed94a02d0a09 49-53,55
+  s_594d29ad60234a::t_d1754de36df420 25-26,28-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "acc9c901f61f211c4ec25297d6ca2ff06b155b6b",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_594d29ad60234a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b1705291-ee6a-4b2c-a1c6-9fb53e7e7b05",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_9dd7958e5023c1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93702dec-a40b-4939-b62a-9aebf002ff15",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

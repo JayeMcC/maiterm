@@ -1,0 +1,24 @@
+.agents/skills/pr-train-splitting
+  s_dc969cb3b38e4f::t_3b2ee5b6792bf2 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "3fd0f4cf8e25987db4e34d7c5950e1b8555eb8e8",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_dc969cb3b38e4f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4e71e973-1752-488e-8634-d53d83f8c78d",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

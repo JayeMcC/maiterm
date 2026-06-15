@@ -1,0 +1,24 @@
+test/gitignoreEnsure.test.ts
+  s_36596460844258::t_1606d1b1977a21 1-148
+src/gitignoreEnsure.ts
+  s_36596460844258::t_377adbb63d856e 1-74
+src/local.ts
+  s_36596460844258::t_ea6866de4375b9 15
+  s_36596460844258::t_77d2c6ab5a5fb5 71-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "e11ea99e8f5f43abbc0deaa04bf98a99ce10221b",
+  "prompts": {},
+  "sessions": {
+    "s_36596460844258": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3c5863b9-4d11-4308-be03-ba64880f2ef9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

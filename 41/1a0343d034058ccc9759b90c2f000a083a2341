@@ -1,0 +1,29 @@
+skill-library/developing-ticket/pr-train-splitting/test/manifest.test.mjs
+  s_dc969cb3b38e4f::t_f2e1201b298ef8 1-119
+skill-library/developing-ticket/pr-train-splitting/evals/evals.json
+  s_dc969cb3b38e4f::t_f2e1201b298ef8 1-71
+skill-library/developing-ticket/pr-train-splitting/SKILL.md
+  s_dc969cb3b38e4f::t_f2e1201b298ef8 1-157
+skill-library/developing-ticket/pr-train-splitting/evals/fixtures/README.md
+  s_dc969cb3b38e4f::t_f2e1201b298ef8 1-149
+skill-library/developing-ticket/pr-train-splitting/lib/manifest.mjs
+  s_dc969cb3b38e4f::t_f2e1201b298ef8 1-111
+skill-library/developing-ticket/pr-train-splitting/package.json
+  s_dc969cb3b38e4f::t_f2e1201b298ef8 1-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "411a0343d034058ccc9759b90c2f000a083a2341",
+  "prompts": {},
+  "sessions": {
+    "s_dc969cb3b38e4f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4e71e973-1752-488e-8634-d53d83f8c78d",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,84 @@
+skill-library/developing-ticket/commit-diff-coverage/evals/evals.json
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-79
+skill-library/developing-ticket/report-changes/evals/fixtures/README.md
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-243
+skill-library/responding-to-pr-feedback/bitbucket-pr-comment/evals/evals.json
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-89
+skill-library/responding-to-pr-feedback/bitbucket-pr-comment/evals/fixtures/README.md
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-265
+skill-library/responding-to-pr-feedback/bitbucket-pr-inline-per-changed-file/evals/evals.json
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-89
+skill-library/tech-lead-planning/generate-tickets/evals/evals.json
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-93
+skill-library/tech-lead-planning/generate-tickets/evals/fixtures/README.md
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-329
+skill-library/reviewing/ingest-ai-test-review/evals/evals.json
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-81
+skill-library/vault/vault-query/evals/evals.json
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 2-83
+skill-library/reviewing/prd-review/evals/evals.json
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-75
+skill-library/developing-ticket/plan-pr-split/evals/fixtures/README.md
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-233
+skill-library/developing-ticket/pre-commit-checks/evals/fixtures/README.md
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-258
+skill-library/developing-ticket/bitbucket-build-failure/evals/evals.json
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-75
+skill-library/reviewing/scan-bitbucket-pr/evals/evals.json
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-73
+skill-library/reviewing/scan-bitbucket-pr/evals/fixtures/README.md
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-339
+skill-library/vault/vault-lint/evals/evals.json
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-94
+skill-library/responding-to-pr-feedback/bitbucket-pr-inline-per-changed-file/evals/fixtures/README.md
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-290
+skill-library/developing-ticket/scan-jira-ticket/evals/evals.json
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-73
+skill-library/developing-ticket/scan-jira-ticket/evals/fixtures/README.md
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-233
+skill-library/vault/vault-query/evals/fixtures/README.md
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-286
+skill-library/vault/vault-lint/evals/fixtures/README.md
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-426
+skill-library/developing-ticket/bitbucket-build-failure/evals/fixtures/README.md
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-388
+skill-library/developing-ticket/pre-commit-checks/evals/evals.json
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-98
+skill-library/developing-ticket/commit-diff-coverage/evals/fixtures/README.md
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-323
+skill-library/developing-ticket/report-changes/evals/evals.json
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-108
+skill-library/reviewing/ingest-ai-test-review/evals/fixtures/README.md
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-318
+skill-library/tools-maintenance/skill-lint/evals/fixtures/fixtures/README.md
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-306
+skill-library/developing-ticket/plan-pr-split/evals/evals.json
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-97
+skill-library/tools-maintenance/skill-lint/evals/evals.json
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 3-6,8-30,33-39,42-44,47-49,55-60,63-65,68-70
+skill-library/reviewing/prd-review/evals/fixtures/README.md
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-244
+eval/audits/rules-context-cost.md
+  s_dc969cb3b38e4f::t_7dc5942a6db84d 1-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "91e107bca53939fe5272e93ae36cd588f3df044e",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_dc969cb3b38e4f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4e71e973-1752-488e-8634-d53d83f8c78d",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

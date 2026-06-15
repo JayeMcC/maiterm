@@ -1,0 +1,262 @@
+linked-tools/core/.agents/skills/grill-with-docs/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/scan-bitbucket-pr/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+.agents/skills/overlay-park/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/report-changes/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+.agents/skills/generate-tools-index/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/setup-matt-pocock-skills/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/use-git-town/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/prototype/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/visual-regression/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/commit-diff-coverage/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+.agents/skills/subagent-scan/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/git-guardrails-claude-code/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/pre-commit-checks/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/bitbucket-build-failure/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/report-changes/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/ingest-ai-test-review/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/visual-regression/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/decompose-orchestrator/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/diagnose/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/setup-pre-commit/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/triage/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/report-prompt-context/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/migrate-to-shoehorn/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/plan-pr-split/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/personal-tooling-sync-fix/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/devcontainer-logs/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/skill-eval/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/plan-pr-split/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/personal-tooling-sync-fix/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/devcontainer-logs/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/bitbucket-pr-inline-per-changed-file/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/pr-train-splitting/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/scaffold-exercises/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+.agents/skills/speckit-flow-tools/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/diagnose/scripts
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/obsidian-vault/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/playwright-workflows/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/skill-lint/scripts
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/qa/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/request-refactor-plan/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/tdd/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/ingest-ai-test-review/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/playwright-workflows/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+.agents/skills/speckit-flow-tools/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/to-prd/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/skill-lint/reference
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/bitbucket-build-failure/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/migrate-skill/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+.agents/skills/tools-comparison/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/triage/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/vault-query/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/report-changes/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/prototype/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/scan-bitbucket-pr/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/skill-creator/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/design-an-interface/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/write-a-skill/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/commit-diff-coverage/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/teach/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/scan-jira-ticket/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/decompose-orchestrator/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+.agents/skills/figma-extract/scripts
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/bitbucket-pr-comment/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/vault-query/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/visual-regression/scripts
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/scan-jira-ticket/scripts
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+.agents/skills/prd-review/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/to-issues/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/writing-shape/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/improve-codebase-architecture/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/use-git-town/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/ubiquitous-language/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/skill-lint/MAINTAINERS.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+.agents/skills/generate-workflows/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/edit-article/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/decompose-orchestrator/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/generate-tickets/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+.agents/skills/tools-repo-manager/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/pr-train-splitting/lib
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/scan-bitbucket-pr/scripts
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/handoff/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/writing-beats/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/git-guardrails-claude-code/scripts
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/grill-me/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+.agents/skills/solution-design/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/commit-diff-coverage/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+.agents/skills/generate-readme/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/setup-matt-pocock-skills/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/bitbucket-pr-inline-per-changed-file/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/speckit-step-flow/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/writing-fragments/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+scripts/personal-tooling-sync/helpers/sync/engine/skill-library-links.mjs
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 2,5-17,20-22,29-31,40-46,125-185,207-236,240,293-294,300-319,321-322,325-350,352-355,361,366-368,376-383,397,404
+linked-tools/core/.agents/skills/bitbucket-pr-comment/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/vault-query/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/generate-tickets/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/visual-regression/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/plan-pr-split/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/use-git-town/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/skill-eval/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/skill-lint/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/bitbucket-pr-comment/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/pr-train-splitting/test
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/scan-jira-ticket/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/improve-codebase-architecture/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/generate-tickets/scripts
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/speckit-step-flow/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/vault-lint/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/report-prompt-context/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/clear-skill-logs/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/zoom-out/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/teach/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/grill-with-docs/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/pr-train-splitting/package.json
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/vault-lint/workflow.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/tdd/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/migrate-skill/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/report-prompt-context/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/tooling-engagement-status-report/SKILL.md
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+linked-tools/core/.agents/skills/skill-eval/references
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+.agents/skills/caveman-compress/scripts
+  s_dc969cb3b38e4f::t_04a4e74f2a4cc7 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "ccca8b4c562a54d554aec4da49790fce0e32b244",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_dc969cb3b38e4f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4e71e973-1752-488e-8634-d53d83f8c78d",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

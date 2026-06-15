@@ -1,0 +1,446 @@
+imported/mem0/skill/session-behavior-rubric.md
+  s_36596460844258::t_a79ecca8c29970 1-934
+imported/office-365-admin-pack/bamboohr/scripts/bhr-get.sh
+  s_36596460844258::t_a79ecca8c29970 1-9
+linked-tools/core/scripts/test/cli-llm.test.mjs
+  s_fdb4e548464e0f::t_88abbb3107715d 12
+  s_fdb4e548464e0f::t_300e22f3e8c6a3 11
+  s_fdb4e548464e0f::t_e84aec6fb47a47 153-172,176-236,238-241,244-265
+  s_fdb4e548464e0f::t_e58d0639b99def 237,242-243
+  s_fdb4e548464e0f::t_e24112d1e2c70c 1-9,13,16-25,28-35,37-152,384
+  s_fdb4e548464e0f::t_24cad98fb085a9 266-322
+  s_fdb4e548464e0f::t_a61fbc895f100b 26-27,36
+  s_fdb4e548464e0f::t_7f68d2013b7a54 10,14-15
+  s_fdb4e548464e0f::t_6c4b18195cfa9a 323-383
+  s_fdb4e548464e0f::t_d66e3d40e54869 173-175
+skill-library/developing-ticket/speckit-step-flow/SKILL.md
+  s_02cd628bf76a70::t_23bfdd271e64ea 202-211
+scripts/terminal/wave/LAYOUT.md
+  s_99dc823096f0e5::t_94c7ccc5a59466 1-96
+imported/timesheet/timesheet/harvest.py
+  s_36596460844258::t_a79ecca8c29970 1-140
+imported/timesheet/timesheet/util.py
+  s_36596460844258::t_a79ecca8c29970 1-65
+scripts/terminal/wave/README.md
+  s_99dc823096f0e5::t_0c9a703e95a728 77,84-93
+  s_99dc823096f0e5::t_24a0216794602c 29
+  s_99dc823096f0e5::t_9113baf7c06a9e 32
+  s_99dc823096f0e5::t_8dc18f321b4842 108,110-112,115-117,120-135
+  s_99dc823096f0e5::t_0d295fff504a81 33,39-44
+  s_99dc823096f0e5::t_cce9c775335ccb 1-28,30-31,34-38,45-70,136-155
+  s_99dc823096f0e5::t_5cd13a27bfd3e1 76,78-83
+  s_99dc823096f0e5::t_d4455d8d639db6 71-75,94-107,109,113-114,118-119
+scripts/terminal/wave/layouts/meta.json
+  s_99dc823096f0e5::t_04943460ccac41 1-28
+imported/timesheet/timesheet/collectors/jira.py
+  s_36596460844258::t_a79ecca8c29970 1-153
+imported/timesheet/timesheet/cluster.py
+  s_36596460844258::t_a79ecca8c29970 1-329
+imported/atlassian-pr-jira-sync/scripts/post_ac_validation.py
+  s_36596460844258::t_a79ecca8c29970 1-175
+imported/timesheet/uv.lock
+  s_36596460844258::t_a79ecca8c29970 1-904
+linked-tools/core/.agents/skills/forwood-f1-cli/SKILL.md
+  s_36596460844258::t_a79ecca8c29970 1
+imported/mem0/hooks/mem0-autosearch.js
+  s_36596460844258::t_a79ecca8c29970 1-31
+scripts/test
+  s_36596460844258::t_a79ecca8c29970 1
+scripts/personal-tooling-sync/helpers/layout/constants.mjs
+  s_fdb4e548464e0f::t_66512e753e8822 7-10,14
+imported/office-365-admin-pack/microsoft-mail/scripts/send-message.sh
+  s_36596460844258::t_a79ecca8c29970 1-95
+imported/atlassian-pr-jira-sync/scripts/inspect_pr.py
+  s_36596460844258::t_a79ecca8c29970 1-44
+imported/office-365-admin-pack/microsoft-teams/scripts/get-channel-messages.sh
+  s_36596460844258::t_a79ecca8c29970 1-70
+imported/office-365-admin-pack/meeting-digest/scripts/fetch-transcripts.py
+  s_36596460844258::t_a79ecca8c29970 1-64
+imported/timesheet/timesheet/review.py
+  s_36596460844258::t_a79ecca8c29970 1-260
+scripts/terminal/wave/bin/wave-mint-token
+  s_99dc823096f0e5::t_92f671af2a857d 72-74,100-131
+  s_99dc823096f0e5::t_d34c6b7cc0ebbb 1-71,75-99,132-148
+scripts/terminal/tmux-workspaces/tmux.conf
+  s_99dc823096f0e5::t_1344147dbf7c2d 76-81
+imported/office-365-admin-pack/microsoft-calendar/scripts/create-event.sh
+  s_36596460844258::t_a79ecca8c29970 1-97
+docs/plans/10-wave-as-default-terminal.md
+  s_99dc823096f0e5::t_2690799fe0940d 375-382
+  s_99dc823096f0e5::t_3c23a4c78ce3db 1-374,383-426
+imported/mem0/commands/audit.md
+  s_36596460844258::t_a79ecca8c29970 1-5
+scripts/personal-tooling-sync/test/symlink-guard.test.mjs
+  s_fdb4e548464e0f::t_82fdaa082455a9 1-83
+imported/mem0/hooks/mem0-autosearch.test.js
+  s_36596460844258::t_a79ecca8c29970 1-215
+linked-tools/core/scripts/test/cli-llm-smoke.mjs
+  s_fdb4e548464e0f::t_3cfd13f7c1ca96 31,33,39-43,45
+  s_fdb4e548464e0f::t_3743d72a298ff0 1-30,32,34-38,44,46-62
+imported/office-365-admin-pack/meeting-digest/scripts/parse-vtt.py
+  s_36596460844258::t_a79ecca8c29970 1-43
+imported/atlassian-pr-jira-sync/scripts/update_jira_from_pr.py
+  s_36596460844258::t_a79ecca8c29970 1-185
+imported/mem0/skill/fact-extraction-rubric.md
+  s_36596460844258::t_a79ecca8c29970 1-285
+imported/atlassian-pr-jira-sync/scripts/common.py
+  s_36596460844258::t_a79ecca8c29970 1-704
+imported/office-365-admin-pack/marp/templates/standup.md
+  s_36596460844258::t_a79ecca8c29970 1-32
+imported/office-365-admin-pack/microsoft-teams/scripts/list-channels.sh
+  s_36596460844258::t_a79ecca8c29970 1-36
+scripts/terminal/wave/install.sh
+  s_99dc823096f0e5::t_606a51fd0f9351 1-32,37-60,72-108,110-130,133-136,138-140,142-169,191-196,218-244,246-277
+  s_99dc823096f0e5::t_f571397fc46555 109
+  s_99dc823096f0e5::t_1d5e1f6b098f1c 170-190
+  s_99dc823096f0e5::t_50fc03847f78f6 245
+  s_99dc823096f0e5::t_e9e3e854500722 197-217
+  s_99dc823096f0e5::t_0b55e4e774f605 33-36
+  s_99dc823096f0e5::t_240b9d8ebfd3d5 61-71
+  s_99dc823096f0e5::t_0f663dcbe11205 131-132,137
+  s_99dc823096f0e5::t_9b79a049d535a6 141
+skill-library/local-environment/tmux-md-view/SKILL.md
+  s_a8628e1715cf58::t_91af9626ca7a0e 29
+  s_a8628e1715cf58::t_df971938f94c10 82,87,93,100,106-117
+  s_9dd7958e5023c1::t_b5b9150ad338b8 104
+  s_9dd7958e5023c1::t_69c5bd132ed016 69,72,74,76-78,80
+  s_a8628e1715cf58::t_a807e9372b0958 47,50-52,55,58,60-61
+  s_a8628e1715cf58::t_8bcf0106c4dcb1 157
+  s_9dd7958e5023c1::t_decf9cae41c93c 121,123
+  s_9dd7958e5023c1::t_3931c7b3f7e4a1 1-28,30-46,48-49,53-54,56-57,59,62-68,70-71,73,75,79,81,83-86,88-92,94-99,101-103,105,118-120,122,124-156,158-160
+specs/feature/PLAN-21__cassette-record-replay/spec.md
+  s_fdb4e548464e0f::t_9808a948760909 1-7,14-107,109-142
+  s_fdb4e548464e0f::t_7c3a15ce833d4b 8-11,13
+  s_fdb4e548464e0f::t_c61571e81e7273 12
+  s_fdb4e548464e0f::t_74f294ea6b335f 108
+specs/feature/PLAN-05__cli-llm-backend/research.md
+  s_fdb4e548464e0f::t_fa21be8662d41f 54-65
+  s_fdb4e548464e0f::t_3c7839bac10dc0 23-24
+.cursorignore
+  s_36596460844258::t_a79ecca8c29970 388-389,501-504
+imported/forwood-ship-story/SKILL.md
+  s_36596460844258::t_a79ecca8c29970 1-484
+imported/mem0/hooks/mem0-storage-prompt.test.js
+  s_36596460844258::t_a79ecca8c29970 1-307
+specs/feature/PLAN-21__cassette-record-replay/plan.md
+  s_fdb4e548464e0f::t_583e3d4e40da86 1-73
+imported/office-365-admin-pack/session-handoff/SKILL.md
+  s_36596460844258::t_a79ecca8c29970 1-163
+imported/office-365-admin-pack/wiki-compiler/templates/index-template.md
+  s_36596460844258::t_a79ecca8c29970 1-28
+imported/office-365-admin-pack/wiki-compiler/templates/schema-template.md
+  s_36596460844258::t_a79ecca8c29970 1-41
+imported/office-365-admin-pack/marp/templates/one-pager.md
+  s_36596460844258::t_a79ecca8c29970 1-60
+imported/office-365-admin-pack/marp/skill.md
+  s_36596460844258::t_a79ecca8c29970 1-242
+imported/timesheet/timesheet/slack_login.py
+  s_36596460844258::t_a79ecca8c29970 1-328
+imported/timesheet/timesheet/writer.py
+  s_36596460844258::t_a79ecca8c29970 1-264
+specs/feature/PLAN-21__cassette-record-replay/data-model.md
+  s_fdb4e548464e0f::t_9b9a717f36be81 1-69
+imported/mem0/skill/SKILL.md
+  s_36596460844258::t_a79ecca8c29970 1-649
+imported/mem0/skill/procedural-rubric.md
+  s_36596460844258::t_a79ecca8c29970 1-230
+imported/release-pr-babysitter/scripts/undraft-pr.py
+  s_36596460844258::t_a79ecca8c29970 1-190
+imported/mem0/skill/length-rubric.md
+  s_36596460844258::t_a79ecca8c29970 1-85
+scripts/terminal/wave/layouts/development.json
+  s_99dc823096f0e5::t_7a2b82be0659af 1-12
+linked-tools/core/scripts/test/cli-llm-cassette.test.mjs
+  s_fdb4e548464e0f::t_f34242ef5235ba 12-14
+  s_fdb4e548464e0f::t_229c5de2ce8274 1-11,15-229,243-265
+  s_fdb4e548464e0f::t_6431d80920a355 230-242
+imported/timesheet/timesheet/push.py
+  s_36596460844258::t_a79ecca8c29970 1-130
+imported/office-365-admin-pack/microsoft-mail/scripts/search.sh
+  s_36596460844258::t_a79ecca8c29970 1-95
+skill-logs/tools-repo-manager/20260612T152826Z-STEPS.md
+  s_cb3783f7107f3d::t_3bea2a157b1edd 12-20
+  s_cb3783f7107f3d::t_9440a3967728f4 21-35
+imported/release-pr-babysitter/scripts/load-bkt-env.sh
+  s_36596460844258::t_a79ecca8c29970 1-144
+imported/atlassian-pr-jira-sync/scripts/manual_ticket_update.py
+  s_36596460844258::t_a79ecca8c29970 1-201
+imported/office-365-admin-pack/microsoft-calendar/scripts/list-events.sh
+  s_36596460844258::t_a79ecca8c29970 1-93
+scripts/terminal/wave/config/connections.json
+  s_99dc823096f0e5::t_05000078cc76cd 1-7
+imported/office-365-admin-pack/microsoft-mail/SKILL.md
+  s_36596460844258::t_a79ecca8c29970 1-178
+imported/office-365-admin-pack/microsoft-teams/SKILL.md
+  s_36596460844258::t_a79ecca8c29970 1-100
+imported/atlassian-pr-jira-sync/scripts/my_tickets.py
+  s_36596460844258::t_a79ecca8c29970 1-61
+imported/office-365-admin-pack/bamboohr/scripts/bhr-cookie.sh
+  s_36596460844258::t_a79ecca8c29970 1-7
+imported/office-365-admin-pack/microsoft-mail/scripts/delete-rule.sh
+  s_36596460844258::t_a79ecca8c29970 1-44
+imported/office-365-admin-pack/wiki-compiler/SKILL.md
+  s_36596460844258::t_a79ecca8c29970 1-163
+imported/release-pr-babysitter/scripts/discover-prs.py
+  s_36596460844258::t_a79ecca8c29970 1-350
+scripts/terminal/wave/tmux.conf
+  s_99dc823096f0e5::t_0dfb864eb1f940 1-26
+specs/feature/PLAN-05__cli-llm-backend/spec.md
+  s_fdb4e548464e0f::t_4f153e8caffc7f 170
+imported/office-365-admin-pack/microsoft-mail/scripts/download-attachments.sh
+  s_36596460844258::t_a79ecca8c29970 1-86
+imported/release-pr-babysitter/scripts/log-comment.py
+  s_36596460844258::t_a79ecca8c29970 1-268
+imported/timesheet/.gitignore
+  s_36596460844258::t_a79ecca8c29970 1-28
+imported/office-365-admin-pack/wiki-compiler/templates/article-template.md
+  s_36596460844258::t_a79ecca8c29970 1-44
+imported/office-365-admin-pack/obsidian/vault-patterns.md
+  s_36596460844258::t_a79ecca8c29970 1-274
+imported/mem0/commands/summarize.md
+  s_36596460844258::t_a79ecca8c29970 1-5
+scripts/terminal/wave/bin/wave-spawn
+  s_99dc823096f0e5::t_1f1a5d9a2df4e2 212-213,215-216,218,227-228
+  s_99dc823096f0e5::t_b556c36187e031 307,309,312-313,322
+  s_99dc823096f0e5::t_ccc5fff401e3a9 186-189,191-193
+  s_99dc823096f0e5::t_601f6616cae4f3 56-57
+  s_99dc823096f0e5::t_f0068afe8071a1 1-55,58-185,190,194-211,214,217,219-226,229-306,308,310-311,314-321,323-339
+imported/office-365-admin-pack/meeting-digest/SKILL.md
+  s_36596460844258::t_a79ecca8c29970 1-114
+imported/office-365-admin-pack/microsoft-mail/scripts/create-rule.sh
+  s_36596460844258::t_a79ecca8c29970 1-185
+imported/office-365-admin-pack/microsoft-mail/scripts/list-rules.sh
+  s_36596460844258::t_a79ecca8c29970 1-75
+specs/feature/PLAN-05__cli-llm-backend/data-model.md
+  s_fdb4e548464e0f::t_283b80dafcfbfb 82
+  s_fdb4e548464e0f::t_e3258220ed36d0 13
+imported/release-pr-babysitter/SKILL.md
+  s_36596460844258::t_a79ecca8c29970 1-817
+imported/timesheet/timesheet/collectors/outlook.py
+  s_36596460844258::t_a79ecca8c29970 1-214
+scripts/terminal/wave/fixtures/spike-test.md
+  s_99dc823096f0e5::t_be8c6b67e670ce 1-36
+linked-tools/core/.agents/commands/tmux-md-view.md
+  s_9dd7958e5023c1::t_a2cd22bed7b9b1 1-7
+imported/mem0/hooks/mem0-storage-prompt.js
+  s_36596460844258::t_a79ecca8c29970 1-222
+imported/atlassian-pr-jira-sync/scripts/ac_report.py
+  s_36596460844258::t_a79ecca8c29970 1-177
+linked-tools/core/.agents/meta/cli-agent-architecture.md
+  s_fdb4e548464e0f::t_c3cf864e96e192 78-81
+  s_fdb4e548464e0f::t_eaa749e5ae6741 5,7-10
+  s_fdb4e548464e0f::t_9002e2d1f3dfa6 74-77
+imported/office-365-admin-pack/microsoft-calendar/SKILL.md
+  s_36596460844258::t_a79ecca8c29970 1-119
+imported/office-365-admin-pack/microsoft-teams/scripts/list-chats.sh
+  s_36596460844258::t_a79ecca8c29970 1-75
+imported/timesheet/timesheet/collectors/bitbucket.py
+  s_36596460844258::t_a79ecca8c29970 1-324
+imported/atlassian-pr-jira-sync/SKILL.md
+  s_36596460844258::t_a79ecca8c29970 1-313
+imported/timesheet/timesheet/mapper.py
+  s_36596460844258::t_a79ecca8c29970 1-212
+scripts/terminal/wave/tests/run.sh
+  s_99dc823096f0e5::t_6fef8db7b9931c 1-63,77-185
+  s_99dc823096f0e5::t_64762b1db8128f 64-69
+  s_99dc823096f0e5::t_ce862c8a066534 70-76
+imported/atlassian-pr-jira-sync/scripts/__init__.py
+  s_36596460844258::t_a79ecca8c29970 1
+imported/timesheet/timesheet/collectors/git_local.py
+  s_36596460844258::t_a79ecca8c29970 1-149
+imported/office-365-admin-pack/mail-triage/SKILL.md
+  s_36596460844258::t_a79ecca8c29970 1-83
+imported/timesheet/timesheet/collectors/slack.py
+  s_36596460844258::t_a79ecca8c29970 1-147
+specs/feature/PLAN-21__cassette-record-replay/quickstart.md
+  s_fdb4e548464e0f::t_716ee203524d4f 1-50
+specs/feature/PLAN-21__cassette-record-replay/tasks.md
+  s_fdb4e548464e0f::t_47a2c9e3fc930d 1-54,56-75
+  s_fdb4e548464e0f::t_5923f14f32ec46 55
+imported/mem0/skill/density-rubric.md
+  s_36596460844258::t_a79ecca8c29970 1-123
+imported/office-365-admin-pack/microsoft-mail/scripts/get-message.sh
+  s_36596460844258::t_a79ecca8c29970 1-75
+specs/feature/PLAN-21__cassette-record-replay/checklists/requirements.md
+  s_fdb4e548464e0f::t_fd328bb9606579 1-35
+.gitignore
+  s_36596460844258::t_a79ecca8c29970 421-422,534-537
+imported/timesheet/timesheet/config.py
+  s_36596460844258::t_a79ecca8c29970 1-108
+imported/atlassian-pr-jira-sync/scripts/link_pr_to_description.py
+  s_36596460844258::t_a79ecca8c29970 1-153
+specs/feature/PLAN-21__cassette-record-replay/research.md
+  s_fdb4e548464e0f::t_01fa3017e615ee 1-65,71-79
+  s_fdb4e548464e0f::t_2b5d47ed541776 66-70
+imported/atlassian-pr-jira-sync/scripts/sync_recent_prs.py
+  s_36596460844258::t_a79ecca8c29970 1-103
+imported/mem0/hooks/mem0-gate.js
+  s_36596460844258::t_a79ecca8c29970 1-182
+.agents/skills/tmux-md-view
+  s_36596460844258::t_a79ecca8c29970 1
+scripts/terminal/wave/config/widgets.json
+  s_99dc823096f0e5::t_595e2532b534ed 1-2
+imported/timesheet/timesheet/models.py
+  s_36596460844258::t_a79ecca8c29970 1-43
+imported/office-365-admin-pack/harvest/SKILL.md
+  s_36596460844258::t_a79ecca8c29970 1-151
+imported/office-365-admin-pack/microsoft-calendar/scripts/get-event.sh
+  s_36596460844258::t_a79ecca8c29970 1-65
+linked-tools/repos/forwood-vault/.specify/memory/constitution.md
+  s_36596460844258::t_a79ecca8c29970 74-90,100,124,126
+linked-tools/core/.agents/skills/tmux-md-view/SKILL.md
+  s_36596460844258::t_a79ecca8c29970 1
+imported/mem0/hooks/mem0-gate.test.js
+  s_36596460844258::t_a79ecca8c29970 1-237
+imported/mem0/skill/references/cloud-vs-local.md
+  s_36596460844258::t_a79ecca8c29970 1-90
+linked-tools/core/scripts/cli-llm.mjs
+  s_fdb4e548464e0f::t_faa0ce07dedcff 30-202
+  s_fdb4e548464e0f::t_32c15cf3361869 256
+  s_fdb4e548464e0f::t_4c7f080a43fad2 290-291,293-294,298,302
+  s_fdb4e548464e0f::t_ac988e3966119c 342-372
+  s_fdb4e548464e0f::t_4f6ef4063957ca 373-411
+  s_fdb4e548464e0f::t_04ade2a670d1e9 1-7,10-22,24-29
+  s_fdb4e548464e0f::t_e529d227f18a5d 23
+  s_fdb4e548464e0f::t_8b2b44412f1db8 8-9
+  s_fdb4e548464e0f::t_ff1c2d46f3be05 203,215-219,224-226,231-232,234-255,257-289,292,295-297,299-301,303-341
+  s_fdb4e548464e0f::t_7dea191a9b1802 204-214,220-223,227-230,233
+scripts/terminal/wave/layouts/devcontainers.json
+  s_99dc823096f0e5::t_7f19b416176fc3 1-12
+imported/office-365-admin-pack/microsoft-teams/scripts/list-teams.sh
+  s_36596460844258::t_a79ecca8c29970 1-31
+imported/office-365-admin-pack/obsidian/SKILL.md
+  s_36596460844258::t_a79ecca8c29970 1-59
+imported/office-365-admin-pack/obsidian/commands.md
+  s_36596460844258::t_a79ecca8c29970 1-217
+.agents/skills/forwood-f1-cli
+  s_36596460844258::t_a79ecca8c29970 1
+specs/feature/PLAN-25__visual-regression-standalone-cli/tasks.md
+  s_36596460844258::t_98bfff79cc8c0a 46-51,58-59,61,69-70,73,75,83,86,95-98,102,104
+imported/release-pr-babysitter/scripts/bkt-snapshot.sh
+  s_36596460844258::t_a79ecca8c29970 1-71
+imported/office-365-admin-pack/marp/templates/sprint-review.md
+  s_36596460844258::t_a79ecca8c29970 1-74
+imported/office-365-admin-pack/mail-triage/scripts/fetch-recent.sh
+  s_36596460844258::t_a79ecca8c29970 1-26
+imported/timesheet/timesheet/cli.py
+  s_36596460844258::t_a79ecca8c29970 1-460
+imported/timesheet/timesheet/enrichment.py
+  s_36596460844258::t_a79ecca8c29970 1-117
+imported/timesheet/timesheet/resolve.py
+  s_36596460844258::t_a79ecca8c29970 1-125
+imported/release-pr-babysitter/scripts/pipeline-preflight.py
+  s_36596460844258::t_a79ecca8c29970 1-268
+scripts/terminal/wave/config/settings.json
+  s_99dc823096f0e5::t_ce4220e139ef97 10
+  s_99dc823096f0e5::t_920e45f23dbe6d 1-9,11-12
+imported/mem0/hooks/mem0-shared.js
+  s_36596460844258::t_a79ecca8c29970 1-219
+imported/mem0/commands/diagnose.md
+  s_36596460844258::t_a79ecca8c29970 1-5
+linked-tools/core/scripts/test/fixtures/cassettes/63a12eeb8622465cd5ee623af3dc07aaad94fc75cc6636c1b5287c5fd01d600c.json
+  s_fdb4e548464e0f::t_d6713d440bfb34 11-12
+imported/office-365-admin-pack/marp/templates/architecture.md
+  s_36596460844258::t_a79ecca8c29970 1-89
+skill-logs/skill-lint/2026-06-13T07-33-45Z-STEPS.md
+  s_9dd7958e5023c1::t_199fefd66a3e17 1-21
+specs/feature/PLAN-05__cli-llm-backend/tasks.md
+  s_fdb4e548464e0f::t_a914eb1894e4a4 1-106
+linked-tools/core/scripts/cli-llm-cassette.mjs
+  s_fdb4e548464e0f::t_55c002ea32af6a 1-134
+imported/office-365-admin-pack/bamboohr/scripts/read-assessment.sh
+  s_36596460844258::t_a79ecca8c29970 1-22
+imported/timesheet/pyproject.toml
+  s_36596460844258::t_a79ecca8c29970 1-39
+scripts/terminal/wave/bin/view
+  s_99dc823096f0e5::t_fc01ca72f33c1f 43-44,47-53,70-71,78-81
+  s_99dc823096f0e5::t_1924ce0f57ba77 1-42,72-77,82-180,191-196,210-233
+  s_99dc823096f0e5::t_9cdd2e57a435a3 45-46,54-69
+  s_99dc823096f0e5::t_3f95a1d852189f 181-190,197-209
+imported/timesheet/timesheet/__init__.py
+  s_36596460844258::t_a79ecca8c29970 1-3
+scripts/terminal/wave/config/presets.json
+  s_99dc823096f0e5::t_642344c8e1d5e5 1-15
+linked-tools/core/.agents/skills/forwood-f1-cli/catalog-snapshot.md
+  s_36596460844258::t_a79ecca8c29970 1
+imported/README.md
+  s_fdb4e548464e0f::t_178238a5bce1c0 1-23,25-26
+  s_fdb4e548464e0f::t_13531d24b78913 24
+imported/office-365-admin-pack/obsidian/gotchas.md
+  s_36596460844258::t_a79ecca8c29970 1-174
+scripts/terminal/wave/bin/wave-rpc
+  s_99dc823096f0e5::t_ae9dda8e277003 1-36,43,46,52-67
+  s_99dc823096f0e5::t_8c15b62f36fc95 37-42,44-45,47-51
+imported/atlassian-pr-jira-sync/scripts/adf.py
+  s_36596460844258::t_a79ecca8c29970 1-114
+imported/office-365-admin-pack/microsoft-teams/scripts/get-chat-messages.sh
+  s_36596460844258::t_a79ecca8c29970 1-62
+scripts/terminal/wave/bin/wave-jwt-bootstrap
+  s_99dc823096f0e5::t_39859f67b7c3e0 1-70
+imported/office-365-admin-pack/bamboohr/SKILL.md
+  s_36596460844258::t_a79ecca8c29970 1-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "4aff547ea479edbef77c45d31c0b9341d23285d7",
+  "prompts": {},
+  "sessions": {
+    "s_02cd628bf76a70": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "99db2a40-255a-4fa7-b482-e40a1572232a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_36596460844258": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3c5863b9-4d11-4308-be03-ba64880f2ef9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_99dc823096f0e5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4a9a0006-85ce-4e8e-8f22-d37db40aa416",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_9dd7958e5023c1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93702dec-a40b-4939-b62a-9aebf002ff15",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_a8628e1715cf58": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ca36397-8afb-446e-8867-e6606a07b1c3",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_cb3783f7107f3d": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9e4f6f81-8045-438f-b69a-987641d60711",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_fdb4e548464e0f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "cf3fdd53-bc3b-4b20-a1b8-758aad5d4c5f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

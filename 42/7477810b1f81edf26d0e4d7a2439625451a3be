@@ -1,0 +1,33 @@
+skill-library/tools-maintenance/overlay-park/SKILL.md
+  s_dc969cb3b38e4f::t_68fc468aab7ced 5,33
+docs/plans/06-skill-eval-audit.md
+  s_dc969cb3b38e4f::t_68fc468aab7ced 1-166
+eval/README.md
+  s_dc969cb3b38e4f::t_68fc468aab7ced 3-13,19-25,28,30-40,42,44,46-49,51,53,55,57-59,65,68,74
+skill-library/tools-maintenance/skill-eval/workflow.md
+  s_dc969cb3b38e4f::t_68fc468aab7ced 8-9,13-14,22-27
+linked-tools/core/.agents/rules/editor/skill-authoring-standard.md
+  s_dc969cb3b38e4f::t_68fc468aab7ced 13
+skill-library/tools-maintenance/overlay-park/references/eval-profile.md
+  s_dc969cb3b38e4f::t_68fc468aab7ced 3-7
+skill-library/tools-maintenance/skill-eval/SKILL.md
+  s_dc969cb3b38e4f::t_68fc468aab7ced 70-73,75,77
+skill-library/tools-maintenance/skill-eval/references/coverage-report-template.md
+  s_dc969cb3b38e4f::t_68fc468aab7ced 12-17,24-26,31,33-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "427477810b1f81edf26d0e4d7a2439625451a3be",
+  "prompts": {},
+  "sessions": {
+    "s_dc969cb3b38e4f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4e71e973-1752-488e-8634-d53d83f8c78d",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
