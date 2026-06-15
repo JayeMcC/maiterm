@@ -1,0 +1,20 @@
+src/nodes/review-compose-comment.ts
+  s_2882d72424ca24::t_fff722c4915641 94-139
+  s_2882d72424ca24::t_cda845fc6be03e 649-655
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "f8166c1029674d2f6966611ff9464219a61725a1",
+  "prompts": {},
+  "sessions": {
+    "s_2882d72424ca24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "43e76dc3-bd21-4ee0-8002-4768725865e0",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
