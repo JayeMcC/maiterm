@@ -1,0 +1,21 @@
+specs/feature/TOOL-02__adequate-coverage-column/spec.md
+  s_2882d72424ca24::t_a57d25262c67fd 1-194
+.agents/rules/10-project/permanent-test-scope.md
+  s_2882d72424ca24::t_2db12735ca7398 1-94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "5db7a3cca20e6077f6032d09abfc613ec5c0a8a7",
+  "prompts": {},
+  "sessions": {
+    "s_2882d72424ca24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "43e76dc3-bd21-4ee0-8002-4768725865e0",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
