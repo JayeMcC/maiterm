@@ -1,0 +1,33 @@
+docs/workflows.md
+  s_e078af93d4b3e2::t_7de5b79f29caa1 361-376
+  s_e078af93d4b3e2::t_10c2f3b5100ea7 50-76
+  s_e078af93d4b3e2::t_715268d01158b1 5-7
+scripts/personal-tooling-sync/helpers/sync/engine/skill-library-links.mjs
+  s_e078af93d4b3e2::t_081394153cfa31 44-47,49
+  s_99dc823096f0e5::t_11be11dab8e7d1 38
+  s_99dc823096f0e5::t_e8fdd17b7c3ecc 68-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "cfcc718462e3d4fd0f18f70650e3c0be748770c5",
+  "prompts": {},
+  "sessions": {
+    "s_99dc823096f0e5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4a9a0006-85ce-4e8e-8f22-d37db40aa416",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_e078af93d4b3e2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93c1630f-9f15-4bd0-be17-5038e1c2afa1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
