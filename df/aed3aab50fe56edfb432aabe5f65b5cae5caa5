@@ -1,0 +1,20 @@
+skill-library/developing-ticket/speckit-step-flow/SKILL.md
+  s_02cd628bf76a70::t_b7505e1841eca9 248
+  s_02cd628bf76a70::t_e3dd393dad0bdb 152-174
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "dfaed3aab50fe56edfb432aabe5f65b5cae5caa5",
+  "prompts": {},
+  "sessions": {
+    "s_02cd628bf76a70": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "99db2a40-255a-4fa7-b482-e40a1572232a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
