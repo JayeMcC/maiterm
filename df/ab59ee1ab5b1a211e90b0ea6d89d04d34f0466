@@ -1,0 +1,31 @@
+skill-library/documentation-generators/generate-readme/references/readme-sections.md
+  s_e078af93d4b3e2::t_44fc962f7d52d2 36
+  s_e078af93d4b3e2::t_8d947b92ec8f09 26
+  s_e078af93d4b3e2::t_8730cdc2cca1b8 18
+  s_e078af93d4b3e2::t_267028421e72a2 11
+skill-library/documentation-generators/generate-tools-index/SKILL.md
+  s_e078af93d4b3e2::t_f98da4c56bd62f 29-30
+README.md
+  s_e078af93d4b3e2::t_2e703d7266e4e6 21-22
+docs/linked-tools-index.md
+  s_e078af93d4b3e2::t_901b14d93c54f6 57
+skill-library/documentation-generators/generate-tools-index/references/index-sections.md
+  s_e078af93d4b3e2::t_4f8df3e7a436e8 23
+  s_e078af93d4b3e2::t_de97952b1b2564 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "dfab59ee1ab5b1a211e90b0ea6d89d04d34f0466",
+  "prompts": {},
+  "sessions": {
+    "s_e078af93d4b3e2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93c1630f-9f15-4bd0-be17-5038e1c2afa1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
