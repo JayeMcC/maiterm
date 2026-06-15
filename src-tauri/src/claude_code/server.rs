@@ -1394,6 +1394,17 @@ fn normalize_hook_event(_runtime: crate::state::AgentRuntime, name: &str, event:
                 .unwrap_or("")
                 .to_string(),
         },
+        // Codex expresses "the human is at an approval prompt" as a top-level
+        // PermissionRequest event (not a Notification subtype). Synthesize the
+        // permission_prompt subtype so it flows through the SAME Notification arm that
+        // sets WaitingPermission — the bridge then holds delivery identically.
+        "PermissionRequest" => HookPhase::Notification {
+            notification_type: "permission_prompt".to_string(),
+        },
+        // Codex emits PostCompact alongside PreCompact; both are compaction signals.
+        "PostCompact" => HookPhase::Compact,
+        // NOTE: Codex has no SessionEnd hook — a Codex session going away is derived from
+        // dormancy (PTY exit / shell-prompt return), not a hook event.
         _ => HookPhase::Other,
     }
 }
@@ -1764,6 +1775,23 @@ mod tests {
             norm("Notification", serde_json::json!({})),
             HookPhase::Notification { notification_type: String::new() }
         );
+    }
+
+    #[test]
+    fn codex_events_map_to_canonical_phases() {
+        let nil = serde_json::json!({});
+        // Codex's top-level PermissionRequest converges with Claude's permission_prompt:
+        // both become the Notification phase carrying "permission_prompt" (the only path
+        // that sets WaitingPermission), so the bridge holds delivery identically.
+        assert_eq!(
+            norm("PermissionRequest", nil.clone()),
+            HookPhase::Notification { notification_type: "permission_prompt".to_string() }
+        );
+        // Codex's PostCompact joins PreCompact as a compaction signal.
+        assert_eq!(norm("PostCompact", nil.clone()), HookPhase::Compact);
+        // Codex shares these names with Claude verbatim.
+        assert_eq!(norm("Stop", nil.clone()), HookPhase::Stop);
+        assert_eq!(norm("PreToolUse", nil), HookPhase::ToolPre);
     }
 
     // Regression for the Agent Bridge "bridge dropped" bug: sessionless streamable-HTTP
