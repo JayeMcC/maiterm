@@ -510,9 +510,9 @@ pub fn tool_list_response() -> Value {
     serde_json::json!({ "tools": tools })
 }
 
-pub fn initialize_response() -> Value {
+pub fn initialize_response(client_protocol_version: Option<&str>) -> Value {
     serde_json::json!({
-        "protocolVersion": "2025-03-26",
+        "protocolVersion": client_protocol_version.unwrap_or("2025-03-26"),
         "capabilities": { "tools": {} },
         "serverInfo": { "name": crate::APP_DISPLAY_NAME, "version": crate::APP_VERSION },
         "instructions": format!(

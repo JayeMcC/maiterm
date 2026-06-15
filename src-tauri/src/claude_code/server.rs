@@ -55,6 +55,29 @@ struct ServerState {
     connection_count: Arc<AtomicUsize>,
 }
 
+/// Extract the bearer/IDE auth token from a request, trying each accepted header
+/// in priority order. Returns None when no usable token is present — callers compare
+/// the result against the expected token, so None can never authenticate. Never
+/// returns an empty string or an unstripped "Bearer " prefix.
+fn extract_auth(headers: &HeaderMap) -> Option<String> {
+    // Claude Code IDE header (raw token) — checked first so it never shadows.
+    if let Some(v) = headers.get("x-claude-code-ide-authorization").and_then(|v| v.to_str().ok()) {
+        if !v.is_empty() { return Some(v.to_string()); }
+    }
+    // Neutral maiTerm header (raw token).
+    if let Some(v) = headers.get("x-maiterm-authorization").and_then(|v| v.to_str().ok()) {
+        if !v.is_empty() { return Some(v.to_string()); }
+    }
+    // Standard Authorization: Bearer <token> (Codex and others).
+    if let Some(v) = headers.get("authorization").and_then(|v| v.to_str().ok()) {
+        if let Some(tok) = v.strip_prefix("Bearer ").or_else(|| v.strip_prefix("bearer ")) {
+            let tok = tok.trim();
+            if !tok.is_empty() { return Some(tok.to_string()); }
+        }
+    }
+    None
+}
+
 /// Result of the synchronous server preparation step. Holds the bound TCP
 /// listener (std form — converted to tokio inside `serve_server`) along with
 /// the port and auth token that were already written into `~/.claude.json`.
@@ -104,6 +127,11 @@ pub fn prepare_server(state: &Arc<AppState>) -> Option<ServerSetup> {
         .take(32)
         .map(char::from)
         .collect();
+
+    if auth.is_empty() {
+        log::error!("Refusing to start MCP server with an empty auth token");
+        return None;
+    }
 
     *state.mcp_port.write() = Some(port);
     *state.mcp_auth.write() = Some(auth.clone());
@@ -564,13 +592,7 @@ async fn ws_upgrade_handler(
     State(srv): State<ServerState>,
     headers: HeaderMap,
 ) -> Response {
-    let auth = headers
-        .get("x-claude-code-ide-authorization")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("")
-        .to_string();
-
-    if auth != srv.expected_auth {
+    if extract_auth(&headers).as_deref() != Some(srv.expected_auth.as_str()) {
         log::warn!("Claude Code WS connection rejected: invalid auth");
         return StatusCode::UNAUTHORIZED.into_response();
     }
@@ -651,12 +673,7 @@ async fn streamable_http_handler(
     headers: HeaderMap,
     body: String,
 ) -> Response {
-    let auth = headers
-        .get("x-claude-code-ide-authorization")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
-
-    if auth != srv.expected_auth {
+    if extract_auth(&headers).as_deref() != Some(srv.expected_auth.as_str()) {
         return StatusCode::UNAUTHORIZED.into_response();
     }
 
@@ -725,12 +742,7 @@ fn derive_streamable_connection_id(incoming_sid: Option<&str>, is_initialize: bo
 // ─── SSE handlers (MCP server via ~/.claude/settings.json) ─────────────────
 
 async fn sse_get_handler(State(srv): State<ServerState>, headers: HeaderMap) -> Response {
-    let auth = headers
-        .get("x-claude-code-ide-authorization")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
-
-    if auth != srv.expected_auth {
+    if extract_auth(&headers).as_deref() != Some(srv.expected_auth.as_str()) {
         log::warn!("Claude Code SSE connection rejected: invalid auth");
         return StatusCode::UNAUTHORIZED.into_response();
     }
@@ -830,12 +842,7 @@ async fn sse_message_handler(
     headers: HeaderMap,
     body: String,
 ) -> Response {
-    let auth = headers
-        .get("x-claude-code-ide-authorization")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
-
-    if auth != srv.expected_auth {
+    if extract_auth(&headers).as_deref() != Some(srv.expected_auth.as_str()) {
         return StatusCode::UNAUTHORIZED.into_response();
     }
 
@@ -874,7 +881,16 @@ async fn process_message(
 
     match req.method.as_str() {
         "initialize" => {
-            let resp = JsonRpcResponse::success(id, initialize_response());
+            let params = req.params.as_ref();
+            let client_proto = params.and_then(|p| p.get("protocolVersion")).and_then(|v| v.as_str());
+            let client_name = params
+                .and_then(|p| p.get("clientInfo"))
+                .and_then(|c| c.get("name"))
+                .and_then(|v| v.as_str());
+            let runtime = crate::state::AgentRuntime::detect(client_name);
+            log::info!("MCP initialize: client='{}' detected_runtime={:?} protocol={}",
+                client_name.unwrap_or("?"), runtime, client_proto.unwrap_or("(default)"));
+            let resp = JsonRpcResponse::success(id, initialize_response(client_proto));
             Some(serde_json::to_string(&resp).unwrap())
         }
         "notifications/initialized" => None,
@@ -1284,11 +1300,7 @@ async fn hooks_handler(
     Query(params): Query<HashMap<String, String>>,
     body: String,
 ) -> Response {
-    let auth = headers
-        .get("x-claude-code-ide-authorization")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
-    if auth != srv.expected_auth {
+    if extract_auth(&headers).as_deref() != Some(srv.expected_auth.as_str()) {
         return StatusCode::UNAUTHORIZED.into_response();
     }
 
@@ -1662,6 +1674,25 @@ mod tests {
         let (c, a) = derive_streamable_connection_id(Some("abc-123"), false);
         assert_eq!(c, "mcp-abc-123");
         assert!(a.is_none(), "no new id assigned when the client already has one");
+    }
+
+    #[test]
+    fn extract_auth_accepts_known_headers_and_rejects_junk() {
+        use axum::http::HeaderMap;
+        use super::extract_auth;
+        let mut h = HeaderMap::new();
+        assert_eq!(extract_auth(&h), None, "no header -> None (never authenticates)");
+        h.insert("x-claude-code-ide-authorization", "tok-claude".parse().unwrap());
+        assert_eq!(extract_auth(&h).as_deref(), Some("tok-claude"));
+        let mut h2 = HeaderMap::new();
+        h2.insert("authorization", "Bearer tok-codex".parse().unwrap());
+        assert_eq!(extract_auth(&h2).as_deref(), Some("tok-codex"), "Bearer prefix stripped");
+        let mut h3 = HeaderMap::new();
+        h3.insert("authorization", "Bearer ".parse().unwrap());
+        assert_eq!(extract_auth(&h3), None, "empty bearer token -> None, not Some(\"\")");
+        let mut h4 = HeaderMap::new();
+        h4.insert("x-claude-code-ide-authorization", "".parse().unwrap());
+        assert_eq!(extract_auth(&h4), None, "empty header value -> None");
     }
 
     #[test]
