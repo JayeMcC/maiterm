@@ -162,14 +162,18 @@ impl Registrar for CodexRegistrar {
         if hooks_path.exists() {
             match read_json(&hooks_path) {
                 Ok(Some(existing)) => {
-                    let cleaned = strip_maiterm_hooks(existing);
-                    match serde_json::to_string_pretty(&cleaned) {
-                        Ok(json) => {
-                            if let Err(e) = atomic_write(&hooks_path, &json) {
-                                log::warn!("Codex unregister: failed to write {:?}: {}", hooks_path, e);
+                    let cleaned = strip_maiterm_hooks(existing.clone());
+                    // Only rewrite if we actually removed something of ours — never
+                    // reformat a user's hooks.json that maiTerm never wrote to.
+                    if cleaned != existing {
+                        match serde_json::to_string_pretty(&cleaned) {
+                            Ok(json) => {
+                                if let Err(e) = atomic_write(&hooks_path, &json) {
+                                    log::warn!("Codex unregister: failed to write {:?}: {}", hooks_path, e);
+                                }
                             }
+                            Err(e) => log::warn!("Codex unregister: failed to serialize hooks.json: {}", e),
                         }
-                        Err(e) => log::warn!("Codex unregister: failed to serialize hooks.json: {}", e),
                     }
                 }
                 Ok(None) => {}
