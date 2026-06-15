@@ -672,7 +672,7 @@ function createAgentBridgeStore() {
       //   1. A fresh fork completing its handshake (primeFork forced the init).
       //   2. An already-bridged tab re-initializing after a resume (or a rehydrated
       //      bridge coming back online) — re-bind it.
-      const u1 = await listen<{ tab_id: string | null; session_id: string }>('claude-init-session', (e) => {
+      const u1 = await listen<{ tab_id: string | null; session_id: string }>('agent-init-session', (e) => {
         const { tab_id, session_id } = e.payload;
         if (!tab_id) return;
 
@@ -718,7 +718,7 @@ function createAgentBridgeStore() {
       // A turn finished → that tab is idle and alive again. A Stop proves liveness (e.g.
       // after a webview reload) and ends any injection cooldown early, so a queued
       // message lands at the turn boundary instead of waiting out the cooldown.
-      const u2 = await listen<{ session_id: string; tab_id: string | null }>('claude-hook-stop', (e) => {
+      const u2 = await listen<{ session_id: string; tab_id: string | null }>('agent-hook-stop', (e) => {
         const tabId = e.payload.tab_id;
         if (!tabId) return;
         const d = delivery.get(tabId);
@@ -733,7 +733,7 @@ function createAgentBridgeStore() {
       // (app-restart auto-resume or a manual resume) and re-bind via Case 2 above.
       // Just suspend live delivery; the durable pairing is kept so it can come back.
       // Only an explicit disconnect or a closed tab removes the bridge permanently.
-      const u3 = await listen<{ session_id: string; tab_id: string | null }>('claude-hook-session-end', (e) => {
+      const u3 = await listen<{ session_id: string; tab_id: string | null }>('agent-hook-session-end', (e) => {
         const tabId = e.payload.tab_id;
         if (!tabId || !bridges.has(tabId)) return;
         const d = delivery.get(tabId);

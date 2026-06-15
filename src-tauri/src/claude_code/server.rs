@@ -55,6 +55,18 @@ struct ServerState {
     connection_count: Arc<AtomicUsize>,
 }
 
+/// Emit an event under both its runtime-neutral name and the legacy claude-* name,
+/// so a frontend listener on either keeps working during the rename's soak. The
+/// legacy emit is dropped in a later release once all listeners are migrated.
+fn emit_dual(app: &AppHandle, agent_event: &str, legacy_event: &str, payload: Value) {
+    let _ = app.emit(agent_event, payload.clone());
+    let _ = app.emit(legacy_event, payload);
+}
+fn emit_dual_to(app: &AppHandle, label: &str, agent_event: &str, legacy_event: &str, payload: Value) {
+    let _ = app.emit_to(label, agent_event, payload.clone());
+    let _ = app.emit_to(label, legacy_event, payload);
+}
+
 /// Extract the bearer/IDE auth token from a request, trying each accepted header
 /// in priority order. Returns None when no usable token is present — callers compare
 /// the result against the expected token, so None can never authenticate. Never
@@ -562,7 +574,7 @@ fn emit_connection_state(srv: &ServerState, connected: bool) {
     let payload = serde_json::json!({ "connected": connected });
     let app_data = srv.state.app_data.read();
     for win in &app_data.windows {
-        let _ = srv.app_handle.emit_to(&win.label, "claude-code-connection", payload.clone());
+        emit_dual_to(&srv.app_handle, &win.label, "agent-ide-connection", "claude-code-connection", payload.clone());
     }
 }
 
@@ -1010,7 +1022,7 @@ async fn process_message(
                                 log::debug!("initSession: linked pending session {} → tab {}",
                                     &pending_sid[..pending_sid.len().min(8)], &tab_id[..tab_id.len().min(8)]);
                                 // Re-emit session start now that we know the tab
-                                let _ = app_handle.emit("claude-hook-session-start", serde_json::json!({
+                                emit_dual(app_handle, "agent-hook-session-start", "claude-hook-session-start", serde_json::json!({
                                     "session_id": pending_sid,
                                     "tab_id": &tab_id,
                                 }));
@@ -1021,7 +1033,7 @@ async fn process_message(
                     // Emit event so frontend can set claudeSessionId trigger variable
                     // (unconditional — session ID is useful for triggers beyond auto-resume)
                     if !session_id.is_empty() {
-                        let _ = app_handle.emit("claude-init-session", serde_json::json!({
+                        emit_dual(app_handle, "agent-init-session", "claude-init-session", serde_json::json!({
                             "tab_id": &tab_id,
                             "session_id": &session_id,
                         }));
@@ -1188,9 +1200,9 @@ async fn process_message(
                     // Emit to the specific window that owns the tab (avoids race
                     // when preferences/help windows also listen for the event)
                     if let Some(label) = resolve_target_window(state, &arguments) {
-                        let _ = app_handle.emit_to(&label, "claude-code-tool", payload);
+                        emit_dual_to(app_handle, &label, "agent-ide-tool", "claude-code-tool", payload);
                     } else {
-                        let _ = app_handle.emit("claude-code-tool", payload);
+                        emit_dual(app_handle, "agent-ide-tool", "claude-code-tool", payload);
                     }
 
                     match tokio::time::timeout(RESPONSE_TIMEOUT, rx).await {
@@ -1390,7 +1402,7 @@ async fn hooks_handler(
             }
 
             let source = event.get("source").and_then(|v| v.as_str()).unwrap_or("");
-            let _ = srv.app_handle.emit("claude-hook-session-start", serde_json::json!({
+            emit_dual(&srv.app_handle, "agent-hook-session-start", "claude-hook-session-start", serde_json::json!({
                 "runtime": runtime_key,
                 "session_id": session_id,
                 "tab_id": if tab_id.is_empty() { None } else { Some(&tab_id) },
@@ -1408,7 +1420,7 @@ async fn hooks_handler(
 
             log::info!("Claude hook: session {} ended (tab {:?})", session_id, tab_id);
 
-            let _ = srv.app_handle.emit("claude-hook-session-end", serde_json::json!({
+            emit_dual(&srv.app_handle, "agent-hook-session-end", "claude-hook-session-end", serde_json::json!({
                 "runtime": runtime_key,
                 "session_id": session_id,
                 "tab_id": tab_id,
@@ -1442,7 +1454,7 @@ async fn hooks_handler(
 
             log::debug!("Claude hook: Notification type='{}' session={} (tab {:?})",
                 notification_type, &session_id[..session_id.len().min(8)], tab_id);
-            let _ = srv.app_handle.emit("claude-hook-notification", serde_json::json!({
+            emit_dual(&srv.app_handle, "agent-hook-notification", "claude-hook-notification", serde_json::json!({
                 "runtime": runtime_key,
                 "session_id": session_id,
                 "tab_id": tab_id,
@@ -1470,7 +1482,7 @@ async fn hooks_handler(
             }
 
             log::debug!("Claude hook: Stop for session {} (tab {:?})", &session_id[..session_id.len().min(8)], tab_id);
-            let _ = srv.app_handle.emit("claude-hook-stop", serde_json::json!({
+            emit_dual(&srv.app_handle, "agent-hook-stop", "claude-hook-stop", serde_json::json!({
                 "runtime": runtime_key,
                 "session_id": session_id,
                 "tab_id": tab_id,
@@ -1494,7 +1506,7 @@ async fn hooks_handler(
             }
 
             log::debug!("Claude hook: UserPromptSubmit session={} (tab {:?})", &session_id[..session_id.len().min(8)], tab_id);
-            let _ = srv.app_handle.emit("claude-hook-user-prompt", serde_json::json!({
+            emit_dual(&srv.app_handle, "agent-hook-user-prompt", "claude-hook-user-prompt", serde_json::json!({
                 "runtime": runtime_key,
                 "session_id": session_id,
                 "tab_id": tab_id,
@@ -1526,7 +1538,7 @@ async fn hooks_handler(
 
             log::debug!("Claude hook: PreToolUse tool='{}' session={} (tab {:?})",
                 tool_name, &session_id[..session_id.len().min(8)], tab_id);
-            let _ = srv.app_handle.emit("claude-hook-pre-tool-use", serde_json::json!({
+            emit_dual(&srv.app_handle, "agent-hook-pre-tool-use", "claude-hook-pre-tool-use", serde_json::json!({
                 "runtime": runtime_key,
                 "session_id": session_id,
                 "tab_id": tab_id,
@@ -1558,7 +1570,7 @@ async fn hooks_handler(
 
             log::debug!("Claude hook: PostToolUse tool='{}' session={} (tab {:?})",
                 tool_name, &session_id[..session_id.len().min(8)], tab_id);
-            let _ = srv.app_handle.emit("claude-hook-post-tool-use", serde_json::json!({
+            emit_dual(&srv.app_handle, "agent-hook-post-tool-use", "claude-hook-post-tool-use", serde_json::json!({
                 "runtime": runtime_key,
                 "session_id": session_id,
                 "tab_id": tab_id,
@@ -1582,7 +1594,7 @@ async fn hooks_handler(
 
             log::debug!("Claude hook: PreCompact trigger='{}' session={} (tab {:?})",
                 trigger, &session_id[..session_id.len().min(8)], tab_id);
-            let _ = srv.app_handle.emit("claude-hook-pre-compact", serde_json::json!({
+            emit_dual(&srv.app_handle, "agent-hook-pre-compact", "claude-hook-pre-compact", serde_json::json!({
                 "runtime": runtime_key,
                 "session_id": session_id,
                 "tab_id": tab_id,

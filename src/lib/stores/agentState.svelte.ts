@@ -257,7 +257,7 @@ function createAgentStateStore() {
     },
 
     async init() {
-      const u1 = await listen<{ session_id: string; tab_id: string; source?: string }>('claude-hook-session-start', (e) => {
+      const u1 = await listen<{ session_id: string; tab_id: string; source?: string }>('agent-hook-session-start', (e) => {
         const { session_id, tab_id, source } = e.payload;
         if (!tab_id) return;
         setState(tab_id, session_id, 'active');
@@ -268,7 +268,7 @@ function createAgentStateStore() {
       });
       unlisteners.push(u1);
 
-      const u2 = await listen<{ session_id: string; tab_id: string | null }>('claude-hook-session-end', (e) => {
+      const u2 = await listen<{ session_id: string; tab_id: string | null }>('agent-hook-session-end', (e) => {
         const { tab_id } = e.payload;
         if (!tab_id) return;
         removeSession(tab_id);
@@ -277,7 +277,7 @@ function createAgentStateStore() {
       });
       unlisteners.push(u2);
 
-      const u3 = await listen<{ session_id: string; tab_id: string | null }>('claude-hook-stop', (e) => {
+      const u3 = await listen<{ session_id: string; tab_id: string | null }>('agent-hook-stop', (e) => {
         const { session_id, tab_id } = e.payload;
         if (!tab_id) return;
         setState(tab_id, session_id, 'idle');
@@ -285,7 +285,7 @@ function createAgentStateStore() {
       });
       unlisteners.push(u3);
 
-      const u4 = await listen<{ session_id: string; tab_id: string | null }>('claude-hook-user-prompt', (e) => {
+      const u4 = await listen<{ session_id: string; tab_id: string | null }>('agent-hook-user-prompt', (e) => {
         const { session_id, tab_id } = e.payload;
         if (!tab_id) return;
         // Clear tool state — new prompt means previous operation ended (possibly interrupted)
@@ -294,7 +294,7 @@ function createAgentStateStore() {
       });
       unlisteners.push(u4);
 
-      const u5 = await listen<{ session_id: string; tab_id: string | null; notification_type: string }>('claude-hook-notification', (e) => {
+      const u5 = await listen<{ session_id: string; tab_id: string | null; notification_type: string }>('agent-hook-notification', (e) => {
         const { session_id, tab_id, notification_type } = e.payload;
         if (!tab_id) return;
         if (notification_type === 'permission_prompt') {
@@ -311,7 +311,7 @@ function createAgentStateStore() {
       unlisteners.push(u5);
 
       // initSession sets claudeSessionId trigger variable and enables auto-resume directly
-      const u6 = await listen<{ tab_id: string; session_id: string }>('claude-init-session', (e) => {
+      const u6 = await listen<{ tab_id: string; session_id: string }>('agent-init-session', (e) => {
         const { tab_id, session_id } = e.payload;
         if (!tab_id || !session_id) return;
         // Always set the variable so pinned commands can reference %claudeSessionId
@@ -335,7 +335,7 @@ function createAgentStateStore() {
       unlisteners.push(u6);
 
       // PreToolUse: track which tool Claude is about to use + set %claudeAction variable
-      const u7 = await listen<{ session_id: string; tab_id: string | null; tool_name: string; tool_input: Record<string, unknown> | null }>('claude-hook-pre-tool-use', (e) => {
+      const u7 = await listen<{ session_id: string; tab_id: string | null; tool_name: string; tool_input: Record<string, unknown> | null }>('agent-hook-pre-tool-use', (e) => {
         const { session_id, tab_id, tool_name, tool_input } = e.payload;
         if (!tab_id) return;
         const action = buildActionString(tool_name, tool_input);
@@ -346,7 +346,7 @@ function createAgentStateStore() {
       unlisteners.push(u7);
 
       // PostToolUse: tool finished, clear tool info (still active/thinking)
-      const u8 = await listen<{ session_id: string; tab_id: string | null; tool_name: string }>('claude-hook-post-tool-use', (e) => {
+      const u8 = await listen<{ session_id: string; tab_id: string | null; tool_name: string }>('agent-hook-post-tool-use', (e) => {
         const { session_id, tab_id } = e.payload;
         if (!tab_id) return;
         setState(tab_id, session_id, 'active');
@@ -355,7 +355,7 @@ function createAgentStateStore() {
       unlisteners.push(u8);
 
       // PreCompact: context compaction starting
-      const u9 = await listen<{ session_id: string; tab_id: string | null; trigger: string }>('claude-hook-pre-compact', (e) => {
+      const u9 = await listen<{ session_id: string; tab_id: string | null; trigger: string }>('agent-hook-pre-compact', (e) => {
         const { tab_id, trigger } = e.payload;
         if (!tab_id) return;
         dispatch('Claude Code', `Compacting conversation (${trigger})...`, 'info', { tabId: tab_id });
