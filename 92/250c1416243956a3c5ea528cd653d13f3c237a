@@ -1,0 +1,451 @@
+linked-tools/core/.agents/skills/use-git-town/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/tdd/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/skills-meta/skill-lint/SKILL.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-255
+linked-tools/core/.agents/skills/request-refactor-plan/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/obsidian-vault/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/scan-bitbucket-pr/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/tooling-engagement-status-report/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/scan-jira-ticket/scripts
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/grill-me/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/handoff/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/pr-workflow/pr-train-splitting/SKILL.md
+  s_e078af93d4b3e2::t_fe2922f8cd8970 141
+linked-tools/core/.agents/skills/ingest-ai-test-review/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/scan-bitbucket-pr/scripts
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/local-dev/tmux-md-view/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-160
+linked-tools/core/.agents/skills/skill-lint/scripts
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/pr-workflow/pr-train-splitting/evals/fixtures/README.md
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 89,91,138
+skill-library/pr-workflow/ingest-ai-test-review/evals/evals.json
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 3
+skill-library/quality/diagnose/SKILL.md
+  s_e078af93d4b3e2::t_51de11f6a39aae 1-132
+skill-library/repo-maintenance/clear-skill-logs/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-156
+linked-tools/core/.agents/skills/triage/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/pr-workflow/ingest-ai-test-review/SKILL.md
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-30
+skill-library/writing/writing-fragments/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-84
+skill-library/tickets/to-issues/SKILL.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-100
+linked-tools/core/.agents/skills/scan-bitbucket-pr/workflow.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/pr-workflow/prd-review/evals/evals.json
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 3,6
+linked-tools/core/.agents/skills/skill-lint/MAINTAINERS.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/speckit-step-flow/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/visual-regression/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+.agents/skills/overlay-park/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/quality/tdd/SKILL.md
+  s_e078af93d4b3e2::t_51de11f6a39aae 1-4,6,8,10,12-14,16,18,20,22,24,26,28,30,32-35,37,40-48,51,53,55,57,59-64,66,68,70,72,74-77,79,81-83,86-87,90,92-95,97-99,101-105,107,109,112-116,119-124
+linked-tools/core/.agents/skills/generate-tickets/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/setup-pre-commit/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+.agents/skills/speckit-flow-tools/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/skills-meta/tooling-engagement-status-report/SKILL.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-60
+linked-tools/core/.agents/skills/tmux-md-view/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/external-services/bitbucket-build-failure/SKILL.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-77
+skill-library/pr-workflow/pr-train-splitting/evals/evals.json
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 3
+linked-tools/core/.agents/skills/report-prompt-context/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/bitbucket-build-failure/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/decompose-orchestrator/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/writing-beats/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/quality/playwright-workflows/SKILL.md
+  s_e078af93d4b3e2::t_51de11f6a39aae 1-30
+skill-library/sync-infrastructure/devcontainer-logs/workflow.md
+  s_e078af93d4b3e2::t_48746d0fca7e49 1-154
+linked-tools/core/.agents/skills/tdd/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/skills-meta/skill-eval/SKILL.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-94
+linked-tools/core/.agents/skills/pr-train-splitting/lib
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/pr-workflow/plan-pr-split/evals/evals.json
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 3
+skill-library/external-services/forwood-f1-cli/SKILL.md
+  s_e078af93d4b3e2::t_c54a42479f51da 32,38
+linked-tools/core/.agents/skills/playwright-workflows/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/skill-lint/reference
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/documentation-generators/generate-workflows/references/workflows-sections.md
+  s_e078af93d4b3e2::t_b0c601dae137c4 46
+  s_e078af93d4b3e2::t_6fcf5517cc1c36 15
+linked-tools/core/.agents/skills/pr-train-splitting/package.json
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/ubiquitous-language/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/teaching/teach/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-117
+linked-tools/core/.agents/skills/bitbucket-build-failure/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/scan-jira-ticket/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/writing/edit-article/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-22
+skill-library/repo-setup/git-guardrails-claude-code/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-104
+linked-tools/core/.agents/skills/report-changes/workflow.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/skill-lint/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/edit-article/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/writing/obsidian-vault/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-68
+linked-tools/core/.agents/skills/personal-tooling-sync-fix/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/external-services/scan-bitbucket-pr/SKILL.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-60
+skill-library/skills-meta/handoff/SKILL.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-23
+skill-library/external-services/scan-bitbucket-pr/evals/fixtures/README.md
+  s_e078af93d4b3e2::t_f77adcc3038fa2 7,14,265,267
+skill-library/skills-meta/skill-eval/workflow.md
+  s_e078af93d4b3e2::t_b01af804d6d3c5 22
+linked-tools/core/.agents/skills/clear-skill-logs/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/external-services/bitbucket-pr-inline-per-changed-file/SKILL.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-34
+linked-tools/core/.agents/skills/zoom-out/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/repos/forwood-vault/.agents/skills/speckit-flow-tools/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/sync-infrastructure/personal-tooling-sync-fix/SKILL.md
+  s_e078af93d4b3e2::t_48746d0fca7e49 1-17
+skill-library/tickets/scan-jira-ticket/workflow.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-45
+skill-library/planning/improve-codebase-architecture/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-90
+.agents/skills/speckit-flow-tools/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/report-changes/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/skill-eval/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/external-services/forwood-f1-cli/catalog-snapshot.md
+  s_e078af93d4b3e2::t_c54a42479f51da 2
+skill-library/tickets/scan-jira-ticket/evals/fixtures/README.md
+  s_e078af93d4b3e2::t_c99e46a0eacadc 7,15
+  s_e078af93d4b3e2::t_548520b8338b91 199
+linked-tools/core/.agents/skills/scan-jira-ticket/workflow.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/external-services/bitbucket-pr-comment/SKILL.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-40
+skill-library/pr-workflow/commit-diff-coverage/evals/fixtures/README.md
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 7,269
+skill-library/repo-setup/setup-matt-pocock-skills/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-131
+linked-tools/core/.agents/skills/devcontainer-logs/workflow.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/external-services/bitbucket-build-failure/evals/fixtures/README.md
+  s_e078af93d4b3e2::t_f77adcc3038fa2 8,327-328
+skill-library/sync-infrastructure/personal-tooling-sync-fix/workflow.md
+  s_e078af93d4b3e2::t_48746d0fca7e49 1-64
+linked-tools/core/.agents/skills/writing-shape/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/skills-meta/decompose-orchestrator/SKILL.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-60
+.agents/skills/tools-comparison/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/speckit-step-flow/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/improve-codebase-architecture/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/documentation-generators/report-prompt-context/SKILL.md
+  s_e078af93d4b3e2::t_6a03eb8a6cb368 1-15
+skill-library/documentation-generators/generate-workflows/SKILL.md
+  s_e078af93d4b3e2::t_a7faf6589ae16e 30
+skill-library/documentation-generators/report-changes/workflow.md
+  s_e078af93d4b3e2::t_6a03eb8a6cb368 1-413
+linked-tools/core/.agents/skills/migrate-skill/workflow.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/generate-tickets/scripts
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/skills-meta/decompose-orchestrator/workflow.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-45
+skill-library/writing/writing-shape/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-72
+skill-library/external-services/bitbucket-pr-comment/workflow.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-6
+skill-library/pr-workflow/plan-pr-split/evals/fixtures/README.md
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 199
+  s_e078af93d4b3e2::t_f68be22ae853a4 85
+skill-library/skills-meta/skill-lint/evals/evals.json
+  s_e078af93d4b3e2::t_9ced673db8e2ed 3
+skill-library/tickets/scan-jira-ticket/SKILL.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-54
+.agents/skills/generate-workflows/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/tickets/qa/SKILL.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-139
+.agents/skills/tools-repo-manager/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/planning/prototype/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-39
+skill-library/repo-setup/migrate-to-shoehorn/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-127
+linked-tools/core/.agents/skills/decompose-orchestrator/workflow.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/skills-meta/migrate-skill/SKILL.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-14
+skill-library/pr-workflow/ingest-ai-test-review/evals/fixtures/README.md
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 7-8,267
+skill-library/repo-setup/setup-pre-commit/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-100
+linked-tools/core/.agents/skills/to-issues/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/plan-pr-split/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/git-guardrails-claude-code/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/pre-commit-checks/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/tickets/to-prd/SKILL.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-82
+linked-tools/core/.agents/skills/forwood-f1-cli/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/setup-matt-pocock-skills/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/documentation-generators/report-changes/SKILL.md
+  s_e078af93d4b3e2::t_6a03eb8a6cb368 1-426
+skill-library/teaching/scaffold-exercises/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-115
+linked-tools/core/.agents/skills/skill-eval/workflow.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/improve-codebase-architecture/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/quality/pre-commit-checks/evals/evals.json
+  s_e078af93d4b3e2::t_51de11f6a39aae 3
+linked-tools/core/.agents/skills/visual-regression/workflow.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/external-services/bitbucket-pr-inline-per-changed-file/workflow.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-27
+skill-library/planning/design-an-interface/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-103
+linked-tools/core/.agents/skills/write-a-skill/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/writing/writing-beats/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-60
+skill-library/skills-meta/skill-eval/references/coverage-report-template.md
+  s_e078af93d4b3e2::t_f68be22ae853a4 14-16
+skill-library/pr-workflow/commit-diff-coverage/SKILL.md
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-109
+linked-tools/core/.agents/skills/pr-train-splitting/test
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/prototype/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/design-an-interface/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/commit-diff-coverage/workflow.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/tickets/triage/SKILL.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-116
+skill-library/pr-workflow/use-git-town/workflow.md
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-37
+linked-tools/core/.agents/skills/bitbucket-pr-inline-per-changed-file/workflow.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/commit-diff-coverage/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/pr-workflow/pr-train-splitting/package.json
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-10
+skill-library/skills-meta/skill-creator/SKILL.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-503
+linked-tools/repos/forwood-one/.vscode/scripts/add-qa-test-users.mjs
+  s_e078af93d4b3e2::t_88e6c408d7f4be 106-109,113-241
+skill-library/speckit/speckit-flow-tools/SKILL.md
+  s_e078af93d4b3e2::t_965aa0bf3d508b 1-74,77-82,85-124,127-248
+linked-tools/core/.agents/skills/writing-fragments/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+.agents/skills/generate-tools-index/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/planning/zoom-out/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-15
+linked-tools/core/.agents/skills/diagnose/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/bitbucket-pr-inline-per-changed-file/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/migrate-to-shoehorn/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/commit-diff-coverage/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/planning/ubiquitous-language/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-102
+linked-tools/core/.agents/skills/scaffold-exercises/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+.agents/skills/figma-extract/scripts
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/teach/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/speckit/speckit-step-flow/SKILL.md
+  s_e078af93d4b3e2::t_965aa0bf3d508b 1-566
+linked-tools/core/.agents/skills/grill-with-docs/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/planning/grill-with-docs/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-94
+skill-library/vault/vault-query/evals/fixtures/README.md
+  s_e078af93d4b3e2::t_f77adcc3038fa2 238
+  s_e078af93d4b3e2::t_9768425126e640 239
+linked-tools/repos/forwood-vault/.agents/skills/speckit-flow-tools/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/visual-design/visual-regression/workflow.md
+  s_e078af93d4b3e2::t_51de11f6a39aae 1-459
+.agents/skills/prd-review/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/visual-regression/scripts
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/pr-workflow/commit-diff-coverage/evals/evals.json
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 3
+linked-tools/core/.agents/skills/pr-train-splitting/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/skill-creator/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/plan-pr-split/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/tickets/generate-tickets/SKILL.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-130
+skill-library/skills-meta/write-a-skill/SKILL.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-126
+skill-library/documentation-generators/report-changes/evals/evals.json
+  s_e078af93d4b3e2::t_6a03eb8a6cb368 3
+.agents/skills/subagent-scan/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/bitbucket-pr-comment/workflow.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/setup-matt-pocock-skills/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/use-git-town/workflow.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/visual-design/visual-regression/SKILL.md
+  s_e078af93d4b3e2::t_51de11f6a39aae 1-327
+linked-tools/core/.agents/skills/ingest-ai-test-review/workflow.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/diagnose/scripts
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/skill-eval/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/pr-workflow/plan-pr-split/SKILL.md
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-70
+linked-tools/core/.agents/skills/personal-tooling-sync-fix/workflow.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/planning/grill-me/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-13
+.agents/skills/solution-design/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/grill-with-docs/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/decompose-orchestrator/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/plan-pr-split/workflow.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/prototype/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/report-prompt-context/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/report-prompt-context/workflow.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/pr-workflow/ingest-ai-test-review/workflow.md
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-207
+linked-tools/core/.agents/skills/git-guardrails-claude-code/scripts
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/to-prd/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/sync-infrastructure/devcontainer-logs/SKILL.md
+  s_e078af93d4b3e2::t_48746d0fca7e49 1-166
+linked-tools/core/.agents/skills/playwright-workflows/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/teach/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/planning/request-refactor-plan/SKILL.md
+  s_e078af93d4b3e2::t_81d6575efc8412 1-76
+linked-tools/core/.agents/skills/generate-tickets/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/use-git-town/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+.agents/skills/generate-readme/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/pr-workflow/use-git-town/SKILL.md
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-48
+linked-tools/core/.agents/skills/forwood-f1-cli/catalog-snapshot.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/pr-workflow/plan-pr-split/workflow.md
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-63
+.agents/skills/caveman-compress/scripts
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/pr-workflow/commit-diff-coverage/workflow.md
+  s_e078af93d4b3e2::t_6ffa4b7adef01d 1-101
+linked-tools/core/.agents/skills/report-changes/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/bitbucket-pr-comment/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/skills-meta/skill-lint/MAINTAINERS.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-73
+skill-library/quality/pre-commit-checks/SKILL.md
+  s_e078af93d4b3e2::t_51de11f6a39aae 1-70
+linked-tools/core/.agents/skills/visual-regression/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/documentation-generators/report-prompt-context/workflow.md
+  s_e078af93d4b3e2::t_6a03eb8a6cb368 1-133
+skill-library/skills-meta/migrate-skill/workflow.md
+  s_e078af93d4b3e2::t_9ced673db8e2ed 1-75
+linked-tools/core/.agents/skills/qa/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/bitbucket-pr-comment/references
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/migrate-skill/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/pr-workflow/prd-review/evals/fixtures/README.md
+  s_e078af93d4b3e2::t_dfb318ef8b5bfc 22
+linked-tools/core/.agents/skills/devcontainer-logs/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+linked-tools/core/.agents/skills/triage/SKILL.md
+  s_e078af93d4b3e2::t_88e6c408d7f4be 1
+skill-library/external-services/scan-bitbucket-pr/workflow.md
+  s_e078af93d4b3e2::t_c54a42479f51da 1-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "92250c1416243956a3c5ea528cd653d13f3c237a",
+  "prompts": {},
+  "sessions": {
+    "s_e078af93d4b3e2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93c1630f-9f15-4bd0-be17-5038e1c2afa1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
