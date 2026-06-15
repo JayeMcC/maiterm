@@ -1,0 +1,21 @@
+src/evidence/primitives/smoke.ts
+  s_7d356ed1988a96::t_e0b42209ae0d6f 1-58
+tests/evidence/primitives/smoke.test.ts
+  s_7d356ed1988a96::t_84093ba783a397 1-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "871abcd4208842ea78079126417aa536d759ecc5",
+  "prompts": {},
+  "sessions": {
+    "s_7d356ed1988a96": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "8a1f0cda-d4a8-4c90-a9e4-520ac4291ea5",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
