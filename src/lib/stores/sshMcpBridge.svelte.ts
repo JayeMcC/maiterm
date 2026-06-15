@@ -252,59 +252,9 @@ function buildSetupScript(
     'rm -rf ~/.claude/skills/aiterm',
     'mkdir -p ~/.claude/skills/maiterm',
     "cat > ~/.claude/skills/maiterm/SKILL.md << 'SKILLEOF'\n" +
-    '---\n' +
-    'name: maiterm\n' +
-    'description: Quick maiTerm terminal operations — /maiterm notes, /maiterm diag, /maiterm tabs, etc.\n' +
-    '---\n' +
-    '\n' +
-    '## Fast path: `init`\n' +
-    '\n' +
-    'If the argument is `init`, do ONLY this and stop — do NOT read the command table below and do NOT keyword-search across MCP servers:\n' +
-    '1. Load the tool with one targeted lookup: ToolSearch `select:mcp__maiterm__initSession,mcp__maiterm-dev__initSession,mcp__aiterm__initSession,mcp__aiterm-dev__initSession`\n' +
-    '2. Call the one named in your SessionStart hook context (this build registers exactly one of maiterm/maiterm-dev; the aiterm/aiterm-dev names are legacy fallbacks) with `{ "tabId": "<value of $AITERM_TAB_ID>", "sessionId": "<from your SessionStart hook context>" }`.\n' +
-    '\n' +
-    'Always re-run this when asked, even if you think you already initialized — resume/fork/compact require re-init.\n' +
-    '\n' +
-    'Execute the maiTerm MCP tool for the requested operation. Use the maiterm MCP server. If you have not initialized yet, call initSession first.\n' +
-    '\n' +
-    '## Command reference\n' +
-    '\n' +
-    '| Command | MCP Tool | Parameters |\n' +
-    '|---------|----------|------------|\n' +
-    '| `notes` | openNotesPanel | `{ "open": true }` |\n' +
-    '| `notes close` | openNotesPanel | `{ "open": false }` |\n' +
-    '| `notes read` | getTabNotes | `{}` |\n' +
-    '| `notes write <content>` | setTabNotes | `{ "notes": "<content>" }` |\n' +
-    '| `tabs` | listWorkspaces | `{}` |\n' +
-    '| `tab` | getActiveTab | `{}` |\n' +
-    '| `diag` | getDiagnostics | `{}` |\n' +
-    '| `vars` | getTriggerVariables | `{}` |\n' +
-    '| `var <name> <value>` | setTriggerVariable | `{ "name": "<name>", "value": "<value>" }` |\n' +
-    '| `resume on` | setAutoResume | `{ "enabled": true }` |\n' +
-    '| `resume off` | setAutoResume | `{ "enabled": false }` |\n' +
-    '| `resume` | getAutoResume | `{}` |\n' +
-    '| `notify <title> <body>` | sendNotification | `{ "title": "<title>", "body": "<body>" }` |\n' +
-    '| `logs` | readLogs | `{}` |\n' +
-    '| `logs <search>` | readLogs | `{ "search": "<search>" }` |\n' +
-    '| `sessions` | getClaudeSessions | `{}` |\n' +
-    '| `init` | initSession | `{ "tabId": "$AITERM_TAB_ID", "sessionId": "<from SessionStart hook>" }` |\n' +
-    '\n' +
-    'Call the exact MCP tool listed above with the specified parameters. Do not ask for clarification — just execute.\n' +
-    'For `init`: read tabId from $AITERM_TAB_ID env var and sessionId from your SessionStart hook context. IMPORTANT: Always call initSession when requested, even if you believe it was already called earlier in the session. Session resume, fork, and compact events require re-initialization to pick up state changes.\n' +
-    '\n' +
-    '## statusline — install the maiTerm status line\n' +
-    '\n' +
-    '`statusline` is the one subcommand that is NOT an MCP tool. It installs the maiTerm-recommended Claude Code status line on THIS machine. Be fast:\n' +
-    '\n' +
-    '1. Run: `bash ~/.claude/skills/maiterm/bin/setup-statusline.sh`\n' +
-    '2. The script prints a colored example, then signals via exit code:\n' +
-    '   - exit 0 → installed; tell the user in one sentence it is active in new Claude Code sessions and stop.\n' +
-    '   - exit 3 → jq is missing; the script printed `JQ_MISSING:<install command>`. Show it, ask whether to run it; if yes run it then re-run the setup script; if no, stop.\n' +
-    '   - any other non-zero → show the output and stop.\n' +
-    '\n' +
-    'It is idempotent — only writes ~/.claude/statusline-command.sh and the statusLine key in ~/.claude/settings.json.\n' +
-    '\n' +
-    '$ARGUMENTS\n' +
+    // Single source of truth: the SKILL.md body comes from the bundled resource
+    // (get_maiterm_skill_scripts), identical to the local install — no drift.
+    scripts.skill_md +
     'SKILLEOF',
     // Bundle the /maiterm statusline helper scripts on the remote too, so
     // `/maiterm statusline` works in remote (SSH-bridged) Claude sessions.

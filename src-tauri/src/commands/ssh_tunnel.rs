@@ -208,6 +208,7 @@ pub fn get_mcp_auth(state: tauri::State<'_, Arc<AppState>>) -> Option<String> {
 /// (SSH) skill setup so `/maiterm statusline` works on remote hosts too.
 #[derive(serde::Serialize)]
 pub struct MaitermSkillScripts {
+    pub skill_md: String,
     pub setup_statusline: String,
     pub statusline_command: String,
 }
@@ -215,6 +216,7 @@ pub struct MaitermSkillScripts {
 #[tauri::command]
 pub fn get_maiterm_skill_scripts() -> MaitermSkillScripts {
     MaitermSkillScripts {
+        skill_md: crate::claude_code::lockfile::MAITERM_SKILL_MD.to_string(),
         setup_statusline: crate::claude_code::lockfile::STATUSLINE_SETUP_SCRIPT.to_string(),
         statusline_command: crate::claude_code::lockfile::STATUSLINE_PAYLOAD_SCRIPT.to_string(),
     }
