@@ -1,0 +1,25 @@
+.agents/skills/tmux-md-view
+  s_36596460844258::t_906dfd00cec45b 1
+linked-tools/core/.agents/commands/tmux-md-view.md
+  s_36596460844258::t_906dfd00cec45b 1-7
+skill-library/local-environment/tmux-md-view/SKILL.md
+  s_36596460844258::t_906dfd00cec45b 1-160
+linked-tools/core/.agents/skills/tmux-md-view/SKILL.md
+  s_36596460844258::t_906dfd00cec45b 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "fa05191923ed0e848e6c897a403af5644628113a",
+  "prompts": {},
+  "sessions": {
+    "s_36596460844258": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3c5863b9-4d11-4308-be03-ba64880f2ef9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
