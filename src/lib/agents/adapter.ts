@@ -1,0 +1,85 @@
+import type { AgentRuntime } from './types';
+import type { AgentTabSession } from '$lib/stores/agentState.svelte';
+
+/**
+ * Per-runtime behaviors the Agent Bridge needs that genuinely differ by agent
+ * runtime. The bridge's plumbing (PTY injection, registry, queue/drain, persistence)
+ * is runtime-agnostic; only these four couplings vary. The Claude adapter reproduces
+ * the bridge's original hardcoded Claude behavior exactly.
+ */
+export interface AgentAdapter {
+  runtime: AgentRuntime;
+  /** Hold bridge delivery while the recipient is at a prompt awaiting the HUMAN — an
+   *  injected paste+CR would hijack their selection. */
+  isAwaitingHumanInput(state: AgentTabSession | undefined): boolean;
+  /** Whether this runtime can fork a session into a fresh, isolated pane. */
+  supportsFork: boolean;
+  /** The command that forks `sessionId` into a new pane, or null if unsupported. */
+  buildForkCommand(sessionId: string): string | null;
+  /** Whether a freshly forked session must be force-re-initialized: Claude inherits the
+   *  target's initSession from the resumed transcript and won't rebind its new MCP
+   *  connection otherwise. Runtimes that rebind on their own set this false. */
+  forkNeedsReinit: boolean;
+  /** Directive injected into a fork to force it to re-init as its OWN tab. */
+  buildForkInitDirective(forkTabId: string, peerLabel: string): string;
+}
+
+const claudeAdapter: AgentAdapter = {
+  runtime: 'claude',
+  isAwaitingHumanInput(state) {
+    if (!state) return false;
+    // A permission prompt, or an active interactive elicitation tool (AskUserQuestion),
+    // is a multiple-choice question for the human — never inject a peer message over it.
+    if (state.state === 'permission') return true;
+    if (state.state === 'active' && state.toolName === 'AskUserQuestion') return true;
+    return false;
+  },
+  supportsFork: true,
+  buildForkCommand(sessionId) {
+    return `claude --resume ${sessionId} --fork-session`;
+  },
+  forkNeedsReinit: true,
+  buildForkInitDirective(forkTabId, peerLabel) {
+    return (
+      `⟦AGENT-BRIDGE⟧ You are now a FORKED peer agent in a NEW maiTerm tab (id ${forkTabId}). ` +
+      `This is a fresh tab with a fresh MCP connection, so you must re-initialize: call your maiterm initSession tool with tabId "${forkTabId}" right now. ` +
+      `Disregard any tab id mentioned earlier in this conversation — you are "${forkTabId}" now.\n\n` +
+      `You have been bridged to a peer AI agent ("${peerLabel}") via maiTerm Agent Bridge. ` +
+      `After initializing, reply with a one-line readiness note, then wait — the peer's message will arrive as a new prompt.`
+    );
+  },
+};
+
+const codexAdapter: AgentAdapter = {
+  runtime: 'codex',
+  isAwaitingHumanInput(state) {
+    if (!state) return false;
+    // Codex signals a human approval prompt via PermissionRequest → 'permission' state.
+    // It has no AskUserQuestion-style active elicitation tool to guard against.
+    return state.state === 'permission';
+  },
+  // Codex has no launch-flag fork (its fork is an in-TUI /fork command), so the picker
+  // grays out "fork into new pane" for Codex; existing-tab bridging is the Codex path.
+  supportsFork: false,
+  buildForkCommand() {
+    return null;
+  },
+  forkNeedsReinit: false,
+  buildForkInitDirective(forkTabId, peerLabel) {
+    return `⟦AGENT-BRIDGE⟧ You are a bridged peer agent ("${peerLabel}") in maiTerm tab ${forkTabId}.`;
+  },
+};
+
+const geminiAdapter: AgentAdapter = { ...codexAdapter, runtime: 'gemini' };
+
+/** Resolve the bridge adapter for a runtime (defaults to Claude). */
+export function getAdapter(runtime: AgentRuntime): AgentAdapter {
+  switch (runtime) {
+    case 'codex':
+      return codexAdapter;
+    case 'gemini':
+      return geminiAdapter;
+    default:
+      return claudeAdapter;
+  }
+}

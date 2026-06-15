@@ -4,6 +4,7 @@ import type { AgentBridge } from '$lib/tauri/types';
 import { workspacesStore } from '$lib/stores/workspaces.svelte';
 import { terminalsStore } from '$lib/stores/terminals.svelte';
 import { claudeStateStore } from '$lib/stores/agentState.svelte';
+import { getAdapter } from '$lib/agents/adapter';
 import { error as logError, info as logInfo } from '@tauri-apps/plugin-log';
 
 /**
@@ -46,9 +47,6 @@ import { error as logError, info as logInfo } from '@tauri-apps/plugin-log';
 
 const INJECT_GAP_MS = 120;           // gap between bracketed-paste and the submitting CR
 const INJECT_COOLDOWN_MS = 1000;     // post-injection cooldown: serialize injects + let the TUI register the input
-// Tools that put a multiple-choice prompt in front of the HUMAN; we hold delivery while
-// one is awaiting an answer so an injected paste+CR can't hijack their selection.
-const HUMAN_PROMPT_TOOLS = new Set(['AskUserQuestion']);
 const DRAIN_TICK_MS = 1500;          // queue-drain backstop: re-attempt queued delivery while held
 const FORK_BOOT_POLL_MS = 500;       // poll interval while waiting for the fork's Claude to register
 const FORK_BOOT_TIMEOUT_MS = 15_000; // cap on waiting for the fork to boot before priming anyway
@@ -195,11 +193,10 @@ function createAgentBridgeStore() {
     if (!d || !d.ready || d.busy || injecting.has(tabId)) return false;
     const st = claudeStateStore.getState(tabId);
     if (!st) return false;                          // dormant/resuming → queue
-    if (st.state === 'permission') return false;    // human is at a permission prompt → hold
-    // Also hold while an interactive elicitation tool (a multiple-choice question for the
-    // human) is awaiting an answer — it runs as an 'active' tool, and an injected paste+CR
-    // would land on the selector and hijack the human's pick.
-    if (st.state === 'active' && st.toolName && HUMAN_PROMPT_TOOLS.has(st.toolName)) return false;
+    // Hold while the recipient is at a prompt awaiting the HUMAN (a permission prompt, or
+    // a runtime-specific interactive elicitation like Claude's AskUserQuestion) — an
+    // injected paste+CR would hijack their selection. What counts is per-runtime.
+    if (getAdapter(workspacesStore.getTabRuntime(tabId)).isAwaitingHumanInput(st)) return false;
     return true;
   }
 
@@ -326,19 +323,6 @@ function createAgentBridgeStore() {
     );
   }
 
-  /** Directive injected into the fork to force it to re-initialize as its OWN tab
-   *  (a resumed/forked session otherwise inherits the target's initSession and never
-   *  re-binds its new MCP connection, so its maiTerm tools stay unusable). */
-  function buildForkInitDirective(forkTabId: string, peerLabel: string): string {
-    return (
-      `⟦AGENT-BRIDGE⟧ You are now a FORKED peer agent in a NEW maiTerm tab (id ${forkTabId}). ` +
-      `This is a fresh tab with a fresh MCP connection, so you must re-initialize: call your maiterm initSession tool with tabId "${forkTabId}" right now. ` +
-      `Disregard any tab id mentioned earlier in this conversation — you are "${forkTabId}" now.\n\n` +
-      `You have been bridged to a peer AI agent ("${peerLabel}") via maiTerm Agent Bridge. ` +
-      `After initializing, reply with a one-line readiness note, then wait — the peer's message will arrive as a new prompt.`
-    );
-  }
-
   /** Sent to the caller if the fork never re-initializes on this instance. */
   function buildBridgeFailedNote(forkTabId: string): string {
     return (
@@ -362,7 +346,7 @@ function createAgentBridgeStore() {
     if (!pendingOpeners.has(forkTabId)) return;
 
     const peerLabel = bridges.get(forkTabId)?.partnerLabel ?? 'your bridged peer';
-    const ok = await injectPrompt(forkTabId, buildForkInitDirective(forkTabId, peerLabel));
+    const ok = await injectPrompt(forkTabId, getAdapter(workspacesStore.getTabRuntime(forkTabId)).buildForkInitDirective(forkTabId, peerLabel));
     if (!ok) {
       logError(`agentBridge: failed to prime fork ${forkTabId.slice(0, 8)}`);
       return;
