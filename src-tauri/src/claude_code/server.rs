@@ -40,6 +40,12 @@ type SseSessions = Arc<parking_lot::RwLock<HashMap<String, mpsc::UnboundedSender
 /// Set by `initSession` tool, used to auto-inject `tabId` into tool calls.
 type ConnectionTabMap = Arc<parking_lot::RwLock<HashMap<String, String>>>;
 
+/// Per-connection runtime: maps transport connection ID → detected agent runtime.
+/// Set on the MCP `initialize` handshake (from `clientInfo.name`); used to
+/// RUNTIME-GATE affinity recovery so a Codex connection can never bind to a
+/// Claude tab (and vice-versa).
+type ConnectionRuntimeMap = Arc<parking_lot::RwLock<HashMap<String, crate::state::AgentRuntime>>>;
+
 #[derive(Clone)]
 struct ServerState {
     app_handle: AppHandle,
@@ -48,6 +54,9 @@ struct ServerState {
     sse_sessions: SseSessions,
     /// Maps connection IDs (SSE session, WS id, or "streamable-http") to tab IDs.
     connection_tabs: ConnectionTabMap,
+    /// Maps connection IDs to the runtime detected on their `initialize` handshake.
+    /// Gates affinity recovery to same-runtime sessions only.
+    connection_runtimes: ConnectionRuntimeMap,
     /// Active transport connections (WS + SSE). Used to ref-count the connected
     /// flag so flapping sessions don't emit spurious disconnect events while
     /// another session is still alive. Also dampens log/event spam from the
@@ -211,6 +220,7 @@ pub async fn serve_server(app_handle: AppHandle, state: Arc<AppState>, setup: Se
 
     let sse_sessions: SseSessions = Arc::new(parking_lot::RwLock::new(HashMap::new()));
     let connection_tabs: ConnectionTabMap = Arc::new(parking_lot::RwLock::new(HashMap::new()));
+    let connection_runtimes: ConnectionRuntimeMap = Arc::new(parking_lot::RwLock::new(HashMap::new()));
 
     let server_state = ServerState {
         app_handle,
@@ -218,6 +228,7 @@ pub async fn serve_server(app_handle: AppHandle, state: Arc<AppState>, setup: Se
         expected_auth: setup.auth,
         sse_sessions,
         connection_tabs,
+        connection_runtimes,
         connection_count: Arc::new(AtomicUsize::new(0)),
     };
 
@@ -635,7 +646,7 @@ async fn handle_ws_connection(socket: WebSocket, srv: ServerState) {
             msg = ws_read.next() => {
                 match msg {
                     Some(Ok(WsMessage::Text(text))) => {
-                        handle_message(&text, &srv.app_handle, &srv.state, &srv.connection_tabs, &ws_connection_id, &response_tx).await;
+                        handle_message(&text, &srv.app_handle, &srv.state, &srv.connection_tabs, &srv.connection_runtimes, &ws_connection_id, &response_tx).await;
                     }
                     Some(Ok(WsMessage::Ping(data))) => {
                         let _ = ws_write.send(WsMessage::Pong(data)).await;
@@ -668,6 +679,7 @@ async fn handle_ws_connection(socket: WebSocket, srv: ServerState) {
 
     connection_dec(&srv);
     srv.connection_tabs.write().remove(&ws_connection_id);
+    srv.connection_runtimes.write().remove(&ws_connection_id);
     // Only clear the global notify channel if we still own it — a newer
     // transport session may have overwritten it while we were running.
     {
@@ -706,7 +718,7 @@ async fn streamable_http_handler(
     let (connection_id, assigned_sid) = derive_streamable_connection_id(incoming_sid, is_initialize);
 
     // Process the JSON-RPC message and get the response
-    let response_json = process_message(&body, &srv.app_handle, &srv.state, &srv.connection_tabs, &connection_id).await;
+    let response_json = process_message(&body, &srv.app_handle, &srv.state, &srv.connection_tabs, &srv.connection_runtimes, &connection_id).await;
 
     match response_json {
         Some(json) => {
@@ -826,6 +838,7 @@ async fn sse_get_handler(State(srv): State<ServerState>, headers: HeaderMap) -> 
         }
         cleanup_srv.sse_sessions.write().remove(&cleanup_session_id);
         cleanup_srv.connection_tabs.write().remove(&format!("sse-{}", cleanup_session_id));
+        cleanup_srv.connection_runtimes.write().remove(&format!("sse-{}", cleanup_session_id));
         connection_dec(&cleanup_srv);
         // Only clear the global notify channel if this session still owns it —
         // a newer session may have overwritten it while we were running.
@@ -869,11 +882,40 @@ async fn sse_message_handler(
     };
 
     let connection_id = format!("sse-{}", params.session_id);
-    handle_message(&body, &srv.app_handle, &srv.state, &srv.connection_tabs, &connection_id, &tx).await;
+    handle_message(&body, &srv.app_handle, &srv.state, &srv.connection_tabs, &srv.connection_runtimes, &connection_id, &tx).await;
     StatusCode::OK.into_response()
 }
 
 // ─── Shared JSON-RPC handler ────────────────────────────────────────────────
+
+/// Decide which tab an unbound connection should recover affinity to, given the
+/// set of active tabs (already filtered to the connection's runtime) and the set
+/// of tabs that currently have a live connection.
+///
+/// Rule (unchanged from the inline logic it replaces):
+/// - Exactly one active tab → that tab (any unbound call must be from it).
+/// - Multiple active tabs → only the SOLE tab lacking a live connection (the one
+///   reconnecting); ambiguous otherwise → `None` (caller must re-initSession).
+///
+/// The runtime FILTERING happens before this is called — `active_same_runtime_tabs`
+/// already excludes other runtimes' sessions.
+fn recover_affinity(
+    active_same_runtime_tabs: &[String],
+    bound_tabs: &std::collections::HashSet<&str>,
+) -> Option<String> {
+    if active_same_runtime_tabs.len() == 1 {
+        return Some(active_same_runtime_tabs[0].clone());
+    }
+    let unbound: Vec<&String> = active_same_runtime_tabs
+        .iter()
+        .filter(|t| !bound_tabs.contains(t.as_str()))
+        .collect();
+    if unbound.len() == 1 {
+        Some(unbound[0].clone())
+    } else {
+        None
+    }
+}
 
 /// Process one JSON-RPC message and return the response as a raw JSON string.
 /// Returns `None` for notifications (no id) that don't require a response.
@@ -884,6 +926,7 @@ async fn process_message(
     app_handle: &AppHandle,
     state: &Arc<AppState>,
     connection_tabs: &ConnectionTabMap,
+    connection_runtimes: &ConnectionRuntimeMap,
     connection_id: &str,
 ) -> Option<String> {
     let req: JsonRpcRequest = match serde_json::from_str(text) {
@@ -907,6 +950,9 @@ async fn process_message(
             let runtime = crate::state::AgentRuntime::detect(client_name);
             log::info!("MCP initialize: client='{}' detected_runtime={:?} protocol={}",
                 client_name.unwrap_or("?"), runtime, client_proto.unwrap_or("(default)"));
+            // Remember this connection's runtime so affinity recovery can gate on it
+            // (a Codex connection must never recover onto a Claude tab, and vice-versa).
+            connection_runtimes.write().insert(connection_id.to_string(), runtime);
             let resp = JsonRpcResponse::success(id, initialize_response(client_proto));
             Some(serde_json::to_string(&resp).unwrap())
         }
@@ -972,6 +1018,15 @@ async fn process_message(
                         return Some(serde_json::to_string(&resp).unwrap());
                     }
 
+                    // Resolve this connection's runtime ONCE (set on `initialize`).
+                    // Defaults to Claude when unknown so Claude behavior is unchanged
+                    // and an unrecognized client never misroutes as Codex/Gemini.
+                    let runtime = connection_runtimes
+                        .read()
+                        .get(connection_id)
+                        .copied()
+                        .unwrap_or(crate::state::AgentRuntime::Claude);
+
                     // Store connection → tab affinity
                     connection_tabs.write().insert(connection_id.to_string(), tab_id.clone());
                     log::debug!("initSession: connection {} → tab {} (claude session: {})",
@@ -991,7 +1046,7 @@ async fn process_message(
                             sessions.insert(
                                 session_id.clone(),
                                 AgentSessionInfo {
-                                    runtime: crate::state::AgentRuntime::Claude,
+                                    runtime,
                                     tab_id: tab_id.clone(),
                                     cwd: existing.as_ref().and_then(|e| e.cwd.clone()),
                                     state: AgentSessionState::Active,
@@ -1015,7 +1070,7 @@ async fn process_message(
                                 sessions.insert(
                                     pending_sid.clone(),
                                     AgentSessionInfo {
-                                        runtime: crate::state::AgentRuntime::Claude,
+                                        runtime,
                                         tab_id: tab_id.clone(),
                                         cwd: pending_cwd,
                                         state: AgentSessionState::Active,
@@ -1035,10 +1090,42 @@ async fn process_message(
                         }
                     }
 
+                    // Persist the tab's runtime so it survives a reload and the
+                    // frontend can resolve getTabRuntime. Scoped block so the write
+                    // lock is dropped before any await/emit below.
+                    {
+                        let data_clone = {
+                            let mut app_data = state.app_data.write();
+                            let mut changed = false;
+                            'outer: for win in app_data.windows.iter_mut() {
+                                for ws in win.workspaces.iter_mut() {
+                                    for pane in ws.panes.iter_mut() {
+                                        for t in pane.tabs.iter_mut() {
+                                            if t.id == tab_id {
+                                                if t.runtime != Some(runtime) {
+                                                    t.runtime = Some(runtime);
+                                                    changed = true;
+                                                }
+                                                break 'outer;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if changed { Some(app_data.clone()) } else { None }
+                        };
+                        if let Some(data) = data_clone {
+                            if let Err(e) = crate::state::save_state(&data) {
+                                log::warn!("initSession: failed to persist tab runtime: {}", e);
+                            }
+                        }
+                    }
+
                     // Emit event so frontend can set claudeSessionId trigger variable
                     // (unconditional — session ID is useful for triggers beyond auto-resume)
                     if !session_id.is_empty() {
                         emit_dual(app_handle, "agent-init-session", "claude-init-session", serde_json::json!({
+                            "runtime": runtime.as_key(),
                             "tab_id": &tab_id,
                             "session_id": &session_id,
                         }));
@@ -1073,8 +1160,18 @@ async fn process_message(
                     let sessions = state.agent_sessions.read();
                     let ct = connection_tabs.read();
 
-                    // Unique tabs that currently have a live Claude session.
+                    // RUNTIME GATE: recover affinity only among sessions of the SAME
+                    // runtime as this connection. If the connection's runtime is known
+                    // (set on `initialize`), a Codex connection can never recover onto a
+                    // Claude tab (and vice-versa). If UNKNOWN (e.g. a connection that
+                    // never did `initialize`), don't filter — preserving today's behavior
+                    // exactly. For a Claude connection in a Claude-only setup all sessions
+                    // are Claude, so this is identical to before.
+                    let conn_runtime = connection_runtimes.read().get(connection_id).copied();
+
+                    // Unique tabs that currently have a live (same-runtime) agent session.
                     let active_tabs: Vec<String> = sessions.values()
+                        .filter(|info| conn_runtime.map_or(true, |rt| info.runtime == rt))
                         .map(|info| info.tab_id.clone())
                         .collect::<std::collections::HashSet<_>>()
                         .into_iter()
@@ -1089,16 +1186,9 @@ async fn process_message(
                     // 2+ agents are live, recover only if exactly ONE of them currently
                     // lacks a live connection affinity (the sole reconnecting one);
                     // otherwise refuse and make the caller re-initSession.
-                    let recovered = if active_tabs.len() == 1 {
-                        Some(active_tabs[0].clone())
-                    } else {
-                        let bound: std::collections::HashSet<&str> =
-                            ct.values().map(|s| s.as_str()).collect();
-                        let unbound: Vec<&String> = active_tabs.iter()
-                            .filter(|t| !bound.contains(t.as_str()))
-                            .collect();
-                        if unbound.len() == 1 { Some(unbound[0].clone()) } else { None }
-                    };
+                    let bound: std::collections::HashSet<&str> =
+                        ct.values().map(|s| s.as_str()).collect();
+                    let recovered = recover_affinity(&active_tabs, &bound);
 
                     let active_count = active_tabs.len();
                     drop(ct);
@@ -1622,10 +1712,11 @@ async fn handle_message(
     app_handle: &AppHandle,
     state: &Arc<AppState>,
     connection_tabs: &ConnectionTabMap,
+    connection_runtimes: &ConnectionRuntimeMap,
     connection_id: &str,
     response_tx: &mpsc::UnboundedSender<String>,
 ) {
-    if let Some(json) = process_message(text, app_handle, state, connection_tabs, connection_id).await {
+    if let Some(json) = process_message(text, app_handle, state, connection_tabs, connection_runtimes, connection_id).await {
         let _ = response_tx.send(json);
     }
 }
@@ -1633,8 +1724,10 @@ async fn handle_message(
 #[cfg(test)]
 mod tests {
     use super::derive_streamable_connection_id;
+    use super::recover_affinity;
     use super::{normalize_hook_event, HookPhase};
     use crate::state::AgentRuntime;
+    use std::collections::HashSet;
 
     fn norm(name: &str, ev: serde_json::Value) -> HookPhase {
         normalize_hook_event(AgentRuntime::Claude, name, &ev)
@@ -1722,5 +1815,45 @@ mod tests {
         // An empty header is treated as absent, not as the literal key "mcp-".
         let (c3, _) = derive_streamable_connection_id(Some(""), false);
         assert_ne!(c3, "mcp-");
+    }
+
+    // ── Affinity recovery decision (runtime filtering happens BEFORE this) ──
+    // These mirror the pre-refactor inline behavior exactly.
+
+    #[test]
+    fn recover_affinity_single_active_tab_is_recovered() {
+        let active = vec!["tab-a".to_string()];
+        let bound: HashSet<&str> = HashSet::new();
+        assert_eq!(recover_affinity(&active, &bound), Some("tab-a".to_string()));
+        // Even if that single tab is already bound, one active agent means any
+        // unbound call must be it (matches the original `len()==1` short-circuit).
+        let bound2: HashSet<&str> = ["tab-a"].into_iter().collect();
+        assert_eq!(recover_affinity(&active, &bound2), Some("tab-a".to_string()));
+    }
+
+    #[test]
+    fn recover_affinity_two_active_one_unbound_recovers_the_unbound() {
+        let active = vec!["tab-a".to_string(), "tab-b".to_string()];
+        // tab-a is bound (has a live connection); tab-b is the sole reconnecting one.
+        let bound: HashSet<&str> = ["tab-a"].into_iter().collect();
+        assert_eq!(recover_affinity(&active, &bound), Some("tab-b".to_string()));
+    }
+
+    #[test]
+    fn recover_affinity_two_active_both_bound_or_both_unbound_is_none() {
+        let active = vec!["tab-a".to_string(), "tab-b".to_string()];
+        // Both bound → ambiguous → None.
+        let both_bound: HashSet<&str> = ["tab-a", "tab-b"].into_iter().collect();
+        assert_eq!(recover_affinity(&active, &both_bound), None);
+        // Both unbound → ambiguous → None.
+        let none_bound: HashSet<&str> = HashSet::new();
+        assert_eq!(recover_affinity(&active, &none_bound), None);
+    }
+
+    #[test]
+    fn recover_affinity_empty_active_set_is_none() {
+        let active: Vec<String> = vec![];
+        let bound: HashSet<&str> = HashSet::new();
+        assert_eq!(recover_affinity(&active, &bound), None);
     }
 }

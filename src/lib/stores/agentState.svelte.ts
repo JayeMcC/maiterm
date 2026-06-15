@@ -285,9 +285,14 @@ function createAgentStateStore() {
       unlisteners.push(u5);
 
       // initSession sets claudeSessionId trigger variable and enables auto-resume directly
-      const u6 = await listen<{ tab_id: string; session_id: string }>('agent-init-session', (e) => {
+      const u6 = await listen<{ tab_id: string; session_id: string; runtime?: string }>('agent-init-session', (e) => {
         const { tab_id, session_id } = e.payload;
         if (!tab_id || !session_id) return;
+        // Update the tab's runtime live (backend already persists it) so
+        // getTabRuntime/getResumeCommand below resolve the correct runtime.
+        if (e.payload.runtime) {
+          workspacesStore.setTabRuntimeLocal(tab_id, runtimeOf(e.payload));
+        }
         // Always set the variable so pinned commands can reference %claudeSessionId
         setVariable(tab_id, 'claudeSessionId', session_id);
 

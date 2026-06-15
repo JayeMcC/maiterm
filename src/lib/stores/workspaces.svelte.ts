@@ -193,6 +193,21 @@ function createWorkspacesStore() {
       return 'claude';
     },
 
+    /**
+     * Update a tab's detected runtime in local state (the backend already
+     * persists it on initSession). Mutates in place for Svelte reactivity so
+     * getTabRuntime reflects the change live, without a reload.
+     */
+    setTabRuntimeLocal(tabId: string, runtime: AgentRuntime) {
+      for (const ws of workspaces) for (const pane of ws.panes) {
+        const t = pane.tabs.find(x => x.id === tabId);
+        if (t) {
+          if (t.runtime !== runtime) t.runtime = runtime;
+          return;
+        }
+      }
+    },
+
     /** True while a workspace is being suspended (PTYs being killed). */
     isWorkspaceSuspending(workspaceId: string) { return suspendingWorkspaceIds.has(workspaceId); },
 
