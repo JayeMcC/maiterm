@@ -1,0 +1,32 @@
+.agents/commands/speckit-flow-tools.md
+  s_e078af93d4b3e2::t_47306a281e9c9a 15
+  s_e078af93d4b3e2::t_52963e56eadea8 37
+.specify/templates/spec-template.md
+  s_e078af93d4b3e2::t_fbb396526778f5 12
+docs/plans/13-skill-library-reorg-by-topic.md
+  s_e078af93d4b3e2::t_514c73d0e693c4 207-286
+  s_e078af93d4b3e2::t_367207d706fb44 107-164
+  s_e078af93d4b3e2::t_e19c9c8bc15bcc 165-206
+.specify/templates/tasks-template.md
+  s_e078af93d4b3e2::t_197bf3fca616ce 20
+.specify/memory/constitution.md
+  s_e078af93d4b3e2::t_42a6c96b09a10d 76
+.agents/commands/speckit.implement.md
+  s_e078af93d4b3e2::t_2f92f836e0db99 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "3736509fb458e36dd2b26a77e65f9bee6bdf2b67",
+  "prompts": {},
+  "sessions": {
+    "s_e078af93d4b3e2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93c1630f-9f15-4bd0-be17-5038e1c2afa1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
