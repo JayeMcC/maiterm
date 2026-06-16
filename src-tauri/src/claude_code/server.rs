@@ -1507,6 +1507,36 @@ async fn hooks_handler(
                 log::info!("Claude hook: session {} started (pending tab assignment)", session_id);
             }
 
+            // Persist the tab's runtime for NON-Claude runtimes from the hook path.
+            // Codex doesn't always call initSession (where Tab.runtime is otherwise set),
+            // so tag it here too; Claude tabs are left untouched (None → defaults claude).
+            if runtime != crate::state::AgentRuntime::Claude && !tab_id.is_empty() {
+                let mut app_data = srv.state.app_data.write();
+                let mut changed = false;
+                'find_tab: for win in &mut app_data.windows {
+                    for ws in &mut win.workspaces {
+                        for pane in &mut ws.panes {
+                            for t in &mut pane.tabs {
+                                if t.id == tab_id {
+                                    if t.runtime != Some(runtime) {
+                                        t.runtime = Some(runtime);
+                                        changed = true;
+                                    }
+                                    break 'find_tab;
+                                }
+                            }
+                        }
+                    }
+                }
+                if changed {
+                    let data = app_data.clone();
+                    drop(app_data);
+                    if let Err(e) = crate::state::save_state(&data) {
+                        log::warn!("Failed to persist tab runtime for {}: {}", tab_id, e);
+                    }
+                }
+            }
+
             let source = event.get("source").and_then(|v| v.as_str()).unwrap_or("");
             emit_dual(&srv.app_handle, "agent-hook-session-start", "claude-hook-session-start", serde_json::json!({
                 "runtime": runtime_key,

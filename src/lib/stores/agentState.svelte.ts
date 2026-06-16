@@ -234,6 +234,9 @@ function createAgentStateStore() {
         if (!tab_id) return;
         const runtime = runtimeOf(e.payload);
         setState(tab_id, session_id, 'active', undefined, undefined, runtime);
+        // Tag the tab's runtime live so getTabRuntime (bridge adapter, resume) is right
+        // even when the agent never calls initSession (e.g. Codex via the hook path).
+        workspacesStore.setTabRuntimeLocal(tab_id, runtime);
         if (source === 'compact') {
           dispatch(getDescriptor(runtime).displayName, 'Compaction complete', 'info', { tabId: tab_id });
         }
