@@ -29,8 +29,8 @@
   import { processOutput, cleanupTab, loadTabVariables, interpolateVariables, getVariables, clearTabVariables, suppressTab, unsuppressTab, replayAutoResume } from '$lib/stores/triggers.svelte';
   import { dispatch } from '$lib/stores/notificationDispatch';
   import { toastStore } from '$lib/stores/toasts.svelte';
-  import { CLAUDE_RESUME_COMMAND } from '$lib/triggers/defaults';
-  import { getResumeCommand } from '$lib/agents/resume';
+  import { getResumeCommand, sessionIdVar } from '$lib/agents/resume';
+  import type { AgentRuntime } from '$lib/agents/types';
   import { createFilePathLinkProvider } from '$lib/utils/filePathDetector';
   import { openFileFromTerminal } from '$lib/utils/openFile';
   import { enableBridge, disableBridge, hasBridge, getBridgeInfo, buildUserSetupScript, isInteractiveSshSession } from '$lib/stores/sshMcpBridge.svelte';
@@ -118,6 +118,27 @@
   let autoResumeTextarea = $state<{ focus: () => void } | undefined>();
   let autoResumeHeightBeforeMouse = 0;
   let sessionIdCopied = $state(false);
+
+  /** Which agent runtime (if any) ran in this tab — drives the auto-resume preset.
+   *  Prefers a live session, then the tab's persisted runtime when it has a captured
+   *  session id, then any captured session-id variable. Null for a plain terminal
+   *  (no AI session) → the modal offers no preset. */
+  function detectAutoResumeRuntime(): AgentRuntime | null {
+    const live = claudeStateStore.getState(tabId)?.runtime;
+    if (live) return live;
+    const vars = getVariables(tabId);
+    const persisted = workspacesStore.getTabRuntime(tabId);
+    if (vars?.get(sessionIdVar(persisted))) return persisted;
+    if (vars?.get('claudeSessionId')) return 'claude';
+    if (vars?.get('codexSessionId')) return 'codex';
+    if (vars?.get('geminiSessionId')) return 'gemini';
+    return null;
+  }
+
+  /** Short display label for a runtime, e.g. 'codex' → 'Codex'. */
+  function runtimeLabel(runtime: AgentRuntime): string {
+    return runtime.charAt(0).toUpperCase() + runtime.slice(1);
+  }
 
   // --- Selection state (Rust-managed via alacritty_terminal) ---
   let selectionActive = false; // mouse is down and dragging
@@ -1778,7 +1799,9 @@
     />
   {/if}
   {#if autoResumePrompt}
-    {@const claudeSessionIdValue = getVariables(tabId)?.get('claudeSessionId')}
+    {@const arRuntime = detectAutoResumeRuntime()}
+    {@const arSessionVar = arRuntime ? sessionIdVar(arRuntime) : null}
+    {@const arSessionIdValue = arSessionVar ? getVariables(tabId)?.get(arSessionVar) : undefined}
     <div class="auto-resume-prompt-backdrop">
     <div class="auto-resume-prompt">
       <div class="auto-resume-context-info">
@@ -1820,22 +1843,24 @@
         onkeydown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitAutoResumePrompt(); if (e.key === 'Escape') cancelAutoResumePrompt(); }}
       />
       <div class="auto-resume-prompt-hint">{autoResumePrompt.sshCmd ? 'Leave empty for SSH + cwd only' : 'Leave empty for cwd only'} &middot; Each line sent as a separate command &middot; {modSymbol}Enter to save</div>
-      {#if claudeSessionIdValue}
+      {#if arSessionIdValue && arSessionVar}
         <div class="auto-resume-session-id-row">
-          <span class="auto-resume-session-id-label">%claudeSessionId</span>
-          <code class="auto-resume-session-id" title="Current tab's captured Claude session ID">{claudeSessionIdValue}</code>
+          <span class="auto-resume-session-id-label">%{arSessionVar}</span>
+          <code class="auto-resume-session-id" title="Current tab's captured {arRuntime ? runtimeLabel(arRuntime) : ''} session ID">{arSessionIdValue}</code>
           <button type="button" class="auto-resume-session-id-copy" title="Copy session ID" onclick={async () => {
-            await clipboardWriteText(claudeSessionIdValue);
+            await clipboardWriteText(arSessionIdValue);
             sessionIdCopied = true;
             setTimeout(() => { sessionIdCopied = false; }, 1200);
           }}>{sessionIdCopied ? 'Copied' : 'Copy'}</button>
         </div>
       {/if}
       <div class="auto-resume-prompt-actions">
-        <div class="auto-resume-presets">
-          <span class="auto-resume-presets-label">Presets</span>
-          <Button variant="secondary" onclick={() => { autoResumePromptValue = CLAUDE_RESUME_COMMAND; }} style="padding:6px 14px;border-radius:4px;font-size: 0.923rem;background:var(--bg-dark);border-color:var(--bg-light)" title="Uses trigger variables %claudeSessionId and %claudeResumeCommand">Claude Resume</Button>
-        </div>
+        {#if arRuntime}
+          <div class="auto-resume-presets">
+            <span class="auto-resume-presets-label">Presets</span>
+            <Button variant="secondary" onclick={() => { autoResumePromptValue = getResumeCommand(arRuntime); }} style="padding:6px 14px;border-radius:4px;font-size: 0.923rem;background:var(--bg-dark);border-color:var(--bg-light)" title="Resumes by %{arSessionVar}">{runtimeLabel(arRuntime)} Resume</Button>
+          </div>
+        {/if}
         <span style="flex: 1;"></span>
         <Button variant="secondary" onclick={cancelAutoResumePrompt} style="padding:6px 14px;border-radius:4px;font-size: 0.923rem">Cancel</Button>
         <Button variant="primary" onclick={submitAutoResumePrompt} style="padding:6px 14px;border-radius:4px;font-size: 0.923rem">Save</Button>
