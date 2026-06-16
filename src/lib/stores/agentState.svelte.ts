@@ -5,9 +5,18 @@ import { terminalsStore } from './terminals.svelte';
 import { workspacesStore } from './workspaces.svelte';
 import { activityStore } from './activity.svelte';
 import { dispatch } from './notificationDispatch';
-import { getResumeCommand } from '$lib/agents/resume';
+import { preferencesStore } from './preferences.svelte';
+import { getResumeCommand, sessionIdVar } from '$lib/agents/resume';
 import { getDescriptor } from '$lib/agents/descriptor';
 import type { AgentRuntime, AgentState, WorkspaceAgentState } from '$lib/agents/types';
+
+/** Per-runtime auto-resume preference (Claude default on; Codex opt-in; Gemini has
+ *  no pref yet → off). Gates whether agent init auto-configures auto-resume. */
+function autoResumeEnabledFor(runtime: AgentRuntime): boolean {
+  if (runtime === 'codex') return preferencesStore.codexAutoResume;
+  if (runtime === 'gemini') return false;
+  return preferencesStore.claudeCodeAutoResume;
+}
 
 /**
  * Claude Code session state per tab, driven by hook events.
@@ -292,17 +301,29 @@ function createAgentStateStore() {
       });
       unlisteners.push(u5);
 
-      // initSession sets claudeSessionId trigger variable and enables auto-resume directly
+      // initSession sets the runtime's session-id variable and configures auto-resume.
       const u6 = await listen<{ tab_id: string; session_id: string; runtime?: string }>('agent-init-session', (e) => {
         const { tab_id, session_id } = e.payload;
         if (!tab_id || !session_id) return;
-        // Update the tab's runtime live (backend already persists it) so
-        // getTabRuntime/getResumeCommand below resolve the correct runtime.
+        const runtime = runtimeOf(e.payload);
+        // Update the tab's runtime live (backend already persists it) so getResumeCommand
+        // and getTabRuntime resolve correctly.
         if (e.payload.runtime) {
-          workspacesStore.setTabRuntimeLocal(tab_id, runtimeOf(e.payload));
+          workspacesStore.setTabRuntimeLocal(tab_id, runtime);
         }
-        // Always set the variable so pinned commands can reference %claudeSessionId
-        setVariable(tab_id, 'claudeSessionId', session_id);
+        // Set the runtime's own session-id variable (claudeSessionId / codexSessionId /
+        // geminiSessionId) so its resume command (e.g. `codex resume %codexSessionId`)
+        // interpolates. The backend supplies this id from the SessionStart hook for
+        // runtimes (Codex) that don't pass sessionId to initSession.
+        setVariable(tab_id, sessionIdVar(runtime), session_id);
+
+        // Respect the per-runtime auto-resume preference (Claude on by default, Codex
+        // opt-in). The session-id variable above is still set regardless — useful for
+        // triggers and manual resume.
+        if (!autoResumeEnabledFor(runtime)) {
+          logInfo(`Agent init: ${runtime} auto-resume off by pref for tab ${tab_id.slice(0, 8)}`);
+          return;
+        }
 
         // Skip auto-resume setup if the tab has a pinned auto-resume — don't overwrite user's config
         const instance = terminalsStore.get(tab_id);
@@ -311,13 +332,13 @@ function createAgentStateStore() {
           const pane = ws?.panes.find(p => p.id === instance.paneId);
           const tab = pane?.tabs.find(t => t.id === tab_id);
           if (tab?.auto_resume_pinned) {
-            logInfo(`Claude init: tab ${tab_id.slice(0, 8)} has pinned auto-resume, skipping`);
+            logInfo(`Agent init: tab ${tab_id.slice(0, 8)} has pinned auto-resume, skipping`);
             return;
           }
         }
 
-        handleEnableAutoResume(tab_id, getResumeCommand(workspacesStore.getTabRuntime(tab_id)));
-        logInfo(`Claude init: set claudeSessionId for tab ${tab_id.slice(0, 8)} = ${session_id.slice(0, 8)}`);
+        handleEnableAutoResume(tab_id, getResumeCommand(runtime));
+        logInfo(`Agent init: set ${sessionIdVar(runtime)} for tab ${tab_id.slice(0, 8)} = ${session_id.slice(0, 8)}`);
       });
       unlisteners.push(u6);
 

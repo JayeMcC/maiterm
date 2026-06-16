@@ -1149,11 +1149,18 @@ async fn process_message(
                         if session_id.is_empty() { "none" } else { &session_id[..session_id.len().min(8)] }
                     );
 
-                    // Link claude session → tab mapping
+                    // The session id we surface to the frontend (for the
+                    // <runtime>SessionId trigger var + auto-resume). Codex does NOT pass
+                    // sessionId to initSession — nothing tells its agent the id (its hook
+                    // shim injects no context, unlike Claude's SessionStart command hook)
+                    // — so fall back to the SessionStart-hook session linked below.
+                    let mut init_session_id = session_id.clone();
+
+                    // Link agent session → tab mapping
                     {
                         use crate::state::app_state::{AgentSessionInfo, AgentSessionState};
 
-                        // If Claude passed sessionId explicitly, use that
+                        // If the agent passed sessionId explicitly, use that
                         if !session_id.is_empty() {
                             let mut sessions = state.agent_sessions.write();
                             // Preserve existing fields (model, tool_name) if session already registered
@@ -1181,6 +1188,11 @@ async fn process_message(
                         };
                         if let Some((pending_sid, pending_cwd, _)) = pending {
                             if session_id.is_empty() || pending_sid != session_id {
+                                // Surface this hook session id when the agent passed none
+                                // (Codex) so the frontend can wire codexSessionId + resume.
+                                if init_session_id.is_empty() {
+                                    init_session_id = pending_sid.clone();
+                                }
                                 let mut sessions = state.agent_sessions.write();
                                 sessions.insert(
                                     pending_sid.clone(),
@@ -1236,13 +1248,15 @@ async fn process_message(
                         }
                     }
 
-                    // Emit event so frontend can set claudeSessionId trigger variable
-                    // (unconditional — session ID is useful for triggers beyond auto-resume)
-                    if !session_id.is_empty() {
+                    // Emit so the frontend sets the <runtime>SessionId trigger variable +
+                    // configures auto-resume. Uses the explicit sessionId when the agent
+                    // provided one (Claude), else the linked SessionStart-hook session
+                    // (Codex, which doesn't pass sessionId).
+                    if !init_session_id.is_empty() {
                         emit_dual(app_handle, "agent-init-session", "claude-init-session", serde_json::json!({
                             "runtime": runtime.as_key(),
                             "tab_id": &tab_id,
-                            "session_id": &session_id,
+                            "session_id": &init_session_id,
                         }));
                     }
 
@@ -1660,6 +1674,22 @@ async fn hooks_handler(
                 "cwd": event.get("cwd"),
                 "source": source,
             }));
+
+            // Non-Claude runtimes (Codex) don't pass sessionId to initSession — nothing
+            // tells their agent the id — so the SessionStart hook (which carries both the
+            // resumable session id and the tab) is where we surface the init-session
+            // event that wires <runtime>SessionId + auto-resume on the frontend. Claude
+            // still gets its init-session from the initSession tool (explicit sessionId).
+            if runtime != crate::state::AgentRuntime::Claude
+                && !session_id.is_empty()
+                && !tab_id.is_empty()
+            {
+                emit_dual(&srv.app_handle, "agent-init-session", "claude-init-session", serde_json::json!({
+                    "runtime": runtime_key,
+                    "tab_id": &tab_id,
+                    "session_id": &session_id,
+                }));
+            }
         }
 
         HookPhase::SessionEnd => {
