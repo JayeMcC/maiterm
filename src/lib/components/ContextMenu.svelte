@@ -20,14 +20,37 @@
 
   let menuEl = $state<HTMLDivElement | null>(null);
 
-  // Adjust position if menu would overflow viewport
-  const adjustedPos = $derived.by(() => {
-    if (!menuEl) return { x, y };
+  const MARGIN = 8; // keep this gap from the window edges
+
+  // Keep the menu fully inside the window. Prefer opening down-right of the
+  // cursor, flip when it would overflow, then clamp. When the menu is taller
+  // than the viewport (more items than fit), cap its height — `overflow-y:auto`
+  // turns it into a scrollable list instead of clipping off-screen.
+  const layout = $derived.by(() => {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const maxHeight = Math.max(0, vh - MARGIN * 2);
+    if (!menuEl) return { left: x, top: y, maxHeight };
+
     const rect = menuEl.getBoundingClientRect();
-    return {
-      x: x + rect.width > window.innerWidth ? x - rect.width : x,
-      y: y + rect.height > window.innerHeight ? y - rect.height : y,
-    };
+    const menuW = rect.width;
+
+    // Horizontal: flip left if it overflows the right edge, then clamp.
+    let left = x + menuW > vw - MARGIN ? x - menuW : x;
+    left = Math.max(MARGIN, Math.min(left, vw - menuW - MARGIN));
+
+    // Vertical: place below the cursor if it fits, else above, else pin to the
+    // top and let the capped height scroll.
+    const cappedH = Math.min(rect.height, maxHeight);
+    const spaceBelow = vh - MARGIN - y;
+    const spaceAbove = y - MARGIN;
+    let top: number;
+    if (cappedH <= spaceBelow) top = y;
+    else if (cappedH <= spaceAbove) top = y - cappedH;
+    else top = MARGIN;
+    top = Math.max(MARGIN, Math.min(top, vh - cappedH - MARGIN));
+
+    return { left, top, maxHeight };
   });
 
   function handleItemClick(item: MenuItem) {
@@ -70,7 +93,7 @@
 <div
   class="context-menu"
   bind:this={menuEl}
-  style="left: {adjustedPos.x}px; top: {adjustedPos.y}px"
+  style="left: {layout.left}px; top: {layout.top}px; max-height: {layout.maxHeight}px"
   role="menu"
   tabindex="-1"
 >
@@ -105,6 +128,7 @@
     padding: 4px;
     min-width: 180px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    overflow-y: auto;
   }
 
   .menu-item {
