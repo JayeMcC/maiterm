@@ -422,6 +422,14 @@ pub fn render_codex_remote_artifacts(remote_port: u16, auth: &str) -> (String, S
 
     let mut doc = DocumentMut::new();
     put_codex_mcp_entry(&mut doc, name, remote_port, auth);
+    // Suppress the redundant bare `[mcp_servers]` parent header. The remote merge does a
+    // textual block-replace keyed on `[mcp_servers.<name>]`; if the rendered block also
+    // carried a lone `[mcp_servers]` header, every reconnect re-run would append another
+    // one (the replace doesn't match it) → duplicate `[mcp_servers]` tables, which is a
+    // TOML parse error. `[mcp_servers.<name>]` alone implicitly creates the parent.
+    if let Some(t) = doc.get_mut("mcp_servers").and_then(|i| i.as_table_mut()) {
+        t.set_implicit(true);
+    }
     let config_block = doc.to_string();
 
     // Bake the tunnel port as the shim's $2 so the remote hook routes correctly even
@@ -610,6 +618,13 @@ mod tests {
 
         // config.toml block: streamable-HTTP /mcp url + http_headers (NOT bearer_token).
         assert!(config_block.contains("[mcp_servers."), "has table header:\n{}", config_block);
+        // No bare `[mcp_servers]` parent header — it would accumulate on reconnect
+        // re-runs of the textual block-merge and break TOML parsing.
+        assert!(
+            config_block.trim_start().starts_with("[mcp_servers.maiterm-dev]"),
+            "block starts with the dotted sub-table, no bare parent header:\n{}",
+            config_block
+        );
         assert!(config_block.contains("http://127.0.0.1:40123/mcp"), "tunnel port in url");
         assert!(config_block.contains("x-maiterm-authorization"), "auth via http_headers");
         assert!(!config_block.contains("bearer_token"), "no bearer_token for streamable_http");
