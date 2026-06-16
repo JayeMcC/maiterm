@@ -975,6 +975,7 @@
         <TabListMenu
           items={archiveItems}
           position={archiveDropdownPos}
+          searchable
           onActivate={(t) => handleRestoreArchivedTab(t.id)}
         >
           {#snippet actions(t)}
