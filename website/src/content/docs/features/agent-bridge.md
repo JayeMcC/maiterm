@@ -46,5 +46,5 @@ A bridge is durable. The pairing is saved on both tabs, so it survives quitting 
 Bridged tabs show a small link badge in the tab bar so you can see which sessions are paired at a glance. To break a bridge, right-click the tab and choose **Disconnect Agent Bridge**.
 
 :::note
-Agent Bridge is part of maiTerm's [agent integration](/features/claude-code/). It needs a supported agent (Claude Code or Codex) running in both tabs, and works over SSH through the same reverse-tunnel MCP bridge that powers the rest of the integration.
+Agent Bridge is part of maiTerm's [agent integration](/features/agents/). It needs a supported agent (Claude Code or Codex) running in both tabs, and works over SSH through the same reverse-tunnel MCP bridge that powers the rest of the integration.
 :::

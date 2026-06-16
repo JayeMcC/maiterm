@@ -3,6 +3,10 @@ import starlight from '@astrojs/starlight';
 
 export default defineConfig({
   site: 'https://maiterm.dev',
+  // Old single-agent URL → renamed agent-neutral page (v1.17.0 Codex support).
+  redirects: {
+    '/features/claude-code/': '/features/agents/',
+  },
   integrations: [
     starlight({
       title: 'maiTerm',
@@ -34,7 +38,7 @@ export default defineConfig({
             { label: 'Terminal', slug: 'features/terminal' },
             { label: 'Workspaces & Panes', slug: 'features/workspaces' },
             { label: 'Code Editor', slug: 'features/editor' },
-            { label: 'Agent Integration', slug: 'features/claude-code' },
+            { label: 'Agent Integration', slug: 'features/agents' },
             { label: 'Agent Bridge', slug: 'features/agent-bridge' },
             { label: 'Triggers & Automation', slug: 'features/triggers' },
             { label: 'Themes', slug: 'features/themes' },

@@ -56,4 +56,4 @@ maiTerm integrates with **Claude Code** and **OpenAI Codex**, both enabled by de
 2. Tracks live state through the agent's hooks
 3. Captures the session ID and enables auto-resume
 
-No configuration needed — it just works, and maiTerm detects which agent connected on its own (no manual `/maiterm init`). To choose which agents maiTerm wires up — locally and over SSH — open **Preferences → AI Agents**. See [Agent Integration](/features/claude-code/) for the full picture.
+No configuration needed — it just works, and maiTerm detects which agent connected on its own (no manual `/maiterm init`). To choose which agents maiTerm wires up — locally and over SSH — open **Preferences → AI Agents**. See [Agent Integration](/features/agents/) for the full picture.
