@@ -1,0 +1,52 @@
+.agents/rules/20-workflow/review.md
+  s_2882d72424ca24::t_14e1f9721efcd0 13-34
+.agents/rules/10-project/permanent-test-scope.md
+  s_97977c05ed22dc::t_de8fe7db937ad4 75-84
+  s_6417cc1fe474ed::t_190943ecc6e40e 148-197
+  s_6417cc1fe474ed::t_b097c83cfabe70 215-217
+  s_5d60cd2e047626::t_e19fe45713d721 64-74,85-101
+  s_6417cc1fe474ed::t_8c027a8c9628ec 102-147
+  s_6417cc1fe474ed::t_ab739e77254e94 218-223
+.agents/memory/learnings.jsonl
+  s_2882d72424ca24::t_14e1f9721efcd0 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "7d17035b566adff2e481009d8b4015f7c9ed062f",
+  "prompts": {},
+  "sessions": {
+    "s_2882d72424ca24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "43e76dc3-bd21-4ee0-8002-4768725865e0",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_5d60cd2e047626": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "69f8e6b7-1ea9-406f-8e96-9ee856f245b4",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_6417cc1fe474ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "86b26ca9-1e95-417c-9a4a-183734494ba4",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_97977c05ed22dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c2fbd296-0e4f-488c-9b7b-a7b135fb5e27",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
