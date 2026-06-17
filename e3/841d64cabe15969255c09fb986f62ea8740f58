@@ -1,0 +1,50 @@
+.agents/skills/verify-review/evals/fixtures/eap-3128/source/api/src/modules/events/services/impl/event-comments.service.impl.ts
+  s_76494a5c6f60b3::t_d65c1a724ab5ba 1-52
+.agents/skills/verify-review/evals/fixtures/eap-3128/source/api/src/modules/events/services/impl/event-comments.service.spec.ts
+  s_76494a5c6f60b3::t_3fa80c89cc035b 1-26
+.agents/skills/verify-review/evals/fixtures/eap-3128/source/packages/ehs-contracts/dist/event/dto/event-comment.dto.js
+  s_76494a5c6f60b3::t_e292e46d9c9f7b 1-9
+.agents/skills/verify-review/evals/fixtures/eap-3128/review/manual-evidence/AC-01/cli-probes.json
+  s_76494a5c6f60b3::t_2d236287e1c6da 1-18
+.agents/skills/verify-review/evals/fixtures/eap-3128/source/packages/ehs-contracts/src/event/dto/event-comment.dto.ts
+  s_76494a5c6f60b3::t_736aa70a5de873 1-17
+.agents/skills/verify-review/evals/fixtures/eap-3128/review/jira-review-comment.md
+  s_76494a5c6f60b3::t_8b476baa597879 1-63
+.gitignore
+  s_d30a25af462e94::t_a724fdf250ec99 6-10
+.agents/skills/verify-review/evals/fixtures/eap-3128/source/packages/ehs-core/dist/index.js
+  s_76494a5c6f60b3::t_4e8d81231bf2bd 1-12
+src/nodes/review-dispatch-test-runs.ts
+  s_76494a5c6f60b3::t_d0f0ff93a43b7a 66-74
+  s_76494a5c6f60b3::t_657de0c936e5cf 95-115
+.agents/skills/verify-review/evals/evals.json
+  s_76494a5c6f60b3::t_f02891864de6c4 3,18-23
+.agents/skills/verify-review/evals/fixtures/eap-3128/source/packages/ehs-core/src/services/MentionParser.ts
+  s_76494a5c6f60b3::t_39a1ae83c6f941 1-32
+.agents/skills/verify-review/evals/fixtures/eap-3128/source/packages/ehs-core/src/index.ts
+  s_76494a5c6f60b3::t_66fe29f2b93578 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "e3841d64cabe15969255c09fb986f62ea8740f58",
+  "prompts": {},
+  "sessions": {
+    "s_76494a5c6f60b3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "689c5e67-4d3f-43bb-8b09-3076e2bdff39",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_d30a25af462e94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cea7a41b-5106-476e-94d9-b2866bc06a6f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
