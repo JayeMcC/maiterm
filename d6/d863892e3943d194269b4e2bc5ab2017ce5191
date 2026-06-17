@@ -1,0 +1,101 @@
+tests/nodes/review-ac-sort.test.ts
+  s_2882d72424ca24::t_14e1f9721efcd0 29-41
+tests/nodes/review-compose-subclaims.test.ts
+  s_2882d72424ca24::t_75eb625a93628f 142-145,147
+  s_2882d72424ca24::t_508c871caaea18 352-355
+tests/nodes/review-compose-automation-backlog.test.ts
+  s_2882d72424ca24::t_14e1f9721efcd0 21-24
+src/nodes/review-compose-comment.ts
+  s_f8c501d675a886::t_d037f4bdb207e3 834
+  s_5d60cd2e047626::t_d7857bcdf1017e 1976-1980
+  s_5d60cd2e047626::t_77525abde5e645 851
+  s_6417cc1fe474ed::t_057e7cf0d0c083 67
+  s_6417cc1fe474ed::t_8bc1a8242cdc8f 579-582
+  s_f8c501d675a886::t_03e0634f825685 2214-2216,2238-2243,2246-2247
+  s_82312589c4187d::t_0a7a632dae4d07 450-465,467-475,481,489,497,499,501-533
+  s_f8c501d675a886::t_247712c9bd4a40 705-714,716-735
+  s_f8c501d675a886::t_624b4f3fb2915f 2368,2373-2380
+  s_2882d72424ca24::t_ebf187446e067e 617-627,629
+  s_5d60cd2e047626::t_4e4e17ec119eb2 1945
+  s_f8c501d675a886::t_a00c87154047b3 116-132
+  s_f8c501d675a886::t_66eff1454c27dc 833,835
+  s_2882d72424ca24::t_e569d1644cfeb6 101-104
+  s_82312589c4187d::t_a46d0f3f16fda0 919-932
+  s_5d60cd2e047626::t_0f5ce5b892f52b 1508,1510-1519,1525,1530,1536,1539,1542,1544,1552-1559
+  s_5d60cd2e047626::t_bf9877966b2493 1165
+  s_5d60cd2e047626::t_f99ecf8940522c 1944,1970-1975
+  s_f8c501d675a886::t_60c31a8df33c1d 2208-2213,2217,2219-2233,2248-2253
+  s_f8c501d675a886::t_5915ca522d33a1 76-79
+  s_f8c501d675a886::t_e31b315ef43a26 2218,2234-2237,2244-2245
+  s_2882d72424ca24::t_5b3efc108f9cd0 65
+  s_2882d72424ca24::t_5ae6a307d63791 68
+  s_5d60cd2e047626::t_68c4a2b0a1e8e4 2382-2391,2393-2395
+  s_5d60cd2e047626::t_984b6d1aed84d9 1104,1118-1125,1128-1141,1160-1164,1166-1171,1183
+  s_5d60cd2e047626::t_7c44fd8f7167f8 736,741,751
+  s_6417cc1fe474ed::t_4da70cd03f7335 674
+  s_5d60cd2e047626::t_59983363e364fb 715
+  s_5d60cd2e047626::t_94e8ef7c0b9a9f 798
+  s_6417cc1fe474ed::t_4ef40bbce2a997 1749-1755,1759-1761,1767,1769-1776
+  s_2882d72424ca24::t_6c4063f0de4cd0 1642-1649
+  s_2882d72424ca24::t_d682b1bd853b52 2367,2370-2372,2381
+  s_2882d72424ca24::t_067b82e281de89 750,752
+  s_f8c501d675a886::t_0eeaba1a5a68b2 628
+  s_5d60cd2e047626::t_82f87822633d91 950,952-956,965
+  s_5d60cd2e047626::t_5b92e7bd615798 943-949,951,957-964,967
+  s_2882d72424ca24::t_4a55723de4ab13 565-578,583-594,598-604
+  s_f8c501d675a886::t_7a4e198041224c 858-873
+tests/nodes/review-compose-format.test.ts
+  s_2882d72424ca24::t_ca08ee6cf27a55 128-134,136
+  s_2882d72424ca24::t_b2c239505764bc 135
+tests/nodes/review-compose-wire-evidence.test.ts
+  s_2882d72424ca24::t_14e1f9721efcd0 18-21,154-177
+  s_f8c501d675a886::t_f13be430eb96c9 178-179
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "d6d863892e3943d194269b4e2bc5ab2017ce5191",
+  "prompts": {},
+  "sessions": {
+    "s_2882d72424ca24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "43e76dc3-bd21-4ee0-8002-4768725865e0",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_5d60cd2e047626": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "69f8e6b7-1ea9-406f-8e96-9ee856f245b4",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_6417cc1fe474ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "86b26ca9-1e95-417c-9a4a-183734494ba4",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_82312589c4187d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "71559c86-5ae6-4701-a73b-7a4c0104c97d",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_f8c501d675a886": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f7c3e947-3b4a-4e5e-a5cf-73ed563208b1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
