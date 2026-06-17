@@ -1,0 +1,21 @@
+src/llm/providers/cursor-provider.ts
+  s_97977c05ed22dc::t_1c31e08305f162 13-15
+  s_97977c05ed22dc::t_da40dad6dfbea9 54,67-73,77-79
+  s_97977c05ed22dc::t_e0620cbe2ebda7 122-133,145-159,176-177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "b036ccc1c2aa629291690f6373c40d4878d3cc1f",
+  "prompts": {},
+  "sessions": {
+    "s_97977c05ed22dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c2fbd296-0e4f-488c-9b7b-a7b135fb5e27",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
