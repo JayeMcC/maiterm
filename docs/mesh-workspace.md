@@ -301,19 +301,25 @@ Mirror the structs in `tauri/types.ts`; extend `agentBridge.svelte.ts`:
 5. **Stage divider** — locked 50/50 for v1 to hold the equal-cols invariant.
 6. **Notes board** — overlay side drawer, one workspace note per agent, no tab notes in
    mesh view.
+7. **Owner tab closes** — do nothing; the topic stays `open`. A tab may reopen/resume, so
+   the mesh must not tear down or reassign its topics on close.
+8. **Human is a director, not a mesh peer** — the human tells an *agent* what needs done;
+   that agent decides who to talk to and how to name the topic. The human steers by
+   interjecting on any agent's panel mid-flight (type into it / Esc), course-correcting as
+   the work proceeds. The human does not address peers or set topics through a mesh-level
+   control; they work *through* agents.
+9. **The drawer is the cockpit** — the overlay side drawer hosts both the status board AND
+   the mesh map (and any further at-a-glance details we add). One place the human glances at
+   to see who's talking, on what topic, and what each agent has done / needs.
 
 ---
 
 ## 14. Open questions
 
-- Topic creation: explicit `startTopic` only, or allow implicit create-on-first-send? (Lean:
-  allow both — a new label on send mints a topic.)
-- What happens to an open topic when its owner tab closes? (Candidate: auto-complete with a
-  "owner left" notice, or transfer ownership to the oldest participant.)
-- Can the human be a first-class mesh node (address agents, set topics) from the
-  composer/dock, or only observe + interrupt? (Lean: human can message any one agent and
-  start/close topics, but is not auto-bridged into agent-to-agent threads.)
-- Does the mesh map live as a corner overlay, a dedicated tab, or a toggle over the stage?
+- **Topic creation mechanics** (for eng review): explicit `startTopic(label)` first, or
+  implicit create-on-first-send where a new `topic` label mints a topic owned by the sender?
+  What is the cleanest registry/ownership/dedup implementation? (Decision deferred to
+  `/plan-eng-review`.)
 
 ---
 
