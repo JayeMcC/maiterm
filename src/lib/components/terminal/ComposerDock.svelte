@@ -14,6 +14,7 @@
   import { toastStore } from '$lib/stores/toasts.svelte';
   import { writeTerminal, terminalBracketedPaste, readClipboardFilePaths, saveClipboardImage, getPtyInfo } from '$lib/tauri/commands';
   import { uploadWithProgress, AGENT_UPLOAD_DIR } from '$lib/utils/scpUpload';
+  import { encodeClipboardImage } from '$lib/utils/clipboardImage';
   import { bracketedPasteSubmit } from '$lib/utils/agentPrompt';
   import { isModKey, modLabel } from '$lib/utils/platform';
   import { error as logError } from '@tauri-apps/plugin-log';
@@ -167,18 +168,6 @@
     terminalsStore.get(tabId)?.terminal?.focus();
   }
 
-  /** Convert clipboard RGBA to PNG base64 (full size) — same approach as the
-      terminal's screenshot paste (TerminalPane.rgbaToPngBase64). */
-  async function rgbaToPngBase64(rgba: Uint8Array, width: number, height: number): Promise<string> {
-    const canvas = new OffscreenCanvas(width, height);
-    canvas.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(rgba), width, height), 0, 0);
-    const blob = await canvas.convertToBlob({ type: 'image/png' });
-    const bytes = new Uint8Array(await blob.arrayBuffer());
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-    return btoa(binary);
-  }
-
   /** Downscaled data: URL for the chip preview (≤48px tall, 2x for retina). */
   async function makeThumb(rgba: Uint8Array, width: number, height: number): Promise<string> {
     const src = new OffscreenCanvas(width, height);
@@ -219,8 +208,8 @@
         const { width, height } = await image.size();
         if (width > 0 && height > 0) {
           const rgba = await image.rgba();
-          const base64 = await rgbaToPngBase64(rgba, width, height);
-          const localPath = await saveClipboardImage(base64);
+          const { base64, ext } = await encodeClipboardImage(rgba, width, height);
+          const localPath = await saveClipboardImage(base64, ext);
           const thumb = await makeThumb(rgba, width, height);
           addAttachments([{ path: localPath, name: basename(localPath), thumb }]);
           return;

@@ -12,6 +12,7 @@
   import { spawnTerminal, writeTerminal, resizeTerminal, killTerminal, setTabScrollback, getPtyInfo, setTabRestoreContext, cleanSshCommand, normalizeSshInput, buildSshCommand, shellEscapePath, readClipboardFilePaths, serializeTerminal, restoreTerminalScrollback, resizeTerminalGrid, scrollTerminal, scrollTerminalTo, saveTerminalScrollback, restoreTerminalFromSaved, hasSavedScrollback, getSavedTerminalSize, getTerminalScrollbackInfo, playBellSound, saveClipboardImage, startSelection, updateSelection, clearSelection, copySelection, selectAll, scrollSelection } from '$lib/tauri/commands';
   import type { TerminalFrame, OscCwdEvent, OscShellEvent } from '$lib/tauri/types';
   import { uploadWithProgress, AGENT_UPLOAD_DIR } from '$lib/utils/scpUpload';
+  import { encodeClipboardImage } from '$lib/utils/clipboardImage';
   import { readText as clipboardReadText, writeText as clipboardWriteText, readImage as clipboardReadImage } from '@tauri-apps/plugin-clipboard-manager';
   import { terminalsStore } from '$lib/stores/terminals.svelte';
   import { workspacesStore } from '$lib/stores/workspaces.svelte';
@@ -262,20 +263,6 @@
 
   // Paste from clipboard using native Tauri APIs (bypasses WKWebView paste popup).
   // Checks for file paths first (Finder copy), then falls back to text.
-  /** Convert clipboard RGBA image to PNG via offscreen canvas, return base64. PNG preserves transparency. */
-  async function rgbaToPngBase64(rgba: Uint8Array, width: number, height: number): Promise<string> {
-    const canvas = new OffscreenCanvas(width, height);
-    const ctx = canvas.getContext('2d')!;
-    ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba), width, height), 0, 0);
-    const blob = await canvas.convertToBlob({ type: 'image/png' });
-    const buf = await blob.arrayBuffer();
-    // Manual base64 encoding (no btoa needed for binary)
-    const bytes = new Uint8Array(buf);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-    return btoa(binary);
-  }
-
   async function pasteFromClipboard() {
     // Check for file URLs first (Finder Cmd+C puts filename as text too,
     // but we want the full path from NSPasteboard)
@@ -294,8 +281,8 @@
         const { width, height } = await image.size();
         if (width > 0 && height > 0) {
           const rgba = await image.rgba();
-          const base64 = await rgbaToPngBase64(rgba, width, height);
-          const localPath = await saveClipboardImage(base64);
+          const { base64, ext } = await encodeClipboardImage(rgba, width, height);
+          const localPath = await saveClipboardImage(base64, ext);
 
           // Check if SSH session — need to SCP upload
           const info = await getPtyInfo(ptyId);

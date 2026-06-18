@@ -265,13 +265,18 @@ pub async fn scp_write_file(
 }
 
 #[command]
-pub async fn save_clipboard_image(data_base64: String) -> Result<String, String> {
+pub async fn save_clipboard_image(
+    data_base64: String,
+    ext: Option<String>,
+) -> Result<String, String> {
     let bytes = base64::engine::general_purpose::STANDARD
         .decode(&data_base64)
         .map_err(|e| format!("Invalid base64: {}", e))?;
 
+    // Opaque clipboard images are encoded JPEG; transparent ones stay PNG.
+    let ext = ext.unwrap_or_else(|| "png".to_string());
     let temp_dir = std::env::temp_dir();
-    let filename = format!("aiterm-clipboard-{}.png", uuid::Uuid::new_v4());
+    let filename = format!("aiterm-clipboard-{}.{}", uuid::Uuid::new_v4(), ext);
     let path = temp_dir.join(&filename);
 
     std::fs::write(&path, &bytes).map_err(|e| format!("Cannot write temp file: {}", e))?;
