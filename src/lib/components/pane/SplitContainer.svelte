@@ -6,7 +6,12 @@
   import { workspacesStore } from '$lib/stores/workspaces.svelte';
 
   interface Props {
-    node: SplitNode;
+    // Transiently null/undefined: while the workspace split tree mutates (pane
+    // added / removed / collapsed) Svelte's production-mode reactivity can
+    // re-read this component's `node` getters for a tick after `node` has been
+    // swapped to a leaf or dropped but before the {#if} switches arms. Typing it
+    // nullable lets us guard every dereference so a stale read can't throw.
+    node: SplitNode | null | undefined;
     workspaceId: string;
     panes: Pane[];
   }
@@ -18,8 +23,19 @@
     return panes.find(p => p.id === paneId);
   }
 
+  // Children of a split node, or null for leaves / transient empty nodes.
+  // Reading the children through this guard (instead of `node.children[0]`
+  // inline) is what fixes the prod-only "node.children[0] is undefined" renderer
+  // crash: the child <SplitContainer>s are nested under `{#if children}`, so a
+  // stale tick where `node` is no longer a split tears them down before their
+  // `children[0]`/`children[1]` getters can run. Observed as a crash loop while
+  // dragging a file over a live terminal (any churny re-render hit it).
+  function splitChildren(n: SplitNode | null | undefined): [SplitNode, SplitNode] | null {
+    return n && n.type === 'split' ? n.children : null;
+  }
+
   function handleResize(splitId: string, direction: 'horizontal' | 'vertical', delta: number) {
-    if (!containerEl || node.type !== 'split') return;
+    if (!containerEl || node?.type !== 'split') return;
     const containerSize = direction === 'horizontal'
       ? containerEl.clientWidth
       : containerEl.clientHeight;
@@ -32,12 +48,12 @@
   }
 
   function handleResizeEnd() {
-    if (node.type !== 'split') return;
+    if (node?.type !== 'split') return;
     workspacesStore.persistSplitRatio(workspaceId, node.id, node.ratio);
   }
 </script>
 
-{#if node.type === 'leaf'}
+{#if node?.type === 'leaf'}
   {@const pane = findPane(node.pane_id)}
   {#if pane}
     <SplitPane
@@ -47,33 +63,36 @@
       showHeader={panes.length > 1}
     />
   {/if}
-{:else}
-  <div
-    class="split-container {node.direction}"
-    bind:this={containerEl}
-  >
-    <div class="split-child" style="flex: {node.ratio}">
-      <SplitContainer
-        node={node.children[0]}
-        {workspaceId}
-        {panes}
-      />
-    </div>
+{:else if node?.type === 'split'}
+  {@const children = splitChildren(node)}
+  {#if children}
+    <div
+      class="split-container {node.direction}"
+      bind:this={containerEl}
+    >
+      <div class="split-child" style="flex: {node.ratio}">
+        <SplitContainer
+          node={children[0]}
+          {workspaceId}
+          {panes}
+        />
+      </div>
 
-    <Resizer
-      direction={node.direction}
-      onresize={(delta) => handleResize(node.type === 'split' ? node.id : '', node.type === 'split' ? node.direction : 'horizontal', delta)}
-      onresizeend={handleResizeEnd}
-    />
-
-    <div class="split-child" style="flex: {1 - node.ratio}">
-      <SplitContainer
-        node={node.children[1]}
-        {workspaceId}
-        {panes}
+      <Resizer
+        direction={node.direction}
+        onresize={(delta) => handleResize(node.type === 'split' ? node.id : '', node.type === 'split' ? node.direction : 'horizontal', delta)}
+        onresizeend={handleResizeEnd}
       />
+
+      <div class="split-child" style="flex: {1 - node.ratio}">
+        <SplitContainer
+          node={children[1]}
+          {workspaceId}
+          {panes}
+        />
+      </div>
     </div>
-  </div>
+  {/if}
 {/if}
 
 <style>
