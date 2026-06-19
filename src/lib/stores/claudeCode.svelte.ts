@@ -829,6 +829,9 @@ function createClaudeCodeStore() {
       action = 'created';
     }
 
+    // Mesh: scan the written note for a NEEDS DECISION block → pull the human in (§8).
+    agentMeshStore.onWorkspaceNoteWritten(ws.id, resultNoteId, args.content);
+
     // Auto-open notes panel on workspace scope so the user sees the written note
     if (preferencesStore.notesScope !== 'workspace') {
       await preferencesStore.setNotesScope('workspace');

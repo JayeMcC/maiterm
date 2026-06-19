@@ -10,7 +10,9 @@ import { createDeliveryController } from '$lib/stores/agentDelivery';
 import { createMeshRouter, type MeshMember, type MeshRouter } from '$lib/stores/meshRouting';
 import { performMeshSend, type MeshEdge, type MeshSendResult } from '$lib/stores/meshSend';
 import { createLoopController, type LoopReason } from '$lib/stores/meshLoopControl';
+import { statusMarker, buildStatusNoteTemplate, parseNeedsDecision } from '$lib/stores/meshStatus';
 import { preferencesStore } from '$lib/stores/preferences.svelte';
+import { dispatch as dispatchNotification } from '$lib/stores/notificationDispatch';
 import { error as logError, info as logInfo } from '@tauri-apps/plugin-log';
 
 /**
@@ -40,6 +42,12 @@ function createAgentMeshStore() {
   const routers = new Map<string, MeshRouter>();
   // In-memory per-member purpose (priming context). Not persisted in v1 — like the 1:1 bridge.
   const purposes = new Map<string, string>();
+  // Members already primed this session (opener injected) — keyed by tabId, idempotent.
+  const primed = new Set<string>();
+  // Each member's status-note id (the one workspace note it maintains), keyed by tabId.
+  const statusNoteIds = new Map<string, string>();
+  // Last "NEEDS DECISION" text surfaced per status note, to dedupe the decision toast.
+  const lastDecision = new Map<string, string>();
   // Recipient-keyed FIFO mailbox, shared core with the 1:1 bridge (separate instance).
   const deliveryCtl = createDeliveryController({
     inject: (tabId, text) => injectPrompt(tabId, text),
@@ -182,6 +190,28 @@ function createAgentMeshStore() {
     );
   }
 
+  // ─── Priming + status notes (§6, §8) ────────────────────────────────────────
+
+  function buildMeshOpener(member: MeshMember, peers: MeshMember[], noteId: string): string {
+    const where = member.cwd ? ` (working in ${member.cwd})` : '';
+    const purpose = member.purpose?.trim();
+    const roster = peers.length
+      ? peers.map((p) => `  - "${p.role}"${p.purpose ? ` — ${p.purpose}` : p.cwd ? ` — ${p.cwd}` : ''}`).join('\n')
+      : '  (no other agents yet — peers appear as they join; call listBridgedPeers anytime)';
+    return (
+      `⟦MESH⟧ You've joined a Mesh Workspace as "${member.role}"${where}. Every agent here is a peer AI agent (NOT your human operator); you can talk to any of them.\n\n` +
+      `Your purpose: ${purpose || '(your human will tell you — ask if unclear)'}\n\n` +
+      `Peers you can reach:\n${roster}\n\n` +
+      `How the mesh works:\n` +
+      `  - Every message goes to ONE peer (no broadcast) and is tagged with a TOPIC. Start a thread by passing a short topic label to sendToBridgedAgent (you own it), or reply on an existing topic id from listTopics. Always tag a reply with the topic id shown in the incoming message.\n` +
+      `  - Reusing a thread keeps context together; near-duplicate labels are deduped automatically.\n` +
+      `  - When a thread's work is done, its OWNER calls completeTopic(id) so peers stop replying. Don't reply just to acknowledge.\n` +
+      `  - Tools: listBridgedPeers, listTopics, startTopic, completeTopic, sendToBridgedAgent (recipient = a peer's role or handle; topic = id or new label).\n\n` +
+      `Your status note (id: ${noteId}): keep this ONE workspace note updated as you work — what you've completed, what's blocked, and anything needing the human under a line starting "NEEDS DECISION:". Use writeWorkspaceNote with noteId "${noteId}". Be concise; leave the first marker line intact.\n\n` +
+      `Don't message anyone yet. First check in with your human: confirm you've joined as "${member.role}", say what you'll own, and wait for direction.`
+    );
+  }
+
   // ─── Edge events ────────────────────────────────────────────────────────────
 
   function emitEdge(e: MeshEdge) {
@@ -202,6 +232,63 @@ function createAgentMeshStore() {
   function removeMember(tabId: string) {
     deliveryCtl.remove(tabId);
     purposes.delete(tabId);
+  }
+
+  /** Ensure this member has its one status note, reusing an existing one (by role marker)
+   *  rather than spawning duplicates across re-prime / restart. Returns whether it was just
+   *  created — a freshly created note means a genuinely new join (→ prime), an existing one
+   *  means the agent was onboarded before (→ don't re-inject the opener). */
+  async function ensureStatusNote(ws: Workspace, member: MeshMember): Promise<{ id: string; created: boolean } | null> {
+    const known = statusNoteIds.get(member.tabId);
+    if (known && ws.workspace_notes.some((n) => n.id === known)) return { id: known, created: false };
+    const marker = statusMarker(member.role);
+    const byMarker = ws.workspace_notes.find((n) => n.content.startsWith(marker));
+    if (byMarker) { statusNoteIds.set(member.tabId, byMarker.id); return { id: byMarker.id, created: false }; }
+    const note = await workspacesStore.addWorkspaceNote(ws.id, buildStatusNoteTemplate(member.role, member.purpose), 'preview');
+    if (!note) return null;
+    statusNoteIds.set(member.tabId, note.id);
+    return { id: note.id, created: true };
+  }
+
+  /** Prime a member on join: pre-create its status note and inject the mesh opener once.
+   *  Idempotent (guarded by `primed`); skips the opener for an agent that was already
+   *  onboarded in a prior session (its status note already exists). */
+  async function tryPrime(tabId: string) {
+    if (primed.has(tabId)) return;
+    const ws = meshWorkspaceForTab(tabId);
+    if (!ws) return;
+    const member = membersOf(ws).find((m) => m.tabId === tabId);
+    if (!member || !member.live) return; // not a named, live agent yet — re-check on next Stop
+    primed.add(tabId); // mark before the await so a racing event can't double-prime
+    const note = await ensureStatusNote(ws, member);
+    if (!note) { primed.delete(tabId); return; } // note creation failed — allow a retry
+    ensureMember(tabId);
+    if (note.created) {
+      const peers = membersOf(ws).filter((m) => m.tabId !== tabId);
+      const status = await deliveryCtl.deliver(tabId, buildMeshOpener(member, peers, note.id));
+      if (status === 'failed') { primed.delete(tabId); return; }
+      logInfo(`agentMesh: primed "${member.role}" (${tabId.slice(0, 8)}) into mesh "${ws.name}"`);
+    }
+    bump();
+  }
+
+  /** Scan a just-written status note for a NEEDS DECISION block and raise a toast (deduped).
+   *  Called from the workspace-note write path (§8 — pull the human in instead of watching). */
+  function scanDecision(ws: Workspace, noteId: string, content: string) {
+    // Which member owns this status note (for the deep-link + role label)?
+    let ownerTabId: string | null = null;
+    let ownerRole = 'An agent';
+    for (const [tabId, nid] of statusNoteIds) {
+      if (nid !== noteId) continue;
+      ownerTabId = tabId;
+      ownerRole = membersOf(ws).find((m) => m.tabId === tabId)?.role ?? ownerRole;
+      break;
+    }
+    const decision = parseNeedsDecision(content);
+    if (!decision) { lastDecision.delete(noteId); return; }
+    if (lastDecision.get(noteId) === decision) return; // already surfaced this exact text
+    lastDecision.set(noteId, decision);
+    void dispatchNotification(`${ownerRole} needs a decision`, decision, 'info', ownerTabId ? { tabId: ownerTabId } : undefined);
   }
 
   // ─── Loop-control pause inspection (for the cockpit) ────────────────────────
@@ -252,10 +339,10 @@ function createAgentMeshStore() {
       ws.bridge_all = enabled;
       if (enabled) {
         const router = routerFor(wsId);
-        if (router) for (const m of membersOf(ws)) ensureMember(m.tabId);
+        if (router) for (const m of membersOf(ws)) { ensureMember(m.tabId); void tryPrime(m.tabId); }
       } else {
         // Leaving mesh mode: drop delivery entries for this ws's members (topics persist).
-        for (const m of membersOf(ws)) removeMember(m.tabId);
+        for (const m of membersOf(ws)) { removeMember(m.tabId); primed.delete(m.tabId); statusNoteIds.delete(m.tabId); }
         routers.delete(wsId);
       }
       bump();
@@ -435,16 +522,31 @@ function createAgentMeshStore() {
     /** A tab is being closed — drop its mesh delivery slot. Topics persist (it may reopen). */
     handleTabClosed(tabId: string) {
       if (deliveryCtl.has(tabId)) removeMember(tabId);
+      primed.delete(tabId);
+      const nid = statusNoteIds.get(tabId);
+      statusNoteIds.delete(tabId);
+      if (nid) lastDecision.delete(nid);
       bump();
     },
 
-    /** Tab reload minted a new id — carry the delivery queue across. */
+    /** Tab reload minted a new id — carry the delivery queue + priming state across. */
     remapTab(oldTabId: string, newTabId: string) {
       if (oldTabId === newTabId || !deliveryCtl.has(oldTabId)) return;
       deliveryCtl.remap(oldTabId, newTabId);
       const p = purposes.get(oldTabId);
       if (p !== undefined) { purposes.delete(oldTabId); purposes.set(newTabId, p); }
+      if (primed.has(oldTabId)) { primed.delete(oldTabId); primed.add(newTabId); }
+      const nid = statusNoteIds.get(oldTabId);
+      if (nid !== undefined) { statusNoteIds.delete(oldTabId); statusNoteIds.set(newTabId, nid); }
       bump();
+    },
+
+    /** Called from the workspace-note write path: scan a mesh status note for a NEEDS
+     *  DECISION block and surface a toast (§8). No-op outside a mesh workspace. */
+    onWorkspaceNoteWritten(wsId: string, noteId: string, content: string) {
+      const ws = getWorkspace(wsId);
+      if (!ws || !ws.bridge_all) return;
+      scanDecision(ws, noteId, content);
     },
 
     async init() {
@@ -453,15 +555,18 @@ function createAgentMeshStore() {
         const tabId = e.payload.tab_id;
         if (!tabId || !meshWorkspaceForTab(tabId)) return;
         deliveryCtl.markReadyOrCreate(tabId);
+        void tryPrime(tabId); // a member just came online → prime it (idempotent)
         bump();
       });
       unlisteners.push(u1);
 
       // Turn finished → idle + alive; ends any inject cooldown so a queued message lands now.
+      // Also a re-check point: an agent named AFTER it started becomes primeable here.
       const u2 = await listen<{ session_id: string; tab_id: string | null }>('agent-hook-stop', (e) => {
         const tabId = e.payload.tab_id;
         if (!tabId || !meshWorkspaceForTab(tabId)) return;
         deliveryCtl.markReady(tabId);
+        void tryPrime(tabId);
       });
       unlisteners.push(u2);
 
@@ -495,6 +600,9 @@ function createAgentMeshStore() {
       loopCtl.reset();
       routers.clear();
       purposes.clear();
+      primed.clear();
+      statusNoteIds.clear();
+      lastDecision.clear();
       edges.length = 0;
     },
   };

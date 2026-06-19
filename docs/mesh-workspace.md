@@ -471,9 +471,15 @@ Synthesized from findings. P1 blocks the phase; P2 same-phase; P3 follow-up.
   surfaces `paused`/`pauseReason`. (Prefs UI lands with the cockpit in T6.)
   - Verify: `meshLoopControl.test.ts` (8) — pause-at-N, resume-lifts, hard-can't-resume,
     TTL pause + re-base, precedence (hard > ttl > soft); `meshSend.test.ts` paused-send case.
-- [ ] **T5 (P1, human ~1-2d / CC ~1 session)** — priming + status — opener injects role/roster/
-  topic-rules/noteId; pre-create one status note per role; `NEEDS DECISION:` toast scan.
-  - Surfaced by: §6, §8. Files: mesh store, `buildOpener`, workspace-notes.
+- [x] **T5 (P1) — DONE** — priming + status — on join, `tryPrime` (idempotent) injects a mesh
+  opener (role, purpose, roster, topic rules, the agent's status-note id) and pre-creates ONE
+  workspace status note per role, reused-by-marker across re-prime/restart (a fresh agent is
+  primed, a returning one isn't re-onboarded). Pure `meshStatus.ts` (template + marker +
+  `parseNeedsDecision`); a `NEEDS DECISION:` block in any status note raises a deduped toast
+  deep-linked to the owning tab, scanned from the workspace-note write path. Priming fires on
+  `agent-init-session`, `agent-hook-stop` (catches a late-named agent), and mesh-enable.
+  - Verify: `meshStatus.test.ts` (8) — marker/template, placeholder→empty, single/multi-item
+    extraction, stop-at-next-heading, case-insensitive.
 - [ ] **T6 (P1, human ~1-2d / CC ~1 session)** — cockpit drawer — overlay drawer hosting the
   status board + conversation-graph (edge events from `deliver()`) + human complete-topic.
   - Surfaced by: §9, D8. Files: new drawer component, edge-event bus.
