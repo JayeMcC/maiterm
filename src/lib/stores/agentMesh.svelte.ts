@@ -463,14 +463,21 @@ function createAgentMeshStore() {
       bump();
     },
 
-    /** Is this tab currently on a stage slot of an ACTIVE stage view? Drives `visible` in
-     *  +page so only staged terminals fit-to-size (filmstrip tiles stay unfit → no reflow). */
+    /** Is this tab currently on a stage slot of an ACTIVE stage view? */
     isOnStage(tabId: string): boolean {
       void version;
       const ws = meshWorkspaceForTab(tabId);
       if (!ws) return false;
       const s = stage.get(ws.id);
       return !!s?.active && (s.left === tabId || s.right === tabId);
+    },
+
+    /** Is this tab an addressable member of its mesh workspace? Drives `visible` in +page so
+     *  ALL members render live in stage view (stage at scale 1, filmstrip CSS-scaled). */
+    isMeshMemberTab(tabId: string): boolean {
+      void version;
+      const ws = meshWorkspaceForTab(tabId);
+      return !!ws && membersOf(ws).some((m) => m.tabId === tabId);
     },
 
     // ─── MCP tool: listBridgedPeers ───────────────────────────────────────────

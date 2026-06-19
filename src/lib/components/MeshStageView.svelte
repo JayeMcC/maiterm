@@ -24,6 +24,30 @@
     });
   });
 
+  // Measure the stage panel so filmstrip tiles render the terminal at the SAME pixel size as
+  // the stage and just CSS-scale it down. A transform doesn't change clientWidth, so a scaled
+  // tile still fits to the stage column count — promoting/demoting never reflows the terminal.
+  let rowEl = $state<HTMLDivElement | undefined>();
+  let rowW = $state(0);
+  let rowH = $state(0);
+  $effect(() => {
+    const el = rowEl;
+    if (!el) return;
+    const measure = () => { rowW = el.clientWidth; rowH = el.clientHeight; };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
+  const PANEL_LABEL_H = 28; // the slot is the panel height minus its label bar
+  const panelW = $derived(Math.max(240, Math.floor((rowW - 1) / 2)));
+  const panelH = $derived(Math.max(160, rowH - PANEL_LABEL_H));
+  // Scale to the filmstrip HEIGHT (panels are tall, so a height-based thumbnail fits the strip
+  // row; a width-based one would overflow vertically). Width follows from the panel aspect.
+  const TILE_H = 116;
+  const tileScale = $derived(TILE_H / panelH);
+  const tileW = $derived(Math.max(56, Math.round(panelW * tileScale)));
+
   function promote(tabId: string, e: MouseEvent) {
     agentMeshStore.promoteToStage(workspaceId, tabId, e.shiftKey ? 'right' : 'left');
   }
@@ -38,7 +62,7 @@
 </script>
 
 <div class="stage-view">
-  <div class="stage-row">
+  <div class="stage-row" bind:this={rowEl}>
     {#each (['left', 'right'] as const) as side}
       {@const tabId = slots[side]}
       <div class="stage-panel">
@@ -62,10 +86,13 @@
     {#each filmstrip as m (m.tabId)}
       <button
         class="tile"
+        style="width: {tileW}px; height: {TILE_H}px;"
         onclick={(e) => promote(m.tabId, e)}
         title="Click → left panel · Shift+click → right panel"
       >
-        <div class="tile-term" data-terminal-slot={m.tabId}></div>
+        <!-- Inner is the full stage panel size; the terminal fits to it (clientWidth ignores
+             the scale), then we visually shrink it to the tile with transform: scale. -->
+        <div class="tile-term" data-terminal-slot={m.tabId} style="width: {panelW}px; height: {panelH}px; transform: scale({tileScale});"></div>
         <div class="tile-overlay">
           <StatusDot color={dotColor(m.tabId)} pulse={dotColor(m.tabId) === 'accent'} />
           <span class="tile-role">{m.role}</span>
@@ -76,16 +103,21 @@
 </div>
 
 <style>
-  .stage-view { display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--bg-dark); }
-  .stage-row { flex: 1; display: flex; min-height: 0; gap: 1px; }
-  .stage-panel { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; background: var(--bg-dark); }
+  /* width:100% + height:100% to fill the flex-row .main-content, exactly like SplitContainer.
+     Without width:100% it collapses to content width in the flex row. */
+  .stage-view { display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; background: var(--bg-dark); overflow: hidden; }
+  .stage-row { flex: 1; display: flex; min-height: 0; min-width: 0; gap: 1px; overflow: hidden; }
+  .stage-panel { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; background: var(--bg-dark); overflow: hidden; }
   .panel-label {
     display: flex; align-items: center; gap: 6px;
     padding: 4px 10px; font-size: 11px; color: var(--fg);
     background: var(--bg-medium); border-bottom: 1px solid var(--bg-light);
   }
   .panel-label .side-tag { margin-left: auto; font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-dim); }
-  .stage-slot { flex: 1; min-height: 0; position: relative; }
+  /* display:flex is load-bearing: the portaled TerminalPane container is `flex:1`, so the
+     slot MUST be a flex container for it to fill the panel height (matches .terminal-slot in
+     SplitPane). Without it the terminal hugs its initial 2-row fit and never grows. */
+  .stage-slot { flex: 1; min-height: 0; min-width: 0; position: relative; display: flex; overflow: hidden; }
   .slot-empty {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     color: var(--fg-dim); font-size: 12px; text-align: center; padding: 0 24px;
@@ -106,17 +138,19 @@
 
   .tile {
     flex-shrink: 0; position: relative;
-    width: 200px; height: 130px; padding: 0;
+    padding: 0;
     border: 1px solid var(--bg-light); border-radius: 5px; overflow: hidden;
     background: var(--bg-dark); cursor: pointer;
   }
   .tile:hover { border-color: var(--accent); }
-  /* The portaled terminal renders at its own size top-left, scaled down to a thumbnail. Its
-     job is "what's it doing / what color is the dot," not legibility (design §7.4). */
+  /* The portaled terminal renders live at the full stage-panel size, then transform:scale
+     shrinks it to a thumbnail (set inline). display:flex lets the flex:1 terminal container
+     fill it. Its job is "what's it doing / what color is the dot," not legibility (§7.4). */
   .tile-term {
     position: absolute; top: 0; left: 0;
-    width: 400%; height: 400%;
-    transform: scale(0.25); transform-origin: top left;
+    transform-origin: top left;
+    display: flex;
+    overflow: hidden;
     pointer-events: none;
   }
   .tile-overlay {

@@ -304,13 +304,13 @@
                     visible={!meshStage && tab.id === pane.active_tab_id && ws.id === workspacesStore.activeWorkspaceId}
                     editorFile={tab.editor_file}
                   />
-                {:else if tab.tab_type === 'terminal' && activatedTabIds.has(tab.id)}
+                {:else if tab.tab_type === 'terminal' && (activatedTabIds.has(tab.id) || (meshStage && agentMeshStore.isMeshMemberTab(tab.id)))}
                   <TerminalPane
                     workspaceId={ws.id}
                     paneId={pane.id}
                     tabId={tab.id}
                     existingPtyId={terminalsStore.get(tab.id) ? tab.pty_id : null}
-                    visible={meshStage ? agentMeshStore.isOnStage(tab.id) : (tab.id === pane.active_tab_id && ws.id === workspacesStore.activeWorkspaceId)}
+                    visible={meshStage ? agentMeshStore.isMeshMemberTab(tab.id) : (tab.id === pane.active_tab_id && ws.id === workspacesStore.activeWorkspaceId)}
                     restoreCwd={tab.restore_cwd}
                     restoreSshCommand={tab.restore_ssh_command}
                     restoreRemoteCwd={tab.restore_remote_cwd}
