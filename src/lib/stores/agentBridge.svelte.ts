@@ -6,6 +6,7 @@ import { terminalsStore } from '$lib/stores/terminals.svelte';
 import { claudeStateStore } from '$lib/stores/agentState.svelte';
 import { getAdapter } from '$lib/agents/adapter';
 import { bracketedPasteSubmit } from '$lib/utils/agentPrompt';
+import { createDeliveryController } from '$lib/stores/agentDelivery';
 import { error as logError, info as logInfo } from '@tauri-apps/plugin-log';
 
 /**
@@ -46,8 +47,6 @@ import { error as logError, info as logInfo } from '@tauri-apps/plugin-log';
  * breaking, and a closed tab tears the bridge down cleanly.
  */
 
-const INJECT_COOLDOWN_MS = 1000;     // post-injection cooldown: serialize injects + let the TUI register the input
-const DRAIN_TICK_MS = 1500;          // queue-drain backstop: re-attempt queued delivery while held
 const FORK_BOOT_POLL_MS = 500;       // poll interval while waiting for the fork's Claude to register
 const FORK_BOOT_TIMEOUT_MS = 15_000; // cap on waiting for the fork to boot before priming anyway
 const FORK_SETTLE_MS = 1500;         // extra settle after the fork registers, so its TUI accepts input
@@ -73,27 +72,21 @@ interface BridgeEntry {
   purpose?: string;
 }
 
-interface DeliveryState {
-  /** Live session that can accept a prompt (false while dormant/resuming). */
-  ready: boolean;
-  /** Short post-injection cooldown — serializes injections, auto-clears. NOT "awaiting a Stop". */
-  busy: boolean;
-  /** Framed envelopes waiting to be delivered to this tab. */
-  queue: string[];
-  busyTimer?: ReturnType<typeof setTimeout>;
-}
-
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 function createAgentBridgeStore() {
   // Both tabs of a bridge get an entry pointing at each other (symmetric).
   const bridges = new Map<string, BridgeEntry>();
-  // Delivery state is keyed by the RECIPIENT tab.
-  const delivery = new Map<string, DeliveryState>();
-  // Tabs with an injectPrompt in flight — a hard serialization guard so two bracketed
-  // pastes can never interleave at the PTY. Independent of the `busy` cooldown (which a
-  // Stop can clear), so an event firing mid-injection can't race a second write in.
-  const injecting = new Set<string>();
+  // Recipient-keyed FIFO delivery mailbox (queue + cooldown + drain), shared with the mesh.
+  // injectPrompt is hoisted (function declaration), so referencing it here is safe.
+  const deliveryCtl = createDeliveryController({
+    inject: (tabId, text) => injectPrompt(tabId, text),
+    liveState: (tabId) => !!claudeStateStore.getState(tabId),
+    awaitingHuman: (tabId) => {
+      const st = claudeStateStore.getState(tabId);
+      return !!st && getAdapter(workspacesStore.getTabRuntime(tabId)).isAwaitingHumanInput(st);
+    },
+  });
   // Forked partners awaiting init → opener-into-caller (keyed by fork tab id).
   const pendingOpeners = new Map<string, { callerTabId: string }>();
   // Best-effort cwd label when live OSC cwd isn't available yet.
@@ -101,8 +94,6 @@ function createAgentBridgeStore() {
   // Reactive version bump so UI ($derived) can react to bridge changes.
   let version = $state(0);
   const unlisteners: (() => void)[] = [];
-  // Backstop poller, live only while some tab has queued messages (see ensureDrainPump).
-  let drainTimer: ReturnType<typeof setInterval> | undefined;
 
   function bump() { version++; }
 
@@ -178,121 +169,12 @@ function createAgentBridgeStore() {
     }
   }
 
-  // ─── Delivery gating ──────────────────────────────────────────────────────────
-
-  // When MAY we inject a peer message into a recipient tab? Claude Code captures input
-  // submitted mid-turn and runs it at the end of the current turn, so delivering while
-  // the agent is actively working is safe AND desirable — it gets the info during its
-  // flow. So we deliver in both `active` and `idle` and hold back only when the recipient
-  // is at a permission / multiple-choice prompt awaiting the human (an injected paste+CR
-  // would hijack their pick), or offline/dormant (no live session — don't inject a bare
-  // shell). `busy` is just a short injection cooldown; it can't wedge the queue because
-  // it always auto-clears.
-  function deliverable(tabId: string): boolean {
-    const d = delivery.get(tabId);
-    if (!d || !d.ready || d.busy || injecting.has(tabId)) return false;
-    const st = claudeStateStore.getState(tabId);
-    if (!st) return false;                          // dormant/resuming → queue
-    // Hold while the recipient is at a prompt awaiting the HUMAN (a permission prompt, or
-    // a runtime-specific interactive elicitation like Claude's AskUserQuestion) — an
-    // injected paste+CR would hijack their selection. What counts is per-runtime.
-    if (getAdapter(workspacesStore.getTabRuntime(tabId)).isAwaitingHumanInput(st)) return false;
-    return true;
-  }
-
-  /** Mark a tab as just-injected: a brief cooldown that (a) serializes injections so two
-   *  bracketed pastes can't interleave at the PTY and (b) lets the TUI register the input
-   *  before the next one. AUTO-clears (the queue can never wedge on a stuck latch); a Stop
-   *  releases it early for snappy back-to-back delivery. */
-  function armCooldown(tabId: string) {
-    const d = delivery.get(tabId);
-    if (!d) return;
-    d.busy = true;
-    if (d.busyTimer) clearTimeout(d.busyTimer);
-    d.busyTimer = setTimeout(() => {
-      const cur = delivery.get(tabId);
-      if (!cur) return;
-      cur.busy = false;
-      cur.busyTimer = undefined;
-      void flush(tabId);
-    }, INJECT_COOLDOWN_MS);
-  }
-
-  function releaseCooldown(tabId: string) {
-    const d = delivery.get(tabId);
-    if (!d) return;
-    d.busy = false;
-    if (d.busyTimer) { clearTimeout(d.busyTimer); d.busyTimer = undefined; }
-  }
-
-  /** Run the drain backstop while any tab has queued messages. Event-driven flush (a
-   *  Stop/re-init on the recipient) handles the common case; this poller covers what
-   *  events can't — a message queued while the recipient was at a permission prompt or
-   *  offline, which then clears with no bridge-relevant event to trigger a flush.
-   *  Self-stops once all queues are empty, so it idles at zero cost. */
-  function pumpQueues() {
-    let anyQueued = false;
-    for (const [tabId, d] of delivery) {
-      if (d.queue.length === 0) continue;
-      anyQueued = true;
-      void flush(tabId);
-    }
-    if (!anyQueued && drainTimer) { clearInterval(drainTimer); drainTimer = undefined; }
-  }
-
-  function ensureDrainPump() {
-    if (!drainTimer) drainTimer = setInterval(pumpQueues, DRAIN_TICK_MS);
-  }
-
-  /** injectPrompt under the in-flight guard — `injecting.has(tabId)` is true for the
-   *  whole write, and deliverable() rejects while it is, so no two injections to the
-   *  same tab can overlap regardless of what events fire in between. */
-  async function injectExclusive(tabId: string, text: string): Promise<boolean> {
-    injecting.add(tabId);
-    try { return await injectPrompt(tabId, text); }
-    finally { injecting.delete(tabId); }
-  }
-
-  /** Deliver framed text to a tab, or queue it if the tab isn't deliverable.
-   *  Ordering rule: never jump the queue. If messages are already waiting (held
-   *  while the recipient was dormant or at a human prompt), this newer message goes
-   *  to the BACK and the in-order drain delivers it after them. Injecting directly
-   *  here would land a newer message AHEAD of older queued ones — the "newest-first"
-   *  reordering a recipient sees when a hold clears between the drain ticks. */
-  async function deliver(tabId: string, text: string): Promise<'delivered' | 'queued' | 'failed'> {
-    const d = delivery.get(tabId);
-    if (!d) return 'failed';
-    if (d.queue.length > 0) {
-      d.queue.push(text);
-      ensureDrainPump();
-      void flush(tabId); // nudge the drain now (it always delivers the OLDEST first)
-      return 'queued';
-    }
-    if (!deliverable(tabId)) {
-      d.queue.push(text);
-      ensureDrainPump();
-      return 'queued';
-    }
-    const ok = await injectExclusive(tabId, text);
-    if (!ok) {
-      d.queue.push(text);
-      ensureDrainPump();
-      return 'queued';
-    }
-    armCooldown(tabId);
-    return 'delivered';
-  }
-
-  /** Try to deliver the next queued message to a tab. */
-  async function flush(tabId: string) {
-    const d = delivery.get(tabId);
-    if (!d || !deliverable(tabId)) return;
-    const next = d.queue.shift();
-    if (next === undefined) return;
-    const ok = await injectExclusive(tabId, next);
-    if (ok) armCooldown(tabId);
-    else { d.queue.unshift(next); ensureDrainPump(); }
-  }
+  // ─── Delivery ─────────────────────────────────────────────────────────────────
+  // The recipient-keyed FIFO mailbox (gating, cooldown, queue, drain) lives in the shared
+  // agentDelivery controller (deliveryCtl above). agentBridge wires the PTY write + liveness
+  // + awaiting-human predicates and otherwise drives it via deliveryCtl.deliver / .markReady
+  // / .ensure / .remap / .remove. injectPrompt (above) is also used directly for one-off
+  // writes that intentionally bypass the queue (fork re-init directive, disconnect notice).
 
   // ─── Envelopes (identity stamped by maiTerm) ──────────────────────────────────
 
@@ -367,16 +249,14 @@ function createAgentBridgeStore() {
       const po = pendingOpeners.get(forkTabId);
       if (!po) return;                                        // handshake completed
       pendingOpeners.delete(forkTabId);
-      if (tabExists(po.callerTabId)) void deliver(po.callerTabId, buildBridgeFailedNote(forkTabId));
+      if (tabExists(po.callerTabId)) void deliveryCtl.deliver(po.callerTabId, buildBridgeFailedNote(forkTabId));
     }, FORK_INIT_TIMEOUT_MS);
   }
 
   // ─── Lifecycle: bridge / disconnect ────────────────────────────────────────────────
 
   function cleanup(tabId: string) {
-    const d = delivery.get(tabId);
-    if (d?.busyTimer) clearTimeout(d.busyTimer);
-    delivery.delete(tabId);
+    deliveryCtl.remove(tabId);
     bridges.delete(tabId);
     pendingOpeners.delete(tabId);
     cwdHint.delete(tabId);
@@ -386,7 +266,7 @@ function createAgentBridgeStore() {
     get version() { return version; },
 
     getInternalSizes() {
-      return { bridges: bridges.size, delivery: delivery.size, pending_openers: pendingOpeners.size };
+      return { bridges: bridges.size, delivery: deliveryCtl.size(), pending_openers: pendingOpeners.size };
     },
 
     isBridged(tabId: string): boolean {
@@ -442,12 +322,7 @@ function createAgentBridgeStore() {
       // Carry delivery state across, but the reloaded tab isn't live until its Claude
       // re-inits — force not-ready so nothing injects into a booting shell; the
       // claude-init-session handler flips it ready and flushes the queue.
-      const d = delivery.get(oldTabId) ?? { ready: false, busy: false, queue: [] };
-      delivery.delete(oldTabId);
-      if (d.busyTimer) { clearTimeout(d.busyTimer); d.busyTimer = undefined; }
-      d.ready = false;
-      d.busy = false;
-      delivery.set(newTabId, d);
+      deliveryCtl.remap(oldTabId, newTabId);
 
       // Re-key anything else keyed by the old id (pending opener, cwd hint), and any
       // opener that referenced the old id as its caller.
@@ -530,8 +405,8 @@ function createAgentBridgeStore() {
       bridges.set(partnerTabId, { partnerTabId: callerTabId, partnerLabel: callerLabel, turn: 0, partnerSessionId: callerSessionId, role: 'fork' });
       // Caller is a live, established agent → ready now. The forked partner becomes
       // ready when its initSession lands.
-      delivery.set(callerTabId, { ready: true, busy: false, queue: [] });
-      delivery.set(partnerTabId, { ready: false, busy: false, queue: [] });
+      deliveryCtl.ensure(callerTabId, true);
+      deliveryCtl.ensure(partnerTabId, false);
       if (target.cwd) cwdHint.set(partnerTabId, target.cwd);
       const callerCwd = getCwd(callerTabId);
       if (callerCwd) cwdHint.set(callerTabId, callerCwd);
@@ -591,8 +466,8 @@ function createAgentBridgeStore() {
       // claudeState immediately, each records the other's live session id.
       bridges.set(callerTabId, { partnerTabId: targetTabId, partnerLabel: targetLabel, turn: callerTurn, partnerSessionId: targetState.sessionId, role: 'caller', purpose: purpose?.trim() || undefined });
       bridges.set(targetTabId, { partnerTabId: callerTabId, partnerLabel: callerLabel, turn: targetTurn, partnerSessionId: callerState?.sessionId, role: 'peer' });
-      delivery.set(callerTabId, { ready: true, busy: false, queue: [] });
-      delivery.set(targetTabId, { ready: true, busy: false, queue: [] });
+      deliveryCtl.ensure(callerTabId, true);
+      deliveryCtl.ensure(targetTabId, true);
       const callerCwd = getCwd(callerTabId); if (callerCwd) cwdHint.set(callerTabId, callerCwd);
       const targetCwd = getCwd(targetTabId); if (targetCwd) cwdHint.set(targetTabId, targetCwd);
 
@@ -604,8 +479,8 @@ function createAgentBridgeStore() {
         logInfo(`agentBridge: repaired existing bridge ${callerTabId.slice(0, 8)} ⇄ ${targetTabId.slice(0, 8)}`);
       } else {
         // Prime the target (it didn't initiate) and have the caller introduce itself.
-        void deliver(targetTabId, buildExistingBridgeNotice(callerLabel));
-        void deliver(callerTabId, buildOpener(callerTabId, targetTabId, false));
+        void deliveryCtl.deliver(targetTabId, buildExistingBridgeNotice(callerLabel));
+        void deliveryCtl.deliver(callerTabId, buildOpener(callerTabId, targetTabId, false));
         logInfo(`agentBridge: bridged existing ${callerTabId.slice(0, 8)} ⇄ ${targetTabId.slice(0, 8)} (no fork)`);
       }
       return { ok: true, partnerTabId: targetTabId, partnerLabel: targetLabel };
@@ -642,7 +517,7 @@ function createAgentBridgeStore() {
       bridge.turn += 1;
       void persistBridge(senderTabId); // keep the turn counter durable
       const text = buildEnvelope(senderTabId, message, bridge.turn);
-      const status = await deliver(recipient, text);
+      const status = await deliveryCtl.deliver(recipient, text);
       const recipName = bridge.partnerLabel;
       if (status === 'delivered') {
         return { ok: true, delivered: true, recipient: recipName, note: `Delivered to ${recipName}. Their reply will arrive as a new prompt — finish your turn now.` };
@@ -695,9 +570,8 @@ function createAgentBridgeStore() {
           pendingOpeners.delete(tab_id);
           const callerBridge = bridges.get(po.callerTabId);
           if (callerBridge) { callerBridge.partnerSessionId = session_id; void persistBridge(po.callerTabId); }
-          const d = delivery.get(tab_id);
-          if (d) { d.ready = true; void flush(tab_id); }
-          if (tabExists(po.callerTabId)) void deliver(po.callerTabId, buildOpener(po.callerTabId, tab_id));
+          deliveryCtl.markReady(tab_id);
+          if (tabExists(po.callerTabId)) void deliveryCtl.deliver(po.callerTabId, buildOpener(po.callerTabId, tab_id));
           logInfo(`agentBridge: fork ${tab_id.slice(0, 8)} initialized → opener to caller ${po.callerTabId.slice(0, 8)}`);
           return;
         }
@@ -712,15 +586,8 @@ function createAgentBridgeStore() {
             partner.partnerSessionId = session_id;
             void persistBridge(bridge.partnerTabId);
           }
-          const d = delivery.get(tab_id);
-          if (d) {
-            d.ready = true;
-            releaseCooldown(tab_id);
-          } else {
-            delivery.set(tab_id, { ready: true, busy: false, queue: [] });
-          }
+          deliveryCtl.markReadyOrCreate(tab_id);
           bump();
-          void flush(tab_id);
           logInfo(`agentBridge: ${tab_id.slice(0, 8)} re-initialized → bridge re-bound`);
         }
       });
@@ -732,11 +599,7 @@ function createAgentBridgeStore() {
       const u2 = await listen<{ session_id: string; tab_id: string | null }>('agent-hook-stop', (e) => {
         const tabId = e.payload.tab_id;
         if (!tabId) return;
-        const d = delivery.get(tabId);
-        if (!d) return;
-        d.ready = true;
-        releaseCooldown(tabId);
-        void flush(tabId);
+        deliveryCtl.markReady(tabId);
       });
       unlisteners.push(u2);
 
@@ -747,11 +610,7 @@ function createAgentBridgeStore() {
       const u3 = await listen<{ session_id: string; tab_id: string | null }>('agent-hook-session-end', (e) => {
         const tabId = e.payload.tab_id;
         if (!tabId || !bridges.has(tabId)) return;
-        const d = delivery.get(tabId);
-        if (d) {
-          d.ready = false;
-          releaseCooldown(tabId);
-        }
+        deliveryCtl.markDormant(tabId);
         bump();
         logInfo(`agentBridge: ${tabId.slice(0, 8)} session ended → bridge dormant (awaiting resume)`);
       });
@@ -795,7 +654,7 @@ function createAgentBridgeStore() {
         // up yet → ready=false; the init handler flips it on resume. If already live
         // (e.g. webview reload), start ready.
         const live = !!claudeStateStore.getState(tabId);
-        delivery.set(tabId, { ready: live, busy: false, queue: [] });
+        deliveryCtl.ensure(tabId, live);
         restored++;
       }
       if (restored) { bump(); logInfo(`agentBridge: rehydrated ${restored / 2} bridge(s) from persisted state`); }
@@ -804,10 +663,8 @@ function createAgentBridgeStore() {
     destroy() {
       for (const u of unlisteners) u();
       unlisteners.length = 0;
-      if (drainTimer) { clearInterval(drainTimer); drainTimer = undefined; }
-      for (const d of delivery.values()) if (d.busyTimer) clearTimeout(d.busyTimer);
+      deliveryCtl.destroy();
       bridges.clear();
-      delivery.clear();
       pendingOpeners.clear();
       cwdHint.clear();
     },
