@@ -237,6 +237,12 @@ export interface Preferences {
   auto_check_updates: boolean;
   quick_open_show_hidden: boolean;
   quick_open_show_ignored: boolean;
+  /** Mesh Workspace soft per-topic turn cap (N) — delivery pauses here, awaiting resume. */
+  mesh_soft_cap: number;
+  /** Mesh Workspace hard per-topic turn ceiling (M ≫ N) — absolute backstop, complete-only. */
+  mesh_hard_cap: number;
+  /** Mesh Workspace per-topic TTL in minutes (0 = disabled) — time backstop. */
+  mesh_topic_ttl_minutes: number;
 }
 
 export interface WindowData {

@@ -92,6 +92,24 @@ describe('performMeshSend', () => {
     expect(h.delivered).toHaveLength(0);
   });
 
+  it('a loop-control gate pauses the send: no delivery, no turn commit, no edge', async () => {
+    const h = harness(ROSTER, async () => 'delivered');
+    // Seed a topic at turn 2 so the prospective next turn is 3.
+    const start = h.router.startTopic('t-api', 'Loop');
+    if (!start.ok) throw new Error('setup');
+    h.router.bumpTurn(start.topic.id);
+    h.router.bumpTurn(start.topic.id);
+    const r = await performMeshSend(
+      { ...h.deps, gate: (_t, nextTurn) => (nextTurn > 2 ? { ok: false, reason: 'soft', turn: nextTurn, cap: 2 } : { ok: true }) },
+      { senderTabId: 't-mob', recipient: 't-api', topic: start.topic.id, message: 'one more?' },
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) { expect(r.paused).toBe(true); expect(r.pauseReason).toBe('soft'); expect(r.delivered).toBe(false); }
+    expect(h.delivered).toHaveLength(0);            // nothing injected
+    expect(h.edges).toHaveLength(0);                // no edge
+    expect(h.router.get(start.topic.id)?.turn).toBe(2); // turn not advanced
+  });
+
   it('persists once on topic creation and once when the recipient first joins', async () => {
     const h = harness(ROSTER, async () => 'delivered');
     await performMeshSend(h.deps, { senderTabId: 't-api', recipient: 't-mob', topic: 'New', message: 'hi' });

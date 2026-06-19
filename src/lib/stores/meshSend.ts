@@ -18,6 +18,7 @@
 import type { MeshTopic } from '$lib/tauri/types';
 import type { MeshRouter } from '$lib/stores/meshRouting';
 import type { DeliverResult } from '$lib/stores/agentDelivery';
+import type { LoopVerdict, LoopReason } from '$lib/stores/meshLoopControl';
 
 /** A confirmed conversation edge — emitted only on actual delivery. */
 export interface MeshEdge {
@@ -30,7 +31,7 @@ export interface MeshEdge {
 }
 
 export type MeshSendResult =
-  | { ok: true; delivered: boolean; queued: boolean; recipient: string; topic: { id: string; label: string }; note: string }
+  | { ok: true; delivered: boolean; queued: boolean; paused?: boolean; pauseReason?: LoopReason; recipient: string; topic: { id: string; label: string }; note: string }
   | { ok: false; error: string };
 
 export interface MeshSendDeps {
@@ -46,6 +47,10 @@ export interface MeshSendDeps {
   isLive: (tabId: string) => boolean;
   /** Epoch ms for the edge timestamp (injected for deterministic tests). */
   now: () => number;
+  /** Loop-control gate (§10): evaluate the prospective next turn on this topic. When it
+   *  blocks, the send neither delivers nor commits — the runaway is halted. Optional: a 1:1
+   *  bridge / a test without loop control simply omits it. */
+  gate?: (topic: MeshTopic, nextTurn: number) => LoopVerdict;
 }
 
 export async function performMeshSend(
@@ -64,8 +69,24 @@ export async function performMeshSend(
   if (!tr.ok) return { ok: false, error: tr.error };
   if (tr.created) deps.persistTopics();
 
-  // Build with the next turn number, deliver, then commit on success (no phantom turn).
+  // Loop control (§10): gate the prospective next turn. A blocked send is halted here —
+  // nothing is injected and the turn counter does not advance — so a runaway truly pauses.
   const nextTurn = tr.topic.turn + 1;
+  if (deps.gate) {
+    const verdict = deps.gate(tr.topic, nextTurn);
+    if (!verdict.ok) {
+      const summary = { id: tr.topic.id, label: tr.topic.label };
+      const note =
+        verdict.reason === 'soft'
+          ? `Topic "${tr.topic.label}" is paused at the soft turn cap (${verdict.cap}). It will not deliver until your human resumes or completes it from the mesh cockpit. Stop here and let them steer.`
+          : verdict.reason === 'hard'
+            ? `Topic "${tr.topic.label}" hit the hard turn ceiling (${verdict.cap}) — it is force-paused and can only be completed, not resumed. Tell your human this thread needs a decision or to close it.`
+            : `Topic "${tr.topic.label}" has been open past its time limit and is force-paused. Your human must resume or complete it. Stop here.`;
+      return { ok: true, delivered: false, queued: false, paused: true, pauseReason: verdict.reason, recipient: rr.role, topic: summary, note };
+    }
+  }
+
+  // Build with the next turn number, deliver, then commit on success (no phantom turn).
   const text = deps.buildEnvelope(args.senderTabId, rr.role, tr.topic, nextTurn, message);
   const status = await deps.deliver(rr.tabId, text);
   if (status === 'failed') {

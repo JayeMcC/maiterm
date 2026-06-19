@@ -9,6 +9,8 @@ import { bracketedPasteSubmit } from '$lib/utils/agentPrompt';
 import { createDeliveryController } from '$lib/stores/agentDelivery';
 import { createMeshRouter, type MeshMember, type MeshRouter } from '$lib/stores/meshRouting';
 import { performMeshSend, type MeshEdge, type MeshSendResult } from '$lib/stores/meshSend';
+import { createLoopController, type LoopReason } from '$lib/stores/meshLoopControl';
+import { preferencesStore } from '$lib/stores/preferences.svelte';
 import { error as logError, info as logInfo } from '@tauri-apps/plugin-log';
 
 /**
@@ -46,6 +48,14 @@ function createAgentMeshStore() {
       const st = claudeStateStore.getState(tabId);
       return !!st && getAdapter(workspacesStore.getTabRuntime(tabId)).isAwaitingHumanInput(st);
     },
+  });
+  // Per-topic loop control (§10): soft cap + hard ceiling + TTL, limits live from prefs.
+  const loopCtl = createLoopController({
+    limits: () => ({
+      softCap: preferencesStore.meshSoftCap,
+      hardCap: preferencesStore.meshHardCap,
+      ttlMs: preferencesStore.meshTopicTtlMinutes * 60_000,
+    }),
   });
   // Confirmed conversation edges (ring) — drives the cockpit map pulse (T6).
   const edges: MeshEdge[] = [];
@@ -194,6 +204,26 @@ function createAgentMeshStore() {
     purposes.delete(tabId);
   }
 
+  // ─── Loop-control pause inspection (for the cockpit) ────────────────────────
+
+  /** Is this topic currently paused (would its NEXT turn be gated)? Open topics only. */
+  function pauseInfo(topic: MeshTopic): { paused: boolean; reason?: LoopReason; turn: number; cap: number } {
+    if (topic.state !== 'open') return { paused: false, turn: topic.turn, cap: 0 };
+    const v = loopCtl.evaluate(topic.id, topic.turn + 1, Date.parse(topic.created_at) || Date.now(), Date.now());
+    return v.ok ? { paused: false, turn: topic.turn, cap: 0 } : { paused: true, reason: v.reason, turn: v.turn, cap: v.cap };
+  }
+
+  /** Find a topic (and its workspace) by id across all mesh workspaces. */
+  function findTopicById(topicId: string): { ws: Workspace; topic: MeshTopic } | null {
+    for (const ws of workspacesStore.workspaces) {
+      if (!ws.bridge_all) continue;
+      const router = routerFor(ws.id);
+      const topic = router?.get(topicId);
+      if (topic) return { ws, topic };
+    }
+    return null;
+  }
+
   // ─── Public API ─────────────────────────────────────────────────────────────
 
   return {
@@ -283,15 +313,19 @@ function createAgentMeshStore() {
       const router = routerFor(ws.id);
       const roster = membersOf(ws);
       const roleOf = (id: string) => roster.find((m) => m.tabId === id)?.role ?? id.slice(0, 8);
-      const topics = (router ? router.all() : []).map((t) => ({
-        id: t.id,
-        label: t.label,
-        state: t.state,
-        owner: roleOf(t.owner_tab_id),
-        ownerHandle: t.owner_tab_id,
-        participants: t.participants.map(roleOf),
-        turn: t.turn,
-      }));
+      const topics = (router ? router.all() : []).map((t) => {
+        const pause = pauseInfo(t);
+        return {
+          id: t.id,
+          label: t.label,
+          state: t.state,
+          owner: roleOf(t.owner_tab_id),
+          ownerHandle: t.owner_tab_id,
+          participants: t.participants.map(roleOf),
+          turn: t.turn,
+          ...(pause.paused ? { paused: true, pauseReason: pause.reason } : {}),
+        };
+      });
       return { workspace: ws.name, topics };
     },
 
@@ -321,6 +355,7 @@ function createAgentMeshStore() {
       const r = router.completeTopic(byTabId, topicId, isHuman);
       if (!r.ok) return { error: r.error };
       if (!r.alreadyComplete) {
+        loopCtl.clear(topicId);
         persistTopics(owningWs.id);
         // Control-plane signal: notify every participant (exempt from no-broadcast, §4.1).
         const notice = buildTopicCompleteNotice(r.topic);
@@ -333,6 +368,39 @@ function createAgentMeshStore() {
         logInfo(`agentMesh: topic ${topicId.slice(0, 8)} "${r.topic.label}" completed${isHuman ? ' (human)' : ''}`);
       }
       return { success: true, topic: { id: r.topic.id, label: r.topic.label, state: r.topic.state } };
+    },
+
+    // ─── Cockpit: loop-control resume + pause inspection (human-driven) ────────
+
+    /** Human lifts a paused topic's soft cap (and re-bases its TTL) so it flows again. */
+    resumeTopic(topicId: string): { success: true; topic: { id: string; label: string } } | { error: string } {
+      const ctx = findTopicById(topicId);
+      if (!ctx) return { error: `Topic not found: ${topicId}` };
+      if (ctx.topic.state === 'complete') return { error: 'Topic is already complete.' };
+      loopCtl.resume(topicId, Date.now());
+      bump();
+      logInfo(`agentMesh: topic ${topicId.slice(0, 8)} "${ctx.topic.label}" resumed by human`);
+      return { success: true, topic: { id: ctx.topic.id, label: ctx.topic.label } };
+    },
+
+    /** Pause state of a topic (for the cockpit resume button). */
+    topicPauseInfo(topicId: string): { paused: boolean; reason?: LoopReason; turn: number; cap: number } {
+      void version;
+      const ctx = findTopicById(topicId);
+      return ctx ? pauseInfo(ctx.topic) : { paused: false, turn: 0, cap: 0 };
+    },
+
+    /** All currently-paused open topics in a workspace (for the cockpit banner). */
+    pausedTopics(wsId: string): { id: string; label: string; reason: LoopReason; turn: number; cap: number }[] {
+      void version;
+      const router = routerFor(wsId);
+      if (!router) return [];
+      const out: { id: string; label: string; reason: LoopReason; turn: number; cap: number }[] = [];
+      for (const t of router.all()) {
+        const p = pauseInfo(t);
+        if (p.paused && p.reason) out.push({ id: t.id, label: t.label, reason: p.reason, turn: p.turn, cap: p.cap });
+      }
+      return out;
     },
 
     // ─── MCP tool: sendToBridgedAgent (mesh form) ─────────────────────────────
@@ -355,6 +423,8 @@ function createAgentMeshStore() {
           persistTopics: () => persistTopics(ws.id),
           isLive: (tabId) => !!claudeStateStore.getState(tabId),
           now: () => Date.now(),
+          gate: (topic, nextTurn) =>
+            loopCtl.evaluate(topic.id, nextTurn, Date.parse(topic.created_at) || Date.now(), Date.now()),
         },
         { senderTabId, recipient: args.recipient, topic: args.topic, message: args.message },
       );
@@ -422,6 +492,7 @@ function createAgentMeshStore() {
       for (const u of unlisteners) u();
       unlisteners.length = 0;
       deliveryCtl.destroy();
+      loopCtl.reset();
       routers.clear();
       purposes.clear();
       edges.length = 0;

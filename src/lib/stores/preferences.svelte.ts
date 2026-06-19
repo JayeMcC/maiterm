@@ -71,6 +71,9 @@ function createPreferencesStore() {
   let autoCheckUpdates = $state(true);
   let quickOpenShowHidden = $state(false);
   let quickOpenShowIgnored = $state(false);
+  let meshSoftCap = $state(12);
+  let meshHardCap = $state(40);
+  let meshTopicTtlMinutes = $state(30);
 
   return {
     /** Resolves once the initial load() has completed. */
@@ -139,6 +142,9 @@ function createPreferencesStore() {
     get autoCheckUpdates() { return autoCheckUpdates; },
     get quickOpenShowHidden() { return quickOpenShowHidden; },
     get quickOpenShowIgnored() { return quickOpenShowIgnored; },
+    get meshSoftCap() { return meshSoftCap; },
+    get meshHardCap() { return meshHardCap; },
+    get meshTopicTtlMinutes() { return meshTopicTtlMinutes; },
 
     async load() {
       const prefs = await commands.getPreferences();
@@ -217,6 +223,9 @@ function createPreferencesStore() {
       autoCheckUpdates = prefs.auto_check_updates ?? true;
       quickOpenShowHidden = prefs.quick_open_show_hidden ?? false;
       quickOpenShowIgnored = prefs.quick_open_show_ignored ?? false;
+      meshSoftCap = prefs.mesh_soft_cap ?? 12;
+      meshHardCap = prefs.mesh_hard_cap ?? 40;
+      meshTopicTtlMinutes = prefs.mesh_topic_ttl_minutes ?? 30;
       _resolveReady();
     },
 
@@ -532,6 +541,21 @@ function createPreferencesStore() {
       await this.save();
     },
 
+    async setMeshSoftCap(value: number) {
+      meshSoftCap = Math.max(1, Math.round(value));
+      await this.save();
+    },
+
+    async setMeshHardCap(value: number) {
+      meshHardCap = Math.max(meshSoftCap, Math.round(value));
+      await this.save();
+    },
+
+    async setMeshTopicTtlMinutes(value: number) {
+      meshTopicTtlMinutes = Math.max(0, Math.round(value));
+      await this.save();
+    },
+
     async addCustomTheme(t: Theme) {
       customThemes = [...customThemes, t];
       await this.save();
@@ -619,6 +643,9 @@ function createPreferencesStore() {
       autoCheckUpdates = prefs.auto_check_updates ?? true;
       quickOpenShowHidden = prefs.quick_open_show_hidden ?? false;
       quickOpenShowIgnored = prefs.quick_open_show_ignored ?? false;
+      meshSoftCap = prefs.mesh_soft_cap ?? 12;
+      meshHardCap = prefs.mesh_hard_cap ?? 40;
+      meshTopicTtlMinutes = prefs.mesh_topic_ttl_minutes ?? 30;
     },
 
     async save() {
@@ -688,6 +715,9 @@ function createPreferencesStore() {
         auto_check_updates: autoCheckUpdates,
         quick_open_show_hidden: quickOpenShowHidden,
         quick_open_show_ignored: quickOpenShowIgnored,
+        mesh_soft_cap: meshSoftCap,
+        mesh_hard_cap: meshHardCap,
+        mesh_topic_ttl_minutes: meshTopicTtlMinutes,
       };
       await commands.setPreferences(prefs);
     }

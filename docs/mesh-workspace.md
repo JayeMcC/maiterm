@@ -463,10 +463,14 @@ Synthesized from findings. P1 blocks the phase; P2 same-phase; P3 follow-up.
   - Verify: `meshRouting.test.ts` (18) + `meshSend.test.ts` (8) — unknown/ambiguous recipient →
     error (no silent drop), self-send guard, dedup, reject-on-completed, edge-on-delivered-only,
     routed-to-recipient-queue (real-controller FIFO integration).
-- [ ] **T4 (P1, human ~1d / CC ~minutes)** — loop control — soft per-topic cap (pause/resume) +
-  hard TTL ceiling; prefs for `N`/`M`.
-  - Surfaced by: D4, Codex #4. Files: `agentDelivery.ts`, prefs.
-  - Verify: pause-at-N + resume + TTL backstop tests.
+- [x] **T4 (P1) — DONE** — loop control — pure `meshLoopControl.ts`: soft cap N (liftable by
+  human resume), hard ceiling M (complete-only backstop), TTL (time backstop). Gated into
+  `meshSend.ts` (a paused send neither injects nor advances the turn). Prefs `mesh_soft_cap`
+  (12), `mesh_hard_cap` (40), `mesh_topic_ttl_minutes` (30) on Rust + TS + the prefs store.
+  Cockpit APIs on `agentMesh`: `resumeTopic`, `topicPauseInfo`, `pausedTopics`; `listTopics`
+  surfaces `paused`/`pauseReason`. (Prefs UI lands with the cockpit in T6.)
+  - Verify: `meshLoopControl.test.ts` (8) — pause-at-N, resume-lifts, hard-can't-resume,
+    TTL pause + re-base, precedence (hard > ttl > soft); `meshSend.test.ts` paused-send case.
 - [ ] **T5 (P1, human ~1-2d / CC ~1 session)** — priming + status — opener injects role/roster/
   topic-rules/noteId; pre-create one status note per role; `NEEDS DECISION:` toast scan.
   - Surfaced by: §6, §8. Files: mesh store, `buildOpener`, workspace-notes.

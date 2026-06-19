@@ -595,6 +595,18 @@ fn default_notify_min_duration() -> u32 {
     5
 }
 
+fn default_mesh_soft_cap() -> u32 {
+    12
+}
+
+fn default_mesh_hard_cap() -> u32 {
+    40
+}
+
+fn default_mesh_topic_ttl_minutes() -> u32 {
+    30
+}
+
 fn default_notification_mode() -> String {
     "auto".to_string()
 }
@@ -938,6 +950,20 @@ pub struct Preferences {
     /// Quick Open: show gitignored files by default
     #[serde(default)]
     pub quick_open_show_ignored: bool,
+
+    /// Mesh Workspace soft per-topic turn cap (N): delivery pauses at this many turns on a
+    /// topic, surfacing a resume/complete prompt in the cockpit (docs/mesh-workspace.md §10).
+    #[serde(default = "default_mesh_soft_cap")]
+    pub mesh_soft_cap: u32,
+    /// Mesh Workspace hard per-topic turn ceiling (M ≫ N): an absolute backstop — at M turns
+    /// the topic force-pauses and cannot be resumed (only completed) so an unwatched runaway
+    /// can't run unbounded.
+    #[serde(default = "default_mesh_hard_cap")]
+    pub mesh_hard_cap: u32,
+    /// Mesh Workspace per-topic TTL in minutes (0 = disabled): a topic open longer than this
+    /// (since creation or last resume) force-pauses — the away-from-keyboard time backstop.
+    #[serde(default = "default_mesh_topic_ttl_minutes")]
+    pub mesh_topic_ttl_minutes: u32,
 }
 
 impl Default for Preferences {
@@ -1011,6 +1037,9 @@ impl Default for Preferences {
             auto_check_updates: true,
             quick_open_show_hidden: false,
             quick_open_show_ignored: false,
+            mesh_soft_cap: default_mesh_soft_cap(),
+            mesh_hard_cap: default_mesh_hard_cap(),
+            mesh_topic_ttl_minutes: default_mesh_topic_ttl_minutes(),
         }
     }
 }
