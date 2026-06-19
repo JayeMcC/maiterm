@@ -79,6 +79,12 @@
     await navigateToTab(tabId);
     onclose();
   }
+  const stageActive = $derived.by(() => { void agentMeshStore.version; return ws ? agentMeshStore.isStageView(ws.id) : false; });
+  function toggleStage() {
+    if (!ws) return;
+    agentMeshStore.toggleStageView(ws.id);
+    onclose(); // get out of the way so the stage layout is visible
+  }
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') { e.stopPropagation(); onclose(); }
@@ -218,6 +224,7 @@
         </section>
 
         <footer class="cockpit-footer">
+          <button class="mini" onclick={toggleStage}>{stageActive ? 'Exit stage view' : 'Stage view'}</button>
           <button class="mini ghost danger" disabled={busy} onclick={disableMesh}>Disable Mesh</button>
         </footer>
       {/if}

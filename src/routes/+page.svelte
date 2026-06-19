@@ -3,10 +3,12 @@
   import { SvelteSet } from 'svelte/reactivity';
   import { workspacesStore } from '$lib/stores/workspaces.svelte';
   import { agentBridgeStore } from '$lib/stores/agentBridge.svelte';
+  import { agentMeshStore } from '$lib/stores/agentMesh.svelte';
   import { terminalsStore } from '$lib/stores/terminals.svelte';
   import { preferencesStore } from '$lib/stores/preferences.svelte';
   import WorkspaceSidebar from '$lib/components/workspace/WorkspaceSidebar.svelte';
   import SplitContainer from '$lib/components/pane/SplitContainer.svelte';
+  import MeshStageView from '$lib/components/MeshStageView.svelte';
   import TerminalPane from '$lib/components/terminal/TerminalPane.svelte';
   import EditorPane from '$lib/components/editor/EditorPane.svelte';
   import DiffPane from '$lib/components/editor/DiffPane.svelte';
@@ -222,7 +224,13 @@
       <main class="main-content">
         {#if workspacesStore.activeWorkspace}
           {@const workspace = workspacesStore.activeWorkspace}
-          {#if workspace.split_root}
+          {#if workspace.bridge_all && agentMeshStore.isStageView(workspace.id)}
+            <!-- Mesh stage/filmstrip layout replaces the split tree for this workspace.
+                 Terminals portal into its stage/filmstrip slots (data-terminal-slot). -->
+            {#key workspace.id}
+              <MeshStageView workspaceId={workspace.id} />
+            {/key}
+          {:else if workspace.split_root}
             {#key workspace.id}
               <SplitContainer
                 node={workspace.split_root}
@@ -277,6 +285,7 @@
              Lazy: only mounts terminals once a workspace is first activated. -->
         <div class="terminal-host">
           {#each workspacesStore.workspaces.filter(w => activatedWorkspaceIds.has(w.id)) as ws (ws.id)}
+            {@const meshStage = ws.id === workspacesStore.activeWorkspaceId && ws.bridge_all && agentMeshStore.isStageView(ws.id)}
             {#each ws.panes as pane (pane.id)}
               {#each pane.tabs as tab (tab.id)}
                 {#if tab.tab_type === 'diff' && tab.diff_context}
@@ -284,7 +293,7 @@
                     workspaceId={ws.id}
                     paneId={pane.id}
                     tabId={tab.id}
-                    visible={tab.id === pane.active_tab_id && ws.id === workspacesStore.activeWorkspaceId}
+                    visible={!meshStage && tab.id === pane.active_tab_id && ws.id === workspacesStore.activeWorkspaceId}
                     diffContext={tab.diff_context}
                   />
                 {:else if tab.tab_type === 'editor' && tab.editor_file}
@@ -292,7 +301,7 @@
                     workspaceId={ws.id}
                     paneId={pane.id}
                     tabId={tab.id}
-                    visible={tab.id === pane.active_tab_id && ws.id === workspacesStore.activeWorkspaceId}
+                    visible={!meshStage && tab.id === pane.active_tab_id && ws.id === workspacesStore.activeWorkspaceId}
                     editorFile={tab.editor_file}
                   />
                 {:else if tab.tab_type === 'terminal' && activatedTabIds.has(tab.id)}
@@ -301,7 +310,7 @@
                     paneId={pane.id}
                     tabId={tab.id}
                     existingPtyId={terminalsStore.get(tab.id) ? tab.pty_id : null}
-                    visible={tab.id === pane.active_tab_id && ws.id === workspacesStore.activeWorkspaceId}
+                    visible={meshStage ? agentMeshStore.isOnStage(tab.id) : (tab.id === pane.active_tab_id && ws.id === workspacesStore.activeWorkspaceId)}
                     restoreCwd={tab.restore_cwd}
                     restoreSshCommand={tab.restore_ssh_command}
                     restoreRemoteCwd={tab.restore_remote_cwd}

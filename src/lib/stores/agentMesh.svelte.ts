@@ -48,6 +48,10 @@ function createAgentMeshStore() {
   const statusNoteIds = new Map<string, string>();
   // Last "NEEDS DECISION" text surfaced per status note, to dedupe the decision toast.
   const lastDecision = new Map<string, string>();
+  // Stage-view UI state per mesh workspace (T7): which two members are on the stage, and
+  // whether the stage/filmstrip layout is active (vs normal splits). In-memory UI state.
+  interface StageState { active: boolean; left: string | null; right: string | null; }
+  const stage = new Map<string, StageState>();
   // Recipient-keyed FIFO mailbox, shared core with the 1:1 bridge (separate instance).
   const deliveryCtl = createDeliveryController({
     inject: (tabId, text) => injectPrompt(tabId, text),
@@ -413,6 +417,62 @@ function createAgentMeshStore() {
       return workspacesStore.workspaces.filter((w) => w.bridge_all).map((w) => ({ id: w.id, name: w.name }));
     },
 
+    // ─── Stage view (T7): two-panel stage + scaled filmstrip ──────────────────
+
+    /** Is the stage/filmstrip layout active for this workspace? */
+    isStageView(wsId: string): boolean {
+      void version;
+      return !!stage.get(wsId)?.active;
+    },
+
+    /** Current stage occupants (left/right tabIds), validated against live membership. */
+    stageSlots(wsId: string): { left: string | null; right: string | null } {
+      void version;
+      const s = stage.get(wsId);
+      if (!s) return { left: null, right: null };
+      const ws = getWorkspace(wsId);
+      const memberIds = new Set(ws ? membersOf(ws).map((m) => m.tabId) : []);
+      return { left: s.left && memberIds.has(s.left) ? s.left : null, right: s.right && memberIds.has(s.right) ? s.right : null };
+    },
+
+    /** Turn the stage layout on/off for a mesh workspace; seeds the two slots on first on. */
+    toggleStageView(wsId: string) {
+      const ws = getWorkspace(wsId);
+      if (!ws || !ws.bridge_all) return;
+      const s = stage.get(wsId) ?? { active: false, left: null, right: null };
+      s.active = !s.active;
+      if (s.active) {
+        const members = membersOf(ws).map((m) => m.tabId);
+        if (!s.left || !members.includes(s.left)) s.left = members[0] ?? null;
+        if (!s.right || !members.includes(s.right) || s.right === s.left) s.right = members.find((m) => m !== s.left) ?? null;
+      }
+      stage.set(wsId, s);
+      bump();
+    },
+
+    /** Promote a member to a stage slot (click → left, shift+click → right). The previous
+     *  occupant of that slot falls back to the filmstrip; promoting a tab already on the
+     *  other slot swaps the two so a terminal is never on both. */
+    promoteToStage(wsId: string, tabId: string, side: 'left' | 'right') {
+      const s = stage.get(wsId);
+      if (!s) return;
+      const other = side === 'left' ? 'right' : 'left';
+      if (s[other] === tabId) s[other] = s[side]; // swap rather than duplicate
+      s[side] = tabId;
+      stage.set(wsId, s);
+      bump();
+    },
+
+    /** Is this tab currently on a stage slot of an ACTIVE stage view? Drives `visible` in
+     *  +page so only staged terminals fit-to-size (filmstrip tiles stay unfit → no reflow). */
+    isOnStage(tabId: string): boolean {
+      void version;
+      const ws = meshWorkspaceForTab(tabId);
+      if (!ws) return false;
+      const s = stage.get(ws.id);
+      return !!s?.active && (s.left === tabId || s.right === tabId);
+    },
+
     // ─── MCP tool: listBridgedPeers ───────────────────────────────────────────
     listPeers(tabId: string) {
       const ws = meshWorkspaceForTab(tabId);
@@ -558,6 +618,7 @@ function createAgentMeshStore() {
       const nid = statusNoteIds.get(tabId);
       statusNoteIds.delete(tabId);
       if (nid) lastDecision.delete(nid);
+      for (const s of stage.values()) { if (s.left === tabId) s.left = null; if (s.right === tabId) s.right = null; }
       bump();
     },
 
@@ -570,6 +631,7 @@ function createAgentMeshStore() {
       if (primed.has(oldTabId)) { primed.delete(oldTabId); primed.add(newTabId); }
       const nid = statusNoteIds.get(oldTabId);
       if (nid !== undefined) { statusNoteIds.delete(oldTabId); statusNoteIds.set(newTabId, nid); }
+      for (const s of stage.values()) { if (s.left === oldTabId) s.left = newTabId; if (s.right === oldTabId) s.right = newTabId; }
       bump();
     },
 
@@ -635,6 +697,7 @@ function createAgentMeshStore() {
       primed.clear();
       statusNoteIds.clear();
       lastDecision.clear();
+      stage.clear();
       edges.length = 0;
     },
   };

@@ -216,6 +216,18 @@ transform" implies. Both are validated by a short spike that gates the view phas
 live renderers or a heavy filmstrip prove costly, fall back to snapshot-frozen filmstrip
 tiles (lose the live-dot signal) or a single live stage panel.
 
+**SPIKE OUTCOME (resolved — T7 feasible):** Risk (a) is moot. The single-foreground-renderer
+assumption was a property of the dropped WebGL renderer (one GPU context); the app's DEFAULT
+is now xterm's DOM renderer (`terminal_renderer` pref — see terminal/CLAUDE.md), which has no
+per-context limit, and the portal already renders ALL TerminalPanes flat at `+page` level with
+every one consuming its `term-frame` events. So N terminals are already "live" simultaneously;
+two visible stage panels is not a new capability, just two attached slots. Risk (b) is bounded:
+the mesh targets a few agents (3–6), so N scaled DOM grids is cheap, and per D5 the filmstrip
+uses `transform: scale` (no cols reflow). Net: build T7 on the existing portal/slot mechanism
+(two stage slot divs + a scaled filmstrip row, promote/demote = re-`attachToSlot`), no
+renderer-ownership rework; keep the snapshot-frozen fallback in reserve only if a large mesh
+ever stresses the DOM.
+
 ---
 
 ## 8. Status board (workspace notes)
@@ -493,8 +505,19 @@ Synthesized from findings. P1 blocks the phase; P2 same-phase; P3 follow-up.
     `preferences/+page.svelte`.
   - Verify: `meshGraph.test.ts` (7) — circle layout, active flag, owner-star edges wired to
     node positions, completed/absent exclusion, recent-pulse window, paused flag.
-- [ ] **T7 (P2, spike first)** — mesh view — stage + filmstrip, CSS-scale swap, locked 50/50.
-  - Surfaced by: §7, D7. **Gated on the §7.4 renderer/perf spike.**
+- [x] **T7 (P2) — DONE (spike passed, see §7.4)** — mesh view — `MeshStageView.svelte`: two
+  locked-50/50 stage slots + a CSS-scaled filmstrip row, built on the existing portal/slot
+  mechanism (`data-terminal-slot` + `terminal-slot-ready`). Click a tile → left panel,
+  Shift+click → right; an Exit button returns to normal splits. `+page` swaps `SplitContainer`
+  → `MeshStageView` for a mesh workspace in stage view and drives `visible` by stage membership
+  (`agentMesh.isOnStage`), so only staged terminals fit-to-size — filmstrip tiles stay unfit
+  (no reflow), at most one resize per terminal's first stage appearance (D5-acceptable). Stage
+  state (`active`/`left`/`right`) lives in `agentMesh`, cleaned up on tab close / remap /
+  disable. Toggle from the cockpit footer. **Verified in the running dev build:** normal↔stage
+  round-trips cleanly with no layout breakage; the empty-mesh chrome (two panels, hints,
+  filmstrip, Exit) renders on-theme. (Populated multi-agent promote/demote relies on the proven
+  `attachToSlot` portal path; not exercised live to avoid spawning/injecting throwaway agents.)
+  - Surfaced by: §7, D7.
 
 ### 16.8 Parallelization
 
