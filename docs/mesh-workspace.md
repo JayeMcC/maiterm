@@ -73,9 +73,15 @@ workspace flag, the mesh view, and the conversation-graph visualization.
 ### 4.1 Ownership (decided)
 
 **The agent that starts a conversation owns its topic.** It sets the topic on the opening
-message; that topic id propagates through every reply in the thread. The owner — and only
-the owner — can **close/complete** the topic, which broadcasts a completion signal to every
-agent that participated, instructing them to mark it done.
+message; that topic id propagates through every reply in the thread. The owner can
+**close/complete** the topic — and so can the **human**, from the cockpit (eng review D8;
+this fixes the orphaned-topic case when the owner's tab is closed, decision 7). Completion
+emits a `⟦TOPIC COMPLETE⟧` notice to every participant. That notice is a **maiTerm
+control-plane signal, explicitly exempt from the no-broadcast rule** (§5): it is not an
+agent crafting messages to N peers, it carries no conversational payload, and it is
+delivered through the same per-recipient FIFO queue as everything else (so ordering/retry
+semantics are identical). After a topic is complete, the send tool **rejects** further
+sends on it (enforced at the tool boundary, not by trusting the model — Codex #9).
 
 Rationale: a single owner per topic prevents drift (no two agents coining
 `auth-bug` vs `auth bug` for the same thread) and gives a clear lifecycle authority.
@@ -122,11 +128,16 @@ suggests the most recent active topic as the likely default in tool descriptions
 
 - **No broadcast.** Every message targets exactly one recipient and must be crafted for
   that recipient. This is the primary defense against fan-out storms.
-- **Addressing.** The send tool gains a `recipient` (role name or tab id) and a required
-  `topic`. `listBridgedPeers` returns `{ role, tabId, cwd, purpose }` for each member so the
-  agent addresses by stable handle.
-- **Clarification is just a message.** If a role name is ambiguous, a peer asks the agent
-  directly over the mesh — no special infra.
+- **Addressing.** The send tool gains a `recipient` and a `topic`. Both are **optional on
+  the shared `sendToBridgedAgent` schema** and **required-by-context at runtime** (mesh →
+  required, 1:1 → recipient implicit). This keeps the existing 1:1 tool call valid and
+  untouched (Codex #1; forced by eng review D2). `recipient` resolves against a **stable,
+  maiTerm-minted handle**; the human-editable role name is the *display* label, not the
+  routing key, so a rename/duplicate/casing change can't misroute (Codex #2).
+  `listBridgedPeers` returns `{ handle, role, tabId, cwd, purpose }` per member.
+- **Clarification is just a message.** If a role label is ambiguous to a peer, it asks the
+  agent directly over the mesh — but routing itself never depends on the label, only the
+  handle, so a send can't silently misroute on an ambiguous name.
 - **Envelope.** Extends the existing format:
 
   ```
@@ -163,24 +174,26 @@ suggests the most recent active topic as the likely default in tool descriptions
 - **Swap:** click a filmstrip tile → promote to the **left** stage slot; shift+click →
   promote to the **right** slot. The demoted occupant returns to the filmstrip.
 
-### 7.2 The fixed-cols invariant (critical)
+### 7.2 Cols handling (best-effort, not a hard invariant)
 
-Changing a terminal's column count mid-stream makes Claude Code re-render its whole
-transcript, permanently duplicating scrollback blocks (documented project pitfall). The
-mesh view must therefore **never change a terminal's cols when shifting layout.**
+Changing a terminal's column count mid-stream makes Claude Code re-render its transcript,
+duplicating scrollback blocks (documented project pitfall). The mesh view should **avoid
+gratuitous cols changes** when shuffling tiles — but per eng review D5 this is a best-effort
+preference, **not** a hard guarantee we engineer against. A little duplicated history now and
+then is an accepted tradeoff; we will not add a `resize_pty` guard that would break genuine
+whole-window resizes.
 
 Rules:
 
-- Every tile — both stage panels and every filmstrip thumbnail — renders at **one shared
-  cols value** (the stage-panel width). The filmstrip is that same grid under a CSS scale
-  transform. Promote = scale `0.25 → 1.0`. No reflow, no `resize_pty`, ever.
-- `fitWithPadding` is **suppressed** in mesh view; cols are driven from a fixed mesh-panel
-  width.
-- The stage divider is **locked at 50/50** (no drag) so left and right are identical width —
-  otherwise a left↔right swap would change cols. (Locked for v1; a coalesced/debounced
-  draggable divider could come later.)
-- Member join/leave reflows **only the filmstrip row**; stage cols stay constant regardless
-  of member count (thumbnails just get smaller via scale).
+- Prefer **CSS scale** for tile↔stage transitions: tiles render near the stage-panel width
+  and the filmstrip is that grid under a `transform: scale(~0.25)`. Promote = scale, not
+  reflow. This keeps layout shuffles from firing width changes — but it's an optimization,
+  not a tripwire.
+- `fitWithPadding` is **not** run on layout shuffles in mesh view. Genuine window resizes
+  still flow through the normal (coalesced) resize path untouched.
+- The stage divider is **locked at 50/50** for v1 — a simplicity call (no drag handling, no
+  per-swap width math), not a correctness requirement.
+- Member join/leave reflows **only the filmstrip row**; the stage stays put.
 
 ### 7.3 Why this is cheap
 
@@ -194,6 +207,14 @@ Only the foreground tab gets a WebGL context, and a 0.25-scale terminal is unrea
 anyway. So filmstrip tiles are **throttled or frozen** — apply frames on activity-dot change
 rather than at 60fps — and only the two staged panels stream live. The thumbnail's job is
 "what color is the dot," not legibility.
+
+**Open risks to spike before Phase 2 (Codex #10, #11):** (a) the app currently assumes a
+single foreground terminal owns the live renderer; **two** simultaneously-live stage panels
+may need renderer-ownership changes deeper than view-only CSS. (b) N full terminal grids
+scaled down (each with its own buffer/scrollback/DOM) may cost more than "it's just a CSS
+transform" implies. Both are validated by a short spike that gates the view phase — if two
+live renderers or a heavy filmstrip prove costly, fall back to snapshot-frozen filmstrip
+tiles (lose the live-dot signal) or a single live stage panel.
 
 ---
 
@@ -230,13 +251,20 @@ rather than at 60fps — and only the two staged panels stream live. The thumbna
 ## 10. Loop control
 
 No-broadcast + topic scoping + the "don't reply just to acknowledge" guard shrink runaway
-risk substantially. A↔B ping-pong on one topic is still possible, but:
+risk, but they do not bound it — A↔B ping-pong on one topic can still burn tokens and thrash
+the recipient PTYs while nobody is watching. So loop control is **v1, not deferred** (eng
+review D4 + Codex #4), in three layers:
 
-- The human is watching the board; runaways are *visible* via edge turn counts.
-- Esc on a staged panel interrupts immediately (existing behavior).
+1. **Soft per-topic turn cap (primary).** At `N` turns on a topic, delivery pauses and the
+   cockpit surfaces "topic paused at N turns — resume / complete?". The human resumes or
+   completes. Reuses the per-topic turn counter already tracked for the map (no new state).
+2. **Hard TTL ceiling (backstop).** A topic that reaches a hard turn ceiling `M` (`M ≫ N`)
+   or has no activity for a TTL is force-paused regardless — a backstop for the
+   away-from-keyboard case so an unwatched runaway can't run unbounded.
+3. **Visibility + interrupt (always).** Edge turn counts on the map make runaways visible;
+   Esc on a staged panel interrupts immediately (existing behavior).
 
-For v1, visibility + manual interrupt is the control. Per-topic turn **budgets** are
-deferred until observed need.
+`N` and `M` are preferences with sane defaults, not hardcoded.
 
 ---
 
@@ -325,12 +353,149 @@ Mirror the structs in `tauri/types.ts`; extend `agentBridge.svelte.ts`:
 
 ## 15. Phasing
 
-1. **Graph on existing 1:1 bridges.** Emit edge events, draw the map/dots. Validates the
-   who-talked-to-whom UX with zero routing risk. Highest magic-per-effort.
-2. **N:M mesh core.** `bridge_all` workspace, roster + addressing, topic layer
-   (create/propagate/complete), required role names, opener priming, status-note wiring.
-3. **Mesh view.** Two-panel stage + filmstrip, fixed-cols + CSS-scale, locked divider,
-   notes drawer, swap interaction.
+Reordered per eng review D7 (Codex #14/#15): build the mesh CORE first to retire the real
+system risk; the graph rides along nearly free because edge events live in `deliver()`. The
+elaborate view is last (its perf/renderer questions, §7.4, are the most uncertain work).
 
-Fastest end-to-end proof: a 3-agent roundtable in one mesh workspace, fixed-size tiles (no
-width changes), roster + topic tools, status-note board, and the live edge overlay.
+1. **Mesh core (headless) + graph.** Extract the shared delivery core out of `agentBridge`
+   (regression-tested against the 1:1 FIFO behavior); `bridge_all` workspace, derived
+   roster + addressing (stable handle behind the display role-name), topic layer
+   (create-on-first-send with normalized-label dedup, propagate, complete, reject-on-
+   completed), soft cap + hard TTL, opener priming, status-note wiring. Emit conversation-
+   edge events in `deliver()` and render the map/dots in the cockpit drawer. Agents run in
+   normal tabs/splits for this phase — no custom layout yet. This slice is genuinely usable
+   on its own (N:M agents talking, human reads the board) and proves every hard part.
+2. **Mesh view.** Two-panel stage + scaled filmstrip, CSS-scale promote/demote, locked
+   50/50 divider, swap interaction. Gated on a quick spike validating §7.4 (two live stage
+   renderers + N scaled filmstrip grids) before committing to the layout.
+
+Fastest end-to-end proof: a 3-agent roundtable in one mesh workspace, roster + topic tools,
+status-note board, and the live edge overlay — all in Phase 1, agents in normal splits.
+
+---
+
+## 16. Engineering Review Outcome (/plan-eng-review)
+
+### 16.1 Decisions
+
+| # | Decision | Choice |
+|---|---|---|
+| D1 | Build sequencing | Phase it (refined by D7). |
+| D2 | Mesh routing | **Derived roster + shared delivery core.** Roster = named tabs in the `bridge_all` workspace (not persisted per-tab). Extract delivery map + deliver/flush/deliverable/cooldown + envelope + priming out of `agentBridge` into a shared `agentDelivery` module both 1:1 and mesh consume. 1:1 persistence untouched. |
+| D3 | Topic storage | **Model on `WorkspaceNote`.** Topic = first-class object persisted as `Vec<MeshTopic>` on `Workspace`, mirroring the `workspace_notes` CRUD/MCP-tool pattern. |
+| D4 | Loop control | **Soft per-topic turn cap** (pause + resume) as primary, **hard TTL/ceiling backstop** for the unwatched case (Codex #4). v1, not deferred. See §10. |
+| D5 | Cols handling | **Best-effort CSS-scale, no hard guard.** Whole-window resizes flow normally; occasional duplicated history is an accepted tradeoff. See §7.2. |
+| D6 | Outside voice | Ran Codex (gpt-5.5). 15 findings — folded below. |
+| D7 | Phasing | **Core-first, graph rides along, view last** (Codex #14/#15). See §15. |
+| D8 | Human controls | **Human can complete any topic** from the cockpit (one minimal mesh control) — resolves orphaned topics (Codex #3). See §4.1. |
+
+### 16.2 Codex folds (resolved, baked into the sections above)
+
+- **#1 tool compat** → `recipient`/`topic` optional on the shared tool, required-by-context at runtime (§5).
+- **#2 fragile names** → route by stable minted handle; role name is display only (§5).
+- **#5 no-broadcast vs completion** → completion is a control-plane signal, explicitly exempt, same FIFO delivery (§4.1).
+- **#7 create race/dup** → create-on-first-send with **normalized-label dedup** (reuse an open topic whose normalized label matches) (§15 P1).
+- **#9 model compliance** → **reject sends on a completed topic** at the tool boundary (§4.1).
+- **#4 loop control** → hard TTL ceiling added above the soft cap (§10).
+
+### 16.3 Deferred with eyes open (NOT in scope for v1)
+
+| Item | Rationale | Tracked |
+|---|---|---|
+| Topic-aware delivery prioritization (Codex #8: one noisy topic head-of-line-blocks urgent msgs to the same agent via per-recipient FIFO) | Acceptable for a few agents with the soft cap bounding any one topic; revisit if starvation observed. | TODO |
+| Structured status record vs freeform notes (Codex #12) | v1 uses workspace notes with a `NEEDS DECISION:` line convention the toast scans; a structured `MeshStatus` record is better for badges/filtering but more build. | TODO |
+| Two-live-renderer + filmstrip DOM cost (Codex #10/#11) | Gated by a spike before the view phase (§7.4); fallbacks defined. | §7.4 / Phase 2 gate |
+| Ownership delegation (Codex #6) | D8's human-complete covers the orphan case; auto-delegation deferred unless fan-out makes it painful. | TODO |
+| Draggable stage divider | Locked 50/50 for v1 simplicity (§7.2). | Future |
+| Multi-instance / server-authoritative topics | Single local app instance; frontend-mutated registry is sufficient. | Future |
+
+### 16.4 What already exists (reuse, not rebuild)
+
+See §2. Net: the delivery queue, envelopes, persistence/self-heal, priming, portal rendering,
+workspace-notes + tools, `SplitNode` 50/50 split, and `forkSessionIntoSplit` are reused. The
+delivery-core **extraction** (D2) is the one change to existing code, and it is a refactor of
+the working 1:1 path — covered by a mandatory regression test (16.6).
+
+### 16.5 Failure modes
+
+| Codepath | Failure | Test? | Error handling | Visible? |
+|---|---|---|---|---|
+| `deliver()` edge emit | edge fires on `queued` → phantom map edge | yes (emit on `delivered` only) | n/a | n/a |
+| delivery-core extraction | 1:1 FIFO order regresses | **REGRESSION-CRITICAL** | n/a | would be silent → test mandatory |
+| `sendToBridgedAgent` mesh | unknown recipient handle | yes | **clear tool error + roster** (no silent drop) | yes |
+| `MeshTopic` persistence | serde `skip_serializing_if` null/undefined drift (documented pitfall) | yes (round-trip) | field-by-field `?? null` compare | n/a |
+| soft cap | never resumes → topic wedged | yes (resume path) | hard TTL backstop | yes (cockpit) |
+| completed topic | agent keeps sending | yes | tool rejects send | yes (tool error) |
+
+**Critical gap guard:** unknown-recipient must return a clear error with the roster — never a
+silent drop. This is the one path that would otherwise fail silently.
+
+### 16.6 Test plan (coverage contract)
+
+Built alongside the code, not deferred. **Mandatory regression (IRON RULE):** the
+`agentDelivery` extraction ships with a test proving the 1:1 bridge still delivers strictly
+FIFO (locks in `e3d4eb8`). Phase-1 (Rust unit): topic create/dedup/complete/owner-only +
+human-complete, reject-on-completed, roster derivation (join/close/rename/non-agent-exclude),
+soft-cap pause/resume, serde round-trip. Phase-1 (TS): routing (missing/unknown recipient →
+error; self-send guard; routed to recipient queue), edge-event-on-delivered-only. Phase-2
+(component): attachToSlot swap persists the terminal; layout shuffle does not refit; drawer
+overlay does not refit.
+
+### 16.7 Implementation Tasks
+
+Synthesized from findings. P1 blocks the phase; P2 same-phase; P3 follow-up.
+
+- [ ] **T1 (P1, human ~3d / CC ~1-2 sessions)** — delivery core — extract `delivery`/queue/
+  envelope/priming into a shared `agentDelivery` module; `agentBridge` consumes it.
+  - Surfaced by: D2. Files: `src/lib/stores/agentBridge.svelte.ts`, new `agentDelivery.ts`.
+  - Verify: **regression test** — 1:1 bridge delivers FIFO (e3d4eb8) unchanged.
+- [ ] **T2 (P1, human ~2-3d / CC ~1 session)** — topics — `MeshTopic` on `Workspace` (model
+  on `workspace_notes`); create-on-first-send + normalized-label dedup; complete (owner +
+  human); reject-on-completed.
+  - Surfaced by: D3, D8, Codex #7/#9. Files: `state/workspace.rs`, `commands/`, `tauri/types.ts`.
+  - Verify: Rust unit suite (16.6).
+- [ ] **T3 (P1, human ~2-3d / CC ~1 session)** — routing — `bridge_all` flag; derived roster;
+  stable handles; `sendToBridgedAgent` optional-args + runtime mesh validation;
+  `listBridgedPeers`/`listTopics`/`startTopic`/`completeTopic` tools.
+  - Surfaced by: D2, Codex #1/#2. Files: `protocol.rs`, `claudeCode.svelte.ts`, `agentBridge`/mesh store.
+  - Verify: TS routing tests; unknown-recipient → clear error.
+- [ ] **T4 (P1, human ~1d / CC ~minutes)** — loop control — soft per-topic cap (pause/resume) +
+  hard TTL ceiling; prefs for `N`/`M`.
+  - Surfaced by: D4, Codex #4. Files: `agentDelivery.ts`, prefs.
+  - Verify: pause-at-N + resume + TTL backstop tests.
+- [ ] **T5 (P1, human ~1-2d / CC ~1 session)** — priming + status — opener injects role/roster/
+  topic-rules/noteId; pre-create one status note per role; `NEEDS DECISION:` toast scan.
+  - Surfaced by: §6, §8. Files: mesh store, `buildOpener`, workspace-notes.
+- [ ] **T6 (P1, human ~1-2d / CC ~1 session)** — cockpit drawer — overlay drawer hosting the
+  status board + conversation-graph (edge events from `deliver()`) + human complete-topic.
+  - Surfaced by: §9, D8. Files: new drawer component, edge-event bus.
+- [ ] **T7 (P2, spike first)** — mesh view — stage + filmstrip, CSS-scale swap, locked 50/50.
+  - Surfaced by: §7, D7. **Gated on the §7.4 renderer/perf spike.**
+
+### 16.8 Parallelization
+
+| Lane | Tasks | Notes |
+|---|---|---|
+| A | T1 → (T3, T4) | Shared `agentDelivery` core; sequential within lane. |
+| B | T2 | Rust topic model + commands; independent of A until T3 wires them. |
+| C | T5, T6 | Priming + cockpit; depend on T2/T3 contracts but UI-side, parallel to A/B once tool shapes are fixed. |
+
+Launch A and B in parallel worktrees. T3 joins them (touches both the delivery core and the
+topic tools) → run after T1 and T2 land. C follows once the tool/contract shapes from T2/T3
+are fixed. T7 (view) is a separate later phase after the spike. **Conflict flag:** T1 and T3
+both touch the delivery/store layer — keep them in the same lane (sequential), not parallel.
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | not run |
+| Codex Review | `/codex review` | Independent 2nd opinion | 1 | issues_found | 15 findings; 9 folded, 2 → user tensions (D7/D8), 4 deferred |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | clean | 5 decisions (D1-D5) + 2 tension resolutions (D7/D8); 1 critical gap (unknown-recipient) has error handling + test |
+| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | not run (view deferred to Phase 2) |
+| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | n/a |
+
+- **CODEX:** 15-point challenge; phasing (#14/#15) and human-controls (#3/#6/#13) escalated to user as D7/D8, both resolved. Tool-compat, fragile-names, completion-broadcast, create-race, model-compliance, hard-TTL all folded into the doc.
+- **CROSS-MODEL:** two tensions surfaced; both resolved by user decision (D7 core-first, D8 human-complete). No unresolved tensions.
+- **UNRESOLVED:** none.
+- **VERDICT:** ENG CLEARED — design is reviewed and ready to implement Phase 1. Design Review recommended before Phase 2 (the view). No code written in this review.
