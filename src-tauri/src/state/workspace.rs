@@ -323,6 +323,71 @@ pub struct WorkspaceNote {
     pub updated_at: String,
 }
 
+/// A first-class conversation thread in a Mesh Workspace. Modeled on WorkspaceNote
+/// (a persisted Vec on the workspace). Owned by the agent tab that started it; only the
+/// owner — or the human, from the cockpit — can complete it. See docs/mesh-workspace.md.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MeshTopic {
+    pub id: String,
+    /// Human/agent-readable label ("auth-refactor").
+    pub label: String,
+    /// Case/separator-normalized label used for dedup, so two agents can't coin
+    /// near-duplicate topics ("Auth Refactor" vs "auth_refactor") for one thread.
+    pub normalized_label: String,
+    /// Tab id of the agent that started the topic (the completion authority).
+    pub owner_tab_id: String,
+    #[serde(default)]
+    pub state: MeshTopicState,
+    /// Tab ids that have sent or received on this topic.
+    #[serde(default)]
+    pub participants: Vec<String>,
+    /// Per-topic turn counter — drives the soft turn cap and the mesh-map edge weight.
+    #[serde(default)]
+    pub turn: u32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum MeshTopicState {
+    #[default]
+    Open,
+    Complete,
+}
+
+impl MeshTopic {
+    /// Normalize a label for dedup: trim, lowercase, and collapse runs of whitespace /
+    /// underscores / hyphens into single hyphens. "Auth Refactor", "auth_refactor", and
+    /// "  AUTH   refactor " all map to "auth-refactor".
+    pub fn normalize_label(label: &str) -> String {
+        label
+            .trim()
+            .to_lowercase()
+            .split(|c: char| c.is_whitespace() || c == '_' || c == '-')
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+            .join("-")
+    }
+
+    /// Create an Open topic owned by `owner_tab_id`, who is its first participant.
+    pub fn new(id: String, label: String, owner_tab_id: String, now: String) -> Self {
+        let normalized_label = Self::normalize_label(&label);
+        let participants = vec![owner_tab_id.clone()];
+        Self {
+            id,
+            label,
+            normalized_label,
+            owner_tab_id,
+            state: MeshTopicState::Open,
+            participants,
+            turn: 0,
+            created_at: now.clone(),
+            updated_at: now,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Workspace {
     pub id: String,
@@ -335,6 +400,14 @@ pub struct Workspace {
     pub split_root: Option<SplitNode>,
     #[serde(default)]
     pub workspace_notes: Vec<WorkspaceNote>,
+    /// Mesh Workspace flag: when true, every agent tab here is bridged to every other
+    /// (N:M). Membership IS the roster. See docs/mesh-workspace.md.
+    #[serde(default)]
+    pub bridge_all: bool,
+    /// Topic threads for a Mesh Workspace (empty for normal workspaces). Modeled on
+    /// workspace_notes (a persisted Vec).
+    #[serde(default)]
+    pub mesh_topics: Vec<MeshTopic>,
     #[serde(default)]
     pub archived_tabs: Vec<Tab>,
     /// Transient flag set after merge import — cleared on workspace activation.
@@ -1072,11 +1145,77 @@ impl Workspace {
             active_pane_id: Some(pane_id.clone()),
             split_root: Some(SplitNode::Leaf { pane_id }),
             workspace_notes: Vec::new(),
+            bridge_all: false,
+            mesh_topics: Vec::new(),
             archived_tabs: Vec::new(),
             import_highlight: false,
             suspended: false,
             pane_sizes: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod mesh_topic_tests {
+    use super::{MeshTopic, MeshTopicState, Workspace};
+
+    #[test]
+    fn normalize_label_dedups_case_spacing_and_separators() {
+        for input in [
+            "auth-refactor",
+            "Auth Refactor",
+            "auth_refactor",
+            "  AUTH   refactor ",
+            "auth--refactor",
+            "Auth_Refactor",
+        ] {
+            assert_eq!(MeshTopic::normalize_label(input), "auth-refactor", "input: {input:?}");
+        }
+    }
+
+    #[test]
+    fn topic_new_owns_and_round_trips() {
+        let t = MeshTopic::new(
+            "t1".into(),
+            "Auth Refactor".into(),
+            "tabA".into(),
+            "2026-01-01T00:00:00Z".into(),
+        );
+        assert_eq!(t.normalized_label, "auth-refactor");
+        assert_eq!(t.state, MeshTopicState::Open);
+        assert_eq!(t.participants, vec!["tabA".to_string()]); // owner is first participant
+        assert_eq!(t.turn, 0);
+
+        let json = serde_json::to_string(&t).unwrap();
+        let back: MeshTopic = serde_json::from_str(&json).unwrap();
+        assert_eq!(t, back);
+    }
+
+    #[test]
+    fn topic_state_defaults_open_and_serializes_lowercase() {
+        // state/participants/turn absent in older data → defaults.
+        let legacy = serde_json::json!({
+            "id":"t2","label":"x","normalized_label":"x","owner_tab_id":"a",
+            "created_at":"t","updated_at":"t"
+        });
+        let parsed: MeshTopic = serde_json::from_value(legacy).unwrap();
+        assert_eq!(parsed.state, MeshTopicState::Open);
+        assert!(parsed.participants.is_empty());
+        assert_eq!(parsed.turn, 0);
+
+        assert_eq!(serde_json::to_string(&MeshTopicState::Complete).unwrap(), "\"complete\"");
+        assert_eq!(serde_json::to_string(&MeshTopicState::Open).unwrap(), "\"open\"");
+    }
+
+    #[test]
+    fn pre_mesh_workspace_deserializes_with_defaults() {
+        // A workspace JSON written before the mesh fields existed.
+        let json = serde_json::json!({
+            "id":"w1","name":"WS","panes":[],"active_pane_id":null
+        });
+        let ws: Workspace = serde_json::from_value(json).unwrap();
+        assert!(!ws.bridge_all, "bridge_all defaults false");
+        assert!(ws.mesh_topics.is_empty(), "mesh_topics defaults empty");
     }
 }
 

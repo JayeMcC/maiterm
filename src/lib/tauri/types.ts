@@ -97,6 +97,25 @@ export interface WorkspaceNote {
   updated_at: string;
 }
 
+export type MeshTopicState = 'open' | 'complete';
+
+/** A first-class conversation thread in a Mesh Workspace (docs/mesh-workspace.md).
+ *  Mirrors the Rust MeshTopic; persisted as a Vec on the workspace. */
+export interface MeshTopic {
+  id: string;
+  label: string;
+  /** Case/separator-normalized label used for dedup. */
+  normalized_label: string;
+  /** Tab id of the agent that started the topic (the completion authority). */
+  owner_tab_id: string;
+  state: MeshTopicState;
+  participants: string[];
+  /** Per-topic turn counter (soft cap + mesh-map edge weight). */
+  turn: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Workspace {
   id: string;
   name: string;
@@ -104,6 +123,10 @@ export interface Workspace {
   active_pane_id: string | null;
   split_root: SplitNode | null;
   workspace_notes: WorkspaceNote[];
+  /** Mesh Workspace flag — every agent tab here is bridged N:M. */
+  bridge_all?: boolean;
+  /** Topic threads (empty for normal workspaces). */
+  mesh_topics?: MeshTopic[];
   archived_tabs: Tab[];
   import_highlight?: boolean;
   suspended?: boolean;

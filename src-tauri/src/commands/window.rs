@@ -502,6 +502,10 @@ pub(crate) fn clone_workspace_with_id_mapping(
         active_pane_id: new_active_pane,
         split_root: new_split_root,
         workspace_notes: ws.workspace_notes.clone(),
+        // Preserve the mesh nature, but drop topics — they reference source tab ids that
+        // were remapped for the new window (same reason agent_bridge is dropped per-tab).
+        bridge_all: ws.bridge_all,
+        mesh_topics: Vec::new(),
         archived_tabs: Vec::new(),
         import_highlight: false,
         suspended: false,
