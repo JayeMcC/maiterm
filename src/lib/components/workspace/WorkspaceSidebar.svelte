@@ -188,6 +188,32 @@
     return claudeStateStore.getWorkspaceClaudeState(tabIds);
   }
 
+  // Whether a workspace should look "active" (vs. dimmed/suspended). The
+  // appearance derives from actual terminal liveness, not the standalone
+  // `suspended` flag: clicking a workspace without resuming any tab (it lands on
+  // a resume prompt with no live PTY) should not make it look active. Rule:
+  // a workspace with terminal tabs is active iff at least one has a live (or
+  // spawning) PTY. Editor/diff-only workspaces have nothing to resume, so they
+  // fall back to the persisted flag and keep their existing behavior.
+  function workspaceIsLive(workspaceId: string): boolean {
+    void terminalsStore.instanceVersion; // re-evaluate on PTY register/unregister
+    const ws = workspacesStore.workspaces.find(w => w.id === workspaceId);
+    if (!ws) return false;
+    let hasTerminalTab = false;
+    for (const pane of ws.panes) {
+      for (const tab of pane.tabs) {
+        const isTerminal = tab.tab_type === 'terminal' || !tab.tab_type;
+        if (!isTerminal) continue;
+        hasTerminalTab = true;
+        if (terminalsStore.get(tab.id) || terminalsStore.isSpawning(tab.id)) return true;
+      }
+    }
+    // Has terminals but none are live → suspended-looking.
+    if (hasTerminalTab) return false;
+    // No terminal tabs at all (editor/diff only) → preserve flag-based behavior.
+    return !ws.suspended;
+  }
+
   let appVersion = $state('');
   getVersion().then(v => { appVersion = v; });
 
@@ -518,7 +544,7 @@
       <div
         class="workspace-item"
         class:active={workspace.id === workspacesStore.activeWorkspaceId}
-        class:suspended={workspace.suspended}
+        class:suspended={!workspaceIsLive(workspace.id)}
         class:import-highlight={workspace.import_highlight}
         class:dragging={dragWorkspaceId === workspace.id}
         class:drop-before={dropTargetIndex === index && dropSide === 'before' && dragWorkspaceId !== workspace.id}

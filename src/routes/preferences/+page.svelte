@@ -426,6 +426,25 @@
           </button>
         </div>
 
+        {#if preferencesStore.restoreSession}
+          <div class="setting" style="align-items: flex-start;">
+            <div>
+              <label for="session-restore-mode">Restore Scope</label>
+              <p class="setting-hint">
+                <strong>All workspaces</strong> respawns and auto-resumes every workspace's active tab on launch, so a crash, update, or quit/relaunch comes back exactly as it was. <strong>Last active only</strong> restores just the last-active workspace and leaves the rest suspended until you open them. (A window reload always reattaches to still-running terminals.)
+              </p>
+            </div>
+            <select
+              id="session-restore-mode"
+              value={preferencesStore.sessionRestoreMode}
+              onchange={(e) => preferencesStore.setSessionRestoreMode(e.currentTarget.value)}
+            >
+              <option value="all">All workspaces</option>
+              <option value="last_active">Last active only</option>
+            </select>
+          </div>
+        {/if}
+
         <div class="setting">
           <label for="font-size">Font Size</label>
           <div class="number-input-wrapper">

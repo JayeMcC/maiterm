@@ -99,17 +99,24 @@
     };
   });
 
-  // Display-order tabs: when groupActiveTabs is on, active (non-suspended) tabs
-  // come first, preserving relative human order within each group.
+  // Display-order tabs: pinned tabs always cluster at the front (in their
+  // drag-orderable storage order), then — when groupActiveTabs is on — active
+  // (non-suspended) tabs, then suspended tabs, each preserving relative order.
+  // Pinned tabs are exempt from the active/suspended split: they hold their slot
+  // regardless of liveness.
   const groupedTabs = $derived.by(() => {
+    const pinned = pane.tabs.filter(t => t.pinned);
+    const rest = pane.tabs.filter(t => !t.pinned);
     if (!preferencesStore.groupActiveTabs) {
-      return { tabs: pane.tabs, activeCount: 0 };
+      // No active-grouping — but pinned still cluster at the front.
+      if (pinned.length === 0) return { tabs: pane.tabs, activeCount: 0, pinnedCount: 0 };
+      return { tabs: [...pinned, ...rest], activeCount: 0, pinnedCount: pinned.length };
     }
     // Read instanceVersion to re-derive when terminals register/unregister
     void terminalsStore.instanceVersion;
     const active: Tab[] = [];
     const suspended: Tab[] = [];
-    for (const tab of pane.tabs) {
+    for (const tab of rest) {
       const isTerminal = tab.tab_type === 'terminal' || !tab.tab_type;
       if (isTerminal && !terminalsStore.get(tab.id) && !terminalsStore.isSpawning(tab.id)) {
         suspended.push(tab);
@@ -118,12 +125,16 @@
       }
     }
     return {
-      tabs: [...active, ...suspended],
-      activeCount: suspended.length > 0 ? active.length : 0,
+      tabs: [...pinned, ...active, ...suspended],
+      // Divider sits before the first suspended (unpinned) tab — after the pinned
+      // cluster and the unpinned-active group.
+      activeCount: suspended.length > 0 ? pinned.length + active.length : 0,
+      pinnedCount: pinned.length,
     };
   });
   const displayTabs = $derived(groupedTabs.tabs);
   const activeGroupCount = $derived(groupedTabs.activeCount);
+  const pinnedCount = $derived(groupedTabs.pinnedCount);
 
   // Tabs scrolled out of view (not fully visible) in the bar, in display order.
   const overflowTabs = $derived(displayTabs.filter(t => overflowTabIds.has(t.id)));
@@ -450,6 +461,13 @@
   async function handleSuspendTab(tabId: string, e: MouseEvent) {
     e.stopPropagation();
     await workspacesStore.suspendTab(workspaceId, pane.id, tabId);
+  }
+
+  async function handleTogglePin(tabId: string, e: MouseEvent) {
+    e.stopPropagation();
+    const tab = pane.tabs.find(t => t.id === tabId);
+    if (!tab) return;
+    await workspacesStore.setTabPinned(workspaceId, pane.id, tabId, !(tab.pinned ?? false));
   }
 
   async function handleCloseTab(tabId: string, e: MouseEvent) {
@@ -838,6 +856,12 @@
       const fromIndex = displayed.findIndex(t => t.id === dragTabId);
       if (fromIndex !== -1) {
         let toIndex = dropSide === 'after' ? dropTargetIndex + 1 : dropTargetIndex;
+        // Keep the pin boundary intact: a pinned tab can only land within the
+        // pinned cluster (display indices [0, pinnedCount)), and an unpinned tab
+        // can't slip into it. Without this, a cross-boundary drop would just snap
+        // back on the next derive.
+        if (displayed[fromIndex]?.pinned) toIndex = Math.min(toIndex, pinnedCount);
+        else toIndex = Math.max(toIndex, pinnedCount);
         if (fromIndex < toIndex) toIndex--;
         if (fromIndex !== toIndex) {
           const ids = displayed.map(t => t.id);
@@ -926,7 +950,13 @@
     const onlyTab = pane.tabs.length === 1;
     const ws = workspacesStore.workspaces.find(w => w.id === workspaceId);
     const otherPanes = (ws?.panes ?? []).filter(p => p.id !== pane.id);
+    const isPinned = !!pane.tabs.find(t => t.id === tabId)?.pinned;
     const items: Array<{ label: string; action: () => void; disabled?: boolean; separator?: boolean }> = [
+      {
+        label: isPinned ? 'Unpin tab' : 'Pin tab',
+        action: () => workspacesStore.setTabPinned(workspaceId, pane.id, tabId, !isPinned),
+      },
+      { label: '', separator: true, action: () => {} },
       {
         label: 'Move to New Split Right',
         disabled: onlyTab,
@@ -952,6 +982,11 @@
     return items;
   }
 </script>
+
+<!-- Blue pin glyph shown in a pinned tab's leading indicator slot. Clicking it unpins. -->
+{#snippet pinGlyph(t: Tab)}
+  <Tooltip text="Unpin tab"><button class="indicator pin-indicator" onclick={(e) => handleTogglePin(t.id, e)} aria-label="Unpin tab"><Icon name="pin" size={11} /></button></Tooltip>
+{/snippet}
 
 <div class="tabs-bar" data-tauri-drag-region data-pane-id={pane.id}>
     <div class="tabbar-menu-wrapper" bind:this={archiveDropdownEl}>
@@ -1056,9 +1091,11 @@
         </div>
       {:else}
         {#if isDiff}
-          <Tooltip text="Diff"><span class="editor-icon"><Icon name="diff" size={12} /></span></Tooltip>
+          {#if tab.pinned}{@render pinGlyph(tab)}{:else}<Tooltip text="Diff"><span class="editor-icon"><Icon name="diff" size={12} /></span></Tooltip>{/if}
         {:else if isEditor}
-          {#if tab.editor_file && isPdfFile(tab.editor_file.file_path)}
+          {#if tab.pinned}
+            {@render pinGlyph(tab)}
+          {:else if tab.editor_file && isPdfFile(tab.editor_file.file_path)}
             <Tooltip text="PDF"><span class="editor-icon"><Icon name="pdf" size={12} /></span></Tooltip>
           {:else if tab.editor_file && isImageFile(tab.editor_file.file_path)}
             <Tooltip text="Image"><span class="editor-icon"><Icon name="image" size={12} /></span></Tooltip>
@@ -1081,6 +1118,8 @@
           <span class="indicator" class:completed-indicator={shellState.exitCode === 0} class:failed-indicator={shellState.exitCode !== 0}>{#if shellState.exitCode === 0}<Icon name="check" size={11} />{:else}<Icon name="cross" size={11} />{/if}</span>
         {:else if hasActivity}
           <span class="indicator"><StatusDot color="accent" /></span>
+        {:else if tab.pinned}
+          {@render pinGlyph(tab)}
         {/if}
         {#if !isEditor && preferencesStore.claudeCodeIde && preferencesStore.claudeCodeIdeSsh}
           {@const bridgeStatus = getBridgeStatus(tab.id)}
@@ -1105,7 +1144,12 @@
         {/if}
         <span class="tab-name">{displayName(tab)}</span>
         {@const hasRunningPty = !isEditor && !isDiff && !!terminalsStore.get(tab.id)}
-        <div class="tab-actions" class:always-visible={preferencesStore.tabButtonStyle === 'always'} class:modifier-only={preferencesStore.tabButtonStyle === 'modifier'} class:modifier-active={preferencesStore.tabButtonStyle === 'modifier' && modHeld} class:never-visible={preferencesStore.tabButtonStyle === 'never'} class:single-action={false} class:double-action={isEditor || isDiff} class:triple-action={!isEditor && !isDiff && !hasRunningPty} class:quadruple-action={hasRunningPty}>
+        <div class="tab-actions" class:always-visible={preferencesStore.tabButtonStyle === 'always'} class:modifier-only={preferencesStore.tabButtonStyle === 'modifier'} class:modifier-active={preferencesStore.tabButtonStyle === 'modifier' && modHeld} class:never-visible={preferencesStore.tabButtonStyle === 'never'} class:triple-action={isEditor || isDiff} class:quadruple-action={!isEditor && !isDiff && !hasRunningPty} class:quintuple-action={hasRunningPty}>
+          <IconButton
+            tooltip={tab.pinned ? 'Unpin tab' : 'Pin tab'}
+            style="width:22px;height:18px;border-radius:3px"
+            onclick={(e) => handleTogglePin(tab.id, e)}
+          ><span class="pin-action" class:pinned={tab.pinned}><Icon name="pin" size={11} /></span></IconButton>
           <IconButton
             tooltip="Archive tab"
             style="width:22px;height:18px;border-radius:3px"
@@ -1475,6 +1519,30 @@
     color: var(--yellow, #e0af68);
   }
 
+  /* Pinned-state glyph in the leading indicator slot — a clickable unpin button. */
+  button.indicator.pin-indicator {
+    appearance: none;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--accent);
+  }
+
+  button.indicator.pin-indicator:hover {
+    opacity: 0.65;
+  }
+
+  /* Pin button in the hover-action cluster — accent-tinted while the tab is pinned. */
+  .pin-action {
+    display: flex;
+    align-items: center;
+  }
+
+  .pin-action.pinned {
+    color: var(--accent);
+  }
+
   /* Reset button chrome — this indicator is a clickable reconnect affordance */
   button.indicator.ssh-disconnected {
     appearance: none;
@@ -1533,8 +1601,8 @@
     width: 88px;
   }
 
-  .tab:hover .tab-actions.double-action {
-    width: 44px;
+  .tab:hover .tab-actions.quintuple-action {
+    width: 110px;
   }
 
   .tab-actions.always-visible {
@@ -1550,6 +1618,10 @@
 
   .tab-actions.always-visible.quadruple-action {
     width: 88px;
+  }
+
+  .tab-actions.always-visible.quintuple-action {
+    width: 110px;
   }
 
   /* modifier mode: suppress normal hover reveal */
@@ -1572,6 +1644,10 @@
 
   .tab:hover .tab-actions.modifier-active.quadruple-action {
     width: 88px;
+  }
+
+  .tab:hover .tab-actions.modifier-active.quintuple-action {
+    width: 110px;
   }
 
   .tab:hover .tab-actions.never-visible {

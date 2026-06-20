@@ -738,6 +738,13 @@ pub struct PtyInfo {
     pub foreground_command: Option<String>,
 }
 
+/// IDs of all PTYs currently alive in the registry. Used on startup to tell a
+/// window reload (backend process still running, PTYs alive → reattach) apart
+/// from a full app restart (fresh process, registry empty → respawn).
+pub fn list_live_ptys(state: &Arc<AppState>) -> Vec<String> {
+    state.pty_registry.read().keys().cloned().collect()
+}
+
 pub fn get_pty_info(state: &Arc<AppState>, pty_id: &str) -> Result<PtyInfo, String> {
     let registry = state.pty_registry.read();
     let handle = registry.get(pty_id).ok_or("PTY not found")?;

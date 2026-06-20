@@ -105,6 +105,12 @@ export async function killTerminal(ptyId: string): Promise<void> {
   return invoke('kill_terminal', { ptyId });
 }
 
+/** PTY IDs still alive in the backend registry. Empty after a full app restart;
+ *  populated after a window reload (used to reattach instead of respawning). */
+export async function listLivePtys(): Promise<string[]> {
+  return invoke('list_live_ptys');
+}
+
 export async function readClipboardFilePaths(): Promise<string[]> {
   return invoke('read_clipboard_file_paths');
 }
@@ -285,6 +291,10 @@ export async function setTabPtyId(workspaceId: string, paneId: string, tabId: st
 
 export async function suspendTab(workspaceId: string, paneId: string, tabId: string, cwd: string | null, sshCommand: string | null, remoteCwd: string | null): Promise<void> {
   return invoke('suspend_tab', { workspaceId, paneId, tabId, cwd, sshCommand, remoteCwd });
+}
+
+export async function setTabPinned(workspaceId: string, paneId: string, tabId: string, pinned: boolean): Promise<void> {
+  return invoke('set_tab_pinned', { workspaceId, paneId, tabId, pinned });
 }
 
 export async function setSidebarWidth(width: number): Promise<void> {

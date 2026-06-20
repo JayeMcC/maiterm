@@ -33,6 +33,8 @@ export interface Tab {
   pty_id: string | null;
   scrollback: string | null;
   custom_name: boolean;
+  /** Pinned tabs cluster at the front of the bar and are exempt from active/suspended regrouping. */
+  pinned?: boolean;
   restore_cwd: string | null;
   restore_ssh_command: string | null;
   restore_remote_cwd: string | null;
@@ -195,6 +197,7 @@ export interface Preferences {
   shell_integration: boolean;
   custom_themes: import('$lib/themes').Theme[];
   restore_session: boolean;
+  session_restore_mode: string;
   notify_on_completion: boolean;
   notification_mode: string;
   notify_min_duration: number;

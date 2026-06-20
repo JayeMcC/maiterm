@@ -88,6 +88,11 @@ pub fn get_pty_info(
 }
 
 #[tauri::command]
+pub fn list_live_ptys(state: State<'_, Arc<AppState>>) -> Vec<String> {
+    pty::list_live_ptys(&*state)
+}
+
+#[tauri::command]
 pub fn write_terminal(
     state: State<'_, Arc<AppState>>,
     pty_id: String,

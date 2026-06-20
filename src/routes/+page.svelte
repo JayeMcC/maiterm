@@ -74,6 +74,9 @@
       // Activate the current active tab in each pane of the active workspace.
       // Uses $effect.pre so activatedTabIds is updated before DOM render,
       // avoiding a frame where the tab slot is empty.
+      // Full-session restore auto-resumes on visit instead of showing a manual
+      // resume prompt on workspace switch.
+      const fullRestore = preferencesStore.restoreSession && preferencesStore.sessionRestoreMode === 'all';
       // On workspace switch (not initial load), suspended tabs show a resume prompt.
       for (const paneSnap of paneSnapshots) {
         const tabId = paneSnap.active_tab_id;
@@ -84,7 +87,7 @@
         // Brand-new tabs have pty_id === null and should activate immediately.
         const isSuspended = isTerminal && !!tab?.pty_id && !terminalsStore.get(tabId) && !activatedTabIds.has(tabId);
 
-        if (initialActivationDone && workspaceSwitched && isSuspended) {
+        if (initialActivationDone && workspaceSwitched && isSuspended && !fullRestore) {
           // Workspace switch landed on a suspended tab — show resume prompt
           pendingResumePanes.add(paneSnap.id);
         } else if (pendingResumePanes.has(paneSnap.id) && isSuspended) {
@@ -166,6 +169,37 @@
   onMount(() => {
     workspacesStore.load().then(() => {
       loading = false;
+
+      // Session restore. Two independent reasons to bring a background tab live:
+      //  1. Reload reattach: its PTY is still alive in the backend (any mode).
+      //  2. Full-session restore ('all' mode): respawn + auto-resume every
+      //     non-suspended workspace's active tab so a crash / update / relaunch
+      //     comes back exactly as it was — not just the last-active workspace.
+      // The active workspace is already handled by the activation $effect above;
+      // this only adds the background workspaces. Mounting a TerminalPane for a
+      // workspace that isn't visible spawns its PTY detached (no slot) at its
+      // saved size and attaches later via 'terminal-slot-ready' when first shown.
+      const fullRestore = preferencesStore.restoreSession && preferencesStore.sessionRestoreMode === 'all';
+      for (const ws of workspacesStore.workspaces) {
+        let touched = false;
+        for (const pane of ws.panes) {
+          for (const tab of pane.tabs) {
+            const isTerminal = tab.tab_type === 'terminal' || !tab.tab_type;
+            // Reattach any tab whose backend PTY is still alive (window reload).
+            if (isTerminal && terminalsStore.shouldReattach(tab.pty_id)) {
+              activatedTabIds.add(tab.id);
+              touched = true;
+            }
+          }
+          // Full restore: spawn each non-suspended workspace's active tab.
+          if (fullRestore && !ws.suspended && pane.active_tab_id) {
+            activatedTabIds.add(pane.active_tab_id);
+            touched = true;
+          }
+        }
+        if (touched) activatedWorkspaceIds.add(ws.id);
+      }
+
       // Seed navigation history with the initial active tab
       const ws = workspacesStore.activeWorkspace;
       const pane = ws?.panes.find(p => p.id === ws.active_pane_id);
@@ -333,7 +367,7 @@
                     workspaceId={ws.id}
                     paneId={pane.id}
                     tabId={tab.id}
-                    existingPtyId={terminalsStore.get(tab.id) ? tab.pty_id : null}
+                    existingPtyId={(terminalsStore.get(tab.id) || terminalsStore.shouldReattach(tab.pty_id)) ? tab.pty_id : null}
                     visible={meshStage ? agentMeshStore.isMeshMemberTab(tab.id) : (tab.id === pane.active_tab_id && ws.id === workspacesStore.activeWorkspaceId)}
                     restoreCwd={tab.restore_cwd}
                     restoreSshCommand={tab.restore_ssh_command}

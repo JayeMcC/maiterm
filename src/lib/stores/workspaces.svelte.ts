@@ -288,10 +288,38 @@ function createWorkspacesStore() {
         }
       }
 
-      // On restart, non-active workspaces have no PTYs — mark them as suspended
-      // so the UI is consistent (dimmed, click to resume).
+      // Distinguish a window reload (Rust process still running, PTYs alive in
+      // the registry → reattach) from a full app restart (fresh process, no live
+      // PTYs → respawn). Seed the reattach set so live tabs reconnect instead of
+      // killing + respawning their shells/agents.
+      const livePtyIds = await commands.listLivePtys().catch(() => [] as string[]);
+      const livePtySet = new Set(livePtyIds);
+      terminalsStore.seedReattachPtyIds(livePtyIds);
+
+      // Decide which non-active workspaces to suspend on load. With "Restore on
+      // Relaunch" off we keep the old conservative behavior; with it on, the
+      // session_restore_mode preference picks the scope.
+      const restoreMode = preferencesStore.restoreSession ? preferencesStore.sessionRestoreMode : 'last_active';
       for (const ws of workspaces) {
-        if (ws.id !== activeWorkspaceId && !ws.suspended) {
+        if (ws.id === activeWorkspaceId) continue;
+        // Window reload: this workspace still has a live PTY — its tab will
+        // reattach. Never leave a workspace that's actually running dimmed.
+        const hasLivePty = ws.panes.some(p => p.tabs.some(t =>
+          (t.tab_type === 'terminal' || !t.tab_type) && t.pty_id && livePtySet.has(t.pty_id)));
+        if (restoreMode === 'all' || hasLivePty) {
+          // Full restore (or a still-running reload): clear any persisted
+          // suspension so it's not dimmed — its active tab is respawned (or
+          // reattached) by the activation pass in +page. This also un-does the
+          // old "suspend every non-active workspace on load" behavior that
+          // earlier versions persisted into state.
+          if (ws.suspended) {
+            ws.suspended = false;
+            commands.resumeWorkspace(ws.id).catch(() => {});
+          }
+          continue;
+        }
+        // last_active mode, app restart, no live PTY → suspend (dimmed, resume on click).
+        if (!ws.suspended) {
           ws.suspended = true;
           commands.suspendWorkspace(ws.id).catch(() => {});
         }
@@ -1254,6 +1282,21 @@ function createWorkspacesStore() {
     },
 
     /**
+     * Pin/unpin a tab. Pinned tabs cluster at the front of the bar and are exempt
+     * from the active/suspended regrouping `group_active_tabs` performs — they hold
+     * their (drag-orderable) position regardless of liveness. Display ordering is
+     * derived in TerminalTabs; this just persists the flag and updates it locally.
+     */
+    async setTabPinned(workspaceId: string, paneId: string, tabId: string, pinned: boolean) {
+      const ws = workspaces.find(w => w.id === workspaceId);
+      const pane = ws?.panes.find(p => p.id === paneId);
+      const tab = pane?.tabs.find(t => t.id === tabId);
+      if (!tab || (tab.pinned ?? false) === pinned) return;
+      tab.pinned = pinned;
+      await commands.setTabPinned(workspaceId, paneId, tabId, pinned);
+    },
+
+    /**
      * When group-active-tabs is enabled, a just-resumed tab visually jumps into
      * the active group (which renders ahead of suspended tabs) but keeps its old
      * storage position. Move it in storage too, so the visible order is the real
@@ -1274,7 +1317,8 @@ function createWorkspacesStore() {
       if (!pane) return;
       const tab = pane.tabs.find(t => t.id === tabId);
       const isTerminal = (t: Tab) => t.tab_type === 'terminal' || !t.tab_type;
-      if (!tab || !isTerminal(tab)) return;
+      // Pinned tabs are display-pinned to the front; never promote them in storage.
+      if (!tab || !isTerminal(tab) || tab.pinned) return;
 
       // First still-suspended terminal tab marks the active/suspended boundary.
       // (The resumed tab itself is excluded — it has just left the suspended group.)

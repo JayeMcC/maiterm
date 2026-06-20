@@ -445,6 +445,7 @@ pub(crate) fn clone_workspace_with_id_mapping(
                 pty_id: None, // New window will spawn fresh PTYs
                 scrollback: ctx.and_then(|c| c.scrollback.clone()),
                 custom_name: tab.custom_name,
+                pinned: tab.pinned,
                 restore_cwd: ctx.and_then(|c| c.cwd.clone()),
                 restore_ssh_command: ctx.and_then(|c| c.ssh_command.clone()),
                 restore_remote_cwd: ctx.and_then(|c| c.remote_cwd.clone()),

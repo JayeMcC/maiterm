@@ -221,6 +221,12 @@ pub struct Tab {
     /// True when the user has explicitly renamed this tab (disables OSC title).
     #[serde(default)]
     pub custom_name: bool,
+    /// True when the tab is pinned: it clusters at the front of the tab bar and is
+    /// exempt from the active/suspended regrouping done by `group_active_tabs`.
+    /// Drag-reordering a pinned tab sets its new pinned position. Display ordering
+    /// is derived on the frontend; this is just the persisted flag.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub pinned: bool,
     /// Transient flag set after merge import — cleared on tab activation.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub import_highlight: bool,
@@ -647,6 +653,12 @@ fn default_true() -> bool {
     true
 }
 
+/// Session restore scope: "all" (default — restore every workspace's active
+/// tab(s) live) or "last_active" (only the last-active workspace).
+fn default_session_restore_mode() -> String {
+    "all".to_string()
+}
+
 fn default_notes_width() -> u32 {
     320
 }
@@ -825,6 +837,12 @@ pub struct Preferences {
     pub custom_themes: Vec<serde_json::Value>,
     #[serde(default = "default_true")]
     pub restore_session: bool,
+    /// How much of the previous session to bring back live on launch:
+    /// "all" (default) respawns + auto-resumes every workspace's active tab(s);
+    /// "last_active" restores only the last-active workspace and leaves the rest
+    /// suspended until visited. Only meaningful when `restore_session` is on.
+    #[serde(default = "default_session_restore_mode")]
+    pub session_restore_mode: String,
     /// One-time marker for the "restore_session default-on" migration. Once set,
     /// the migration never re-flips it, so a user who deliberately turns Restore
     /// on Relaunch off stays off across launches.
@@ -995,6 +1013,7 @@ impl Default for Preferences {
             shell_integration_default_migrated: true,
             custom_themes: Vec::new(),
             restore_session: true,
+            session_restore_mode: default_session_restore_mode(),
             restore_session_default_migrated: true,
             notify_on_completion: false,
             notification_mode: default_notification_mode(),
@@ -1056,6 +1075,7 @@ impl Tab {
             pty_id: None,
             scrollback: None,
             custom_name: false,
+            pinned: false,
             restore_cwd: None,
             restore_ssh_command: None,
             restore_remote_cwd: None,
@@ -1093,6 +1113,7 @@ impl Tab {
             pty_id: None,
             scrollback: None,
             custom_name: true,
+            pinned: false,
             restore_cwd: None,
             restore_ssh_command: None,
             restore_remote_cwd: None,
@@ -1130,6 +1151,7 @@ impl Tab {
             pty_id: None,
             scrollback: None,
             custom_name: true,
+            pinned: false,
             restore_cwd: None,
             restore_ssh_command: None,
             restore_remote_cwd: None,

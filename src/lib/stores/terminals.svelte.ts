@@ -51,6 +51,10 @@ function createTerminalsStore() {
   const splitContexts = new Map<string, SplitContext>();
   // PTY IDs that should NOT be killed on component destroy (e.g. tab moving between workspaces)
   const preservedPtyIds = new Set<string>();
+  // PTY IDs found still alive in the Rust registry at load time (window reload,
+  // not a full app restart). A tab whose persisted pty_id is in here reattaches
+  // to the running PTY instead of respawning. Consumed when the tab registers.
+  const reattachPtyIds = new Set<string>();
   // Listeners notified when any terminal's OSC state changes
   const oscListeners = new Set<(tabId: string, osc: OscState) => void>();
   // Dirty tracking: tabs that have received PTY output since last auto-save.
@@ -90,6 +94,17 @@ function createTerminalsStore() {
       preservedPtyIds.add(ptyId);
     },
 
+    /** Seed the set of backend-alive PTY IDs (from listLivePtys at load). */
+    seedReattachPtyIds(ptyIds: string[]) {
+      reattachPtyIds.clear();
+      for (const id of ptyIds) reattachPtyIds.add(id);
+    },
+
+    /** True if this persisted pty_id is still alive in the backend (reload). */
+    shouldReattach(ptyId: string | null | undefined): boolean {
+      return !!ptyId && reattachPtyIds.has(ptyId);
+    },
+
     consumePreserve(ptyId: string): boolean {
       return preservedPtyIds.delete(ptyId);
     },
@@ -121,6 +136,9 @@ function createTerminalsStore() {
         workspaceId, paneId, tabId,
         osc: { title: null, cwd: null, cwdHost: null, promptCwd: null },
       });
+      // This PTY is now live in the frontend — consume any reattach eligibility
+      // so a later remount (split/move) can't try to reattach a stale ID.
+      reattachPtyIds.delete(ptyId);
       if (spawningTabs.has(tabId)) {
         const s = new Set(spawningTabs);
         s.delete(tabId);

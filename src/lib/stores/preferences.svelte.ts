@@ -28,6 +28,7 @@ function createPreferencesStore() {
   let shellIntegration = $state(false);
   let customThemes = $state<Theme[]>([]);
   let restoreSession = $state(true);
+  let sessionRestoreMode = $state('all');
   let notificationMode = $state('auto');
   let notifyMinDuration = $state(30);
   let notesFontSize = $state(13);
@@ -99,6 +100,7 @@ function createPreferencesStore() {
     get shellIntegration() { return shellIntegration; },
     get customThemes() { return customThemes; },
     get restoreSession() { return restoreSession; },
+    get sessionRestoreMode() { return sessionRestoreMode; },
     get notificationMode() { return notificationMode; },
     get notifyMinDuration() { return notifyMinDuration; },
     get notesFontSize() { return notesFontSize; },
@@ -175,6 +177,7 @@ function createPreferencesStore() {
       shellIntegration = prefs.shell_integration ?? false;
       customThemes = prefs.custom_themes ?? [];
       restoreSession = prefs.restore_session ?? true;
+      sessionRestoreMode = prefs.session_restore_mode || 'all';
       // Migration: derive notification_mode from old notify_on_completion if absent
       if (prefs.notification_mode) {
         notificationMode = prefs.notification_mode;
@@ -326,6 +329,11 @@ function createPreferencesStore() {
 
     async setRestoreSession(value: boolean) {
       restoreSession = value;
+      await this.save();
+    },
+
+    async setSessionRestoreMode(value: string) {
+      sessionRestoreMode = value;
       await this.save();
     },
 
@@ -596,6 +604,7 @@ function createPreferencesStore() {
       shellIntegration = prefs.shell_integration ?? false;
       customThemes = prefs.custom_themes ?? [];
       restoreSession = prefs.restore_session ?? true;
+      sessionRestoreMode = prefs.session_restore_mode || 'all';
       if (prefs.notification_mode) {
         notificationMode = prefs.notification_mode;
       } else {
@@ -671,6 +680,7 @@ function createPreferencesStore() {
         shell_integration: shellIntegration,
         custom_themes: customThemes,
         restore_session: restoreSession,
+        session_restore_mode: sessionRestoreMode,
         notify_on_completion: notificationMode !== 'disabled',
         notification_mode: notificationMode,
         notify_min_duration: notifyMinDuration,
