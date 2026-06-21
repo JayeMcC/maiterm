@@ -44,6 +44,7 @@ description: Complete list of maiTerm keyboard shortcuts.
 | `Cmd+O` | Open file |
 | `Cmd+P` | Quick Open file search (or double-press `Opt`) |
 | `Cmd+Shift+L` | Connect this agent to another ([Agent Bridge](/features/agent-bridge/)) |
+| `Cmd+Shift+M` | Open the Mesh cockpit ([Mesh Workspace](/features/mesh-workspace/)) |
 | `Cmd+Shift+C` | Toggle composer dock |
 | `Cmd+E` | Toggle notes panel |
 | `Cmd+B` | Toggle sidebar |

@@ -40,6 +40,7 @@ export default defineConfig({
             { label: 'Code Editor', slug: 'features/editor' },
             { label: 'Agent Integration', slug: 'features/agents' },
             { label: 'Agent Bridge', slug: 'features/agent-bridge' },
+            { label: 'Mesh Workspace', slug: 'features/mesh-workspace' },
             { label: 'Triggers & Automation', slug: 'features/triggers' },
             { label: 'Themes', slug: 'features/themes' },
           ],

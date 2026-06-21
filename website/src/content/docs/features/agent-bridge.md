@@ -5,6 +5,10 @@ description: Connect two running agent sessions so they can collaborate directly
 
 Agent Bridge connects two running agent sessions so they can talk to each other directly — say one in your local project and another SSH'd into a related service. The two sides can be any supported agents, so a **Claude Code** and a **Codex** can bridge across runtimes just as easily as two of the same. Instead of you copy-pasting context back and forth between two agents, you bridge them once and they collaborate: one asks the other questions, requests research, or shares context, and the replies arrive as new turns in each session. You watch the whole exchange, and you stay the one making the decisions.
 
+:::tip[Need more than two?]
+A bridge connects exactly two agents. To let *every* named agent in a workspace message any other by role, turn the workspace into a [Mesh Workspace](/features/mesh-workspace/) — the N:M generalization of a bridge, with topics, loop control, and a cockpit.
+:::
+
 ## When to use it
 
 Agent Bridge shines whenever two projects need to talk:

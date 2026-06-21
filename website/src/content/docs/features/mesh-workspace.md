@@ -1,0 +1,54 @@
+---
+title: Mesh Workspace
+description: Turn a whole workspace into a mesh so every named agent in it can message any other by role — addressed, routed, and loop-controlled, with you in the cockpit.
+---
+
+[Agent Bridge](/features/agent-bridge/) connects exactly two agents. A **Mesh Workspace** generalizes that to N:M: flip a whole workspace into a mesh and every named agent tab in it can message any other agent by role name. Your frontend agent can ask the backend agent a question, the backend can loop in the infra agent, and the infra agent can reply to both — all without you copy-pasting between panes, and all where you can watch it happen.
+
+There is no broadcast. Every message is **addressed** to a specific recipient and routed off a stable handle, so renaming an agent never misroutes a message. An unknown or ambiguous recipient is a hard error that lists the current roster, never a silent drop — an agent always knows whether its message landed.
+
+## Topics
+
+Conversation in a mesh is organized into **topics**. A topic is owned by whoever starts it, and topics dedupe by normalized label — start "auth refactor" twice and you get the same topic, not two parallel threads talking past each other.
+
+- **Ownership** — the agent (or you, the human) that opens a topic owns it.
+- **Completion** — only the owner or the human can complete a topic. Once completed, the topic rejects further messages, so a wrapped-up thread can't be reopened by a stray turn.
+
+## Loop control
+
+Two agents left talking to each other can burn tokens and thrash terminals indefinitely. A mesh has three layered backstops so that never happens:
+
+- **Soft turn cap** *(per topic, default 12)* — a back-and-forth pauses at a checkpoint when it hits the soft cap. A human resume lifts the pause by another round, so a productive exchange can keep going on your say-so.
+- **Hard ceiling** *(default 40)* — an absolute backstop a resume can't clear. When a topic hits the hard cap it stops for good.
+- **Time-to-live** *(default 30 min)* — a stale topic is force-paused once its TTL elapses, even if no one hit a turn cap.
+
+All three are configurable in the **AI Agents** section of Preferences.
+
+## The cockpit drawer
+
+Open the cockpit with `Cmd+Shift+M`, or by clicking the **MESH** badge on a mesh workspace row in the sidebar. It gives you a single view of everything the agents are doing:
+
+- **Live conversation graph** — the mesh's agents are arranged on a circle, with topic "stars" weighted by turn count. A pulse animation lights up topics that delivered a message recently, and a halo marks agents that are currently active. Click any node to jump straight to that agent's tab.
+- **Topic list** — every topic with human **complete** and **resume** controls, so you can wrap a thread or lift a paused one without leaving the drawer.
+- **Status board** — parsed from each agent's workspace note. When an agent writes a `NEEDS DECISION` block into its note, the board surfaces it and raises a deep-linked toast so a blocked agent gets your attention.
+
+## Stage + filmstrip view
+
+When you want to focus on a hand-off between two agents, swap the workspace's split layout for the **stage**: a two-panel focused view with a live, CSS-scaled **filmstrip** of the other agents along the side. Click a filmstrip tile to bring that agent to the left panel; `Shift`+click to put it on the right. An **Exit** / **Tab view** button returns you to the normal split layout.
+
+Promoting and demoting agents this way never reflows or respawns a terminal — the stage rearranges what you see, not the live sessions underneath.
+
+## Enabling a mesh + readiness
+
+Enabling a mesh opens a **pre-flight readiness modal** that inventories every tab in the workspace and tells you exactly where each one stands:
+
+- **Ready** — registered and good to go.
+- **Not yet registered** — offers to **Send `/maiterm init`** so the agent registers itself.
+- **Suspended** — offers **Wake** for that tab, or **Wake all** to bring back everything at once.
+- **Unnamed** — offers an inline rename, since a mesh agent needs a role name to be addressable.
+
+After a restart, the mesh **auto-rechecks** readiness and offers to wake or re-init any agents that dropped, so your mesh comes back the way you left it. Each agent can also carry an optional **purpose** note — a one-line scope steer that tells it what its role in the mesh is — and those purposes persist across restarts.
+
+:::note
+Mesh Workspace builds on the same [agent integration](/features/agents/) pipeline as [Agent Bridge](/features/agent-bridge/). It needs supported agents (Claude Code or Codex) running in the tabs you want to mesh, and works over SSH through the same reverse-tunnel MCP bridge.
+:::

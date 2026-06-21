@@ -155,7 +155,7 @@ When an agent registers, maiTerm captures its session ID and arms auto-resume so
 
 Bridge two running agent sessions so they can collaborate directly — one local and one over SSH, two related projects, even a Claude Code and a Codex. Press `Cmd+Shift+L` to pick a peer session; maiTerm forks it into a split pane beside you (when the target supports forking) or links an existing tab, and the two agents talk through `sendToBridgedAgent`. Every message is stamped with the sender's real identity so the recipient knows it's a peer, not you — and the agents stay deferring to you for decisions. Bridges persist across restarts.
 
-See the dedicated [Agent Bridge](/features/agent-bridge/) page for the full walkthrough.
+See the dedicated [Agent Bridge](/features/agent-bridge/) page for the full walkthrough. To scale past a single pair to a whole roster of agents that can each address any other by role — with topics, loop control, and a cockpit — see [Mesh Workspace](/features/mesh-workspace/), the N:M generalization of a bridge.
 
 ## File Drop & Image Paste
 
