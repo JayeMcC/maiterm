@@ -1,0 +1,21 @@
+tests/nodes/review-compose-additional-testing.test.ts
+  s_375e7f88918ce6::t_6c4f41990f8cdb 5-77
+  s_375e7f88918ce6::t_ac5959438d7a01 1-4
+  s_375e7f88918ce6::t_e19f9d89691cb3 78-140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "1a3f99325d34cccbe1dda37c48edf19ce0c28893",
+  "prompts": {},
+  "sessions": {
+    "s_375e7f88918ce6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f938b24-227f-44ba-ba49-0b22b04477c1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
