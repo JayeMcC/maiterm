@@ -1,0 +1,21 @@
+src/lessons/index.md
+  s_fb09dea22c7ca8::t_3cbd630b3ba409 19
+src/lessons/enum-expansion-drift.md
+  s_fb09dea22c7ca8::t_fb3fd7b494fba4 1-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "157f531773f3f4fa4d9de6170d0ba7d84d2a0908",
+  "prompts": {},
+  "sessions": {
+    "s_fb09dea22c7ca8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6e5690e5-6eb8-4346-9c12-858cc61938f1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
