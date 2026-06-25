@@ -1,0 +1,20 @@
+.agents/specs/authors/api-evidence.spec.md
+  s_375e7f88918ce6::t_faff8ce1c9281e 231-259
+  s_375e7f88918ce6::t_c8843255c060d0 173-201
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "c63a88d668d9ef703486e811b9f2c0728ede81e2",
+  "prompts": {},
+  "sessions": {
+    "s_375e7f88918ce6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f938b24-227f-44ba-ba49-0b22b04477c1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
