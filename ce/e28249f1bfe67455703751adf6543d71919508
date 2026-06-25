@@ -1,0 +1,190 @@
+skill-library/skills-meta/subagent-scan/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/sync-infrastructure/devcontainer-sync-park/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-5
+skill-library/pr-workflow/pr-train-splitting/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/sync-infrastructure/tests-overlay-sync/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/sync-infrastructure/personal-tooling-sync-fix/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/tickets/generate-tickets/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-5
+skill-library/pr-workflow/commit-diff-coverage/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-6
+skill-library/tickets/scan-jira-ticket/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/planning/design-an-interface/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/planning/zoom-out/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/skills-meta/skill-creator/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/skills-meta/decompose-orchestrator/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/personas/pr-description-bullets/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/documentation-generators/report-prompt-context/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/vault/vault-query/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/local-dev/tmux-md-view/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/skills-meta/migrate-skill/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/pr-workflow/plan-pr-split/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/skills-meta/tools-repo-manager/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/personas/caveman-commit/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-5
+skill-library/sync-infrastructure/devcontainer-logs/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/speckit/speckit-step-flow/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-5
+skill-library/quality/playwright-workflows/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/skills-meta/tools-comparison/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/pr-workflow/prd-review/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/planning/grill-with-docs/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-5
+skill-library/writing/obsidian-vault/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-5
+skill-library/skills-meta/skill-eval/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/documentation-generators/generate-readme/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/skills-meta/skill-lint/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/repo-maintenance/clear-skill-logs/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/planning/request-refactor-plan/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/teaching/teach/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/external-services/bitbucket-build-failure/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/quality/diagnose/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/external-services/bitbucket-pr-comment/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/vault/vault-lint/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/personas/caveman-compress/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/pr-workflow/ingest-ai-test-review/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/writing/writing-fragments/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/documentation-generators/generate-workflows/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+.cursorignore
+  s_e078af93d4b3e2::t_50f46ffbdf3600 137,140,144,150,163,165,171,179,181,185,188,191,194,197,201,211,215,219,222,224,228,230,236,239,242,244,246,253,256,261,265,270,273,275,279,281,286,290,292,294,298,302,310,312,314,323,335,339,343,349,354,361,368,370,372,375,377,381,388,392,394,398,401,405,416,418,420,422,424,530,587-589,591
+skill-library/visual-design/figma-extract/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+scripts/personal-tooling-sync/helpers/sync/engine/index.mjs
+  s_e078af93d4b3e2::t_4c44cbff83bad6 14
+skill-library/writing/edit-article/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/external-services/forwood-f1-cli/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/personas/caveman-review/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/personas/caveman/JOBS.md
+  s_e078af93d4b3e2::t_e8c19180124843 6
+  s_e078af93d4b3e2::t_0aba84599e642e 1-5
+skill-library/tickets/to-issues/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/planning/grill-me/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-5
+skill-library/external-services/scan-bitbucket-pr/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/personas/caveman-help/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/repo-setup/migrate-to-shoehorn/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/documentation-generators/report-changes/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/quality/pre-commit-checks/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+.gitignore
+  s_e078af93d4b3e2::t_50f46ffbdf3600 170,173,177,183,196,198,204,212,214,218,221,224,227,230,234,244,248,252,255,257,261,263,269,272,275,277,279,286,289,294,298,303,306,308,312,314,319,323,325,327,331,335,343,345,347,356,368,372,376,382,387,394,401,403,405,408,410,414,421,425,427,431,434,438,449,451,453,455,457,563,620-622,624
+skill-library/personas/bluf/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-5
+scripts/personal-tooling-sync/helpers/sync/engine/skill-jobs-links.mjs
+  s_e078af93d4b3e2::t_2485605f2c2593 1-220
+skill-library/documentation-generators/generate-tools-index/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/planning/solution-design/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/skills-meta/handoff/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-5
+skill-library/tickets/qa/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/skills-meta/tooling-engagement-status-report/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/sync-infrastructure/overlay-park/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+scripts/personal-tooling-sync/helpers/sync/commands.mjs
+  s_e078af93d4b3e2::t_5097b4a4cb65d1 9,12
+  s_e078af93d4b3e2::t_d62ccbaaf4cf67 34-41
+  s_e078af93d4b3e2::t_071ecf37ce249a 62-63,65
+skill-library/writing/writing-shape/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/writing/writing-beats/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/quality/tdd/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/planning/improve-codebase-architecture/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/skills-meta/write-a-skill/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/planning/prototype/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/speckit/speckit-flow-tools/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-5
+skill-library/planning/ubiquitous-language/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/repo-setup/git-guardrails-claude-code/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/repo-setup/setup-matt-pocock-skills/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-5
+skill-library/repo-maintenance/todo-cleanup/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/tickets/triage/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/external-services/bitbucket-pr-inline-per-changed-file/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/teaching/scaffold-exercises/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/tickets/to-prd/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/pr-workflow/use-git-town/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-5
+skill-library/visual-design/visual-regression/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-5
+skill-library/personas/anti-slop/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/external-services/figma-api/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+skill-library/repo-setup/setup-pre-commit/JOBS.md
+  s_e078af93d4b3e2::t_0aba84599e642e 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "cee28249f1bfe67455703751adf6543d71919508",
+  "prompts": {},
+  "sessions": {
+    "s_e078af93d4b3e2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93c1630f-9f15-4bd0-be17-5038e1c2afa1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

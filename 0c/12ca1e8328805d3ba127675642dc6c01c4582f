@@ -1,0 +1,19 @@
+docs/getting-started.md
+  s_f1e7fe5402b249::t_0a9596608d6e68 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "0c12ca1e8328805d3ba127675642dc6c01c4582f",
+  "prompts": {},
+  "sessions": {
+    "s_f1e7fe5402b249": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eee48de2-e845-46e7-818b-f14dd12c000b",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

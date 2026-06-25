@@ -1,0 +1,25 @@
+skill-library/local-dev/playwright-recording/SKILL.md
+  s_5f14770e38a813::t_b5bfd9bfa32d31 63-96
+  s_5f14770e38a813::t_77d079b2189cc6 1-62,97-121
+skill-library/local-dev/playwright-recording/scripts/record-fill.sh
+  s_5f14770e38a813::t_844ac234ac0fb6 44,48-50,55,65,78-84
+  s_5f14770e38a813::t_85c325d92157eb 3-4,6-8,10-17,26,37
+  s_5f14770e38a813::t_470f838ca0ff4c 148,154-156,159-160,162,165-176,178-194
+  s_5f14770e38a813::t_2bff4f6386dfc6 1-2,5,9,18-25,27-36,38-43,45-47,51-54,56-64,66-77,85-147,149-153,157-158,161,163-164,177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "3141926c6fcbe14cc00975be236f8c43af65679e",
+  "prompts": {},
+  "sessions": {
+    "s_5f14770e38a813": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "20f2e9e3-5ce3-4e4f-aa58-f7da934517a3",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
