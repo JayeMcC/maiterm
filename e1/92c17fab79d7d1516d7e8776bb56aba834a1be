@@ -1,0 +1,32 @@
+src/utils/codegen-attach.ts
+  s_5f14770e38a813::t_1a053c19c04e60 168-176,179,191-194,198-222,225,228-229,235,237-246,248-252,254-256
+.agents/skills/walk/SKILL.md
+  s_5f14770e38a813::t_849f96fb3a9fb6 83-107,112-120
+  s_5f14770e38a813::t_6e2a70a40ed22d 121
+src/scripts/walk-start.ts
+  s_5f14770e38a813::t_44175f16463684 75-148
+  s_5f14770e38a813::t_ae29de57645304 239-244,246
+  s_5f14770e38a813::t_660ac8841be079 260-273
+  s_5f14770e38a813::t_8dbc28381e9c45 39-47
+  s_5f14770e38a813::t_be3b41980affb3 183,188,190,194-215
+  s_5f14770e38a813::t_ab96dfaa0006ad 288-293,296-318
+  s_5f14770e38a813::t_d8f9b4805d4656 165-166
+  s_5f14770e38a813::t_4bf30e22029800 414-419
+  s_5f14770e38a813::t_282cdc12fa7b4e 216
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.1",
+  "base_commit_sha": "e192c17fab79d7d1516d7e8776bb56aba834a1be",
+  "prompts": {},
+  "sessions": {
+    "s_5f14770e38a813": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "20f2e9e3-5ce3-4e4f-aa58-f7da934517a3",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
