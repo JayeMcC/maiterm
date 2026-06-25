@@ -1,0 +1,20 @@
+src/utils/compose-coverage-llm.ts
+  s_10d7e958b8b364::t_e330a47d2a3da0 140-141,143-144,147,151,153-154
+  s_10d7e958b8b364::t_d2cf7fd12fb236 142,145-146,148-150,152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "a477d3b2667e9268b9f17ca2a18afdee1be95c8a",
+  "prompts": {},
+  "sessions": {
+    "s_10d7e958b8b364": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46384a65-2676-4658-b4d1-9722428b95fa",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
