@@ -1,0 +1,19 @@
+tools/md-to-adf.mjs
+  s_97977c05ed22dc::t_a68cd89cb20b26 73-75,77-78,81-82,84-85,88-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "3391bdc65a0c9f508c590385f91a8b0af8a60edf",
+  "prompts": {},
+  "sessions": {
+    "s_97977c05ed22dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c2fbd296-0e4f-488c-9b7b-a7b135fb5e27",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
