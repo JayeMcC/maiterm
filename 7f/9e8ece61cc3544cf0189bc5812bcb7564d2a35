@@ -1,0 +1,22 @@
+src/utils/storybook-host-orchestrator.ts
+  s_15b80792f12d41::t_06c4efbc024996 46
+  s_15b80792f12d41::t_23fbd4537dc730 62-72
+  s_15b80792f12d41::t_f2b66fb2236a0a 249,286
+  s_15b80792f12d41::t_e69ffb2587ff48 194-248,250-254,257-285
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "7f9e8ece61cc3544cf0189bc5812bcb7564d2a35",
+  "prompts": {},
+  "sessions": {
+    "s_15b80792f12d41": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7a8edb5-f6d8-4a6b-b255-010bdfa18f85",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
