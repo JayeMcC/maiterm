@@ -1,0 +1,32 @@
+docs/adr/0016-emit-specs-inline-atomics-verbatim.md
+  s_5f14770e38a813::t_69fcd8f3aeaf0f 1-40
+CONTEXT.md
+  s_5f14770e38a813::t_2fa9f381fa7c0d 344-352,375-386
+  s_5f14770e38a813::t_c8de5378a1586d 365-374
+  s_5f14770e38a813::t_34a8599a722e36 300,303-307,317
+  s_5f14770e38a813::t_7b44d84670d227 301-302,308-316
+  s_5f14770e38a813::t_732a8926b6591e 318-328
+  s_5f14770e38a813::t_9954713e1981d0 353-364
+  s_5f14770e38a813::t_0c0e14fdac4635 329-330,340-343
+  s_5f14770e38a813::t_a29625560c6034 331-339
+docs/adr/0014-walk-as-langgraph-subgraph.md
+  s_5f14770e38a813::t_ba6352570df4ba 1-26
+docs/adr/0015-atomic-library-in-review-repo-for-now.md
+  s_5f14770e38a813::t_eb86039fb2972e 1-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "5ac2029fedc87df0beac4537f8d59856bea5dbcc",
+  "prompts": {},
+  "sessions": {
+    "s_5f14770e38a813": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "20f2e9e3-5ce3-4e4f-aa58-f7da934517a3",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
