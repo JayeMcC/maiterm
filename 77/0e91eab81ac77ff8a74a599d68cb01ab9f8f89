@@ -1,0 +1,19 @@
+src/review/contracts.ts
+  s_fb09dea22c7ca8::t_615c38f3fc2d10 37-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "770e91eab81ac77ff8a74a599d68cb01ab9f8f89",
+  "prompts": {},
+  "sessions": {
+    "s_fb09dea22c7ca8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6e5690e5-6eb8-4346-9c12-858cc61938f1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
