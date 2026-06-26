@@ -1,0 +1,213 @@
+tests/fixtures/review-scenarios/partial-spec-text-demands-test/ac-docs/AC-01.md
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-13
+tests/fixtures/review-scenarios/styling-exception-1/expected.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-12
+tests/fixtures/review-scenarios/mixed-ticket/expected.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-33
+tests/fixtures/review-scenarios/backend-passing-spec/manifest.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-5
+tests/nodes/review-manifest-pre-pass.test.ts
+  s_d30a25af462e94::t_34284814dadef8 1-91
+tests/fixtures/review-scenarios/no-spec-no-exception/llm-responses.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-11
+tests/fixtures/review-scenarios/styling-exception-1/llm-responses.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-11
+tests/fixtures/review-scenarios/mixed-ticket/pr.diff
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-27
+tests/fixtures/review-scenarios/partial-spec-text-demands-test/expected.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-12
+tests/nodes/review-verify-rendered-behaviour.test.ts
+  s_f8c501d675a886::t_048bf9c948a4f4 56-58
+  s_f8c501d675a886::t_f6d53438ac8449 72,74,84,86-87,92,98-99,118-119
+  s_f8c501d675a886::t_e95a1a372db6de 73,75-83,85,88-91,93-96,100-104,106-107,114,120,123-127,129
+  s_f8c501d675a886::t_a27ed940a9ee55 205-208,212-213
+  s_f8c501d675a886::t_8c9bc6f21bfd9a 181,185-186
+  s_f8c501d675a886::t_0342f36d2421d7 247-249,253-254
+  s_f8c501d675a886::t_6b6e064d192f6e 200-203,216-220
+  s_f8c501d675a886::t_a041cf5b54481d 1-55,59-71,97,105,108-113,115-117,121-122,128,130-161,163-165,168-173,175-180,182-184,187-199,223-246,250-252,255-260
+  s_f8c501d675a886::t_e107df4fd33a90 162,166-167
+  s_f8c501d675a886::t_dd34ea9f7ac97d 174,204,209-211,214-215,221-222
+tests/fixtures/review-scenarios/partial-spec-text-demands-test/manifest.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-5
+tests/fixtures/review-scenarios/no-spec-no-exception/manifest.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-5
+tests/fixtures/review-scenarios/mixed-ticket/failures.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-9
+tests/fixtures/review-scenarios/mixed-ticket/scenario.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-6
+tests/fixtures/review-scenarios/backend-passing-spec/llm-responses.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-11
+tests/fixtures/review-scenarios/backend-failing-spec/scenario.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-6
+tests/fixtures/review-scenarios/mixed-ticket/llm-responses.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-38
+tests/fixtures/review-scenarios/backend-passing-spec/expected.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-12
+tests/fixtures/review-scenarios/backend-passing-spec/scenario.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-6
+tests/fixtures/review-scenarios/backend-failing-spec/manifest.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-5
+tests/fixtures/review-scenarios/backend-failing-spec/failures.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-9
+tests/fixtures/review-scenarios/mixed-ticket/manifest.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-6
+tests/fixtures/review-scenarios/styling-exception-1/manifest.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-5
+tests/fixtures/review-scenarios/README.md
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-45
+tests/nodes/review-compose-scenarios.test.ts
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-271
+tests/fixtures/review-scenarios/backend-passing-spec/ac-docs/AC-01.md
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-13
+tests/fixtures/review-scenarios/partial-spec-text-demands-test/scenario.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-9
+src/review/phases.ts
+  s_f8c501d675a886::t_5298f5e0d8f2d9 53
+  s_f8c501d675a886::t_f7feb6c0d50209 88
+  s_f8c501d675a886::t_223fe30fac8f15 29
+  s_97977c05ed22dc::t_9cc65f7ade9ad2 144-176
+  s_f8c501d675a886::t_5f6b7fe04241ac 122
+tests/fixtures/review-scenarios/backend-passing-spec/pr.diff
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-12
+tests/fixtures/review-scenarios/backend-failing-spec/ac-docs/AC-01.md
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-13
+src/graph/review-state-annotation.ts
+  s_2882d72424ca24::t_14e1f9721efcd0 117-126
+  s_f8c501d675a886::t_fae4ee1cc64066 239-246
+src/nodes/review-run-visual-regression.ts
+  s_d30a25af462e94::t_34284814dadef8 1-123
+src/graph/review-loop.ts
+  s_2882d72424ca24::t_14e1f9721efcd0 61,79,83,125,143-145,148-155,161
+  s_f8c501d675a886::t_21bb71e4785a7d 59
+  s_f8c501d675a886::t_9061f84db26f18 104,106
+  s_f8c501d675a886::t_d571cb6399033e 206-208,210,212
+  s_f8c501d675a886::t_95b7c660277519 131
+tests/fixtures/review-scenarios/backend-failing-spec/expected.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-12
+tests/fixtures/review-scenarios/mixed-ticket/ac-docs/AC-01.md
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-12
+src/graph/review-edges.ts
+  s_f8c501d675a886::t_a1191183280401 169-171,173-176
+tests/fixtures/review-scenarios/styling-exception-1/scenario.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-6
+tests/fixtures/review-scenarios/partial-spec-text-demands-test/pr.diff
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-11
+tests/fixtures/review-scenarios/partial-spec-text-demands-test/llm-responses.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-11
+tests/fixtures/review-scenarios/no-spec-no-exception/pr.diff
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-9
+tests/fixtures/review-scenarios/mixed-ticket/ac-docs/AC-03.md
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-12
+tests/fixtures/review-scenarios/backend-failing-spec/pr.diff
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-10
+src/review/contracts.ts
+  s_5d60cd2e047626::t_d1304f8293d399 148
+  s_6417cc1fe474ed::t_5f073e4db167a7 84-94
+  s_6417cc1fe474ed::t_735078959516ec 75-83
+  s_5d60cd2e047626::t_5c6932640552a5 102-105
+tests/fixtures/review-scenarios/no-spec-no-exception/scenario.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-6
+tests/fixtures/review-scenarios/mixed-ticket/ac-docs/AC-04.md
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-12
+tests/fixtures/review-scenarios/styling-exception-1/pr.diff
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-11
+tests/fixtures/review-scenarios/no-spec-no-exception/ac-docs/AC-01.md
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-13
+tests/fixtures/review-scenarios/no-spec-no-exception/expected.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-12
+tests/fixtures/review-scenarios/mixed-ticket/ac-docs/AC-02.md
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-12
+tests/fixtures/review-scenarios/styling-exception-1/ac-docs/AC-01.md
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-13
+tests/fixtures/review-scenarios/backend-failing-spec/llm-responses.json
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-11
+src/nodes/review-verify-rendered-behaviour.ts
+  s_f8c501d675a886::t_5d8b864569aa42 438-439,442-451,456-457,459-462,464-466
+  s_f8c501d675a886::t_0bb0737f8ef2c8 148-153
+  s_f8c501d675a886::t_ba8e6e27050427 207-210
+  s_f8c501d675a886::t_7c707aeb6d467e 363-437,440-441,458,463,467-506,509,527-538,540-542,556,558,561-567
+  s_f8c501d675a886::t_7ef37417432b85 321-352
+  s_f8c501d675a886::t_c3f09d0fb3fd26 46
+  s_f8c501d675a886::t_b75a0a0f567788 139-144
+  s_f8c501d675a886::t_759799d6ff3b5f 288
+  s_f8c501d675a886::t_a6963cad3339f7 513,526
+  s_f8c501d675a886::t_4ca86c2f281f63 568-633
+  s_f8c501d675a886::t_8e26e23ec43eea 48-53
+  s_f8c501d675a886::t_75ee3e2a9cce3f 220-224,227-228,230-260,262-286
+  s_f8c501d675a886::t_5e15c99e42991d 68-74
+  s_f8c501d675a886::t_e5607a0d790ea3 261
+  s_f8c501d675a886::t_f5d078dffef0b7 177-179,182-191,197,199-205,289-291,293-294,296-298,300-301,303,305-308,315,317-318
+  s_f8c501d675a886::t_7e229cbe19bf46 90,92
+  s_f8c501d675a886::t_e28ffed6a4a459 42-45
+  s_f8c501d675a886::t_06fe79482f4003 452-455
+  s_f8c501d675a886::t_1caa961e446b50 507-508,510-512,514-525,539,543-555,557,559-560
+  s_f8c501d675a886::t_c8e4b0951f955e 196
+  s_f8c501d675a886::t_1b9f2157db2d3d 1-41,47,54-67,75-89,91,93-138,145-147,154-176,198,287,292,295,299,302,304,309-314,316,319-320,353-362,634-669
+  s_f8c501d675a886::t_6d7060aff14c3c 192-195
+  s_f8c501d675a886::t_7e66d4db0989b7 180-181,206,229
+  s_f8c501d675a886::t_96ca2a88c047e2 211-219,225-226
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "7e402927712565057a7e55000500e6035934a708",
+  "prompts": {},
+  "sessions": {
+    "s_2882d72424ca24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "43e76dc3-bd21-4ee0-8002-4768725865e0",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_5d60cd2e047626": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "69f8e6b7-1ea9-406f-8e96-9ee856f245b4",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_6417cc1fe474ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "86b26ca9-1e95-417c-9a4a-183734494ba4",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_76494a5c6f60b3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "689c5e67-4d3f-43bb-8b09-3076e2bdff39",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_97977c05ed22dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c2fbd296-0e4f-488c-9b7b-a7b135fb5e27",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_d30a25af462e94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cea7a41b-5106-476e-94d9-b2866bc06a6f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_f8c501d675a886": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f7c3e947-3b4a-4e5e-a5cf-73ed563208b1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

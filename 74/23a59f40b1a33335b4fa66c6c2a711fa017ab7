@@ -1,0 +1,19 @@
+forwood-vault/wiki/changes-archive/e2e/e2e-007.md
+  s_d30a25af462e94::t_8fda75d3ee7edc 1-794
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "7423a59f40b1a33335b4fa66c6c2a711fa017ab7",
+  "prompts": {},
+  "sessions": {
+    "s_d30a25af462e94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cea7a41b-5106-476e-94d9-b2866bc06a6f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

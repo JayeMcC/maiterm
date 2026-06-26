@@ -1,0 +1,29 @@
+specs/feature/TOOL-01__deterministic-visual-evidence/tasks.md
+  s_2882d72424ca24::t_14e1f9721efcd0 82,84-85
+specs/feature/TOOL-04__source-cli-probe-library/spec.md
+  s_76494a5c6f60b3::t_12e0f527da62a0 1-136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "d5db481373075bf45f081bdebe22cf444f9a0834",
+  "prompts": {},
+  "sessions": {
+    "s_2882d72424ca24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "43e76dc3-bd21-4ee0-8002-4768725865e0",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_76494a5c6f60b3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "689c5e67-4d3f-43bb-8b09-3076e2bdff39",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

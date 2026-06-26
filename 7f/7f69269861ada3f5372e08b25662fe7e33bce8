@@ -1,0 +1,92 @@
+tests/fixtures/review-scenarios/partial-spec-text-demands-test/expected.json
+  s_15b80792f12d41::t_471e50f17ea5b2 2
+tests/fixtures/review-scenarios/backend-failing-spec/expected.json
+  s_15b80792f12d41::t_471e50f17ea5b2 2
+src/utils/agent-gap-summary.ts
+  s_15b80792f12d41::t_85b444ac494763 215-219,222-223
+  s_15b80792f12d41::t_b72ce9c4a4212b 55-58
+tests/fixtures/review-scenarios/no-spec-no-exception/expected.json
+  s_15b80792f12d41::t_471e50f17ea5b2 2
+tests/fixtures/review-scenarios/backend-passing-spec/expected.json
+  s_15b80792f12d41::t_471e50f17ea5b2 2
+tests/fixtures/review-scenarios/styling-exception-1/expected.json
+  s_15b80792f12d41::t_471e50f17ea5b2 2
+tests/utils/agent-gap-summary.test.ts
+  s_15b80792f12d41::t_42c1f81441792b 32,74,106,130,142,161,194
+  s_15b80792f12d41::t_85441a8a24191e 225
+  s_15b80792f12d41::t_41b3bf8a0b8089 178-180,182-185
+  s_15b80792f12d41::t_074be982e5d0c8 48,62,235
+tests/nodes/review-compose-format.test.ts
+  s_15b80792f12d41::t_ea1a872cdd54e6 220
+  s_15b80792f12d41::t_af2172d8639353 250-254,259
+  s_15b80792f12d41::t_1a0edbe1d60b79 275-276
+tests/graph/review-e2e-integration.test.ts
+  s_97977c05ed22dc::t_1234b4dff709e5 304-306,308
+  s_97977c05ed22dc::t_21b6e38cff8944 527-528
+  s_15b80792f12d41::t_094e5a3ba87b55 671-673,675
+  s_15b80792f12d41::t_24aff261d0552e 847-848,850
+  s_97977c05ed22dc::t_80b1cec47f9e4e 417-421,427
+  s_15b80792f12d41::t_1b2537155c58ec 955-957
+src/nodes/review-compose-comment.ts
+  s_97977c05ed22dc::t_3e4136feab791b 593-614,627-628
+  s_15b80792f12d41::t_4b6765138df782 713-723,727-734
+  s_15b80792f12d41::t_b11e97f27d1f6b 26-31
+  s_15b80792f12d41::t_188c9a93504517 861
+  s_15b80792f12d41::t_a79b9f8b3f6a94 827-830
+  s_15b80792f12d41::t_624ccbacbee8c1 1913-1924
+  s_15b80792f12d41::t_bbfe7b61522d0e 2629,2631-2653
+  s_15b80792f12d41::t_2a5a7499e435e4 2720-2734,2736-2737,2748,2750-2752,2755-2770,2773-2792,2797-2800,2803
+  s_97977c05ed22dc::t_03c1ce76020f8d 1862-1866,1868-1871
+  s_15b80792f12d41::t_9ad7cfd33b2620 106-124
+  s_97977c05ed22dc::t_e9ab6dcb934358 2015
+  s_15b80792f12d41::t_180790d1d4cbeb 780-784
+  s_97977c05ed22dc::t_d85ca2617e79b4 1602-1605,1634-1648,1653,1658-1678
+  s_97977c05ed22dc::t_c8561359b1f2d0 1145-1147,1152-1178
+  s_97977c05ed22dc::t_7064e7e288335d 157-160,166-183
+  s_15b80792f12d41::t_f9e908791f3f82 1975
+  s_15b80792f12d41::t_fba283f1069732 2738-2747,2749
+  s_15b80792f12d41::t_ff6ad681375633 896-906
+  s_15b80792f12d41::t_8d8d5f8c2772aa 963
+  s_97977c05ed22dc::t_5af5fce6a72ab5 1093-1096
+  s_97977c05ed22dc::t_15f28d00655e27 615-626
+  s_15b80792f12d41::t_b89b3de595ae8b 161-165
+  s_15b80792f12d41::t_6ea36617e57003 2116,2118-2125,2129,2136
+  s_15b80792f12d41::t_87244614390edf 2012
+  s_97977c05ed22dc::t_8b3105d3354e11 2304-2306,2345-2351
+  s_15b80792f12d41::t_6b2a9fa0e8e5a2 2296-2299
+  s_97977c05ed22dc::t_3ea614d5474990 1250-1264
+  s_15b80792f12d41::t_20ff0c9c072cb9 702-706
+  s_15b80792f12d41::t_7fff09b5915de9 653-658
+tests/fixtures/review-scenarios/mixed-ticket/expected.json
+  s_15b80792f12d41::t_471e50f17ea5b2 2
+tests/nodes/review-compose-scenarios.test.ts
+  s_15b80792f12d41::t_78c0e79522f909 172-173
+  s_15b80792f12d41::t_533ab2b67a2d38 68
+tests/nodes/review-compose-reconcile.test.ts
+  s_15b80792f12d41::t_3d2ffca8407096 178
+  s_15b80792f12d41::t_7937f4d421a318 158
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "7f7f69269861ada3f5372e08b25662fe7e33bce8",
+  "prompts": {},
+  "sessions": {
+    "s_15b80792f12d41": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7a8edb5-f6d8-4a6b-b255-010bdfa18f85",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_97977c05ed22dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c2fbd296-0e4f-488c-9b7b-a7b135fb5e27",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,30 @@
+docs/adr/0013-cells-are-the-sole-verdict-input.md
+  s_15b80792f12d41::t_80481d8076c3f7 53-59
+  s_15b80792f12d41::t_b49747b3e53b6f 1-45,48-52,60-65
+  s_15b80792f12d41::t_0292269f95454e 46-47
+CONTEXT.md
+  s_15b80792f12d41::t_caa0dda47f4721 183-184
+  s_15b80792f12d41::t_3e2a754439e24a 187-196
+  s_15b80792f12d41::t_37e1bf4e06a447 172-173,178-181,185,197-198,201-203,243-251,257-265
+  s_15b80792f12d41::t_458f1266735d9d 174-177
+  s_15b80792f12d41::t_11a59daf25a6f0 186
+  s_15b80792f12d41::t_3272c7e7f9f3da 182
+  s_15b80792f12d41::t_df2d8e504b8688 252-256
+  s_15b80792f12d41::t_c8ea7eef45a420 199-200,204-242
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "92e22c143a652a5a7c493df27f2079d713227f7d",
+  "prompts": {},
+  "sessions": {
+    "s_15b80792f12d41": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7a8edb5-f6d8-4a6b-b255-010bdfa18f85",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

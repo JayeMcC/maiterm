@@ -1,0 +1,28 @@
+src/utils/run-source-evidence.ts
+  s_10d7e958b8b364::t_e722b8fb720c23 115,117-136
+  s_10d7e958b8b364::t_3d5ac595b03a66 218,228
+  s_10d7e958b8b364::t_2e6971baf4df94 137-144
+  s_10d7e958b8b364::t_b6636e57089137 49-61
+  s_10d7e958b8b364::t_db66e71954ab4f 192-201,206-207
+  s_10d7e958b8b364::t_27bc8fa9eaa90d 21
+  s_10d7e958b8b364::t_69965937f2bdf2 298-313,326
+  s_10d7e958b8b364::t_082aa3e668ec29 101-103,105
+  s_10d7e958b8b364::t_a1f22a67744812 22
+  s_10d7e958b8b364::t_286313c665a596 278-287
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "b860209d6edc0110ef6cb1a4fa1eacae58412964",
+  "prompts": {},
+  "sessions": {
+    "s_10d7e958b8b364": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46384a65-2676-4658-b4d1-9722428b95fa",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

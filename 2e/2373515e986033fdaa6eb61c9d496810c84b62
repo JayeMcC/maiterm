@@ -1,0 +1,67 @@
+src/graph/walk-edges.ts
+  s_5f14770e38a813::t_d7a13c7af0f458 1-66
+src/utils/atomic-emit.ts
+  s_5f14770e38a813::t_62d7dc4f51b6e8 1-233
+src/utils/spec-fragment-emit.ts
+  s_5f14770e38a813::t_25df8111f5fe5a 1-202
+src/nodes/walk-failed.ts
+  s_5f14770e38a813::t_12050fb73e922c 63-71,73
+  s_5f14770e38a813::t_9b6bc70c5026cb 3-6,23-24,27,30,35-61,80-87
+  s_5f14770e38a813::t_df6ee7ae9813d9 1-2,7-22,25-26,28-29,31-34,62,72,74-79,88
+src/graph/walk-state-annotation.ts
+  s_5f14770e38a813::t_b251476142d7fa 60-74
+  s_5f14770e38a813::t_4c2d3063fccead 1-59,75-132,147-198
+  s_5f14770e38a813::t_acf3d4a7cfd210 133-146
+.agents/skills/walk/SKILL.md
+  s_5f14770e38a813::t_666dd0aaacee9f 30-63
+src/nodes/walk-agent-drive.ts
+  s_5f14770e38a813::t_b3c8c161dc1626 32
+  s_5f14770e38a813::t_dd755435d9f089 1-31,33-59,66-77,79-105,108-111,123-169,203-216
+  s_5f14770e38a813::t_6a2e50917dd629 170-202
+  s_5f14770e38a813::t_bc4bb4a22bd17b 106-107,112-122
+  s_5f14770e38a813::t_4961b335ae185a 60-65,78
+src/graph/walk-subgraph.ts
+  s_5f14770e38a813::t_e87f943d1407f7 1-89
+src/nodes/walk-await-human.ts
+  s_5f14770e38a813::t_6e01309debee9b 140,146,149-160,175
+  s_5f14770e38a813::t_2ac026f8cc69ca 1-38,40-139,141-145,147-148,161-174,176-177
+  s_5f14770e38a813::t_0b4268a6f2a58f 39
+src/utils/dual-codify.ts
+  s_5f14770e38a813::t_15de1d6484da1b 94-106
+  s_5f14770e38a813::t_3a36ae0a844502 1-93,107-108
+src/nodes/walk-plan-subgoal.ts
+  s_5f14770e38a813::t_f6e0d5bfbfcbc0 1-3,14,18,23-24,26,30-32,53,71-73,105,110,132,135,199
+  s_5f14770e38a813::t_0500eb75f96436 4-13,15-17,19-22,25,27-29,33-52,54-70,74-104,106-109,127-131,133-134,136-198
+  s_5f14770e38a813::t_1faa845f14d82c 111-126
+src/utils/atomic-matcher.ts
+  s_5f14770e38a813::t_9dfb9719d95bc7 1-195
+src/nodes/walk-complete.ts
+  s_5f14770e38a813::t_9d35ca98534aa8 1-2,7-22,26-27,55,64,66-80
+  s_5f14770e38a813::t_90383c7a9eb340 3-6,23-25,28-54
+  s_5f14770e38a813::t_49464989d6de32 56-63,65
+src/utils/codegen-attach.ts
+  s_5f14770e38a813::t_797da98b5f68ae 1-249
+src/scripts/walk-start.ts
+  s_5f14770e38a813::t_07c3a1bcec6c7b 1-4,6-8,18-27,29-60,63-79,82-99,101-105,107-119,121-122,126-129,131-132,137,139-140,144-146,150,152,154,156-158,164-171,175-177,183-197,200-203,235,239,246-250,252-261,263-268,273-299
+  s_5f14770e38a813::t_38e8ca3be016a3 241-243
+  s_5f14770e38a813::t_a0c2cda5874540 5,9-17,28,61-62,80-81,100,106,120,123-125,130,133-136,138,141-143,147-149,151,153,155,159-163,172-174,178-182,198-199,204-234,236-238,240,244-245,251,269-272
+  s_5f14770e38a813::t_68bab1936af6da 262
+src/utils/codegen-trace-merge.ts
+  s_5f14770e38a813::t_1e898bbb15d8ba 1-171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "2e2373515e986033fdaa6eb61c9d496810c84b62",
+  "prompts": {},
+  "sessions": {
+    "s_5f14770e38a813": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "20f2e9e3-5ce3-4e4f-aa58-f7da934517a3",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

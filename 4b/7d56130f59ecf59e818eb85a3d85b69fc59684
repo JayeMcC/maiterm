@@ -1,0 +1,23 @@
+src/utils/classify-adequate-coverage.ts
+  s_10d7e958b8b364::t_79a2cd458c6792 247-319,547-548
+  s_10d7e958b8b364::t_17b3b6439783db 536-546
+tests/utils/classify-adequate-coverage.test.ts
+  s_10d7e958b8b364::t_c1904dae37ae05 530-594
+  s_10d7e958b8b364::t_10ed9fafd88ff5 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "4b7d56130f59ecf59e818eb85a3d85b69fc59684",
+  "prompts": {},
+  "sessions": {
+    "s_10d7e958b8b364": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46384a65-2676-4658-b4d1-9722428b95fa",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

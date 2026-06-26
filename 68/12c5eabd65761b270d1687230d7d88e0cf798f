@@ -1,0 +1,32 @@
+.agents/skills/review-pr/SKILL.md
+  s_375e7f88918ce6::t_8c148faf6982ea 89,99-101,103,105-111,141-189
+  s_375e7f88918ce6::t_50b156ee2da746 412-418
+  s_375e7f88918ce6::t_9ebaf3621d085e 16-20
+  s_375e7f88918ce6::t_a6ade06738034d 532-591
+  s_375e7f88918ce6::t_167871640d7a7b 297-298,300,316-318,335,340-344,367,371-375
+  s_375e7f88918ce6::t_3569ea36bb4133 84-88,90-98,102,104,190
+  s_375e7f88918ce6::t_7fc2a312005938 13-15,21
+  s_375e7f88918ce6::t_65646a8e7079b0 326-334
+  s_375e7f88918ce6::t_b670e3dfebd333 468-531
+  s_375e7f88918ce6::t_4c140547edb55e 592-596
+  s_375e7f88918ce6::t_877054ab5799a7 112-140,404
+  s_375e7f88918ce6::t_e1acecc9e97d4f 262-269,271-276,283-284,425,430-467
+  s_375e7f88918ce6::t_f3fd215641fd2e 301-315,319-325,336-339,345-366,376-386
+  s_375e7f88918ce6::t_13bf2dd6673ec5 286-296,299,387-403
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "6812c5eabd65761b270d1687230d7d88e0cf798f",
+  "prompts": {},
+  "sessions": {
+    "s_375e7f88918ce6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f938b24-227f-44ba-ba49-0b22b04477c1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

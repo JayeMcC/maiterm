@@ -1,0 +1,20 @@
+.agents/rules/10-project/permanent-test-scope.md
+  s_10d7e958b8b364::t_9e5387708ab5a4 256-265
+  s_10d7e958b8b364::t_3978565140ddef 198-238
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "132f9b2bb071f462700628ef80e5a5d90e70fbf4",
+  "prompts": {},
+  "sessions": {
+    "s_10d7e958b8b364": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46384a65-2676-4658-b4d1-9722428b95fa",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

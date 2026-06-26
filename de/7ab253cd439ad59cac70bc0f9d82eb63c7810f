@@ -1,0 +1,20 @@
+src/utils/api-evidence-script.ts
+  s_15b80792f12d41::t_dd041187800ea0 70-72,74-77,83-88,93-94,96,99-100
+  s_15b80792f12d41::t_53547c27012b31 294-301
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "de7ab253cd439ad59cac70bc0f9d82eb63c7810f",
+  "prompts": {},
+  "sessions": {
+    "s_15b80792f12d41": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7a8edb5-f6d8-4a6b-b255-010bdfa18f85",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

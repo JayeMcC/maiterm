@@ -1,0 +1,50 @@
+src/nodes/review-dispatch-e2e-review.ts
+  s_375e7f88918ce6::t_9a965676908194 298-301
+  s_15b80792f12d41::t_0ffc3f0f689860 108
+  s_15b80792f12d41::t_b3f6111b2c3833 1313-1324
+  s_15b80792f12d41::t_0b98ba656625bd 2259-2267,2276
+  s_375e7f88918ce6::t_77381cc3c15692 98
+  s_15b80792f12d41::t_495da614306807 419-440
+  s_375e7f88918ce6::t_40e1213e0f5b99 254,259-269,297,302-303
+  s_375e7f88918ce6::t_5a123a2d7d7280 574-587
+  s_15b80792f12d41::t_179735340422c0 784-850
+  s_375e7f88918ce6::t_c6bffbf7a04adb 271-275
+  s_375e7f88918ce6::t_2750e5b8e571df 255-258,270,276-296
+src/nodes/e2e-explore.ts
+  s_15b80792f12d41::t_4934df544191ce 1457-1463
+  s_15b80792f12d41::t_cc6a35f0f66202 1436
+  s_15b80792f12d41::t_44b0f1bb71fcd0 32
+  s_15b80792f12d41::t_cf8e0729f2838a 467-477
+  s_15b80792f12d41::t_9b8238d3d09209 1537
+  s_15b80792f12d41::t_90b307a22febbd 1009-1010
+  s_15b80792f12d41::t_d150e587ec9376 1123
+  s_15b80792f12d41::t_2e7ccd28f4fa3f 879-924
+  s_15b80792f12d41::t_d6b261f3a241a5 565-566
+src/nodes/e2e-walk-for-ac.ts
+  s_15b80792f12d41::t_f3fe5a9ae09c3f 162
+  s_15b80792f12d41::t_b672f356eb7673 414-424
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "840a009f069ef90ac6d196f6fab8ba6fb00234f3",
+  "prompts": {},
+  "sessions": {
+    "s_15b80792f12d41": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7a8edb5-f6d8-4a6b-b255-010bdfa18f85",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_375e7f88918ce6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f938b24-227f-44ba-ba49-0b22b04477c1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

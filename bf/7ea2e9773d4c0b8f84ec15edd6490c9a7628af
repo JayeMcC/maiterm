@@ -1,0 +1,30 @@
+tests/utils/f1cli-script-diagnostic.test.ts
+  s_10d7e958b8b364::t_cc77168b3dcb95 1-67
+src/utils/f1cli-script.ts
+  s_375e7f88918ce6::t_75739220cdb6e8 187-198,200-201
+  s_10d7e958b8b364::t_ce701102332275 170-180,182-183,202-205,214-245
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "bf7ea2e9773d4c0b8f84ec15edd6490c9a7628af",
+  "prompts": {},
+  "sessions": {
+    "s_10d7e958b8b364": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46384a65-2676-4658-b4d1-9722428b95fa",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_375e7f88918ce6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f938b24-227f-44ba-ba49-0b22b04477c1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
