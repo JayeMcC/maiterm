@@ -1,0 +1,19 @@
+skill-library/pr-workflow/triage-pr-feedback/SKILL.md
+  s_5f14770e38a813::t_0c32f5d02789b9 18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "0bdc8eca6bbe750760c6727a4d0be40b02117d0b",
+  "prompts": {},
+  "sessions": {
+    "s_5f14770e38a813": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "20f2e9e3-5ce3-4e4f-aa58-f7da934517a3",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
