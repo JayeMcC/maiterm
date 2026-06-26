@@ -1,0 +1,36 @@
+skill-library/pr-workflow/triage-pr-feedback/JOBS.md
+  s_fb09dea22c7ca8::t_f85ba850e6f8d5 4
+skill-jobs/reviewing-a-pr/README.md
+  s_fb09dea22c7ca8::t_5ee8d32ec42c80 10
+skill-jobs/responding-to-pr-feedback/README.md
+  s_fb09dea22c7ca8::t_ac0336661de0fc 9
+docs/workflows.md
+  s_fb09dea22c7ca8::t_ebe2c726fd58bf 399,401,405-409
+README.md
+  s_fb09dea22c7ca8::t_1add985d8163c4 62
+skill-library/pr-workflow/triage-pr-feedback/workflow.md
+  s_fb09dea22c7ca8::t_2a18f6e098bbc9 1-150
+  s_fb09dea22c7ca8::t_5a57c7a199d6ac 249-291
+  s_fb09dea22c7ca8::t_d885ffe718a9da 332
+  s_fb09dea22c7ca8::t_304d584f05b7e6 296
+  s_fb09dea22c7ca8::t_3744994b35a63b 338
+  s_fb09dea22c7ca8::t_18d919f38b94ae 154-237
+skill-library/pr-workflow/triage-pr-feedback/SKILL.md
+  s_fb09dea22c7ca8::t_f1c5189fd50687 2-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "5fc86650d51a08c87a15bd430c052672f9ccf425",
+  "prompts": {},
+  "sessions": {
+    "s_fb09dea22c7ca8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6e5690e5-6eb8-4346-9c12-858cc61938f1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
