@@ -1,0 +1,24 @@
+src/nodes/walk-plan-subgoal.ts
+  s_10b069ebcfad9c::t_eb2abf407c91ab 68-73
+  s_10b069ebcfad9c::t_9e340960af7654 38-41
+  s_10b069ebcfad9c::t_b7fe4644d117fb 182-200
+  s_10b069ebcfad9c::t_9e9bea06e68774 107-115,119-129,141-145
+src/graph/walk-state-annotation.ts
+  s_10b069ebcfad9c::t_fc27811649a1ab 75-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "b8876dfb506fd58f5e3470e007f4da89d7abae47",
+  "prompts": {},
+  "sessions": {
+    "s_10b069ebcfad9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a534af91-48df-4e47-9019-e2d3a4b4cfd9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
