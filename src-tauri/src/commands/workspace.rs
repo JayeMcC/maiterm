@@ -1581,6 +1581,63 @@ pub fn set_workspace_bridge_all(
     Ok(())
 }
 
+/// Toggle a single tab's maiLink-native designation (whether it appears as a chat in the
+/// maiLink mobile companion). Per-tab opt-in; orthogonal to the workspace-wide flag. See
+/// docs/mailink-protocol.md.
+#[tauri::command]
+pub fn set_tab_mailink_native(
+    window: tauri::Window,
+    state: State<'_, Arc<AppState>>,
+    workspace_id: String,
+    pane_id: String,
+    tab_id: String,
+    mailink_native: bool,
+) -> Result<(), String> {
+    let label = window.label().to_string();
+    let mut app_data = state.app_data.write();
+    let win = app_data.window_mut(&label).ok_or("Window not found")?;
+    let workspace = win.workspaces.iter_mut()
+        .find(|w| w.id == workspace_id)
+        .ok_or("Workspace not found")?;
+    let pane = workspace.panes.iter_mut()
+        .find(|p| p.id == pane_id)
+        .ok_or("Pane not found")?;
+    let tab = pane.tabs.iter_mut()
+        .find(|t| t.id == tab_id)
+        .ok_or("Tab not found")?;
+
+    tab.mailink_native = mailink_native;
+
+    let data_clone = app_data.clone();
+    drop(app_data);
+    save_state(&data_clone)
+}
+
+/// Toggle a workspace-wide maiLink-native designation: every agent tab in the workspace is
+/// exposed to maiLink as a chat. See docs/mailink-protocol.md.
+#[tauri::command]
+pub fn set_workspace_mailink_native(
+    window: tauri::Window,
+    state: State<'_, Arc<AppState>>,
+    workspace_id: String,
+    enabled: bool,
+) -> Result<(), String> {
+    let label = window.label().to_string();
+    let data_clone = {
+        let mut app_data = state.app_data.write();
+        let win = app_data.window_mut(&label).ok_or("Window not found")?;
+        let workspace = win
+            .workspaces
+            .iter_mut()
+            .find(|w| w.id == workspace_id)
+            .ok_or("Workspace not found")?;
+        workspace.mailink_native = enabled;
+        app_data.clone()
+    };
+    save_state(&data_clone)?;
+    Ok(())
+}
+
 /// Replace a mesh workspace's topic registry wholesale. The frontend `agentMesh` store is
 /// authoritative for topics (it mints ids + timestamps in JS and dedups by normalized
 /// label), so persistence is a coarse replace rather than granular CRUD — right-sized for

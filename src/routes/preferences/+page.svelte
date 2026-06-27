@@ -1931,6 +1931,35 @@
             <button class="number-btn" onclick={() => preferencesStore.setMeshTopicTtlMinutes(preferencesStore.meshTopicTtlMinutes + 5)}>+</button>
           </div>
         </div>
+
+        <h3 class="section-heading" style="margin-top: 20px;">maiLink Mobile Companion</h3>
+        <p class="section-desc">
+          maiLink is a phone app that lets you answer your agents (approve a permission, reply to
+          a question, nudge one forward) and drive designated tabs — over your local network or a
+          WireGuard tunnel, with no cloud in the data path. Mark a tab or workspace as a maiLink
+          chat via its right-click menu (“Expose to maiLink”). See <code>docs/mailink-protocol.md</code>.
+        </p>
+
+        <div class="setting" style="align-items: flex-start;">
+          <div>
+            <label for="mailink-enabled">Enable maiLink bridge</label>
+            <p class="setting-hint">
+              Starts the on-device LAN bridge that paired phones connect to. Off by default; no
+              device can connect until you enable it and pair one. Device pairing (QR) and the
+              paired-devices list arrive in a follow-up update.
+            </p>
+          </div>
+          <button
+            id="mailink-enabled"
+            class="toggle"
+            class:active={preferencesStore.mailinkEnabled}
+            onclick={() => preferencesStore.setMailinkEnabled(!preferencesStore.mailinkEnabled)}
+            aria-pressed={preferencesStore.mailinkEnabled}
+            aria-label="Toggle maiLink bridge"
+          >
+            <span class="toggle-knob"></span>
+          </button>
+        </div>
       {:else if activeSection === 'backup'}
         <h3 class="section-heading">Backup Options</h3>
         <p class="section-desc">

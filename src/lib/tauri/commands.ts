@@ -458,6 +458,15 @@ export async function setWorkspaceBridgeAll(workspaceId: string, enabled: boolea
   return invoke('set_workspace_bridge_all', { workspaceId, enabled });
 }
 
+// maiLink companion commands (docs/mailink-protocol.md)
+export async function setTabMailinkNative(workspaceId: string, paneId: string, tabId: string, mailinkNative: boolean): Promise<void> {
+  return invoke('set_tab_mailink_native', { workspaceId, paneId, tabId, mailinkNative });
+}
+
+export async function setWorkspaceMailinkNative(workspaceId: string, enabled: boolean): Promise<void> {
+  return invoke('set_workspace_mailink_native', { workspaceId, enabled });
+}
+
 export async function setWorkspaceMeshTopics(workspaceId: string, topics: MeshTopic[]): Promise<void> {
   return invoke('set_workspace_mesh_topics', { workspaceId, topics });
 }
@@ -569,6 +578,16 @@ export async function scpWriteFile(sshCommand: string, remotePath: string, conte
 
 export async function saveClipboardImage(dataBase64: string, ext?: string): Promise<string> {
   return invoke('save_clipboard_image', { dataBase64, ext });
+}
+
+/** Reveal a local file in the OS file manager (Finder/Explorer/file browser). */
+export async function revealInFileManager(path: string): Promise<void> {
+  return invoke('reveal_in_file_manager', { path });
+}
+
+/** SCP a remote file into the local Downloads directory; returns the saved path. */
+export async function downloadRemoteFile(sshCommand: string, remotePath: string): Promise<string> {
+  return invoke('download_remote_file', { sshCommand, remotePath });
 }
 
 export async function scpUploadFiles(sshCommand: string, localPaths: string[], remoteDir: string, uploadId: string): Promise<void> {

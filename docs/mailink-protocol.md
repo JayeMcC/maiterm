@@ -1,0 +1,485 @@
+# maiLink — Mobile Companion Protocol & Architecture
+
+> Status: **design / contract draft v0.2**. This is the shared contract between the
+> maiTerm **desktop** side (this repo) and the **maiLink mobile app** (separate codebase,
+> built collaboratively with the maiLink agent). Date: 2026-06-27.
+>
+> **v0.2 changelog** (agreed with the maiLink agent): app stack is **Capacitor +
+> SvelteKit + shadcn-svelte** (cross-platform, not native SwiftUI); `/push-register` is
+> **platform-tagged** (APNs+FCM); the WS `attention` event carries an optional inline
+> `prompt`; prompts have an opaque `prompt_id` carried through `/respond` (stale-guard);
+> `POST /message`'s `msg_id` is guaranteed identical to its later WS echo; a transcript
+> pagination param is reserved. **Open product call (Darryl):** iOS-first vs iOS+Android
+> at launch — the protocol supports both regardless; only the *launch scope* is undecided.
+
+## 0. What maiLink is (and is not)
+
+**maiLink is a lightweight mobile *companion* for the agents running inside maiTerm** —
+not a terminal. When a Claude/Codex/Gemini agent in a maiTerm tab needs a human (a
+permission prompt, a question, or it just finished and is waiting), maiLink rings your
+phone; you read enough context to decide, and reply. And — because certain tabs/workspaces
+can be designated **maiLink-native** — you can also *proactively* open one as a chat and
+drive it from your phone, unprompted.
+
+| | maiLink (this doc) | Full mobile maiTerm (`mobile-packaging.md`) |
+|---|---|---|
+| Product | Chat/approvals companion | Real remote terminal |
+| Terminal core | **None** | `alacritty_terminal` + xterm.js + `russh` |
+| Talks to | A running desktop maiTerm over LAN | Remote SSH hosts directly |
+| Stack | Capacitor + SvelteKit + shadcn-svelte | Tauri mobile, ~80% reuse |
+| Effort | Small, well-scoped | Weeks |
+
+These are **independent** products. Don't conflate them. maiLink does not embed a terminal;
+it renders a *distilled chat transcript* of an agent and injects replies back into it.
+
+### Locked-in decisions (from product owner, 2026-06-27)
+
+1. **Wake mechanism: thin doorbell.** The cloud is used *only* as a content-free bell
+   (APNs for iOS). All real data — prompts, context, replies — flows over the **LAN /
+   WireGuard** link. Apple/our relay never see terminal content.
+2. **Platform: cross-platform via Capacitor (iOS + Android).** The contract is
+   transport- and platform-neutral; push is platform-tagged (APNs + FCM). **Launch scope
+   (iOS-first vs both-at-once) is an open product call for Darryl** — it does not affect
+   the protocol.
+3. **Interaction model: a chat app.** Bidirectional. Inbound = the agent needs/notifies
+   you. Outbound = you can activate maiLink-native tabs and send proactive commands.
+4. **Exposure: opt-in + per-device QR pairing.** The LAN listener is **off** until enabled
+   in Preferences. Pairing is a QR scan that hands the phone host+port+cert-fingerprint+a
+   one-time code. Each phone is a revocable device. **The existing localhost-only IDE/MCP
+   server (`claude_code/server.rs`, bound to `127.0.0.1`) is untouched** — maiLink is a
+   *separate*, explicitly-gated LAN surface.
+
+---
+
+## 1. Architecture
+
+```
+                       ┌──────────────────────── desktop maiTerm ────────────────────────┐
+                       │                                                                   │
+  Claude/Codex hooks ──┼─► agent_sessions (session→tab)   tab_pty_map / pty_registry      │
+   (already exists)    │        │  state machine                  │                        │
+                       │        ▼  (active/idle/permission)        ▼  write_pty()           │
+                       │   agentStateStore  ──── attention ───►  bracketed-paste inject    │
+                       │        │                events            ▲                        │
+                       │        ▼                                  │                        │
+                       │   ┌─────────────── NEW: mailink module ───┴──────────────┐        │
+                       │   │  • maiLink-native registry (designated tabs/ws)       │        │
+                       │   │  • gated axum listener on LAN iface (TLS, self-signed) │        │
+                       │   │  • per-device pairing + bearer tokens                  │        │
+                       │   │  • WS live chat channel + REST actions                 │        │
+                       │   │  • doorbell trigger → relay when no live WS            │        │
+                       │   └───────────────┬───────────────────────┬───────────────┘        │
+                       └───────────────────┼───────────────────────┼────────────────────────┘
+                                           │ LAN / WireGuard (TLS)  │ content-free wake
+                                           │ (all real data)        ▼
+                                           │                 ┌─────────────┐   ┌──────────┐
+                                           │                 │ push relay  │──►│   APNs   │
+                                           │                 │ (CF Worker, │   └────┬─────┘
+                                           │                 │  holds .p8) │        │
+                                           ▼                 └─────────────┘        ▼
+                                   ┌──────────────────────────────────────────────────────┐
+                                   │  maiLink iOS app  — chat list / thread / composer      │
+                                   │  wakes on push ► opens WS over LAN ► pulls real data    │
+                                   └──────────────────────────────────────────────────────┘
+```
+
+**Three new things on the desktop side. Everything else already exists.**
+
+1. **maiLink-native designation** — a flag on tabs/workspaces marking them as "exposed to
+   maiLink as a chat."
+2. **Gated LAN bridge** — a new `src-tauri/src/mailink/` module: its own TLS axum listener
+   (separate from the localhost IDE/MCP server), per-device pairing + tokens, a WS live
+   channel, and REST actions. Lists maiLink-native chats, streams their state, accepts
+   messages/commands, serves distilled context.
+3. **APNs doorbell** — when an attention event fires for a maiLink-native tab and no device
+   currently holds a live foreground WS, the desktop POSTs a content-free wake to the push
+   relay, which signs and forwards to APNs.
+
+### What we reuse verbatim (already built — see `claude_code/CLAUDE.md`)
+
+| Need | Existing mechanism | Location |
+|---|---|---|
+| "Agent needs a human" signal | hook state machine: `permission` / `idle`(done) / `active` | `src/lib/stores/agentState.svelte.ts`; `agent-hook-*` Tauri events |
+| session → tab → pty resolution | `agent_sessions` → `tab_pty_map` → `pty_registry` | `src-tauri/src/state/app_state.rs` |
+| Inject a reply/command | `write_pty(state, pty_id, &bytes)` + bracketed-paste submit | `pty/manager.rs:551`; `src/lib/utils/agentPrompt.ts:36` |
+| Don't inject while a human prompt is pending | `deliverable()` / `isAwaitingHumanInput()` gate, FIFO mailbox | `src/lib/stores/agentDelivery.ts`; `src/lib/agents/adapter.ts` |
+| Distilled context for the phone | `get_terminal_recent_text(pty_id, n)` (plain text) | `src-tauri/src/commands/terminal.rs:524` |
+| HTTP/WS/SSE server patterns, auth, conn affinity | axum server | `src-tauri/src/claude_code/server.rs` |
+| A deployed Cloudflare Worker (precedent for the relay) | update + stats worker | `update-worker/` (`updates.maiterm.dev`) |
+
+The reply path is the **same rails the agent-to-agent bridge already uses** — maiLink is
+"just another peer" that happens to be a phone instead of a forked Claude.
+
+---
+
+## 2. Data model additions
+
+### 2.1 maiLink-native designation
+
+Add an additive, `serde(default)` flag to `Tab` (`state/workspace.rs:215`) and `Workspace`
+(`:406`):
+
+```rust
+// Tab
+#[serde(default)]
+pub mailink_native: bool,      // this tab appears as a chat in maiLink
+
+// Workspace
+#[serde(default)]
+pub mailink_native: bool,      // all agent tabs in this workspace are maiLink chats
+```
+
+Effective exposure = `tab.mailink_native || workspace.mailink_native`, intersected with
+"is an agent tab" (has a tracked `agent_sessions` entry — we don't expose plain shells as
+chats). Mirrors the `Workspace.bridge_all` mesh pattern exactly (see mesh-workspace.md):
+designation is *persisted*, the live roster is *derived*.
+
+> **Serde round-trip pitfall** (project-wide): `skip_serializing_if`/`default` means loaded
+> JS objects get `undefined`, not `false`. Normalize with `?? false` on the TS side; never
+> `JSON.stringify`-compare.
+
+Commands (follow the New-Tauri-Command checklist in root `CLAUDE.md`):
+`set_tab_mailink_native(tab_id, on)`, `set_workspace_mailink_native(ws_id, on)`.
+
+UI: a context-menu toggle on a tab ("Expose to maiLink") + a workspace toggle, plus a
+Preferences "maiLink" section (enable bridge, paired devices, designated chats overview).
+
+### 2.2 Preferences additions (`Preferences`, `state/workspace.rs:793`)
+
+```rust
+#[serde(default)] pub mailink_enabled: bool,                 // master on/off for the LAN bridge
+#[serde(default)] pub mailink_port: Option<u16>,             // None → pick + persist a free port
+#[serde(default)] pub mailink_bind: MailinkBind,             // Lan (0.0.0.0) | specific iface
+#[serde(default)] pub mailink_devices: Vec<MailinkDevice>,   // paired devices (see below)
+```
+
+### 2.3 Paired device record (persisted, in state — not preferences if it carries secrets)
+
+```rust
+pub struct MailinkDevice {
+    pub id: String,            // uuid
+    pub name: String,          // "Darryl's iPhone" (user-editable)
+    pub token_hash: String,    // argon2/sha256 of the bearer token (never store raw)
+    pub push_token: Option<String>,   // device's push token (APNs or FCM), set after pairing
+    pub push_platform: PushPlatform,  // Apns | Fcm — which sender the relay uses
+    pub push_env: PushEnv,            // Sandbox | Production (APNs); maps to project for FCM
+    pub created_at: i64,
+    pub last_seen_at: i64,
+}
+```
+
+Revocation = remove the record; its bearer token stops validating immediately.
+
+---
+
+## 3. Pairing & auth
+
+### 3.1 TLS on the LAN (required — and ATS-compatible)
+
+The LAN listener serves **HTTPS with a self-signed cert** generated on first enable
+(`rcgen` crate). This is non-negotiable: without TLS the WireGuard'd link is still cleartext
+to anything on the same LAN, and mobile OSes won't trust an untrusted chain by default. We
+satisfy this via **cert pinning**: the QR carries the cert's SHA-256 fingerprint; the app
+pins it. Self-signed + pinned = encrypted *and* MITM-resistant, no CA needed.
+
+> **Capacitor note (maiLink agent owns this):** in a Capacitor WebView, JS `fetch`/
+> `WebSocket` cannot override trust for a self-signed cert (WKWebView / Android WebView
+> reject it; `NSAllowsLocalNetworking` relaxes ATS but still won't trust an untrusted
+> chain). So maiLink ships a **thin native transport plugin** owning REST + WS with
+> pinned-fingerprint trust evaluation — iOS `URLSession` `didReceive` challenge +
+> `URLSessionWebSocketTask`; Android OkHttp custom `TrustManager` + WebSocket. This is the
+> app's responsibility and changes none of the desktop handlers; pinning is solved
+> native-side on both platforms, not in JS.
+
+**Fingerprint format (FROZEN — agreed with the maiLink agent, v0.2):** the QR `fp` field is
+
+```
+fp = "sha256/" + base64( SHA256( DER_of_leaf_cert ) )
+```
+
+- **Hashed input:** the server's **leaf certificate, full DER** — the whole cert, NOT the
+  SPKI/public-key. These are the exact bytes `cert.der()` returns from `rcgen` on the desktop,
+  `SecCertificateCopyData` on iOS, `X509Certificate.getEncoded()` on Android — so all three
+  hash identical bytes. (Full-cert avoids the iOS SPKI ASN.1-header reconstruction footgun.)
+- **Hash:** SHA-256. **Encoding:** standard Base64 (RFC 4648, `+`/`/`, `=`-padded) — **not**
+  base64url. **Prefix:** literal `sha256/`.
+- **Note:** here `sha256/` denotes a **full-cert (leaf DER) pin**, NOT OkHttp's SPKI
+  `CertificatePinner` convention — the app uses a custom trust evaluator, so the prefix is
+  just our shared label. Don't assume SPKI on either side.
+- **Reproduction (both sides must print the same value):**
+  `openssl x509 -in cert.pem -outform DER | openssl dgst -sha256 -binary | base64`
+
+**Verification is fingerprint-only — hostname/SAN is intentionally bypassed.** With a pinned
+self-signed cert, SAN/host matching is redundant and would only cause spurious failures (LAN
+IP absent from SAN, or IP churn). Consequences, all intended: (1) the cert needs **no IP in
+its SAN**; (2) the **same cert validates at any IP**, so a DHCP address change (or
+mDNS-rediscovery) reconnects **without re-pairing**; (3) the pin changes **only** when the
+desktop regenerates the cert — then the QR carries the new `fp` and the device re-pairs. One
+native trust delegate covers **both** REST and WSS (iOS `URLSessionDelegate.didReceive`
+serverTrust challenge; Android custom `X509TrustManager`) — REST and WSS share the anchor.
+
+### 3.2 QR pairing handshake
+
+```
+QR payload (JSON, displayed by Prefs ▸ maiLink ▸ "Pair new device")
+{ "v": 1,
+  "host": "192.168.1.42",          // or the WireGuard peer IP
+  "port": 9787,
+  "fp": "sha256/BASE64CERTFP",     // cert fingerprint to pin
+  "code": "RXT7-9K2Q",             // one-time pairing code, TTL ~120s, single use
+  "name": "Darryl's MacBook" }
+```
+
+1. App scans QR, dials `https://host:port` pinning `fp`.
+2. `POST /mailink/v1/pair  { code, device_name, app_info }`
+   → desktop validates `code` (unexpired, unused) → mints a long-lived **bearer token**,
+   stores `MailinkDevice{ token_hash, name }`, returns `{ device_id, token, server_name }`.
+   The raw token is shown to the phone **once**; desktop keeps only its hash.
+3. App stores `token` in the iOS Keychain. All later calls send
+   `Authorization: Bearer <token>` over the pinned-TLS channel.
+4. App registers for push: `POST /mailink/v1/push-register { token, platform, env }`
+   where `platform` is `"apns"` or `"fcm"` — the relay fans out to the matching sender.
+
+The pairing code is the only out-of-band secret and it's short-lived + single-use; the
+bearer token never transits a QR or a screen after step 2.
+
+> **WireGuard note:** maiLink imposes nothing on the VPN. When off-LAN, the user brings up
+> their WireGuard tunnel (any client) and the QR/host simply carries the WG peer IP instead
+> of the LAN IP. From maiLink's perspective it's the same TLS endpoint. We *document* a
+> recommended WG setup; we don't ship a VPN.
+
+---
+
+## 4. The wire contract (LAN API)
+
+Base: `https://{host}:{port}/mailink/v1`. Auth: `Authorization: Bearer <token>` on
+everything except `/pair`. JSON bodies. All times are unix ms.
+
+### 4.1 REST (stateless actions)
+
+| Method + path | Purpose | Body / returns |
+|---|---|---|
+| `POST /pair` | Redeem QR code → token | `{code,device_name}` → `{device_id,token,server_name}` |
+| `POST /push-register` | Store push token for doorbell | `{token,platform,env}` → `{ok}` (`platform`: `"apns"`\|`"fcm"`) |
+| `GET  /chats` | List maiLink-native chats + state | → `Chat[]` (see §4.3) |
+| `GET  /chats/{tabId}?before={msg_id}&limit=N` | One chat + transcript (paging params reserved) | → `ChatDetail` |
+| `GET  /chats/{tabId}/context?lines=N` | Distilled plain-text context | → `{text, truncated}` |
+| `POST /chats/{tabId}/message` | Send a message / proactive command | `{text, submit?:true}` → `{status:"queued"\|"delivered", msg_id}` |
+| `POST /chats/{tabId}/respond` | Answer a pending permission/question | `{choice, prompt_id}` (see §5) → `{ok}` \| `{ok:false, reason:"stale"}` |
+| `POST /chats/{tabId}/activate` | Activate/focus/resume a designated tab | `{}` → `{state}` |
+| `POST /chats/{tabId}/interrupt` | Send Esc (stop the agent) | `{}` → `{ok}` |
+| `GET  /heartbeat` | Liveness + server clock | → `{ok, now, server_name}` |
+
+### 4.2 WebSocket (live chat channel) — `GET /mailink/v1/ws` (upgrade)
+
+Bidirectional, opened while the app is foreground. Server→client events:
+
+```jsonc
+{ "type": "chat_state", "tabId": "...", "state": "active|idle|permission",
+  "runtime": "claude", "tool": "Bash", "detail": "rm -rf ./dist", "ts": 0 }
+{ "type": "message", "tabId": "...", "role": "agent|user|system",
+  "text": "...", "msg_id": "...", "ts": 0 }          // a new transcript turn
+                                                     // for a user echo, msg_id === the id POST /message returned
+{ "type": "attention", "tabId": "...", "kind": "permission|idle_done|question",
+  "summary": "Needs permission: Run rm -rf ./dist",
+  "prompt": { "prompt_id": "p_7f3a", "kind": "permission", "text": "Run: rm -rf ./dist",
+              "options": ["Yes","Yes, don't ask again","No"] }, "ts": 0 }
+                                                     // `prompt` mirrors pendingPrompt; present for permission/question,
+                                                     // omitted for idle_done. Lets the app render decision buttons on the
+                                                     // live path with no follow-up GET. GET /chats/{tabId} stays source of truth.
+{ "type": "chats_changed" }                           // roster/designation changed; re-GET /chats
+```
+
+Client→server frames are optional conveniences mirroring the REST actions (`message`,
+`respond`, `activate`, `interrupt`) so the foreground app can avoid REST round-trips; both
+paths converge on the same backend handlers.
+
+Presence: while ≥1 device holds a live WS for a tab, that tab is "covered" and the doorbell
+is **suppressed** (no redundant push). On WS close, coverage drops and future attention
+events doorbell again.
+
+### 4.3 Shapes
+
+```typescript
+interface Chat {
+  tabId: string;
+  title: string;            // tab name
+  workspace: string;        // workspace name (grouping)
+  runtime: 'claude' | 'codex' | 'gemini';
+  state: 'active' | 'idle' | 'permission' | 'dormant';
+  unread: boolean;          // idle/attention not yet seen on a device
+  lastActivityTs: number;
+  preview: string;          // last line(s) of distilled context
+}
+interface ChatDetail extends Chat {
+  transcript: Message[];    // distilled turns, newest last
+  pendingPrompt?: {         // present iff state==='permission' or a question is open
+    prompt_id: string;      // opaque, minted when the agent opens this prompt; echoed in /respond
+    kind: 'permission' | 'question';
+    text: string;
+    options?: string[];     // e.g. ["Yes","Yes, don't ask again","No"]; absent ⇒ free-text only
+  };
+}
+// msg_id identity guarantee: the id POST /message returns IS the id later emitted on the
+// `message{role:'user'}` WS echo for that turn (mints at accept-time, reused for both) —
+// lets the app reconcile an optimistic local bubble against the echo.
+interface Message { msg_id: string; role: 'agent'|'user'|'system'; text: string; ts: number; }
+```
+
+---
+
+## 5. Sending replies, commands & answering prompts
+
+All outbound text rides the **existing injection rails** — the same `write_pty` +
+bracketed-paste-then-`\r` path the agent bridge uses (`agentPrompt.ts:36`), behind the same
+FIFO mailbox + `deliverable()` gate (`agentDelivery.ts`). maiLink never gets a privileged
+shortcut; this guarantees it can't corrupt a TUI mid-prompt.
+
+- **Free-text message / proactive command** (`POST .../message {text, submit:true}`):
+  bracketed-paste `text`, settle, send `\r`. If the tab is busy/dormant it **queues** and
+  flushes on the next `Stop`/re-init (same as bridge messages). Returns `queued|delivered`.
+- **Answer a permission/question** (`POST .../respond {choice, prompt_id}`): Claude's TUI
+  answers permission with a numeric/selection keystroke (e.g. `1`=yes, `2`=yes+don't-ask,
+  `3`/Esc=no). The desktop maps `choice` → the correct keystroke for that runtime and injects
+  it **without** bracketed paste (it's a single keypress, not a paste). The
+  `pendingPrompt.options` in `ChatDetail` are what the phone renders as buttons; the
+  index/label maps server-side so the app never hard-codes TUI key bindings. **`prompt_id` is
+  the stale-guard** (multi-phone safety): the server only injects if `prompt_id` matches the
+  currently-open prompt, else returns `{ok:false, reason:"stale"}` — so a late-waking phone
+  can't approve a prompt that's already been superseded/auto-resolved, and two phones can't
+  double-answer. **This keystroke mapping is still the one fragile spot** (depends on the
+  agent's current TUI affordance) — so the robust fallback is always available: just send a
+  text message (e.g. literally typing "no, use the staging bucket instead").
+- **Activate** (`POST .../activate`): for a dormant maiLink-native tab, run the existing
+  auto-resume/spawn path (the same machinery clone/bridge use) and `switchTab` to focus it;
+  return the resulting state. For a live tab it's a focus + presence no-op.
+- **Interrupt**: inject `\x1b` (Esc) — the documented "human interrupts the agent" gesture.
+
+---
+
+## 6. The doorbell (APNs) — the only internet egress
+
+When an attention event fires (`permission`, or `idle`/done via the Stop hook, or a
+question) for a maiLink-native tab **and** no paired device holds a live WS for it:
+
+```
+desktop ─POST {push_token, platform, collapse_id=tabId, kind, server_id}─► relay ─┬─APNs─► Apple  ─► iPhone
+                                                                                 └─FCM──► Google ─► Android
+```
+The relay fans out by `platform` (`apns`→JWT/APNs, `fcm`→HTTP-v1/FCM). Same content-free
+payload either way.
+
+- **Payload is content-free.** No prompt text, no terminal output, no cwd — only "wake and
+  check `tabId`, kind=permission". Apple and the relay learn *that* an agent wants you, never
+  *what*. The phone wakes, opens the WS over LAN/WireGuard, and pulls the real content.
+- `collapse_id = tabId` so repeated pings for one tab coalesce into a single notification.
+- Use `apns-priority: 10` + an alert for permission/question (user-visible), and a silent
+  `content-available` for "done/idle" if we want quiet sync. Respect the phone's own mute.
+
+### 6.1 Who holds the APNs key? — **recommended: reuse the Cloudflare Worker as a stateless relay**
+
+Sending to APNs requires signing a JWT with an Apple `.p8` auth key (tied to your Team ID +
+Key ID). Shipping that `.p8` inside every desktop install would let anyone extract it and
+spam pushes (they still couldn't read data, but it's poor hygiene and Apple may revoke an
+abused key). The project **already operates a Cloudflare Worker** (`update-worker/`,
+`updates.maiterm.dev`, already holding a stats secret) — adding a `POST /push` route that
+holds the `.p8` and forwards to APNs is the right-sized choice:
+
+- The relay is **stateless** and sees only `{push_token, platform, collapse_id, kind}` — no
+  terminal data ever. It's a doorbell wire, not a data plane. This honors "no cloud for data."
+- It centralizes the secrets that can't live safely on clients: the APNs `.p8` **and** the
+  FCM service-account key (Capacitor → both platforms; the relay fans out by `platform`).
+- It's existing, already-deployed infra (precedent + ops already in place).
+
+Alternatives, for the record: **(B)** embed the `.p8` in the desktop app (simplest, leaks
+the key); **(C)** each install configures the team's own Apple Developer `.p8` (purest
+"no third party," fine for a handful of internal users, but more setup per box). Given the
+tiny, mostly-internal user base, **(A) is the default unless you object.** ← *decision needed.*
+
+---
+
+## 7. Security & threat model
+
+| Threat | Mitigation |
+|---|---|
+| Anyone on the LAN hitting the bridge | Bridge is **off by default**; bearer token required; pairing needs the one-time QR code |
+| Eavesdropping / MITM on LAN | TLS (self-signed) + **cert pinning** via QR fingerprint |
+| Stolen/lost phone | Revoke the device in Prefs → token hash deleted → instant lockout; tokens are per-device |
+| Token theft from disk | Token stored hashed server-side; on the phone it lives in the iOS Keychain |
+| Replay / pairing-code reuse | Pairing code is single-use + ~120 s TTL |
+| Doorbell abuse / data leak via cloud | Relay payload is content-free; relay is stateless; `.p8` never on clients |
+| Exposing plain shells / non-agent tabs | Only agent tabs that are explicitly maiLink-native are listed; designation is opt-in per tab/workspace |
+| Cross-contaminating the IDE/MCP server | maiLink is a **separate listener**; `claude_code/server.rs` stays bound to `127.0.0.1` |
+| Injection corrupting a TUI mid-prompt | Same FIFO + `deliverable()`/`isAwaitingHumanInput()` gate as the agent bridge |
+
+Off-LAN access is the user's **WireGuard** tunnel — we never expose the bridge to the public
+internet directly, and we don't ship a VPN. The QR simply carries the WG peer IP when remote.
+
+---
+
+## 8. Discovery
+
+QR carries host+port, so zero-config discovery is optional. A nicety for later: advertise
+`_mailink._tcp` via mDNS/Bonjour so a paired phone re-finds the desktop after a DHCP IP
+change without re-pairing (the cert+token stay valid; only the address moves). Not needed
+for v1 (QR re-scan covers it).
+
+---
+
+## 9. Build plan (desktop side)
+
+Phased so each lands independently and is testable without the phone:
+
+- **P0 — Contract lock.** This doc, reviewed by product owner + maiLink agent. ← *we are here.*
+- **P1 — Designation + Prefs.** `mailink_native` on Tab/Workspace, the two set-commands, the
+  master enable + device list in Preferences, the context-menu/workspace toggles. No
+  networking yet. Verifiable purely in the desktop app.
+- **P2 — `mailink` module + pairing.** New `src-tauri/src/mailink/`: gated TLS axum listener
+  (rcgen self-signed), `/pair`, bearer-token store, `/chats`, `/chats/{id}` + `/context`.
+  Test with `curl --cacert`/pinning from a laptop. No push, no WS yet.
+- **P3 — WS live channel + actions.** `/ws`, `/message`, `/respond`, `/activate`,
+  `/interrupt`, presence/coverage suppression. This is the full chat loop over LAN with the
+  app foregrounded.
+- **P4 — Doorbell.** Relay route on the Cloudflare Worker + desktop trigger on attention
+  events when uncovered + `/push-register`. End-to-end background wake.
+- **P5 — Hardening.** Revocation UX, reconnect/backoff, rate-limits, mDNS, Android/FCM
+  transport behind the same contract.
+
+P1 is a safe, self-contained first commit. P2+ should land in lockstep with the maiLink app
+so the contract is exercised, not just asserted.
+
+---
+
+## 10. Open questions
+
+**For the product owner:**
+- [ ] **Launch scope** — iOS-first, or iOS+Android at launch? The maiLink agent is building
+      cross-platform (Capacitor), and the protocol supports both; this is purely a
+      go-to-market/effort call, not a technical one.
+- [ ] **Push key hosting** — confirm **(A) reuse the Cloudflare Worker as a stateless push
+      relay** (recommended) vs (B) embed keys vs (C) per-install team key. Note: now hosts
+      BOTH the APNs `.p8` and an FCM service-account key (Capacitor → both platforms). (§6.1)
+- [ ] **"Activate" semantics** — does activating a dormant maiLink-native tab mean (i)
+      resume an existing agent session, (ii) start a fresh agent, or (iii) just focus it if
+      already running? (Likely "resume if it has a session, else start" — confirm.)
+- [ ] **Transcript fidelity** — is "distilled recent plain-text + structured attention
+      events" enough for the chat view in v1, or do you want a cleaner turn-by-turn
+      transcript (would need parsing agent output into messages)?
+- [ ] **Multiple phones** — expected (you + staff)? Affects presence/coverage and whether a
+      reply from phone A should echo to phone B's thread. (Contract already supports N
+      devices; just confirm the UX expectation.)
+
+**For the maiLink agent — RESOLVED (v0.2):**
+- [x] Stack = **Capacitor + SvelteKit + shadcn-svelte** (cross-platform).
+- [x] Cert pinning = **native transport plugin** (iOS URLSession challenge + Android OkHttp
+      TrustManager), not JS — owns REST + WS with pinned-fingerprint trust. (§3.1)
+- [x] JSON shapes in §4 **agreed** (the v0.2 deltas above are the agreed deltas).
+- [ ] Bundle-id + APNs `.p8` + FCM service-account ownership → handed to the relay after
+      Darryl signs off on hosting (§6.1).
+
+---
+
+## 11. Status of the desktop implementation
+
+Nothing is built yet — this is the contract. Pending sign-off on §10, P1 (designation +
+Preferences) is the first commit and is fully independent of the phone.

@@ -67,6 +67,8 @@ export interface Tab {
   agent_bridge?: AgentBridge | null;
   /** Which AI agent runtime this tab is running; detected at initSession. */
   runtime?: AgentRuntime | null;
+  /** maiLink: when true, this tab is exposed to the maiLink mobile companion as a chat. */
+  mailink_native?: boolean;
 }
 
 export interface Pane {
@@ -129,6 +131,8 @@ export interface Workspace {
   workspace_notes: WorkspaceNote[];
   /** Mesh Workspace flag — every agent tab here is bridged N:M. */
   bridge_all?: boolean;
+  /** maiLink flag — every agent tab in this workspace is exposed to maiLink as a chat. */
+  mailink_native?: boolean;
   /** Topic threads (empty for normal workspaces). */
   mesh_topics?: MeshTopic[];
   archived_tabs: Tab[];
@@ -248,6 +252,8 @@ export interface Preferences {
   mesh_hard_cap: number;
   /** Mesh Workspace per-topic TTL in minutes (0 = disabled) — time backstop. */
   mesh_topic_ttl_minutes: number;
+  /** maiLink: master switch for the mobile-companion LAN bridge (off by default). */
+  mailink_enabled?: boolean;
 }
 
 export interface WindowData {

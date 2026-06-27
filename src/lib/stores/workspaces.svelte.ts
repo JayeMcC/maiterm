@@ -1296,6 +1296,24 @@ function createWorkspacesStore() {
       await commands.setTabPinned(workspaceId, paneId, tabId, pinned);
     },
 
+    /** maiLink: toggle whether this tab is exposed to the mobile companion as a chat. */
+    async setTabMailinkNative(workspaceId: string, paneId: string, tabId: string, mailinkNative: boolean) {
+      const ws = workspaces.find(w => w.id === workspaceId);
+      const pane = ws?.panes.find(p => p.id === paneId);
+      const tab = pane?.tabs.find(t => t.id === tabId);
+      if (!tab || (tab.mailink_native ?? false) === mailinkNative) return;
+      tab.mailink_native = mailinkNative;
+      await commands.setTabMailinkNative(workspaceId, paneId, tabId, mailinkNative);
+    },
+
+    /** maiLink: toggle whether ALL agent tabs in a workspace are exposed as chats. */
+    async setWorkspaceMailinkNative(workspaceId: string, enabled: boolean) {
+      const ws = workspaces.find(w => w.id === workspaceId);
+      if (!ws || (ws.mailink_native ?? false) === enabled) return;
+      ws.mailink_native = enabled;
+      await commands.setWorkspaceMailinkNative(workspaceId, enabled);
+    },
+
     /**
      * When group-active-tabs is enabled, a just-resumed tab visually jumps into
      * the active group (which renders ahead of suspended tabs) but keeps its old

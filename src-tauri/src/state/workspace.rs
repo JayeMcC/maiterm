@@ -313,6 +313,12 @@ pub struct Tab {
     /// stage. Drives per-runtime resume command, fork capability, and bridge adapter.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub runtime: Option<crate::state::AgentRuntime>,
+    /// maiLink: when true, this tab is exposed to the maiLink mobile companion as a
+    /// "chat" (listed, streamable, remotely promptable). Opt-in per tab; also implied
+    /// for every agent tab when its workspace has `mailink_native = true`. See
+    /// docs/mailink-protocol.md.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub mailink_native: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -418,6 +424,11 @@ pub struct Workspace {
     /// (N:M). Membership IS the roster. See docs/mesh-workspace.md.
     #[serde(default)]
     pub bridge_all: bool,
+    /// maiLink flag: when true, every agent tab in this workspace is exposed to the
+    /// maiLink mobile companion as a chat (a workspace-wide shortcut for per-tab
+    /// `Tab.mailink_native`). See docs/mailink-protocol.md.
+    #[serde(default)]
+    pub mailink_native: bool,
     /// Topic threads for a Mesh Workspace (empty for normal workspaces). Modeled on
     /// workspace_notes (a persisted Vec).
     #[serde(default)]
@@ -988,6 +999,11 @@ pub struct Preferences {
     /// (since creation or last resume) force-pauses — the away-from-keyboard time backstop.
     #[serde(default = "default_mesh_topic_ttl_minutes")]
     pub mesh_topic_ttl_minutes: u32,
+    /// maiLink: master switch for the mobile-companion LAN bridge. When false (default),
+    /// the maiLink listener is not started and no device can connect. See
+    /// docs/mailink-protocol.md. (Pairing, ports, and device tokens land in P2.)
+    #[serde(default)]
+    pub mailink_enabled: bool,
 }
 
 impl Default for Preferences {
@@ -1065,6 +1081,7 @@ impl Default for Preferences {
             mesh_soft_cap: default_mesh_soft_cap(),
             mesh_hard_cap: default_mesh_hard_cap(),
             mesh_topic_ttl_minutes: default_mesh_topic_ttl_minutes(),
+            mailink_enabled: false,
         }
     }
 }
@@ -1105,6 +1122,7 @@ impl Tab {
             import_highlight: false,
             agent_bridge: None,
             runtime: None,
+            mailink_native: false,
         }
     }
 
@@ -1143,6 +1161,7 @@ impl Tab {
             import_highlight: false,
             agent_bridge: None,
             runtime: None,
+            mailink_native: false,
         }
     }
 
@@ -1181,6 +1200,7 @@ impl Tab {
             import_highlight: false,
             agent_bridge: None,
             runtime: None,
+            mailink_native: false,
         }
     }
 }
@@ -1210,6 +1230,7 @@ impl Workspace {
             split_root: Some(SplitNode::Leaf { pane_id }),
             workspace_notes: Vec::new(),
             bridge_all: false,
+            mailink_native: false,
             mesh_topics: Vec::new(),
             archived_tabs: Vec::new(),
             import_highlight: false,

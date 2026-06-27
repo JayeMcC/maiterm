@@ -950,12 +950,20 @@
     const onlyTab = pane.tabs.length === 1;
     const ws = workspacesStore.workspaces.find(w => w.id === workspaceId);
     const otherPanes = (ws?.panes ?? []).filter(p => p.id !== pane.id);
-    const isPinned = !!pane.tabs.find(t => t.id === tabId)?.pinned;
+    const tabObj = pane.tabs.find(t => t.id === tabId);
+    const isPinned = !!tabObj?.pinned;
+    const isMailink = !!tabObj?.mailink_native;
+    const isTerminalTab = (tabObj?.tab_type ?? 'terminal') === 'terminal';
     const items: Array<{ label: string; action: () => void; disabled?: boolean; separator?: boolean }> = [
       {
         label: isPinned ? 'Unpin tab' : 'Pin tab',
         action: () => workspacesStore.setTabPinned(workspaceId, pane.id, tabId, !isPinned),
       },
+      // maiLink: expose this tab to the mobile companion as a chat (docs/mailink-protocol.md)
+      ...(isTerminalTab ? [{
+        label: isMailink ? 'Remove from maiLink' : 'Expose to maiLink',
+        action: () => workspacesStore.setTabMailinkNative(workspaceId, pane.id, tabId, !isMailink),
+      }] : []),
       { label: '', separator: true, action: () => {} },
       {
         label: 'Move to New Split Right',

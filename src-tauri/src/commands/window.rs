@@ -476,6 +476,8 @@ pub(crate) fn clone_workspace_with_id_mapping(
                 agent_bridge: None,
                 // Runtime is just a per-tab marker (no tab-id refs) — carry it over.
                 runtime: tab.runtime,
+                // maiLink designation is a per-tab marker (no tab-id refs) — carry it over.
+                mailink_native: tab.mailink_native,
             }
         }).collect();
 
@@ -507,6 +509,7 @@ pub(crate) fn clone_workspace_with_id_mapping(
         // Preserve the mesh nature, but drop topics — they reference source tab ids that
         // were remapped for the new window (same reason agent_bridge is dropped per-tab).
         bridge_all: ws.bridge_all,
+        mailink_native: ws.mailink_native,
         mesh_topics: Vec::new(),
         archived_tabs: Vec::new(),
         import_highlight: false,
