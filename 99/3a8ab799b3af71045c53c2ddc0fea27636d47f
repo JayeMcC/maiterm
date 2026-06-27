@@ -1,0 +1,29 @@
+tests/compose-flow/compose-flow.test.ts
+  s_10b069ebcfad9c::t_ae417e658e382d 1-177
+src/compose-flow/types.ts
+  s_10b069ebcfad9c::t_76673339ad1c5f 1-97
+src/compose-flow/stage6-write.ts
+  s_10b069ebcfad9c::t_4cc3b7a06a5170 1-70
+src/compose-flow/index.ts
+  s_10b069ebcfad9c::t_b43670ac78787e 1-187
+src/compose-flow/stage5-assemble.ts
+  s_10b069ebcfad9c::t_3498a137a4adbd 1-190
+src/compose-flow/stage2-lookup.ts
+  s_10b069ebcfad9c::t_d154a44a13d420 1-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "993a8ab799b3af71045c53c2ddc0fea27636d47f",
+  "prompts": {},
+  "sessions": {
+    "s_10b069ebcfad9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a534af91-48df-4e47-9019-e2d3a4b4cfd9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
