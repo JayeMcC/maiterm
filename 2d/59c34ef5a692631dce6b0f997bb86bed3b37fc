@@ -1,0 +1,31 @@
+tests/utils/walk-behavior-and-spec-fragment.test.ts
+  s_10b069ebcfad9c::t_11e7f3c360adf3 2
+src/utils/dual-codify.ts
+  s_10b069ebcfad9c::t_b75c046df8adbe 2-7
+  s_10b069ebcfad9c::t_0a13efb2a11910 41
+src/utils/behavior-matcher.ts
+  s_10b069ebcfad9c::t_a3efa16c7b13f7 2,4-12,14,16-18,20-27,36-38,40,42-43,52-70,74,85-89,95,97,100-101,103-123,125-131,135-136,138-156,163-222,229-231,233-235,237-238,240,267-274
+  s_10b069ebcfad9c::t_c6732422ca9fce 275
+src/utils/behavior-slug.ts
+  s_10b069ebcfad9c::t_6fcf618caeae37 1-36
+tests/utils/behavior-matcher.test.ts
+  s_10b069ebcfad9c::t_8d8a00e7fcc4aa 1-173
+src/nodes/walk-plan-subgoal.ts
+  s_10b069ebcfad9c::t_73c80fe435ca95 8,28,110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "2d59c34ef5a692631dce6b0f997bb86bed3b37fc",
+  "prompts": {},
+  "sessions": {
+    "s_10b069ebcfad9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a534af91-48df-4e47-9019-e2d3a4b4cfd9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
