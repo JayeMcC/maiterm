@@ -481,5 +481,16 @@ so the contract is exercised, not just asserted.
 
 ## 11. Status of the desktop implementation
 
-Nothing is built yet — this is the contract. Pending sign-off on §10, P1 (designation +
-Preferences) is the first commit and is fully independent of the phone.
+- **P1 — DONE** (`fe95aff`): `mailink_native` on Tab/Workspace + `mailink_enabled` pref,
+  set-commands, TS/store wiring, tab "Expose to maiLink" toggle, Preferences section.
+- **P2a — DONE** (`1fde520`): `src-tauri/src/mailink/` gated TLS listener (rcgen self-signed,
+  persisted, SAN-agnostic), `/heartbeat`, fingerprint pipeline (unit-tested vs `openssl`).
+- **P2b — DONE** (`96f49d9`): dev bearer token + `GET /chats`, `/chats/{tabId}`,
+  `/chats/{tabId}/context` derived from live `agent_sessions` state. Compiles + unit tests pass.
+- **Next — live verification & hand-off:** run the app with `mailink_enabled`, curl the
+  endpoints over TLS, cross-check the `fp` vs openssl, and hand the maiLink agent
+  `{ host, port, fp, dev_token }` to swap its mock→live transport.
+- **P3 (known gaps):** real prompt text/options + a stable `prompt_id` (needs deeper hook
+  capture — the prompt lives in the TUI, not `agent_sessions`); turn-by-turn transcript;
+  real `lastActivityTs`/`unread`. Then P3 proper = WS live channel + `/message` + `/respond`;
+  P4 = APNs/FCM doorbell + QR `/pair` + device store.
