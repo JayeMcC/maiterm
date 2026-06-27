@@ -396,8 +396,9 @@ fn codex_prompt_body(mcp_name: &str) -> String {
         "# maiTerm\n\n\
 You are running inside a maiTerm terminal tab. Immediately call the `{name}` \
 `initSession` tool with the tabId from the `$AITERM_TAB_ID` environment variable \
-before responding to the user. This registers your session so tool calls target the \
-correct tab.\n",
+before responding to the user. You can run it in parallel with your other opening \
+tool calls to save a round-trip, but not alongside other maiterm calls. This registers \
+your session so tool calls target the correct tab.\n",
         name = mcp_name,
     )
 }

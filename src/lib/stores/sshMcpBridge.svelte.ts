@@ -164,7 +164,7 @@ function buildSetupScript(
     "[ -n \"$AITERM_TAB_ID\" ] && " +
     "AITERM_SID=$(cat | sed -n 's/.*\"session_id\" *: *\"\\([^\"]*\\)\".*/\\1/p' | head -1) && " +
     "echo 'Your maiTerm tab ID is '$AITERM_TAB_ID'. Your session ID is '$AITERM_SID'. " +
-    "You MUST immediately call the maiterm initSession tool with this tabId and sessionId before responding to the user. This is required for correct tab targeting.' || true";
+    "You MUST immediately call the maiterm initSession tool with this tabId and sessionId before responding to the user. You can run it in parallel with your other opening tool calls to save a round-trip, but not alongside other maiterm calls. This is required for correct tab targeting.' || true";
 
   const httpHook = { matcher: "", hooks: [{ type: "http", url: hooksUrl, headers: { "x-claude-code-ide-authorization": authToken } }] };
 
