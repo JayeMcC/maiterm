@@ -43,13 +43,16 @@
   const roleOf = $derived((tabId: string) => board.find((b) => b.tabId === tabId)?.role ?? tabId.slice(0, 6));
 
   // ── Conversation graph geometry ─────────────────────────────────────────────
-  const GW = 260, GH = 210;
+  // Node labels are word-wrapped via <foreignObject>; LBL_* size the label box and GH leaves
+  // vertical room above the top node / below the bottom node so 2-line labels don't clip.
+  const GW = 260, GH = 240;
+  const LBL_W = 104, LBL_H = 26, LBL_GAP = 12;
   const graph = $derived.by(() => {
     void agentMeshStore.version; void tick;
     if (!ws || !isMesh) return { nodes: [], edges: [] };
     const members: MeshMember[] = board.map((b) => ({ tabId: b.tabId, role: b.role, cwd: b.cwd, purpose: b.purpose, live: b.live }));
     const active = new Set(board.filter((b) => b.claudeState === 'active').map((b) => b.tabId));
-    return computeGraph(members, topics, agentMeshStore.getEdges(), active, Date.now(), { cx: GW / 2, cy: GH / 2 - 6, radius: Math.min(78, 30 + members.length * 8) }, pausedIds);
+    return computeGraph(members, topics, agentMeshStore.getEdges(), active, Date.now(), { cx: GW / 2, cy: GH / 2, radius: Math.min(78, 30 + members.length * 8) }, pausedIds);
   });
 
   function reasonLabel(r: string): string {
@@ -164,10 +167,13 @@
                 {/if}
               {/each}
               {#each graph.nodes as n (n.tabId)}
+                {@const below = n.y >= GH / 2}
                 <g class="node" class:active={n.active} class:offline={!n.live} onclick={() => openTab(n.tabId)} onkeydown={(e) => { if (e.key === 'Enter') openTab(n.tabId); }} role="button" tabindex="-1">
                   <circle cx={n.x} cy={n.y} r="9" />
                   {#if n.active}<circle class="halo" cx={n.x} cy={n.y} r="9" />{/if}
-                  <text x={n.x} y={n.y < GH / 2 ? n.y - 13 : n.y + 19} text-anchor="middle">{n.role}</text>
+                  <foreignObject x={n.x - LBL_W / 2} y={below ? n.y + LBL_GAP : n.y - LBL_GAP - LBL_H} width={LBL_W} height={LBL_H}>
+                    <div xmlns="http://www.w3.org/1999/xhtml" class="node-label" class:below class:above={!below}><span>{n.role}</span></div>
+                  </foreignObject>
                 </g>
               {/each}
             </svg>
@@ -325,7 +331,22 @@
   .node.offline circle { fill: var(--bg-dark); stroke: var(--bg-light); }
   .node .halo { fill: none; stroke: var(--accent); stroke-width: 1.5; opacity: 0.5; animation: halo 1.4s ease-out infinite; }
   @keyframes halo { from { r: 9px; opacity: 0.55; } to { r: 18px; opacity: 0; } }
-  .node text { fill: var(--fg); font-size: 9px; pointer-events: none; }
+  /* foreignObject label: word-wrap + clamp to 2 lines so long agent names don't run into
+     neighbors or clip. Anchored to the node edge — above for top-half nodes, below otherwise. */
+  .node-label {
+    width: 100%; height: 100%; box-sizing: border-box;
+    display: flex; justify-content: center;
+    text-align: center; line-height: 1.12;
+    color: var(--fg); font-size: 9px;
+    overflow: hidden; pointer-events: none;
+  }
+  .node-label.below { align-items: flex-start; }
+  .node-label.above { align-items: flex-end; }
+  .node-label span {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+    overflow: hidden; overflow-wrap: anywhere;
+  }
+  .node.offline .node-label { color: var(--fg-dim); }
 
   .panel { padding: 10px 12px; border-top: 1px solid var(--bg-light); }
   .panel h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-dim); margin: 0 0 8px; }
