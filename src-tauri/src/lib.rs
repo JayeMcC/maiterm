@@ -1,5 +1,6 @@
 mod claude_code;
 mod commands;
+mod mailink;
 mod pty;
 mod state;
 mod terminal;
@@ -294,6 +295,18 @@ pub fn run() {
                 tauri::async_runtime::spawn(async move {
                     claude_code::server::serve_server(server_handle, server_state, setup).await;
                 });
+            }
+
+            // maiLink mobile-companion LAN bridge (docs/mailink-protocol.md): a separate,
+            // opt-in TLS listener — only started when the user has enabled it. Kept distinct
+            // from the localhost-only Claude-Code server above.
+            if app_state.app_data.read().preferences.mailink_enabled {
+                if let Some(cfg) = mailink::prepare(&app_state) {
+                    let mailink_state = app_state.clone();
+                    tauri::async_runtime::spawn(async move {
+                        mailink::serve(mailink_state, cfg).await;
+                    });
+                }
             }
 
             // Background tasks owned by Rust (independent of any webview's
