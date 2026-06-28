@@ -534,15 +534,20 @@ so the contract is exercised, not just asserted.
   devices with BOTH a token and a cap, the relay URL is **baked in by default**
   (`mailink_relay_url` is an optional self-host override), and the Prefs key field is removed.
   Also fixed `set_preferences` to preserve backend-owned `mailink_devices`.
-- **REMAINING for the doorbell:** (A) **provision + deploy** — Darryl downloads the Apple `.p8`,
-  then `wrangler secret put` for `CAP_SECRET` (random) / `APNS_KEY_P8` / `APNS_KEY_ID`
-  (`DRWCHZ5M5B`) / `APNS_TEAM_ID` (`7HJJ4SQ4TC`) / `APNS_TOPIC` (`dev.maiterm.mailink`) +
-  `wrangler deploy`; (B) **joint device test** — the maiLink agent ships a push-entitled dev
-  build, the phone mints its `cap` via `/push-capability` and registers its APNs **sandbox**
-  token + `cap` via `/push-register`, then we fire the wake → lock-screen alert → deep-link
-  `/chat/{tabId}` → pull over LAN. Smoke-test the relay first (mint a cap for a throwaway token,
-  then ring it — expect APNs `BadDeviceToken`, which proves cap+JWT+gateway all work — see
-  `update-worker/README.md`).
+- **Relay deployed + smoke-passed — DONE** (2026-06-28, worker version `edddb56b`): secrets set
+  (`CAP_SECRET`, `APNS_KEY_P8`, `APNS_KEY_ID`=`DRWCHZ5M5B`, `APNS_TEAM_ID`=`7HJJ4SQ4TC`,
+  `APNS_TOPIC`=`dev.maiterm.mailink`) and `wrangler deploy` shipped. Smoke: mint→`{cap}`; ring a
+  fake token with a valid cap → Apple `400 BadDeviceToken` (JWT + sandbox gateway + Workers→APNs
+  **HTTP/2** all confirmed working); wrong cap → `403`; `/latest.json` → `200` (update service
+  unaffected).
+- **REMAINING — (B) joint device test only:** the maiLink build is on the dPhone (push-entitled,
+  explicit App ID `dev.maiterm.mailink`, two-step + self-healing foreground re-mint). Choreography:
+  dPhone pairs with the **dev** maiTerm instance → foreground to mint the real `cap` + register
+  `{token,platform,env:"sandbox",cap}` → background/lock to drop the WS (the doorbell fires only
+  while uncovered) → fire a real permission on a maiLink-native tab → relay → APNs → lock-screen
+  alert → tap → deep-link `/chat/{tabId}` → WS → pull over LAN.
+- **Post-test:** fold the desktop capability changes into a normal maiTerm **release** so all users
+  get them (the dev instance has them; the shipped app does not). The relay deploy is independent.
 - **Two findings (notes, not blockers):** (1) `/message` bracketed-paste is correct for an
   agent TUI but leaks into a bare shell — fine for the intended use; (2) the *first*
   permission (for `initSession` itself) can't be tab-attributed since the session→tab mapping
