@@ -500,9 +500,17 @@ so the contract is exercised, not just asserted.
     `Bash(rm …)` — keystroke landed in the agent's TUI; `POST /message` proactive command
     delivered and the agent acted on it;
   - `/pair`→device-token, `/push-register`, WS frames, auth, `fp`==openssl all verified.
-- **REMAINING for full product — P4 doorbell SEND only:** the APNs/FCM relay holding the
-  `.p8`/FCM key, gated on the relay-hosting decision (§6.1/§10). Desktop trigger + device
-  push-token storage are built; only the relay deployment + wiring remain.
+- **P4b desktop — DONE** (`9e927f5`): the doorbell **trigger** — a global ~2s loop that, on a
+  maiLink-native tab entering attention (permission/idle-done) with no phone WS-covered, POSTs a
+  content-free `{push_token, platform, env, tab_id, kind, title}` wake to the relay per paired
+  device. Coverage via `AppState.mailink_ws_count`; relay from `Preferences.mailink_relay_url`
+  /`_key`. No-op until a relay URL is configured. Relay hosting confirmed: **reuse the existing
+  Cloudflare update-worker** (`updates.maiterm.dev`) `/push` route.
+- **REMAINING for the doorbell:** (1) the worker `/push` route — APNs ES256-JWT from the `.p8`
+  + FCM HTTP-v1, **gateway-by-`env`** (`sandbox`→`api.sandbox.push.apple.com`,
+  `production`→`api.push.apple.com`); (2) load Darryl's `.p8` + FCM key as worker secrets;
+  (3) relay-config UI/command + prefs round-trip; (4) joint device test (maiLink agent ships a
+  push-entitled dev build to a real iPhone, registers its APNs sandbox token, we fire the wake).
 - **Two findings (notes, not blockers):** (1) `/message` bracketed-paste is correct for an
   agent TUI but leaks into a bare shell — fine for the intended use; (2) the *first*
   permission (for `initSession` itself) can't be tab-attributed since the session→tab mapping
