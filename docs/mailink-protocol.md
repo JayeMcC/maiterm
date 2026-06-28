@@ -488,12 +488,25 @@ so the contract is exercised, not just asserted.
 - **P2b — DONE** (`96f49d9`): dev bearer token + `GET /chats`, `/chats/{tabId}`,
   `/chats/{tabId}/context` derived from live `agent_sessions` state. Compiles + unit tests pass.
 - **P3 — DONE** (`6da933a`): write path (`POST /message`, `/respond` with prompt_id
-  stale-guard, `/interrupt`) + live WS event stream (`GET /ws`). **Live-verified** on the dev
-  instance: fp == openssl, 401 auth on REST + WS, WS streams real `chat_state` frames, write
-  guards (409 dormant / `{ok:false,reason:"stale"}`). Endpoint handed to the maiLink agent
-  (`127.0.0.1:8765`, fp `sha256/Frtk3EEsAF…QTwu58=`, dev_token), all read+write+WS methods live.
-- **Next — P4:** QR `/pair` + per-device tokens + device store, `/push-register`, then the
-  APNs/FCM **doorbell send** (gated on the relay-hosting decision, §6.1/§10).
+  stale-guard, `/interrupt`) + live WS event stream (`GET /ws`).
+- **P4a — DONE** (`533ed1f`): production pairing — `POST /pair` (one-time code → per-device
+  bearer token, stored hashed/revocable) + `POST /push-register`; auth widened to dev-token
+  OR device token; `mailink_create_pairing` command → QR payload. Verified live.
+- **🏁 INTEGRATION PASS — PROVEN END-TO-END (this session)** with the maiLink Capacitor app on
+  an iOS simulator over pinned self-signed TLS, against a live Claude agent:
+  - on-device cert pin validated; `GET /chats`/thread/`context` pulled live;
+  - live state (dormant→active→idle) rendered in-app; attention → "Needs you" + pendingPrompt;
+  - **write round-trip**: the phone's `POST /respond {choice:"No"}` denied a real Claude
+    `Bash(rm …)` — keystroke landed in the agent's TUI; `POST /message` proactive command
+    delivered and the agent acted on it;
+  - `/pair`→device-token, `/push-register`, WS frames, auth, `fp`==openssl all verified.
+- **REMAINING for full product — P4 doorbell SEND only:** the APNs/FCM relay holding the
+  `.p8`/FCM key, gated on the relay-hosting decision (§6.1/§10). Desktop trigger + device
+  push-token storage are built; only the relay deployment + wiring remain.
+- **Two findings (notes, not blockers):** (1) `/message` bracketed-paste is correct for an
+  agent TUI but leaks into a bare shell — fine for the intended use; (2) the *first*
+  permission (for `initSession` itself) can't be tab-attributed since the session→tab mapping
+  happens behind it (surfaces only in a dev/prod dual-instance setup).
 - **Known refinements (not blocking):** WS is a ~1.5s internal poller (push-from-hooks later);
   real prompt text/options + stable `prompt_id` need deeper hook capture (prompt lives in the
   TUI, not `agent_sessions`); turn-by-turn transcript; real `lastActivityTs`/`unread`;
