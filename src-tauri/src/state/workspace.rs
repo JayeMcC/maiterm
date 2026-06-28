@@ -1008,6 +1008,14 @@ pub struct Preferences {
     /// docs/mailink-protocol.md §2.3/§3.
     #[serde(default)]
     pub mailink_devices: Vec<MailinkDevice>,
+    /// maiLink doorbell: push-relay endpoint (e.g. the Cloudflare worker `/push` route). Empty
+    /// ⇒ doorbell off (LAN-foreground notifications only). See docs/mailink-protocol.md §6.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mailink_relay_url: Option<String>,
+    /// maiLink doorbell: shared secret sent as `x-mailink-relay-key` so only this desktop can
+    /// drive the relay. Pairs with the worker's secret.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mailink_relay_key: Option<String>,
 }
 
 /// A paired maiLink mobile device. The bearer token is stored hashed (never raw); deleting
@@ -1109,6 +1117,8 @@ impl Default for Preferences {
             mesh_topic_ttl_minutes: default_mesh_topic_ttl_minutes(),
             mailink_enabled: false,
             mailink_devices: Vec::new(),
+            mailink_relay_url: None,
+            mailink_relay_key: None,
         }
     }
 }

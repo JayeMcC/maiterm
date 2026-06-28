@@ -135,6 +135,9 @@ pub struct AppState {
     // maiLink: the live listener's (fingerprint, port), set at startup so the pairing-code
     // command can build the QR payload without re-reading the cert.
     pub mailink_info: RwLock<Option<(String, u16)>>,
+    // maiLink doorbell coverage: count of live WS connections. >0 ⇒ a phone is connected and
+    // receiving events directly, so the push doorbell is suppressed.
+    pub mailink_ws_count: std::sync::atomic::AtomicUsize,
 }
 
 impl AppState {
@@ -170,6 +173,7 @@ impl AppState {
             pending_agent_sessions: RwLock::new(Vec::new()),
             mailink_pairing_codes: RwLock::new(HashMap::new()),
             mailink_info: RwLock::new(None),
+            mailink_ws_count: std::sync::atomic::AtomicUsize::new(0),
         }
     }
 

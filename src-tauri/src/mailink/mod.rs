@@ -59,6 +59,16 @@ struct ApiState {
     dev_token: String,
 }
 
+/// Decrements the live-WS coverage count when a WS connection ends (any exit path).
+struct WsCoverageGuard(Arc<AppState>);
+impl Drop for WsCoverageGuard {
+    fn drop(&mut self) {
+        self.0
+            .mailink_ws_count
+            .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
 /// `~/Library/Application Support/<slug>/mailink/` (or the OS equivalent).
 fn mailink_dir() -> Option<PathBuf> {
     dirs::data_dir()
@@ -184,6 +194,10 @@ pub async fn serve(app_state: Arc<AppState>, cfg: MailinkConfig) {
     // rustls 0.23 needs a process-default crypto provider before any TLS config is built.
     // Pin ring explicitly (idempotent; ignore the Err if another component already set one).
     let _ = rustls::crypto::ring::default_provider().install_default();
+
+    // Doorbell: a single global trigger task that watches maiLink-native tabs and fires a
+    // content-free push when one needs a human and no phone is connected (docs §6).
+    tokio::spawn(doorbell_loop(app_state.clone()));
 
     let api = ApiState {
         app: app_state,
@@ -481,6 +495,13 @@ async fn ws_handler(
 /// `chats_changed` when the roster changes. (A push-based variant driven directly off the
 /// hook state machine is a later refinement — this gives the client the WS interface now.)
 async fn ws_event_loop(mut socket: WebSocket, s: ApiState) {
+    // Coverage: while this WS is alive, a phone is receiving events directly → suppress the
+    // doorbell. The guard decrements on any exit path (return, error, close).
+    s.app
+        .mailink_ws_count
+        .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    let _coverage = WsCoverageGuard(s.app.clone());
+
     let mut last: HashMap<String, String> = HashMap::new();
 
     // initial snapshot: one chat_state per chat
@@ -897,6 +918,115 @@ fn local_ip() -> Option<String> {
     let sock = std::net::UdpSocket::bind("0.0.0.0:0").ok()?;
     sock.connect("8.8.8.8:80").ok()?;
     sock.local_addr().ok().map(|a| a.ip().to_string())
+}
+
+/// Global doorbell trigger. Every ~2s: when a maiLink-native tab transitions INTO an
+/// attention state (permission / idle-done) AND no phone holds a live WS (uncovered), POST a
+/// content-free wake to the relay for each paired device's push token. No-op until a relay
+/// URL is configured. The relay (a Cloudflare worker) signs + forwards to APNs/FCM; the phone
+/// wakes and pulls the real content over LAN. See docs/mailink-protocol.md §6.
+async fn doorbell_loop(app: Arc<AppState>) {
+    let client = reqwest::Client::new();
+    let mut last: HashMap<String, String> = HashMap::new();
+    let mut primed = false;
+    let mut ticker = tokio::time::interval(std::time::Duration::from_millis(2000));
+    loop {
+        ticker.tick().await;
+        let (relay_url, relay_key) = {
+            let p = &app.app_data.read().preferences;
+            (p.mailink_relay_url.clone(), p.mailink_relay_key.clone())
+        };
+        let relay_on = relay_url.as_deref().map(|u| !u.trim().is_empty()).unwrap_or(false);
+        let covered = app
+            .mailink_ws_count
+            .load(std::sync::atomic::Ordering::SeqCst)
+            > 0;
+
+        let chats = build_chats(&app);
+        let mut current = std::collections::HashSet::new();
+        for c in &chats {
+            let tab = c["tabId"].as_str().unwrap_or_default().to_string();
+            let st = c["state"].as_str().unwrap_or_default().to_string();
+            let title = c["title"].as_str().unwrap_or_default().to_string();
+            current.insert(tab.clone());
+            let prev = last.get(&tab).cloned();
+            last.insert(tab.clone(), st.clone());
+
+            // Fire only on a fresh transition into attention, after priming, while uncovered.
+            if !primed || !relay_on || covered {
+                continue;
+            }
+            let is_attn = st == "permission" || st == "idle";
+            let was_attn = matches!(prev.as_deref(), Some("permission") | Some("idle"));
+            if is_attn && !was_attn {
+                let kind = if st == "permission" { "permission" } else { "idle_done" };
+                ring_devices(
+                    &client,
+                    &app,
+                    relay_url.as_deref().unwrap_or_default(),
+                    relay_key.as_deref(),
+                    &tab,
+                    &title,
+                    kind,
+                )
+                .await;
+            }
+        }
+        last.retain(|k, _| current.contains(k));
+        primed = true;
+    }
+}
+
+/// POST the content-free wake to the relay, once per paired device that registered a push
+/// token. Payload carries ONLY {push_token, platform, env, tab_id, kind, title} — never
+/// terminal content (docs §6: content-light boundary; tab title + kind are allowed).
+async fn ring_devices(
+    client: &reqwest::Client,
+    app: &Arc<AppState>,
+    url: &str,
+    key: Option<&str>,
+    tab_id: &str,
+    title: &str,
+    kind: &str,
+) {
+    let targets: Vec<(String, String, Option<String>)> = app
+        .app_data
+        .read()
+        .preferences
+        .mailink_devices
+        .iter()
+        .filter_map(|d| {
+            d.push_token.as_ref().map(|t| {
+                (
+                    t.clone(),
+                    d.push_platform.clone().unwrap_or_else(|| "apns".to_string()),
+                    d.push_env.clone(),
+                )
+            })
+        })
+        .collect();
+
+    for (push_token, platform, env) in targets {
+        let body = json!({
+            "push_token": push_token,
+            "platform": platform,
+            "env": env,
+            "tab_id": tab_id,
+            "kind": kind,
+            "title": title,
+        });
+        let mut req = client.post(url).json(&body);
+        if let Some(k) = key {
+            req = req.header("x-mailink-relay-key", k);
+        }
+        match req.send().await {
+            Ok(resp) => log::info!(
+                "[maiLink] doorbell → {platform} for tab {tab_id} ({kind}): {}",
+                resp.status()
+            ),
+            Err(e) => log::warn!("[maiLink] doorbell POST failed: {e}"),
+        }
+    }
 }
 
 #[cfg(test)]
