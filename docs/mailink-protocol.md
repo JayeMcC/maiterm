@@ -381,6 +381,18 @@ payload either way; `cap` is the per-device capability (below).
 - `apns-priority: 10` + a time-sensitive alert for permission/question; an `active` alert for
   done/idle. Respect the phone's own mute.
 
+> **The phone needs TWO routes at once — by design.** The doorbell splits across networks:
+> the **wake path** (the phone registering its APNs/FCM token, the relay cap mint, and Apple/
+> Google delivering the push) needs the **public internet**; the **content path** (the WS pull
+> after the phone wakes) needs a route to the desktop (**LAN or WireGuard**). This is exactly
+> the normal WireGuard topology — phone on cellular/WiFi for internet **and** the WG tunnel for
+> the desktop — so it's not a constraint in practice. But a phone on a **LAN-only AP with no
+> internet uplink** is the degenerate case: it reaches the desktop fine, but APNs can never
+> issue a token (iOS `register()` fires neither `registration` nor `registrationError` — it
+> retries silently), so the whole chain stalls before any `/push-capability`/`/push-register`.
+> Symptom on the desktop: the paired device's `last_seen` never advances and `push_token`/
+> `push_cap` stay empty. Fix: give the phone a link with **both** internet and desktop reach.
+
 ### 6.1 The relay is shared, multi-tenant infra — **the Flexmark-operated Cloudflare Worker**
 
 maiLink ships as **one published app** (one bundle id, one Apple `.p8`, one FCM project), so
