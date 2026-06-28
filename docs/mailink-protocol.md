@@ -506,11 +506,23 @@ so the contract is exercised, not just asserted.
   device. Coverage via `AppState.mailink_ws_count`; relay from `Preferences.mailink_relay_url`
   /`_key`. No-op until a relay URL is configured. Relay hosting confirmed: **reuse the existing
   Cloudflare update-worker** (`updates.maiterm.dev`) `/push` route.
-- **REMAINING for the doorbell:** (1) the worker `/push` route — APNs ES256-JWT from the `.p8`
-  + FCM HTTP-v1, **gateway-by-`env`** (`sandbox`→`api.sandbox.push.apple.com`,
-  `production`→`api.push.apple.com`); (2) load Darryl's `.p8` + FCM key as worker secrets;
-  (3) relay-config UI/command + prefs round-trip; (4) joint device test (maiLink agent ships a
-  push-entitled dev build to a real iPhone, registers its APNs sandbox token, we fire the wake).
+- **Doorbell relay `/push` — DONE** (`c35c0eb`, in `update-worker/`): the Cloudflare worker
+  `POST /push` route. Consumes the desktop payload `{push_token, platform, env, tab_id, kind,
+  title}` + `x-mailink-relay-key` and fans out — APNs (ES256 JWT minted from the `.p8`,
+  **gateway-by-`env`**: only `production`→`api.push.apple.com`, else sandbox) / FCM (HTTP-v1,
+  OAuth2 from the service-account JWT). JWTs cached in the isolate global. Relay key mandatory
+  (503 unset / 403 mismatch). Response echoes the upstream APNs/FCM verdict for desktop logs.
+- **Relay-config wiring — DONE** (`1637299`): Preferences → Doorbell section (Relay URL + key,
+  shown when maiLink is enabled), prefs-store round-trip (empty→`None`). Also fixed
+  `set_preferences` to preserve backend-owned `mailink_devices` (a save was wiping paired phones).
+- **REMAINING for the doorbell:** (A) **provision + deploy** — Darryl downloads the Apple `.p8`,
+  then `wrangler secret put` for `MAILINK_RELAY_KEY` / `APNS_KEY_P8` / `APNS_KEY_ID` /
+  `APNS_TEAM_ID` (`7HJJ4SQ4TC`) / `APNS_TOPIC` (the iOS bundle id from the peer) + `wrangler
+  deploy`; (B) **joint device test** — the maiLink agent ships a push-entitled dev build to a
+  real iPhone, registers its APNs **sandbox** token via `/push-register`, then with the same
+  relay key set in maiTerm Preferences we fire the wake → lock-screen alert → deep-link
+  `/chat/{tabId}` → pull over LAN. Smoke-test the relay first with a throwaway token (expect
+  APNs `BadDeviceToken`, which proves JWT+gateway+auth all work — see `update-worker/README.md`).
 - **Two findings (notes, not blockers):** (1) `/message` bracketed-paste is correct for an
   agent TUI but leaks into a bare shell — fine for the intended use; (2) the *first*
   permission (for `initSession` itself) can't be tab-attributed since the session→tab mapping
