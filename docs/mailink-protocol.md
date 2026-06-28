@@ -237,8 +237,12 @@ QR payload (JSON, displayed by Prefs ▸ maiLink ▸ "Pair new device")
    The raw token is shown to the phone **once**; desktop keeps only its hash.
 3. App stores `token` in the iOS Keychain. All later calls send
    `Authorization: Bearer <token>` over the pinned-TLS channel.
-4. App registers for push: `POST /mailink/v1/push-register { token, platform, env }`
-   where `platform` is `"apns"` or `"fcm"` — the relay fans out to the matching sender.
+4. App mints its **relay capability**: `POST {relay}/push-capability { push_token, platform }`
+   → `{ cap }` (see §6). This is a one-time call to the *shared relay* (not the desktop), and
+   `cap` is what authorizes the desktop to ring this device on the multi-tenant relay.
+5. App registers for push with the desktop:
+   `POST /mailink/v1/push-register { token, platform, env, cap }` where `platform` is `"apns"`
+   or `"fcm"`. The desktop stores `cap` on the device record and presents it on every wake.
 
 The pairing code is the only out-of-band secret and it's short-lived + single-use; the
 bearer token never transits a QR or a screen after step 2.
@@ -260,7 +264,7 @@ everything except `/pair`. JSON bodies. All times are unix ms.
 | Method + path | Purpose | Body / returns |
 |---|---|---|
 | `POST /pair` | Redeem QR code → token | `{code,device_name}` → `{device_id,token,server_name}` |
-| `POST /push-register` | Store push token for doorbell | `{token,platform,env}` → `{ok}` (`platform`: `"apns"`\|`"fcm"`) |
+| `POST /push-register` | Store push token + relay capability for doorbell | `{token,platform,env,cap}` → `{ok}` (`platform`: `"apns"`\|`"fcm"`; `cap` from §6 `/push-capability`) |
 | `GET  /chats` | List maiLink-native chats + state | → `Chat[]` (see §4.3) |
 | `GET  /chats/{tabId}?before={msg_id}&limit=N` | One chat + transcript (paging params reserved) | → `ChatDetail` |
 | `GET  /chats/{tabId}/context?lines=N` | Distilled plain-text context | → `{text, truncated}` |
@@ -357,44 +361,55 @@ shortcut; this guarantees it can't corrupt a TUI mid-prompt.
 
 ---
 
-## 6. The doorbell (APNs) — the only internet egress
+## 6. The doorbell (APNs/FCM) — the only internet egress
 
 When an attention event fires (`permission`, or `idle`/done via the Stop hook, or a
 question) for a maiLink-native tab **and** no paired device holds a live WS for it:
 
 ```
-desktop ─POST {push_token, platform, collapse_id=tabId, kind, server_id}─► relay ─┬─APNs─► Apple  ─► iPhone
-                                                                                 └─FCM──► Google ─► Android
+desktop ─POST {push_token, platform, env, cap, tab_id, kind, title}─► relay ─┬─APNs─► Apple  ─► iPhone
+                                                                            └─FCM──► Google ─► Android
 ```
-The relay fans out by `platform` (`apns`→JWT/APNs, `fcm`→HTTP-v1/FCM). Same content-free
-payload either way.
+The relay fans out by `platform` (`apns`→JWT/APNs, `fcm`→HTTP-v1/FCM). Same content-light
+payload either way; `cap` is the per-device capability (below).
 
-- **Payload is content-free.** No prompt text, no terminal output, no cwd — only "wake and
-  check `tabId`, kind=permission". Apple and the relay learn *that* an agent wants you, never
-  *what*. The phone wakes, opens the WS over LAN/WireGuard, and pulls the real content.
-- `collapse_id = tabId` so repeated pings for one tab coalesce into a single notification.
-- Use `apns-priority: 10` + an alert for permission/question (user-visible), and a silent
-  `content-available` for "done/idle" if we want quiet sync. Respect the phone's own mute.
+- **Payload is content-light.** No prompt text, no terminal output, no cwd — only the tab
+  `title` + `kind` (`permission`/`idle_done`), which is all the alert renders. Apple and the
+  relay learn *that* an agent wants you and which tab, never the prompt. The phone wakes, opens
+  the WS over LAN/WireGuard, and pulls the real content.
+- `tab_id` drives `apns-collapse-id`/`thread-id` so repeated pings for one tab coalesce.
+- `apns-priority: 10` + a time-sensitive alert for permission/question; an `active` alert for
+  done/idle. Respect the phone's own mute.
 
-### 6.1 Who holds the APNs key? — **recommended: reuse the Cloudflare Worker as a stateless relay**
+### 6.1 The relay is shared, multi-tenant infra — **the Flexmark-operated Cloudflare Worker**
 
-Sending to APNs requires signing a JWT with an Apple `.p8` auth key (tied to your Team ID +
-Key ID). Shipping that `.p8` inside every desktop install would let anyone extract it and
-spam pushes (they still couldn't read data, but it's poor hygiene and Apple may revoke an
-abused key). The project **already operates a Cloudflare Worker** (`update-worker/`,
-`updates.maiterm.dev`, already holding a stats secret) — adding a `POST /push` route that
-holds the `.p8` and forwards to APNs is the right-sized choice:
+maiLink ships as **one published app** (one bundle id, one Apple `.p8`, one FCM project), so
+**one** relay serves **every** user — each phone just has its own per-device push token. The
+project already operates a Cloudflare Worker (`update-worker/`, `updates.maiterm.dev`); it gains
+`POST /push` + `POST /push-capability`, holding the `.p8`/FCM key that can't live safely on
+clients. The desktop's built-in default relay URL points here; `Preferences.mailink_relay_url`
+is only an optional self-host override.
 
-- The relay is **stateless** and sees only `{push_token, platform, collapse_id, kind}` — no
-  terminal data ever. It's a doorbell wire, not a data plane. This honors "no cloud for data."
-- It centralizes the secrets that can't live safely on clients: the APNs `.p8` **and** the
-  FCM service-account key (Capacitor → both platforms; the relay fans out by `platform`).
-- It's existing, already-deployed infra (precedent + ops already in place).
+**Why there is no shared relay key.** Because the relay is multi-tenant, it can't authenticate
+desktops with one secret (it would have to ship in every install → extractable → open spam
+proxy). Instead the relay holds a server-side `CAP_SECRET` and each phone mints a **capability**:
 
-Alternatives, for the record: **(B)** embed the `.p8` in the desktop app (simplest, leaks
-the key); **(C)** each install configures the team's own Apple Developer `.p8` (purest
-"no third party," fine for a handful of internal users, but more setup per box). Given the
-tiny, mostly-internal user base, **(A) is the default unless you object.** ← *decision needed.*
+```
+phone ─POST /push-capability {push_token, platform}─► relay ─► {cap = base64url(HMAC-SHA256(CAP_SECRET, "platform:push_token"))}
+```
+
+The phone hands `cap` to the desktops it pairs with (via `/push-register`, over the pinned-TLS
+LAN channel). The desktop presents `cap` on every `/push`; the relay recomputes the HMAC and
+rejects a mismatch (`403`). Properties: `CAP_SECRET` never leaves the relay; a desktop can't
+forge a cap for a token it never received from a real phone; rotating `CAP_SECRET` revokes every
+cap at once; the relay stays **stateless** (no DB). Possessing the push token is the underlying
+gate (tokens are app-private and only ever travel APNs→phone→pinned-TLS→paired desktop).
+
+Relay endpoints (in `update-worker/`):
+- `POST /push-capability` — `{push_token, platform}` → `{cap}`. Open mint (rate-limit later).
+- `POST /push` — `{push_token, platform, env, cap, tab_id, kind, title}`. `403` on a bad cap,
+  `503` if `CAP_SECRET` unset, else echoes the upstream APNs/FCM verdict.
+- gateway-by-`env`: only `env:"production"`→`api.push.apple.com`, else the sandbox gateway.
 
 ---
 
@@ -507,22 +522,27 @@ so the contract is exercised, not just asserted.
   /`_key`. No-op until a relay URL is configured. Relay hosting confirmed: **reuse the existing
   Cloudflare update-worker** (`updates.maiterm.dev`) `/push` route.
 - **Doorbell relay `/push` — DONE** (`c35c0eb`, in `update-worker/`): the Cloudflare worker
-  `POST /push` route. Consumes the desktop payload `{push_token, platform, env, tab_id, kind,
-  title}` + `x-mailink-relay-key` and fans out — APNs (ES256 JWT minted from the `.p8`,
-  **gateway-by-`env`**: only `production`→`api.push.apple.com`, else sandbox) / FCM (HTTP-v1,
-  OAuth2 from the service-account JWT). JWTs cached in the isolate global. Relay key mandatory
-  (503 unset / 403 mismatch). Response echoes the upstream APNs/FCM verdict for desktop logs.
-- **Relay-config wiring — DONE** (`1637299`): Preferences → Doorbell section (Relay URL + key,
-  shown when maiLink is enabled), prefs-store round-trip (empty→`None`). Also fixed
-  `set_preferences` to preserve backend-owned `mailink_devices` (a save was wiping paired phones).
+  `POST /push` route. Fans out — APNs (ES256 JWT minted from the `.p8`, **gateway-by-`env`**:
+  only `production`→`api.push.apple.com`, else sandbox) / FCM (HTTP-v1, OAuth2 from the
+  service-account JWT). JWTs cached in the isolate global. Response echoes the upstream APNs/FCM
+  verdict for desktop logs.
+- **Multi-tenant capability auth — DONE** (`641c947` relay, `c27ac0c` desktop): the relay is
+  **shared infra for every user of the one published app**, so the per-user `MAILINK_RELAY_KEY`
+  is gone. Added `POST /push-capability` (`{push_token,platform}`→`{cap}`, `cap =
+  HMAC(CAP_SECRET, platform:push_token)`); `/push` now requires `cap` (403 on mismatch).
+  Desktop: `MailinkDevice.push_cap`, `/push-register` accepts `cap`, the doorbell only rings
+  devices with BOTH a token and a cap, the relay URL is **baked in by default**
+  (`mailink_relay_url` is an optional self-host override), and the Prefs key field is removed.
+  Also fixed `set_preferences` to preserve backend-owned `mailink_devices`.
 - **REMAINING for the doorbell:** (A) **provision + deploy** — Darryl downloads the Apple `.p8`,
-  then `wrangler secret put` for `MAILINK_RELAY_KEY` / `APNS_KEY_P8` / `APNS_KEY_ID` /
-  `APNS_TEAM_ID` (`7HJJ4SQ4TC`) / `APNS_TOPIC` (the iOS bundle id from the peer) + `wrangler
-  deploy`; (B) **joint device test** — the maiLink agent ships a push-entitled dev build to a
-  real iPhone, registers its APNs **sandbox** token via `/push-register`, then with the same
-  relay key set in maiTerm Preferences we fire the wake → lock-screen alert → deep-link
-  `/chat/{tabId}` → pull over LAN. Smoke-test the relay first with a throwaway token (expect
-  APNs `BadDeviceToken`, which proves JWT+gateway+auth all work — see `update-worker/README.md`).
+  then `wrangler secret put` for `CAP_SECRET` (random) / `APNS_KEY_P8` / `APNS_KEY_ID`
+  (`DRWCHZ5M5B`) / `APNS_TEAM_ID` (`7HJJ4SQ4TC`) / `APNS_TOPIC` (`dev.maiterm.mailink`) +
+  `wrangler deploy`; (B) **joint device test** — the maiLink agent ships a push-entitled dev
+  build, the phone mints its `cap` via `/push-capability` and registers its APNs **sandbox**
+  token + `cap` via `/push-register`, then we fire the wake → lock-screen alert → deep-link
+  `/chat/{tabId}` → pull over LAN. Smoke-test the relay first (mint a cap for a throwaway token,
+  then ring it — expect APNs `BadDeviceToken`, which proves cap+JWT+gateway all work — see
+  `update-worker/README.md`).
 - **Two findings (notes, not blockers):** (1) `/message` bracketed-paste is correct for an
   agent TUI but leaks into a bare shell — fine for the intended use; (2) the *first*
   permission (for `initSession` itself) can't be tab-attributed since the session→tab mapping
