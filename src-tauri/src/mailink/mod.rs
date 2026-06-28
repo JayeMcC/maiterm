@@ -14,9 +14,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, Query, State},
+    extract::{
+        ws::{Message, WebSocket, WebSocketUpgrade},
+        Path, Query, State,
+    },
     http::{header, HeaderMap, StatusCode},
-    routing::get,
+    response::{IntoResponse, Response},
+    routing::{get, post},
     Json, Router,
 };
 use axum_server::tls_rustls::RustlsConfig;
@@ -190,6 +194,10 @@ pub async fn serve(app_state: Arc<AppState>, cfg: MailinkConfig) {
         .route("/mailink/v1/chats", get(chats_list))
         .route("/mailink/v1/chats/{tab_id}", get(chat_detail))
         .route("/mailink/v1/chats/{tab_id}/context", get(chat_context))
+        .route("/mailink/v1/chats/{tab_id}/message", post(post_message))
+        .route("/mailink/v1/chats/{tab_id}/respond", post(post_respond))
+        .route("/mailink/v1/chats/{tab_id}/interrupt", post(post_interrupt))
+        .route("/mailink/v1/ws", get(ws_handler))
         .with_state(api);
 
     let tls = match RustlsConfig::from_pem(cfg.cert_pem.into_bytes(), cfg.key_pem.into_bytes()).await
@@ -266,7 +274,261 @@ async fn chat_context(
     Ok(Json(json!({ "text": text, "truncated": false })))
 }
 
+#[derive(serde::Deserialize)]
+struct MessageBody {
+    text: String,
+    #[serde(default)]
+    submit: bool,
+}
+
+/// POST /chats/{tabId}/message — inject a free-text message / proactive command into the
+/// tab's agent. Rides the same bracketed-paste + deferred-CR convention the agent bridge
+/// uses. 409 if the tab has no live PTY (dormant — nothing to inject into yet).
+async fn post_message(
+    State(s): State<ApiState>,
+    headers: HeaderMap,
+    Path(tab_id): Path<String>,
+    Json(body): Json<MessageBody>,
+) -> Result<Json<Value>, StatusCode> {
+    authorize(&headers, &s.dev_token)?;
+    let pty = pty_for_tab(&s.app, &tab_id).ok_or(StatusCode::CONFLICT)?;
+    inject_text(&s.app, &pty, &body.text, body.submit)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(Json(json!({ "status": "delivered", "msg_id": format!("m_{}", now_ms()) })))
+}
+
+#[derive(serde::Deserialize)]
+struct RespondBody {
+    choice: String,
+    #[serde(default)]
+    prompt_id: Option<String>,
+}
+
+/// POST /chats/{tabId}/respond — answer the tab's currently-open prompt. `prompt_id` is the
+/// stale-guard: if it doesn't match the open prompt, we reject with `{ok:false,
+/// reason:"stale"}` rather than inject the keystroke into whatever prompt is open NOW.
+async fn post_respond(
+    State(s): State<ApiState>,
+    headers: HeaderMap,
+    Path(tab_id): Path<String>,
+    Json(body): Json<RespondBody>,
+) -> Result<Json<Value>, StatusCode> {
+    authorize(&headers, &s.dev_token)?;
+    let current = current_prompt(&s.app, &tab_id);
+    let (kind, cur_id) = match current {
+        Some(p) => p,
+        None => return Ok(Json(json!({ "ok": false, "reason": "stale" }))),
+    };
+    if let Some(pid) = &body.prompt_id {
+        if pid != &cur_id {
+            return Ok(Json(json!({ "ok": false, "reason": "stale" })));
+        }
+    }
+    let pty = pty_for_tab(&s.app, &tab_id).ok_or(StatusCode::CONFLICT)?;
+    match kind {
+        // permission menu: a single numeric keystroke selects the option (no bracketed paste)
+        "permission" => {
+            let key = permission_key(&body.choice);
+            crate::pty::write_pty(&s.app, &pty, key.as_bytes())
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        }
+        // free-text question: the choice IS the answer text → paste + submit
+        _ => {
+            inject_text(&s.app, &pty, &body.choice, true)
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        }
+    }
+    Ok(Json(json!({ "ok": true })))
+}
+
+/// POST /chats/{tabId}/interrupt — send Esc to the agent (the documented "human interrupts"
+/// gesture).
+async fn post_interrupt(
+    State(s): State<ApiState>,
+    headers: HeaderMap,
+    Path(tab_id): Path<String>,
+) -> Result<Json<Value>, StatusCode> {
+    authorize(&headers, &s.dev_token)?;
+    let pty = pty_for_tab(&s.app, &tab_id).ok_or(StatusCode::CONFLICT)?;
+    crate::pty::write_pty(&s.app, &pty, b"\x1b").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(Json(json!({ "ok": true })))
+}
+
+#[derive(serde::Deserialize)]
+struct WsQuery {
+    token: Option<String>,
+}
+
+/// GET /mailink/v1/ws — upgrade to the live event stream. Auth via `Authorization: Bearer`
+/// header (native clients) or `?token=` query (browsers can't set WS headers).
+async fn ws_handler(
+    State(s): State<ApiState>,
+    headers: HeaderMap,
+    Query(q): Query<WsQuery>,
+    ws: WebSocketUpgrade,
+) -> Response {
+    let header_ok = authorize(&headers, &s.dev_token).is_ok();
+    let query_ok = q.token.as_deref() == Some(s.dev_token.as_str()) && !s.dev_token.is_empty();
+    if !header_ok && !query_ok {
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
+    ws.on_upgrade(move |socket| ws_event_loop(socket, s))
+}
+
+/// Live event loop. v1 is an internal poller (~1.5s): it diffs the chat snapshot and pushes
+/// `chat_state` on any state change, `attention` when a tab enters permission/idle, and
+/// `chats_changed` when the roster changes. (A push-based variant driven directly off the
+/// hook state machine is a later refinement — this gives the client the WS interface now.)
+async fn ws_event_loop(mut socket: WebSocket, s: ApiState) {
+    let mut last: HashMap<String, String> = HashMap::new();
+
+    // initial snapshot: one chat_state per chat
+    for c in build_chats(&s.app) {
+        let tab = c["tabId"].as_str().unwrap_or_default().to_string();
+        let st = c["state"].as_str().unwrap_or_default().to_string();
+        if socket.send(Message::Text(chat_state_event(&c).to_string().into())).await.is_err() {
+            return;
+        }
+        last.insert(tab, st);
+    }
+
+    let mut ticker = tokio::time::interval(std::time::Duration::from_millis(1500));
+    loop {
+        tokio::select! {
+            _ = ticker.tick() => {
+                let chats = build_chats(&s.app);
+                let mut current_ids = std::collections::HashSet::new();
+                let mut roster_changed = false;
+                for c in &chats {
+                    let tab = c["tabId"].as_str().unwrap_or_default().to_string();
+                    let st = c["state"].as_str().unwrap_or_default().to_string();
+                    current_ids.insert(tab.clone());
+                    let prev = last.get(&tab);
+                    if prev.is_none() {
+                        roster_changed = true;
+                    }
+                    if prev != Some(&st) {
+                        if socket.send(Message::Text(chat_state_event(c).to_string().into())).await.is_err() {
+                            return;
+                        }
+                        if st == "permission" || st == "idle" {
+                            let ev = attention_event(&s.app, &tab, &st, c["title"].as_str().unwrap_or_default());
+                            if socket.send(Message::Text(ev.to_string().into())).await.is_err() {
+                                return;
+                            }
+                        }
+                        last.insert(tab, st);
+                    }
+                }
+                // drop tabs that disappeared from the designated set
+                let removed: Vec<String> = last.keys().filter(|k| !current_ids.contains(*k)).cloned().collect();
+                if !removed.is_empty() {
+                    roster_changed = true;
+                    for k in removed { last.remove(&k); }
+                }
+                if roster_changed {
+                    let _ = socket.send(Message::Text(json!({ "type": "chats_changed" }).to_string().into())).await;
+                }
+            }
+            msg = socket.recv() => {
+                match msg {
+                    Some(Ok(Message::Close(_))) | None => break,
+                    Some(Err(_)) => break,
+                    // inbound client frames are ignored in v1 — the client uses REST for actions
+                    Some(Ok(_)) => {}
+                }
+            }
+        }
+    }
+}
+
+fn chat_state_event(c: &Value) -> Value {
+    json!({
+        "type": "chat_state",
+        "tabId": c["tabId"],
+        "state": c["state"],
+        "runtime": c["runtime"],
+        "ts": now_ms(),
+    })
+}
+
+/// Build an `attention` event for a tab, inlining the open prompt (delta 1) so the client can
+/// render decision buttons on the live path without a follow-up GET.
+fn attention_event(app: &AppState, tab_id: &str, state: &str, title: &str) -> Value {
+    let (kind, what) = match state {
+        "permission" => ("permission", "Needs your approval"),
+        "idle" => ("idle_done", "Finished"),
+        _ => ("question", "Has a question"),
+    };
+    let mut ev = json!({
+        "type": "attention",
+        "tabId": tab_id,
+        "kind": kind,
+        "summary": format!("{title}: {what}"),
+        "ts": now_ms(),
+    });
+    if let Some(detail) = build_chat_detail(app, tab_id) {
+        if let Some(pp) = detail.get("pendingPrompt") {
+            ev["prompt"] = pp.clone();
+        }
+    }
+    ev
+}
+
 // ─── helpers ────────────────────────────────────────────────────────────────────────────
+
+/// Inject text into a PTY: bracketed paste, then (if submit) a deferred CR — the same
+/// convention as `agentPrompt.ts::bracketedPasteSubmit`, so a multi-line message stays one
+/// prompt and submits cleanly into the agent's TUI.
+async fn inject_text(
+    app: &Arc<AppState>,
+    pty_id: &str,
+    text: &str,
+    submit: bool,
+) -> Result<(), String> {
+    let paste = format!("\x1b[200~{text}\x1b[201~");
+    crate::pty::write_pty(app, pty_id, paste.as_bytes())?;
+    if submit {
+        // settle delay so the TUI finishes absorbing the paste before the CR submits it
+        let settle = 120 + (text.len() as u64 / 8).min(800);
+        tokio::time::sleep(std::time::Duration::from_millis(settle)).await;
+        crate::pty::write_pty(app, pty_id, b"\r")?;
+    }
+    Ok(())
+}
+
+/// The tab's currently-open prompt, as (kind, prompt_id). Mirrors what `build_chat_detail`
+/// synthesizes, so `/respond`'s stale-guard agrees with what the client was shown.
+fn current_prompt(app: &AppState, tab_id: &str) -> Option<(&'static str, String)> {
+    let states = session_states(app);
+    let (st, _rt, tool) = states.get(tab_id)?;
+    if map_state(*st) == "permission" {
+        Some(("permission", format!("p_{tab_id}")))
+    } else if tool.as_deref() == Some("AskUserQuestion") {
+        Some(("question", format!("q_{tab_id}")))
+    } else {
+        None
+    }
+}
+
+/// Map a permission `choice` to the TUI keystroke. Standard Claude menu is 1=yes,
+/// 2=yes+don't-ask, 3=no. A bare digit passes through; an unknown label defaults to deny.
+/// (Fragile by nature — depends on the runtime's current affordance; the robust path is a
+/// free-text /message. See docs §5.)
+fn permission_key(choice: &str) -> String {
+    let c = choice.trim();
+    if c.len() == 1 && c.chars().next().is_some_and(|ch| ch.is_ascii_digit()) {
+        return c.to_string();
+    }
+    match c.to_lowercase().as_str() {
+        "yes" | "approve" | "allow" => "1",
+        "yes, don't ask again" | "yes, and don't ask again" | "always" => "2",
+        _ => "3", // safe default: deny
+    }
+    .to_string()
+}
 
 /// Bearer-token check. Returns 401 unless the `Authorization: Bearer <token>` matches.
 fn authorize(headers: &HeaderMap, expected: &str) -> Result<(), StatusCode> {
