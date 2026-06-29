@@ -1428,11 +1428,29 @@ async fn process_message(
                     });
 
                     // Emit to the specific window that owns the tab (avoids race
-                    // when preferences/help windows also listen for the event)
-                    if let Some(label) = resolve_target_window(state, &arguments) {
-                        emit_dual_to(app_handle, &label, "agent-ide-tool", "claude-code-tool", payload);
+                    // when preferences/help windows also listen for the event).
+                    //
+                    // BUT: if the frontend's agent-ide-tool listener hasn't been
+                    // registered yet (which happens for the first few seconds of
+                    // app boot — Tauri's `appWindow.listen` fires inside the
+                    // layout's `onMount`), Tauri's event system DROPS the emit
+                    // rather than queueing it. The oneshot would then wait the
+                    // full RESPONSE_TIMEOUT before erroring. So: if the frontend
+                    // hasn't signaled `mark_frontend_ready` yet, stash the
+                    // payload in `pending_frontend_emits` and let the flush in
+                    // `mark_frontend_ready` deliver it once the listener is up.
+                    let target_label = resolve_target_window(state, &arguments);
+                    if state.frontend_ready.load(std::sync::atomic::Ordering::SeqCst) {
+                        if let Some(label) = &target_label {
+                            emit_dual_to(app_handle, label, "agent-ide-tool", "claude-code-tool", payload);
+                        } else {
+                            emit_dual(app_handle, "agent-ide-tool", "claude-code-tool", payload);
+                        }
                     } else {
-                        emit_dual(app_handle, "agent-ide-tool", "claude-code-tool", payload);
+                        state
+                            .pending_frontend_emits
+                            .lock()
+                            .push((target_label, payload));
                     }
 
                     match tokio::time::timeout(RESPONSE_TIMEOUT, rx).await {

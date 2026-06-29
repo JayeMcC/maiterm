@@ -318,7 +318,17 @@
     let unlistenClaudeTool: (() => void) | undefined;
     appWindow.listen<ClaudeCodeToolRequest>('agent-ide-tool', (event) => {
       claudeCodeStore.handleToolRequest(event.payload);
-    }).then(unlisten => { unlistenClaudeTool = unlisten; });
+    }).then(unlisten => {
+      unlistenClaudeTool = unlisten;
+      // Notify the Rust side that the listener is now attached, so any
+      // tool-call emits the server queued during the boot race get
+      // flushed and delivered. Without this, the first frontend-handled
+      // tool call from an external MCP client (CLI launcher, E2E
+      // harness) connecting in the first few seconds of app boot would
+      // be silently dropped — Tauri's event system doesn't queue emits
+      // for listeners that haven't registered yet.
+      invoke('mark_frontend_ready').catch(e => logError(`mark_frontend_ready failed: ${e}`));
+    });
 
     let unlistenClaudeConnection: (() => void) | undefined;
     appWindow.listen<{ connected: boolean }>('agent-ide-connection', (event) => {

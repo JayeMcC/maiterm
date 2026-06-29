@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use serde_json::Value;
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
 
 use crate::state::AppState;
 
@@ -18,6 +18,39 @@ pub fn claude_code_respond(
     } else {
         Err(format!("No pending request with id: {}", request_id))
     }
+}
+
+/// Called once from the Svelte layout's `onMount` after the
+/// `agent-ide-tool` listener has been registered. Flips `frontend_ready`
+/// to true and immediately drains any payloads the server queued during
+/// the boot race (Tauri drops emits that have no registered listener,
+/// so a tool call landing in the first ~5s of app boot needs to wait
+/// for the listener to come up before the emit goes through).
+///
+/// Idempotent — repeat invocations no-op because the queue is already
+/// empty and the flag stays true.
+#[tauri::command]
+pub fn mark_frontend_ready(
+    app: AppHandle,
+    state: State<'_, Arc<AppState>>,
+) -> Result<(), String> {
+    state
+        .frontend_ready
+        .store(true, std::sync::atomic::Ordering::SeqCst);
+    let drained: Vec<(Option<String>, Value)> = {
+        let mut pending = state.pending_frontend_emits.lock();
+        std::mem::take(&mut *pending)
+    };
+    for (target_label, payload) in drained {
+        if let Some(label) = target_label {
+            let _ = app.emit_to(&label, "agent-ide-tool", payload.clone());
+            let _ = app.emit_to(&label, "claude-code-tool", payload);
+        } else {
+            let _ = app.emit("agent-ide-tool", payload.clone());
+            let _ = app.emit("claude-code-tool", payload);
+        }
+    }
+    Ok(())
 }
 
 /// Called by the frontend to forward a notification (e.g. selection change) to Claude CLI.

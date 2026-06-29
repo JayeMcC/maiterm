@@ -130,6 +130,17 @@ pub struct AppState {
     pub agent_sessions: RwLock<HashMap<String, AgentSessionInfo>>,
     // Pending session IDs from SessionStart HTTP hooks awaiting initSession to assign a tab
     pub pending_agent_sessions: RwLock<Vec<(String, Option<String>, Instant)>>, // (session_id, cwd, timestamp)
+    /// Set once the frontend's `agent-ide-tool` listener has been registered
+    /// (the Svelte layout calls `mark_frontend_ready` after `appWindow.listen`
+    /// resolves). Until this is true, frontend-emitted MCP tool requests go
+    /// into `pending_frontend_emits` instead of firing into the void —
+    /// Tauri's event system drops emits with no registered listener and
+    /// won't queue them itself.
+    pub frontend_ready: std::sync::atomic::AtomicBool,
+    /// Buffered `agent-ide-tool` payloads waiting for the frontend listener.
+    /// Each entry is `(target_window_label_or_None, payload_value)`. Flushed
+    /// in FIFO order from `mark_frontend_ready`.
+    pub pending_frontend_emits: parking_lot::Mutex<Vec<(Option<String>, serde_json::Value)>>,
 }
 
 impl AppState {
@@ -163,6 +174,8 @@ impl AppState {
             memory_samples: RwLock::new(Vec::new()),
             agent_sessions: RwLock::new(HashMap::new()),
             pending_agent_sessions: RwLock::new(Vec::new()),
+            frontend_ready: std::sync::atomic::AtomicBool::new(false),
+            pending_frontend_emits: parking_lot::Mutex::new(Vec::new()),
         }
     }
 

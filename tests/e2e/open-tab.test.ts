@@ -30,14 +30,13 @@ if (!BIN) {
       handle = await spawnMaiterm({ binary: BIN!, timeoutMs: 90_000 });
       client = new McpClient(handle.lock);
       await client.initialize();
-      // Crucial: Tauri events emitted before the agent-ide-tool listener
-      // is registered are dropped, not queued. The Svelte layout's
-      // onMount registers the listener; this poll spins until a
-      // frontend-handled tool actually responds, proving the listener
-      // is up. On macos-latest runners we see ~5s before the listener
-      // is ready; without this, the first openTab call races the
-      // listener and silently hangs for the full testTimeout.
-      await client.waitForFrontendReady({ timeoutMs: 60_000 });
+      // No waitForFrontendReady poll here: the server-side queue in
+      // pending_frontend_emits (state/app_state.rs) holds frontend-emitted
+      // tool calls that land before the layout's listener attaches, and
+      // mark_frontend_ready flushes them once `appWindow.listen` resolves.
+      // If this test passes without the poll, the queue fix is working
+      // end-to-end. If it hangs, the fix isn't sufficient — add the
+      // poll back as a workaround and dig into the server.
     }, 180_000);
 
     afterAll(async () => {
