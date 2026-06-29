@@ -204,6 +204,21 @@ pub fn tool_list_response() -> Value {
             }
         },
         {
+            "name": "openTab",
+            "description": "Open a new terminal tab in a workspace and optionally run a command in it. Use this to programmatically spawn dev-server tabs, helper shells, or any named long-running process. If reuseExisting is true and a tab with the given name already exists in the workspace, the existing tab is focused (and re-runs the command, mirroring VS Code's 'dedicated panel' semantics) instead of duplicating. Returns the tabId so callers can address the tab later via switchTab or sendKeysToTab.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string", "description": "Tab name (e.g. 'API', 'WEB', 'Storybook'). Visible in the tab bar; also used as the lookup key when reuseExisting is set." },
+                    "workspaceName": { "type": "string", "description": "Name of the workspace to spawn the tab in. If omitted, uses the currently active workspace in this window." },
+                    "command": { "type": "string", "description": "Optional shell command to run in the tab once its PTY is ready (e.g. 'pnpm dev', 'devcontainer exec -- bash -lc \"...\"'). A trailing newline is appended automatically. If omitted, the tab starts an empty interactive shell." },
+                    "cwd": { "type": "string", "description": "Optional working directory for the new tab's shell. If omitted, inherits the workspace's standard CWD inference." },
+                    "reuseExisting": { "type": "boolean", "description": "When true, if a tab with `name` already exists in the workspace, focus it and send the command into it (after a Ctrl-C to clear any running process) instead of creating a new tab. Default false." }
+                },
+                "required": ["name"]
+            }
+        },
+        {
             "name": "sendKeysToTab",
             "description": "Write raw text into a terminal tab's PTY, as if the user had typed it. Use this to re-run a command in an existing dedicated tab, send Ctrl-C (\\u0003) to interrupt a process, or feed input to a prompt. The text is sent as-is — append a newline (\\n) if you want a command to execute. The tab must be a live terminal tab (not editor/diff, not suspended).",
             "inputSchema": {

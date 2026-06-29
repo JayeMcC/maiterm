@@ -117,6 +117,15 @@ function createClaudeCodeStore() {
         case 'switchTab':
           result = await handleSwitchTab(args as { tabId: string });
           break;
+        case 'openTab':
+          result = await handleOpenTab(args as {
+            name: string;
+            workspaceName?: string;
+            command?: string;
+            cwd?: string;
+            reuseExisting?: boolean;
+          });
+          break;
         case 'sendKeysToTab':
           result = await handleSendKeysToTab(args as { tabId: string; text: string });
           break;
@@ -696,6 +705,123 @@ function createClaudeCodeStore() {
   /** Encode a UTF-8 string into the number[] shape `commands.writeTerminal` expects. */
   function encodeForPty(text: string): number[] {
     return Array.from(new TextEncoder().encode(text));
+  }
+
+  /** Find the first terminal tab in `workspace` whose `name` equals `name`. */
+  function findTabByName(workspace: Workspace, name: string): { pane: Pane; tab: Tab } | null {
+    for (const pane of workspace.panes) {
+      const tab = pane.tabs.find(t => (t.tab_type === 'terminal' || !t.tab_type) && t.name === name);
+      if (tab) return { pane, tab };
+    }
+    return null;
+  }
+
+  /**
+   * Wait for a tab's `pty_id` to be set by the Terminal component's mount-time spawn.
+   * Polls the live `workspacesStore` until set or `timeoutMs` elapses. Returns the
+   * pty_id, or null on timeout.
+   */
+  async function waitForPtyId(tabId: string, timeoutMs = 5000): Promise<string | null> {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const loc = findTabLocation(tabId);
+      if (loc?.tab.pty_id) return loc.tab.pty_id;
+      await new Promise(r => setTimeout(r, 50));
+    }
+    return null;
+  }
+
+  async function handleOpenTab(args: {
+    name: string;
+    workspaceName?: string;
+    command?: string;
+    cwd?: string;
+    reuseExisting?: boolean;
+  }) {
+    if (!args.name) return { error: 'name is required' };
+
+    const ws = args.workspaceName
+      ? workspacesStore.workspaces.find(w => w.name === args.workspaceName)
+      : workspacesStore.activeWorkspace;
+    if (!ws) {
+      return { error: args.workspaceName ? `Workspace not found: ${args.workspaceName}` : 'No active workspace' };
+    }
+
+    // Reuse path: if a terminal tab with the given name exists, focus it and
+    // (optionally) write the command after a Ctrl-C to clear any running process.
+    // Mirrors VS Code's "presentation.panel: dedicated" semantics.
+    if (args.reuseExisting) {
+      const existing = findTabByName(ws, args.name);
+      if (existing) {
+        await navigateToTab(existing.tab.id);
+        let ptyId = existing.tab.pty_id ?? null;
+        if (!ptyId) {
+          // Tab exists but PTY hasn't been spawned yet (suspended/uninitialised);
+          // wait briefly in case it's just remounting.
+          ptyId = await waitForPtyId(existing.tab.id, 2000);
+        }
+        if (args.command && ptyId) {
+          // Ctrl-C first so any running dev server is interrupted before the
+          // new command lands. Small inter-write delay lets the shell's signal
+          // handler print its prompt before we type over it.
+          await commands.writeTerminal(ptyId, encodeForPty('\x03'));
+          await new Promise(r => setTimeout(r, 50));
+          await commands.writeTerminal(ptyId, encodeForPty(args.command + '\n'));
+        }
+        return {
+          action: 'focused',
+          tabId: existing.tab.id,
+          ptyId,
+          workspaceId: ws.id,
+          paneId: existing.pane.id,
+          displayName: tabDisplayName(existing.tab),
+        };
+      }
+    }
+
+    // Create path: pick the active pane (or first pane if none active), create
+    // the tab via the workspace store (which handles sibling CWD inference),
+    // then wait for the Terminal component to spawn its PTY before writing.
+    const pane = ws.panes.find(p => p.id === ws.active_pane_id) ?? ws.panes[0];
+    if (!pane) return { error: `Workspace has no panes: ${ws.id}` };
+
+    const tab = await workspacesStore.createTab(ws.id, pane.id, args.name);
+    await navigateToTab(tab.id);
+
+    let ptyId: string | null = null;
+    if (args.command) {
+      ptyId = await waitForPtyId(tab.id, 5000);
+      if (!ptyId) {
+        return {
+          action: 'created',
+          tabId: tab.id,
+          ptyId: null,
+          workspaceId: ws.id,
+          paneId: pane.id,
+          displayName: args.name,
+          warning: 'Tab created but PTY did not become ready within 5s; command was not written. Caller can retry via sendKeysToTab.',
+        };
+      }
+      // TODO(cwd): args.cwd is currently inferred from sibling-tab heuristics in
+      // workspacesStore.createTab. Honouring an explicit cwd here would require
+      // either threading it through createTab or `cd`-ing after spawn — left
+      // for a follow-up since the launcher's common case is "inherit the
+      // workspace's standard CWD".
+      await commands.writeTerminal(ptyId, encodeForPty(args.command + '\n'));
+    } else {
+      // No command: caller may sendKeysToTab later. Don't block on PTY readiness.
+      const located = findTabLocation(tab.id);
+      ptyId = located?.tab.pty_id ?? null;
+    }
+
+    return {
+      action: 'created',
+      tabId: tab.id,
+      ptyId,
+      workspaceId: ws.id,
+      paneId: pane.id,
+      displayName: args.name,
+    };
   }
 
   async function handleSendKeysToTab(args: { tabId: string; text: string }) {
