@@ -99,7 +99,9 @@ export async function spawnMaiterm(opts: {
       } catch {
         continue;
       }
-      if (lock.ideName !== 'maiTerm') continue;
+      // Debug builds set ideName to "maiTermDev"; release builds use "maiTerm".
+      // startsWith catches both, plus any future variants.
+      if (!lock.ideName.startsWith('maiTerm')) continue;
       if (lock.pid !== proc.pid) continue;
       // Sanity-check the lockfile is fresh enough.
       const mtime = statSync(path).mtimeMs;
