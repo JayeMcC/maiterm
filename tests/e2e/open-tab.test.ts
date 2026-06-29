@@ -27,25 +27,17 @@ if (!BIN) {
     let client: McpClient;
 
     beforeAll(async () => {
-      const t0 = Date.now();
-      const log = (msg: string) =>
-        // eslint-disable-next-line no-console
-        console.error(`[e2e beforeAll +${Date.now() - t0}ms] ${msg}`);
-      log('spawning maiTerm');
       handle = await spawnMaiterm({ binary: BIN!, timeoutMs: 90_000 });
-      log(`spawned, port=${handle.lock.serverPort}`);
       client = new McpClient(handle.lock);
-      log('initializing client');
       await client.initialize();
-      log('client initialized, waiting for frontend listener');
       // Crucial: Tauri events emitted before the agent-ide-tool listener
       // is registered are dropped, not queued. The Svelte layout's
       // onMount registers the listener; this poll spins until a
       // frontend-handled tool actually responds, proving the listener
-      // is up. Without this, the first openTab call races the listener
-      // (~1s after maiTerm starts) and silently hangs.
+      // is up. On macos-latest runners we see ~5s before the listener
+      // is ready; without this, the first openTab call races the
+      // listener and silently hangs for the full testTimeout.
       await client.waitForFrontendReady({ timeoutMs: 60_000 });
-      log('beforeAll done');
     }, 180_000);
 
     afterAll(async () => {

@@ -92,15 +92,8 @@ export class McpClient {
     };
     if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
 
-    const t0 = Date.now();
-    const log = (msg: string) =>
-      // eslint-disable-next-line no-console
-      console.error(`[mcp ${method}#${id} +${Date.now() - t0}ms] ${msg}`);
-
-    log('request start (node:http)');
     const { statusCode, statusMessage, headers: resHeaders, body: resBody } =
       await this.nodeHttpPost(body, headers);
-    log(`response received status=${statusCode} ct=${resHeaders['content-type'] ?? ''} bytes=${resBody.length}`);
 
     const respSessionId = resHeaders['mcp-session-id'] as string | undefined;
     if (respSessionId && !this.sessionId) this.sessionId = respSessionId;
@@ -121,7 +114,6 @@ export class McpClient {
     if (payload.error) {
       throw new Error(`MCP ${method} error ${payload.error.code}: ${payload.error.message}`);
     }
-    log('returning payload');
     return payload.result;
   }
 
@@ -186,20 +178,14 @@ export class McpClient {
   async waitForFrontendReady(opts: { timeoutMs?: number } = {}): Promise<void> {
     const timeoutMs = opts.timeoutMs ?? 60_000;
     const start = Date.now();
-    let attempt = 0;
     let lastError: unknown = null;
     while (Date.now() - start < timeoutMs) {
-      attempt++;
-      // eslint-disable-next-line no-console
-      console.error(`[waitForFrontendReady attempt ${attempt} +${Date.now() - start}ms]`);
       try {
-        // Use a short per-call deadline so a hung emit doesn't waste the
-        // whole budget. listWorkspaces is frontend-handled, in the
-        // server's global_tools allowlist (no initSession needed), and
-        // returns a structured tree once the listener responds.
+        // Short per-call deadline so a hung emit doesn't waste the whole
+        // budget. listWorkspaces is frontend-handled, in the server's
+        // global_tools allowlist (no initSession needed), and returns a
+        // structured tree once the listener responds.
         await this.callToolWithDeadline('listWorkspaces', {}, 2_000);
-        // eslint-disable-next-line no-console
-        console.error(`[waitForFrontendReady ready after ${attempt} attempts, ${Date.now() - start}ms]`);
         return;
       } catch (err) {
         lastError = err;
@@ -234,58 +220,6 @@ export class McpClient {
       return JSON.parse(json) as { result?: unknown; error?: { code: number; message: string } };
     }
     throw new Error(`SSE response had no data line: ${body.slice(0, 300)}`);
-  }
-
-  /**
-   * Some MCP servers respond via SSE even to a one-shot POST. maiTerm always
-   * does (`event: message\ndata: <json>\n\n`). Stream-read and bail out
-   * the moment we see the first `data:` line — don't wait for the body to
-   * close, because chunked transfer encoding under text/event-stream
-   * sometimes leaves the connection open even after the single event
-   * fires, hanging `await res.text()` for the full HTTP timeout.
-   */
-  private async parseSse(
-    res: Response,
-    log: (msg: string) => void = () => undefined,
-  ): Promise<{ result?: unknown; error?: { code: number; message: string } }> {
-    if (!res.body) {
-      throw new Error('SSE response has no readable body');
-    }
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-    let reads = 0;
-    try {
-      while (true) {
-        log(`sse: awaiting chunk #${reads}`);
-        const { value, done } = await reader.read();
-        reads++;
-        if (value) {
-          buf += decoder.decode(value, { stream: true });
-          log(`sse: chunk #${reads - 1} got ${value.byteLength}B (done=${done})`);
-        } else {
-          log(`sse: chunk #${reads - 1} empty (done=${done})`);
-        }
-        const lines = buf.split('\n');
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed.startsWith('data:')) continue;
-          const json = trimmed.slice(5).trim();
-          if (!json) continue;
-          log('sse: data line found, returning');
-          return JSON.parse(json) as { result?: unknown; error?: { code: number; message: string } };
-        }
-        if (done) break;
-      }
-      throw new Error(`SSE response had no data line: ${buf.slice(0, 300)}`);
-    } finally {
-      log('sse: cancelling reader');
-      try {
-        await reader.cancel();
-      } catch {
-        // Ignore — best-effort cleanup so the connection can be reused.
-      }
-    }
   }
 
   private async notify(method: string, params: unknown): Promise<void> {
