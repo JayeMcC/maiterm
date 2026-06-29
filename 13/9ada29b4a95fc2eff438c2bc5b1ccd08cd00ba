@@ -1,0 +1,39 @@
+tests/e2e/.gitignore
+  s_2faedf32a94ff1::t_4fada77d5456d2 1
+tests/e2e/harness/mcp-client.ts
+  s_2faedf32a94ff1::t_7afde383ef33e3 1-144
+.github/workflows/e2e.yml
+  s_2faedf32a94ff1::t_9e5f521da89bd8 1-62
+tests/e2e/vitest.config.ts
+  s_2faedf32a94ff1::t_4cd0df78564911 1-5,9-14
+  s_2faedf32a94ff1::t_09cca642e141db 6-8
+tests/e2e/harness/spawn.ts
+  s_2faedf32a94ff1::t_7fb4c4ee3d4dc5 78
+  s_2faedf32a94ff1::t_cd443a1c4727e8 1-77,81,83-85,87,89-141
+  s_2faedf32a94ff1::t_5b5fbaab484875 86,88
+  s_2faedf32a94ff1::t_e9a0b7ff9bbc4a 79-80,82
+tests/e2e/open-tab.test.ts
+  s_2faedf32a94ff1::t_ae2f3f15b18897 1-94
+tests/e2e/tsconfig.json
+  s_2faedf32a94ff1::t_dce98f9d8ac3bf 1-21
+tests/e2e/package.json
+  s_2faedf32a94ff1::t_0a923ddb98da09 1-20
+tests/e2e/package-lock.json
+  s_2faedf32a94ff1::t_b9f67df88434fc 1-1330
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "139ada29b4a95fc2eff438c2bc5b1ccd08cd00ba",
+  "prompts": {},
+  "sessions": {
+    "s_2faedf32a94ff1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6445d28c-8b55-4fce-aa24-e77fe148004a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
