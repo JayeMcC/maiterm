@@ -204,6 +204,18 @@ pub fn tool_list_response() -> Value {
             }
         },
         {
+            "name": "sendKeysToTab",
+            "description": "Write raw text into a terminal tab's PTY, as if the user had typed it. Use this to re-run a command in an existing dedicated tab, send Ctrl-C (\\u0003) to interrupt a process, or feed input to a prompt. The text is sent as-is — append a newline (\\n) if you want a command to execute. The tab must be a live terminal tab (not editor/diff, not suspended).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "tabId": { "type": "string", "description": "The tab ID to send keys to. Get this from listWorkspaces, openTab, or initSession." },
+                    "text": { "type": "string", "description": "Raw text to write into the PTY. Supports control characters via JSON escapes (e.g. '\\u0003' = Ctrl-C, '\\u001b' = ESC). Append '\\n' to submit a command." }
+                },
+                "required": ["tabId", "text"]
+            }
+        },
+        {
             "name": "getTabNotes",
             "description": "Read the notes content for a terminal or editor tab. Returns the notes text and display mode.",
             "inputSchema": {

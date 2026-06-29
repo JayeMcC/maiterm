@@ -117,6 +117,9 @@ function createClaudeCodeStore() {
         case 'switchTab':
           result = await handleSwitchTab(args as { tabId: string });
           break;
+        case 'sendKeysToTab':
+          result = await handleSendKeysToTab(args as { tabId: string; text: string });
+          break;
         case 'getTabNotes':
           result = handleGetTabNotes(args as { tabId?: string });
           break;
@@ -688,6 +691,36 @@ function createClaudeCodeStore() {
     if (!loc) return { error: `Tab not found: ${args.tabId}` };
     await navigateToTab(args.tabId);
     return { success: true, tabId: args.tabId, workspace: loc.workspace.name, displayName: tabDisplayName(loc.tab) };
+  }
+
+  /** Encode a UTF-8 string into the number[] shape `commands.writeTerminal` expects. */
+  function encodeForPty(text: string): number[] {
+    return Array.from(new TextEncoder().encode(text));
+  }
+
+  async function handleSendKeysToTab(args: { tabId: string; text: string }) {
+    if (!args.tabId) return { error: 'tabId is required' };
+    if (typeof args.text !== 'string') return { error: 'text is required (string)' };
+
+    const loc = findTabLocation(args.tabId);
+    if (!loc) return { error: `Tab not found: ${args.tabId}` };
+
+    const tab = loc.tab;
+    if (tab.tab_type && tab.tab_type !== 'terminal') {
+      return { error: `Tab ${args.tabId} is a ${tab.tab_type} tab; sendKeysToTab only supports terminal tabs.` };
+    }
+    if (!tab.pty_id) {
+      return { error: `Tab ${args.tabId} has no live PTY (suspended or uninitialised). Try switchTab first to remount, then retry.` };
+    }
+
+    const bytes = encodeForPty(args.text);
+    await commands.writeTerminal(tab.pty_id, bytes);
+    return {
+      success: true,
+      tabId: args.tabId,
+      ptyId: tab.pty_id,
+      bytes: bytes.length,
+    };
   }
 
   // --- Tab notes tools ---
