@@ -1,0 +1,21 @@
+tests/e2e/harness/mcp-client.ts
+  s_2faedf32a94ff1::t_5d1720ac5a74c6 184-187
+tests/e2e/open-tab.test.ts
+  s_2faedf32a94ff1::t_454478f404c75d 37-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "a164494b6157bee9b5dc5c5f48402692c032fda6",
+  "prompts": {},
+  "sessions": {
+    "s_2faedf32a94ff1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6445d28c-8b55-4fce-aa24-e77fe148004a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
