@@ -26,6 +26,7 @@ SETTINGS="$CLAUDE_DIR/settings.json"
 GREEN='\033[1;32m'; CYAN='\033[1;36m'; BLUE='\033[1;34m'
 MAGENTA='\033[1;35m'; YELLOW='\033[1;33m'; ORANGE='\033[38;5;208m'; RESET='\033[0m'
 host=$(hostname -s 2>/dev/null | tr '[:lower:]' '[:upper:]'); [ -z "$host" ] && host="HOST"
+[ "${#host}" -gt 12 ] && host="${host:0:11}…"  # match statusline-command.sh truncation
 
 echo "maiTerm Claude Code status line — example:"
 echo

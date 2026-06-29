@@ -1,7 +1,9 @@
 #!/bin/bash
 input=$(cat)
 
-cwd=$(echo "$input" | jq -r '.cwd // .workspace.current_dir // empty')
+# Use the session's base project directory (where Claude Code was launched),
+# not the live CWD — subagents change CWD and make the display misleading.
+cwd=$(echo "$input" | jq -r '.workspace.project_dir // .cwd // .workspace.current_dir // empty')
 [ -z "$cwd" ] && cwd=$(pwd)
 
 # Current git branch (or short commit when detached); empty when not in a repo.
@@ -48,6 +50,9 @@ fi
 
 host=$(hostname -s 2>/dev/null | tr '[:lower:]' '[:upper:]')
 [ -z "$host" ] && host="HOST"
+# Keep the host label from dominating the line: cap at 12 chars,
+# keeping 11 plus an ellipsis so truncation is visible.
+[ "${#host}" -gt 12 ] && host="${host:0:11}…"
 
 case "$model_id" in
   *"[1m]"*|*"-1m"*) ctx_limit=1000000 ;;
