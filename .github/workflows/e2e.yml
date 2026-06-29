@@ -1,0 +1,62 @@
+name: E2E (macOS)
+
+on:
+  push:
+    branches: ["main", "feature/**"]
+  workflow_dispatch:
+
+jobs:
+  e2e-macos:
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install root frontend dependencies
+        run: npm ci
+
+      - name: Build maiTerm (debug)
+        # Debug build for speed (~5min vs ~15min release). The MCP server +
+        # tab/PTY paths the E2E suite exercises are identical to release.
+        # --no-bundle skips the .app/.dmg packaging; we run the raw binary
+        # at src-tauri/target/debug/aiterm directly.
+        run: npx tauri build --debug --no-bundle
+
+      - name: Install E2E dependencies
+        working-directory: tests/e2e
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck E2E
+        working-directory: tests/e2e
+        run: npm run typecheck
+
+      - name: Run E2E suite
+        working-directory: tests/e2e
+        env:
+          MAITERM_BINARY: ${{ github.workspace }}/src-tauri/target/debug/aiterm
+        run: npm test
+
+      - name: Upload maiTerm logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maiterm-logs
+          path: |
+            ~/Library/Logs/com.aiterm.app/
+            ~/.claude/ide/
+          if-no-files-found: ignore

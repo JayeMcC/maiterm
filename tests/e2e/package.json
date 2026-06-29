@@ -1,0 +1,20 @@
+{
+  "name": "@maiterm/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "End-to-end tests for the maiTerm MCP surface. Spawns the built binary, drives it via the IDE MCP server, asserts tab/PTY state. Runs on macos-latest GitHub Actions runners with the debug build of the app. See ../.github/workflows/e2e.yml.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=22.6"
+  }
+}
