@@ -170,6 +170,60 @@ export class McpClient {
     });
   }
 
+  /**
+   * Poll a frontend-handled tool (`listWorkspaces`) until it returns
+   * successfully. Proves the maiTerm webview has finished loading, its
+   * Svelte layout has mounted, and the `agent-ide-tool` listener is
+   * registered — otherwise the first real tool call races the listener
+   * and the server's emit lands in the void (Tauri events emitted
+   * before a listener is attached are dropped, not queued, so the
+   * server's oneshot just waits 120s for a response that never arrives).
+   *
+   * Uses a short per-call timeout (2s) and retries until the overall
+   * timeout (default 60s) elapses. Logs each attempt so a slow webview
+   * boot is visible in the CI output.
+   */
+  async waitForFrontendReady(opts: { timeoutMs?: number } = {}): Promise<void> {
+    const timeoutMs = opts.timeoutMs ?? 60_000;
+    const start = Date.now();
+    let attempt = 0;
+    let lastError: unknown = null;
+    while (Date.now() - start < timeoutMs) {
+      attempt++;
+      // eslint-disable-next-line no-console
+      console.error(`[waitForFrontendReady attempt ${attempt} +${Date.now() - start}ms]`);
+      try {
+        // Use a short per-call deadline so a hung emit doesn't waste the
+        // whole budget. listWorkspaces is frontend-handled, in the
+        // server's global_tools allowlist (no initSession needed), and
+        // returns a structured tree once the listener responds.
+        await this.callToolWithDeadline('listWorkspaces', {}, 2_000);
+        // eslint-disable-next-line no-console
+        console.error(`[waitForFrontendReady ready after ${attempt} attempts, ${Date.now() - start}ms]`);
+        return;
+      } catch (err) {
+        lastError = err;
+        await new Promise(r => setTimeout(r, 500));
+      }
+    }
+    throw new Error(
+      `Frontend did not respond to listWorkspaces within ${timeoutMs}ms (last error: ${String(lastError)})`,
+    );
+  }
+
+  private async callToolWithDeadline(
+    name: string,
+    args: Record<string, unknown>,
+    deadlineMs: number,
+  ): Promise<McpToolCallResult> {
+    return Promise.race([
+      this.callTool(name, args),
+      new Promise<McpToolCallResult>((_, reject) =>
+        setTimeout(() => reject(new Error(`tool ${name} did not respond within ${deadlineMs}ms`)), deadlineMs),
+      ),
+    ]);
+  }
+
   /** Pull the JSON payload from a fully-read SSE body. */
   private parseSseBody(body: string): { result?: unknown; error?: { code: number; message: string } } {
     for (const line of body.split('\n')) {

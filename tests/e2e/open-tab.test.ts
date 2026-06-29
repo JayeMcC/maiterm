@@ -37,8 +37,16 @@ if (!BIN) {
       client = new McpClient(handle.lock);
       log('initializing client');
       await client.initialize();
-      log('client initialized — beforeAll done');
-    }, 120_000);
+      log('client initialized, waiting for frontend listener');
+      // Crucial: Tauri events emitted before the agent-ide-tool listener
+      // is registered are dropped, not queued. The Svelte layout's
+      // onMount registers the listener; this poll spins until a
+      // frontend-handled tool actually responds, proving the listener
+      // is up. Without this, the first openTab call races the listener
+      // (~1s after maiTerm starts) and silently hangs.
+      await client.waitForFrontendReady({ timeoutMs: 60_000 });
+      log('beforeAll done');
+    }, 180_000);
 
     afterAll(async () => {
       if (handle) await handle.kill();
