@@ -82,20 +82,22 @@ export class McpClient {
     };
     if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
 
-    // AbortController tears the socket down once we've parsed the response —
-    // critical for SSE responses where the server's body framing doesn't
-    // close promptly under undici's connection-pool defaults. Without this,
-    // a subsequent fetch blocks waiting for the previous SSE socket to
-    // free up, which on macos-latest manifests as exact-60s queue delays.
+    const t0 = Date.now();
+    const log = (msg: string) =>
+      // eslint-disable-next-line no-console
+      console.error(`[mcp ${method}#${id} +${Date.now() - t0}ms] ${msg}`);
+
     const controller = new AbortController();
     try {
+      log('fetch start');
       const res = await fetch(`http://127.0.0.1:${this.lock.serverPort}/mcp`, {
         method: 'POST',
         headers,
         body,
         signal: controller.signal,
       });
-      // The initialize response carries the session id we echo on subsequent calls.
+      log(`headers received status=${res.status} ct=${res.headers.get('content-type') ?? ''}`);
+
       const respSessionId = res.headers.get('mcp-session-id');
       if (respSessionId && !this.sessionId) this.sessionId = respSessionId;
 
@@ -108,16 +110,20 @@ export class McpClient {
       const ct = res.headers.get('content-type') ?? '';
       let payload: { result?: unknown; error?: { code: number; message: string } };
       if (ct.includes('text/event-stream')) {
-        payload = await this.parseSse(res);
+        payload = await this.parseSse(res, log);
       } else {
+        log('reading json body');
         payload = (await res.json()) as typeof payload;
+        log('json body parsed');
       }
       if (payload.error) {
         throw new Error(`MCP ${method} error ${payload.error.code}: ${payload.error.message}`);
       }
+      log('returning payload');
       return payload.result;
     } finally {
       controller.abort();
+      log('finally: aborted');
     }
   }
 
@@ -129,30 +135,42 @@ export class McpClient {
    * sometimes leaves the connection open even after the single event
    * fires, hanging `await res.text()` for the full HTTP timeout.
    */
-  private async parseSse(res: Response): Promise<{ result?: unknown; error?: { code: number; message: string } }> {
+  private async parseSse(
+    res: Response,
+    log: (msg: string) => void = () => undefined,
+  ): Promise<{ result?: unknown; error?: { code: number; message: string } }> {
     if (!res.body) {
       throw new Error('SSE response has no readable body');
     }
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buf = '';
+    let reads = 0;
     try {
       while (true) {
+        log(`sse: awaiting chunk #${reads}`);
         const { value, done } = await reader.read();
-        if (value) buf += decoder.decode(value, { stream: true });
-        // Try to extract a `data:` JSON payload from the buffer so far.
+        reads++;
+        if (value) {
+          buf += decoder.decode(value, { stream: true });
+          log(`sse: chunk #${reads - 1} got ${value.byteLength}B (done=${done})`);
+        } else {
+          log(`sse: chunk #${reads - 1} empty (done=${done})`);
+        }
         const lines = buf.split('\n');
         for (const line of lines) {
           const trimmed = line.trim();
           if (!trimmed.startsWith('data:')) continue;
           const json = trimmed.slice(5).trim();
           if (!json) continue;
+          log('sse: data line found, returning');
           return JSON.parse(json) as { result?: unknown; error?: { code: number; message: string } };
         }
         if (done) break;
       }
       throw new Error(`SSE response had no data line: ${buf.slice(0, 300)}`);
     } finally {
+      log('sse: cancelling reader');
       try {
         await reader.cancel();
       } catch {

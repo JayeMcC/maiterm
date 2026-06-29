@@ -27,9 +27,17 @@ if (!BIN) {
     let client: McpClient;
 
     beforeAll(async () => {
+      const t0 = Date.now();
+      const log = (msg: string) =>
+        // eslint-disable-next-line no-console
+        console.error(`[e2e beforeAll +${Date.now() - t0}ms] ${msg}`);
+      log('spawning maiTerm');
       handle = await spawnMaiterm({ binary: BIN!, timeoutMs: 90_000 });
+      log(`spawned, port=${handle.lock.serverPort}`);
       client = new McpClient(handle.lock);
+      log('initializing client');
       await client.initialize();
+      log('client initialized — beforeAll done');
     }, 120_000);
 
     afterAll(async () => {
