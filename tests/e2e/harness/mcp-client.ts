@@ -77,7 +77,11 @@ export class McpClient {
     const body = JSON.stringify({ jsonrpc: '2.0', id, method, params });
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      Accept: 'application/json, text/event-stream',
+      // JSON-only — avoids the server holding the response open as an SSE
+      // stream while we wait for a one-shot tool result. The MCP spec lets
+      // the client pin the response shape via Accept; we don't need the
+      // stream features (server-pushed progress notifications).
+      Accept: 'application/json',
       'x-claude-code-ide-authorization': this.lock.authToken,
     };
     if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
@@ -112,26 +116,54 @@ export class McpClient {
   }
 
   /**
-   * Some MCP servers respond via SSE even to a one-shot POST — read the
-   * stream until we see a `data:` line carrying the JSON-RPC payload.
+   * Some MCP servers respond via SSE even to a one-shot POST. maiTerm always
+   * does (`event: message\ndata: <json>\n\n`). Stream-read and bail out
+   * the moment we see the first `data:` line — don't wait for the body to
+   * close, because chunked transfer encoding under text/event-stream
+   * sometimes leaves the connection open even after the single event
+   * fires, hanging `await res.text()` for the full HTTP timeout.
    */
   private async parseSse(res: Response): Promise<{ result?: unknown; error?: { code: number; message: string } }> {
-    const text = await res.text();
-    for (const line of text.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith('data:')) continue;
-      const json = trimmed.slice(5).trim();
-      if (!json) continue;
-      return JSON.parse(json) as { result?: unknown; error?: { code: number; message: string } };
+    if (!res.body) {
+      throw new Error('SSE response has no readable body');
     }
-    throw new Error(`SSE response had no data line: ${text.slice(0, 300)}`);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (value) buf += decoder.decode(value, { stream: true });
+        // Try to extract a `data:` JSON payload from the buffer so far.
+        const lines = buf.split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          const json = trimmed.slice(5).trim();
+          if (!json) continue;
+          return JSON.parse(json) as { result?: unknown; error?: { code: number; message: string } };
+        }
+        if (done) break;
+      }
+      throw new Error(`SSE response had no data line: ${buf.slice(0, 300)}`);
+    } finally {
+      try {
+        await reader.cancel();
+      } catch {
+        // Ignore — best-effort cleanup so the connection can be reused.
+      }
+    }
   }
 
   private async notify(method: string, params: unknown): Promise<void> {
     const body = JSON.stringify({ jsonrpc: '2.0', method, params });
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      Accept: 'application/json, text/event-stream',
+      // JSON-only — avoids the server holding the response open as an SSE
+      // stream while we wait for a one-shot tool result. The MCP spec lets
+      // the client pin the response shape via Accept; we don't need the
+      // stream features (server-pushed progress notifications).
+      Accept: 'application/json',
       'x-claude-code-ide-authorization': this.lock.authToken,
     };
     if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
