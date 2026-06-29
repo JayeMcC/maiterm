@@ -6,10 +6,18 @@
  *
  * The server is maiTerm's IDE HTTP endpoint at http://127.0.0.1:<port>/mcp;
  * auth is a per-process token in `~/.claude/ide/<port>.lock` (see
- * harness/spawn.ts). Each request is one POST that returns the JSON-RPC
- * response synchronously.
+ * harness/spawn.ts).
+ *
+ * We use Node's `node:http` directly instead of global fetch (undici) because
+ * undici's connection-pool semantics combined with maiTerm's SSE-wrapped
+ * responses make subsequent fetches queue for the full testTimeout on the
+ * macos-latest GitHub runners — diagnosed via per-request elapsed-ms logging
+ * (see git history). Plain `http.request` opens a fresh socket per call and
+ * reads the full response body before resolving, sidestepping the issue
+ * entirely.
  */
 
+import * as http from 'node:http';
 import type { MaitermLock } from './spawn.ts';
 
 const PROTOCOL_VERSION = '2025-06-18';
@@ -77,14 +85,9 @@ export class McpClient {
     const body = JSON.stringify({ jsonrpc: '2.0', id, method, params });
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(body).toString(),
       Accept: 'application/json, text/event-stream',
       'x-claude-code-ide-authorization': this.lock.authToken,
-      // Force-close after each response so undici doesn't try to reuse a
-      // socket whose SSE body we already bailed out of mid-stream — that
-      // reuse path on macos-latest hung the next fetch for the full
-      // testTimeout. With Connection: close, every request opens a fresh
-      // TCP socket; the cost is a few ms per call, well worth the
-      // simplicity.
       Connection: 'close',
     };
     if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
@@ -94,44 +97,89 @@ export class McpClient {
       // eslint-disable-next-line no-console
       console.error(`[mcp ${method}#${id} +${Date.now() - t0}ms] ${msg}`);
 
-    const controller = new AbortController();
-    try {
-      log('fetch start');
-      const res = await fetch(`http://127.0.0.1:${this.lock.serverPort}/mcp`, {
-        method: 'POST',
-        headers,
-        body,
-        signal: controller.signal,
-      });
-      log(`headers received status=${res.status} ct=${res.headers.get('content-type') ?? ''}`);
+    log('request start (node:http)');
+    const { statusCode, statusMessage, headers: resHeaders, body: resBody } =
+      await this.nodeHttpPost(body, headers);
+    log(`response received status=${statusCode} ct=${resHeaders['content-type'] ?? ''} bytes=${resBody.length}`);
 
-      const respSessionId = res.headers.get('mcp-session-id');
-      if (respSessionId && !this.sessionId) this.sessionId = respSessionId;
+    const respSessionId = resHeaders['mcp-session-id'] as string | undefined;
+    if (respSessionId && !this.sessionId) this.sessionId = respSessionId;
 
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        throw new Error(
-          `MCP ${method} → HTTP ${res.status} ${res.statusText}: ${text.slice(0, 500)}`,
-        );
-      }
-      const ct = res.headers.get('content-type') ?? '';
-      let payload: { result?: unknown; error?: { code: number; message: string } };
-      if (ct.includes('text/event-stream')) {
-        payload = await this.parseSse(res, log);
-      } else {
-        log('reading json body');
-        payload = (await res.json()) as typeof payload;
-        log('json body parsed');
-      }
-      if (payload.error) {
-        throw new Error(`MCP ${method} error ${payload.error.code}: ${payload.error.message}`);
-      }
-      log('returning payload');
-      return payload.result;
-    } finally {
-      controller.abort();
-      log('finally: aborted');
+    if (statusCode === undefined || statusCode < 200 || statusCode >= 300) {
+      throw new Error(
+        `MCP ${method} → HTTP ${statusCode ?? '?'} ${statusMessage ?? ''}: ${resBody.slice(0, 500)}`,
+      );
     }
+
+    const ct = (resHeaders['content-type'] ?? '') as string;
+    let payload: { result?: unknown; error?: { code: number; message: string } };
+    if (ct.includes('text/event-stream')) {
+      payload = this.parseSseBody(resBody);
+    } else {
+      payload = JSON.parse(resBody) as typeof payload;
+    }
+    if (payload.error) {
+      throw new Error(`MCP ${method} error ${payload.error.code}: ${payload.error.message}`);
+    }
+    log('returning payload');
+    return payload.result;
+  }
+
+  /**
+   * Plain Node http POST that resolves once the response body has been
+   * fully read. Each call opens a fresh TCP socket (no pooling), reads
+   * `Content-Length` bytes, and returns. Avoids undici entirely.
+   */
+  private nodeHttpPost(
+    body: string,
+    headers: Record<string, string>,
+  ): Promise<{ statusCode: number | undefined; statusMessage: string | undefined; headers: http.IncomingHttpHeaders; body: string }> {
+    return new Promise((resolve, reject) => {
+      const req = http.request(
+        {
+          hostname: '127.0.0.1',
+          port: this.lock.serverPort,
+          path: '/mcp',
+          method: 'POST',
+          headers,
+          agent: false,
+          // Generous timeout — vitest will fail the test before this fires;
+          // the timeout is just a safety net in case the server hangs.
+          timeout: 90_000,
+        },
+        res => {
+          const chunks: Buffer[] = [];
+          res.on('data', chunk => chunks.push(chunk));
+          res.on('end', () =>
+            resolve({
+              statusCode: res.statusCode,
+              statusMessage: res.statusMessage,
+              headers: res.headers,
+              body: Buffer.concat(chunks).toString('utf8'),
+            }),
+          );
+          res.on('error', reject);
+        },
+      );
+      req.on('error', reject);
+      req.on('timeout', () => {
+        req.destroy(new Error('node:http request timed out after 90s'));
+      });
+      req.write(body);
+      req.end();
+    });
+  }
+
+  /** Pull the JSON payload from a fully-read SSE body. */
+  private parseSseBody(body: string): { result?: unknown; error?: { code: number; message: string } } {
+    for (const line of body.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data:')) continue;
+      const json = trimmed.slice(5).trim();
+      if (!json) continue;
+      return JSON.parse(json) as { result?: unknown; error?: { code: number; message: string } };
+    }
+    throw new Error(`SSE response had no data line: ${body.slice(0, 300)}`);
   }
 
   /**
@@ -190,30 +238,12 @@ export class McpClient {
     const body = JSON.stringify({ jsonrpc: '2.0', method, params });
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(body).toString(),
       Accept: 'application/json, text/event-stream',
       'x-claude-code-ide-authorization': this.lock.authToken,
-      // Force-close after each response so undici doesn't try to reuse a
-      // socket whose SSE body we already bailed out of mid-stream — that
-      // reuse path on macos-latest hung the next fetch for the full
-      // testTimeout. With Connection: close, every request opens a fresh
-      // TCP socket; the cost is a few ms per call, well worth the
-      // simplicity.
       Connection: 'close',
     };
     if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
-    const controller = new AbortController();
-    try {
-      const res = await fetch(`http://127.0.0.1:${this.lock.serverPort}/mcp`, {
-        method: 'POST',
-        headers,
-        body,
-        signal: controller.signal,
-      });
-      // Drain the body so the keep-alive socket is released for reuse, then
-      // abort to make sure the connection actually tears down.
-      await res.arrayBuffer().catch(() => undefined);
-    } finally {
-      controller.abort();
-    }
+    await this.nodeHttpPost(body, headers);
   }
 }
