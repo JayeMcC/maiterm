@@ -77,42 +77,48 @@ export class McpClient {
     const body = JSON.stringify({ jsonrpc: '2.0', id, method, params });
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      // JSON-only — avoids the server holding the response open as an SSE
-      // stream while we wait for a one-shot tool result. The MCP spec lets
-      // the client pin the response shape via Accept; we don't need the
-      // stream features (server-pushed progress notifications).
-      Accept: 'application/json',
+      Accept: 'application/json, text/event-stream',
       'x-claude-code-ide-authorization': this.lock.authToken,
     };
     if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
 
-    const res = await fetch(`http://127.0.0.1:${this.lock.serverPort}/mcp`, {
-      method: 'POST',
-      headers,
-      body,
-    });
-    // The initialize response carries the session id we must echo on
-    // subsequent calls.
-    const respSessionId = res.headers.get('mcp-session-id');
-    if (respSessionId && !this.sessionId) this.sessionId = respSessionId;
+    // AbortController tears the socket down once we've parsed the response —
+    // critical for SSE responses where the server's body framing doesn't
+    // close promptly under undici's connection-pool defaults. Without this,
+    // a subsequent fetch blocks waiting for the previous SSE socket to
+    // free up, which on macos-latest manifests as exact-60s queue delays.
+    const controller = new AbortController();
+    try {
+      const res = await fetch(`http://127.0.0.1:${this.lock.serverPort}/mcp`, {
+        method: 'POST',
+        headers,
+        body,
+        signal: controller.signal,
+      });
+      // The initialize response carries the session id we echo on subsequent calls.
+      const respSessionId = res.headers.get('mcp-session-id');
+      if (respSessionId && !this.sessionId) this.sessionId = respSessionId;
 
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(
-        `MCP ${method} → HTTP ${res.status} ${res.statusText}: ${text.slice(0, 500)}`,
-      );
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(
+          `MCP ${method} → HTTP ${res.status} ${res.statusText}: ${text.slice(0, 500)}`,
+        );
+      }
+      const ct = res.headers.get('content-type') ?? '';
+      let payload: { result?: unknown; error?: { code: number; message: string } };
+      if (ct.includes('text/event-stream')) {
+        payload = await this.parseSse(res);
+      } else {
+        payload = (await res.json()) as typeof payload;
+      }
+      if (payload.error) {
+        throw new Error(`MCP ${method} error ${payload.error.code}: ${payload.error.message}`);
+      }
+      return payload.result;
+    } finally {
+      controller.abort();
     }
-    const ct = res.headers.get('content-type') ?? '';
-    let payload: { result?: unknown; error?: { code: number; message: string } };
-    if (ct.includes('text/event-stream')) {
-      payload = await this.parseSse(res);
-    } else {
-      payload = (await res.json()) as typeof payload;
-    }
-    if (payload.error) {
-      throw new Error(`MCP ${method} error ${payload.error.code}: ${payload.error.message}`);
-    }
-    return payload.result;
   }
 
   /**
@@ -159,18 +165,23 @@ export class McpClient {
     const body = JSON.stringify({ jsonrpc: '2.0', method, params });
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      // JSON-only — avoids the server holding the response open as an SSE
-      // stream while we wait for a one-shot tool result. The MCP spec lets
-      // the client pin the response shape via Accept; we don't need the
-      // stream features (server-pushed progress notifications).
-      Accept: 'application/json',
+      Accept: 'application/json, text/event-stream',
       'x-claude-code-ide-authorization': this.lock.authToken,
     };
     if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
-    await fetch(`http://127.0.0.1:${this.lock.serverPort}/mcp`, {
-      method: 'POST',
-      headers,
-      body,
-    });
+    const controller = new AbortController();
+    try {
+      const res = await fetch(`http://127.0.0.1:${this.lock.serverPort}/mcp`, {
+        method: 'POST',
+        headers,
+        body,
+        signal: controller.signal,
+      });
+      // Drain the body so the keep-alive socket is released for reuse, then
+      // abort to make sure the connection actually tears down.
+      await res.arrayBuffer().catch(() => undefined);
+    } finally {
+      controller.abort();
+    }
   }
 }
