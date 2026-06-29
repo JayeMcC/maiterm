@@ -1355,6 +1355,12 @@ async fn process_message(
                         "sendNotification", "readLogs", "listWindows", "listWorkspaces",
                         "getPreferences", "setPreference", "createBackup",
                         "getClaudeSessions",
+                        // openTab creates a new tab; the caller (e.g. an external
+                        // launcher CLI) has no tab affinity yet and shouldn't be
+                        // forced into a chicken-and-egg initSession dance.
+                        // sendKeysToTab is naturally exempt below because it takes
+                        // an explicit `tabId` argument that satisfies the guard.
+                        "openTab",
                     ];
                     if !global_tools.contains(&tool_name.as_str())
                         && arguments.get("tabId").and_then(|v| v.as_str()).map_or(true, |s| s.is_empty())
