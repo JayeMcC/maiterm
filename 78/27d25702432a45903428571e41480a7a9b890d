@@ -1,0 +1,26 @@
+src/graph/walk-subgraph.ts
+  s_10b069ebcfad9c::t_6b90a4a7a2debe 36
+  s_10b069ebcfad9c::t_cbc2455ab362bb 73-74,76,81-83
+  s_10b069ebcfad9c::t_26a84059f2a24f 59
+  s_10b069ebcfad9c::t_76e60105d0e8e1 84
+src/nodes/walk-compose-flow.ts
+  s_10b069ebcfad9c::t_ac8bb066464953 1-177
+src/graph/walk-edges.ts
+  s_10b069ebcfad9c::t_af4949e033f691 39,48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "7827d25702432a45903428571e41480a7a9b890d",
+  "prompts": {},
+  "sessions": {
+    "s_10b069ebcfad9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a534af91-48df-4e47-9019-e2d3a4b4cfd9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

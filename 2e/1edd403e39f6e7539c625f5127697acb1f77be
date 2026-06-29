@@ -1,0 +1,22 @@
+src/utils/mirror-emit.ts
+  s_10b069ebcfad9c::t_41d56aba09b0d2 1-123,125-164
+  s_10b069ebcfad9c::t_c95acb18f4006c 124
+tests/utils/mirror-emit.test.ts
+  s_10b069ebcfad9c::t_07117bcd12e677 1-140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "2e1edd403e39f6e7539c625f5127697acb1f77be",
+  "prompts": {},
+  "sessions": {
+    "s_10b069ebcfad9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a534af91-48df-4e47-9019-e2d3a4b4cfd9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

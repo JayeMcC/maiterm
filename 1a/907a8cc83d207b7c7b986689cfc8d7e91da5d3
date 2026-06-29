@@ -1,0 +1,49 @@
+src/nodes/walk-complete.ts
+  s_10b069ebcfad9c::t_780a21a92ac075 57
+  s_10b069ebcfad9c::t_f036b58e220a8b 58
+src/nodes/walk-agent-drive.ts
+  s_10b069ebcfad9c::t_780a21a92ac075 16,18,175,177,184
+  s_10b069ebcfad9c::t_f036b58e220a8b 182,185
+  s_10b069ebcfad9c::t_2bef11d09a9687 212
+src/nodes/walk-plan-subgoal.ts
+  s_10b069ebcfad9c::t_780a21a92ac075 9,11,49,60
+  s_10b069ebcfad9c::t_f036b58e220a8b 8,10,28,110,115,119,129,131
+src/utils/behavior-matcher.ts
+  s_10b069ebcfad9c::t_780a21a92ac075 2,6,24,27,60,76,129
+  s_10b069ebcfad9c::t_48369bd919d033 38,83,145,194
+  s_10b069ebcfad9c::t_f036b58e220a8b 1,3-5,7-23,25-26,28-37,39-59,61-75,77-82,84-128,130-144,146-193,195
+src/utils/behavior-emit.ts
+  s_10b069ebcfad9c::t_48369bd919d033 39,62,89,100,106-115,128,149,157-170,180,252
+  s_10b069ebcfad9c::t_780a21a92ac075 2-8,15,26,42,57-61,71-78,87,97,103,118-120,155,223
+  s_10b069ebcfad9c::t_f036b58e220a8b 11-14,16-22,34-35,41,56,65-68,79-80,92,117,131,171
+tests/utils/walk-behavior-and-spec-fragment.test.ts
+  s_10b069ebcfad9c::t_f036b58e220a8b 1-99
+src/graph/walk-state-annotation.ts
+  s_10b069ebcfad9c::t_780a21a92ac075 64,68
+  s_10b069ebcfad9c::t_f036b58e220a8b 35,67
+src/utils/spec-fragment-emit.ts
+  s_10b069ebcfad9c::t_f036b58e220a8b 9
+  s_10b069ebcfad9c::t_780a21a92ac075 5,10
+src/nodes/walk-failed.ts
+  s_10b069ebcfad9c::t_f036b58e220a8b 66
+src/utils/dual-codify.ts
+  s_10b069ebcfad9c::t_48369bd919d033 78,85-87
+  s_10b069ebcfad9c::t_780a21a92ac075 10,12,36,76,91
+  s_10b069ebcfad9c::t_f036b58e220a8b 3,11,23,42-43,52-53,97,99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "1a907a8cc83d207b7c7b986689cfc8d7e91da5d3",
+  "prompts": {},
+  "sessions": {
+    "s_10b069ebcfad9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a534af91-48df-4e47-9019-e2d3a4b4cfd9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

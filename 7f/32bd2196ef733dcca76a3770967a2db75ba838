@@ -1,0 +1,25 @@
+tests/utils/walk-atomic-and-spec-fragment.test.ts
+  s_10b069ebcfad9c::t_9d53f8abac8ed8 1-99
+src/utils/spec-fragment-emit.ts
+  s_10b069ebcfad9c::t_b3e522962b9adf 155,163-171,175-176,179-180,182-183,187,189,192-197,199-205,208-209
+src/utils/atomic-emit.ts
+  s_10b069ebcfad9c::t_4a0d2b114cd329 215-218,220,231,233
+  s_10b069ebcfad9c::t_996b3a372c6de4 185-193,196-201
+  s_10b069ebcfad9c::t_ff9878992ad467 222-225,229-230,232
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.1",
+  "base_commit_sha": "7f32bd2196ef733dcca76a3770967a2db75ba838",
+  "prompts": {},
+  "sessions": {
+    "s_10b069ebcfad9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a534af91-48df-4e47-9019-e2d3a4b4cfd9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
