@@ -79,6 +79,13 @@ export class McpClient {
       'Content-Type': 'application/json',
       Accept: 'application/json, text/event-stream',
       'x-claude-code-ide-authorization': this.lock.authToken,
+      // Force-close after each response so undici doesn't try to reuse a
+      // socket whose SSE body we already bailed out of mid-stream — that
+      // reuse path on macos-latest hung the next fetch for the full
+      // testTimeout. With Connection: close, every request opens a fresh
+      // TCP socket; the cost is a few ms per call, well worth the
+      // simplicity.
+      Connection: 'close',
     };
     if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
 
@@ -185,6 +192,13 @@ export class McpClient {
       'Content-Type': 'application/json',
       Accept: 'application/json, text/event-stream',
       'x-claude-code-ide-authorization': this.lock.authToken,
+      // Force-close after each response so undici doesn't try to reuse a
+      // socket whose SSE body we already bailed out of mid-stream — that
+      // reuse path on macos-latest hung the next fetch for the full
+      // testTimeout. With Connection: close, every request opens a fresh
+      // TCP socket; the cost is a few ms per call, well worth the
+      // simplicity.
+      Connection: 'close',
     };
     if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
     const controller = new AbortController();
