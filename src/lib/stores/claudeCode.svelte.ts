@@ -127,16 +127,16 @@ function createClaudeCodeStore() {
           result = await handleEditTabNotes(args as { tabId?: string; old_string?: string; new_string?: string; edits?: { old_string: string; new_string: string }[] });
           break;
         case 'listWorkspaceNotes':
-          result = handleListWorkspaceNotes(args as { workspaceId?: string });
+          result = handleListWorkspaceNotes(args as { workspaceId?: string; tabId?: string });
           break;
         case 'readWorkspaceNote':
-          result = handleReadWorkspaceNote(args as { workspaceId?: string; noteId: string });
+          result = handleReadWorkspaceNote(args as { workspaceId?: string; tabId?: string; noteId: string });
           break;
         case 'writeWorkspaceNote':
-          result = await handleWriteWorkspaceNote(args as { workspaceId?: string; noteId?: string; content: string; mode?: string | null });
+          result = await handleWriteWorkspaceNote(args as { workspaceId?: string; tabId?: string; noteId?: string; content: string; mode?: string | null });
           break;
         case 'deleteWorkspaceNote':
-          result = await handleDeleteWorkspaceNote(args as { workspaceId?: string; noteId: string });
+          result = await handleDeleteWorkspaceNote(args as { workspaceId?: string; tabId?: string; noteId: string });
           break;
         case 'moveNote':
           result = await handleMoveNote(args as { direction: string; tabId?: string; workspaceId?: string; noteId?: string; force?: boolean });
@@ -596,6 +596,20 @@ function createClaudeCodeStore() {
     return workspacesStore.activeWorkspace;
   }
 
+  /** Resolve the workspace for a NOTE operation. Precedence: explicit workspaceId, then the
+   *  CALLER'S OWN workspace (from the connection-injected tabId), then the active workspace.
+   *  Using the caller's tab — not the focused workspace — stops an agent in mesh B from
+   *  writing its note into mesh A just because the human is looking at A (cross-workspace
+   *  bleed). Human/UI callers have no tabId and correctly fall back to the active workspace. */
+  function resolveWorkspaceForNote(args: { workspaceId?: string; tabId?: string }): Workspace | null {
+    if (args.workspaceId) return workspacesStore.workspaces.find(ws => ws.id === args.workspaceId) ?? null;
+    if (args.tabId) {
+      const loc = findTabLocation(args.tabId);
+      if (loc) return loc.workspace;
+    }
+    return workspacesStore.activeWorkspace;
+  }
+
   /** Compute the display name for any tab type (terminal, editor, diff). */
   function tabDisplayName(tab: Tab): string {
     if (tab.tab_type === 'terminal') {
@@ -774,8 +788,8 @@ function createClaudeCodeStore() {
 
   // --- Workspace notes tools ---
 
-  function handleListWorkspaceNotes(args: { workspaceId?: string }) {
-    const ws = resolveWorkspace(args.workspaceId);
+  function handleListWorkspaceNotes(args: { workspaceId?: string; tabId?: string }) {
+    const ws = resolveWorkspaceForNote(args);
     if (!ws) return { error: `Workspace not found${args.workspaceId ? `: ${args.workspaceId}` : ''}` };
 
     return {
@@ -791,8 +805,8 @@ function createClaudeCodeStore() {
     };
   }
 
-  function handleReadWorkspaceNote(args: { workspaceId?: string; noteId: string }) {
-    const ws = resolveWorkspace(args.workspaceId);
+  function handleReadWorkspaceNote(args: { workspaceId?: string; tabId?: string; noteId: string }) {
+    const ws = resolveWorkspaceForNote(args);
     if (!ws) return { error: `Workspace not found${args.workspaceId ? `: ${args.workspaceId}` : ''}` };
 
     const note = ws.workspace_notes.find(n => n.id === args.noteId);
@@ -807,8 +821,8 @@ function createClaudeCodeStore() {
     };
   }
 
-  async function handleWriteWorkspaceNote(args: { workspaceId?: string; noteId?: string; content: string; mode?: string | null }) {
-    const ws = resolveWorkspace(args.workspaceId);
+  async function handleWriteWorkspaceNote(args: { workspaceId?: string; tabId?: string; noteId?: string; content: string; mode?: string | null }) {
+    const ws = resolveWorkspaceForNote(args);
     if (!ws) return { error: `Workspace not found${args.workspaceId ? `: ${args.workspaceId}` : ''}` };
 
     let resultNoteId: string;
@@ -842,8 +856,8 @@ function createClaudeCodeStore() {
     return { success: true, noteId: resultNoteId, action };
   }
 
-  async function handleDeleteWorkspaceNote(args: { workspaceId?: string; noteId: string }) {
-    const ws = resolveWorkspace(args.workspaceId);
+  async function handleDeleteWorkspaceNote(args: { workspaceId?: string; tabId?: string; noteId: string }) {
+    const ws = resolveWorkspaceForNote(args);
     if (!ws) return { error: `Workspace not found${args.workspaceId ? `: ${args.workspaceId}` : ''}` };
 
     const note = ws.workspace_notes.find(n => n.id === args.noteId);
