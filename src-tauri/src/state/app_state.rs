@@ -79,6 +79,10 @@ pub struct AgentSessionInfo {
     pub state: AgentSessionState,
     /// Current tool being executed (set by PreToolUse, cleared by PostToolUse/Stop)
     pub tool_name: Option<String>,
+    /// Structured content of an open AskUserQuestion: the raw `tool_input` captured from the
+    /// PreToolUse hook (its `questions[]` drive the maiLink structured PendingPrompt). Set when
+    /// AskUserQuestion starts, cleared when it completes (PostToolUse) or the turn stops.
+    pub pending_question: Option<serde_json::Value>,
     /// Model used in this session (set by SessionStart)
     pub model: Option<String>,
     /// MCP connection ID that called initSession for this session.

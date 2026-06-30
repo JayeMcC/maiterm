@@ -827,6 +827,55 @@ fn session_id_for_tab(app: &AppState, tab_id: &str) -> Option<String> {
         .map(|(id, _)| id.clone())
 }
 
+/// The captured AskUserQuestion `tool_input` for a tab (most attention-worthy session), if an
+/// elicitation is currently open. Mirrors how `session_id_for_tab` resolves the tab's session.
+fn pending_question_for_tab(app: &AppState, tab_id: &str) -> Option<Value> {
+    let sessions = app.agent_sessions.read();
+    sessions
+        .iter()
+        .filter(|(_, s)| s.tab_id == tab_id)
+        .max_by_key(|(_, s)| rank(s.state))
+        .and_then(|(_, s)| s.pending_question.clone())
+}
+
+/// Map Claude's AskUserQuestion `tool_input` into the mailink-protocol §12.1 AskQuestion[] shape
+/// (header, question, multiSelect, options:[{label, description}], allowOther). Returns None on an
+/// unrecognized shape so the caller falls back to a generic prompt. `allowOther` is always true —
+/// Claude's elicitation always offers a free-text "Other".
+fn map_ask_questions(tool_input: &Value) -> Option<Value> {
+    let arr = tool_input.get("questions")?.as_array()?;
+    if arr.is_empty() {
+        return None;
+    }
+    let out: Vec<Value> = arr
+        .iter()
+        .map(|q| {
+            let options: Vec<Value> = q
+                .get("options")
+                .and_then(|v| v.as_array())
+                .map(|opts| {
+                    opts.iter()
+                        .map(|o| {
+                            json!({
+                                "label": o.get("label").and_then(|v| v.as_str()).unwrap_or(""),
+                                "description": o.get("description").and_then(|v| v.as_str()),
+                            })
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+            json!({
+                "header": q.get("header").and_then(|v| v.as_str()).unwrap_or(""),
+                "question": q.get("question").and_then(|v| v.as_str()).unwrap_or(""),
+                "multiSelect": q.get("multiSelect").and_then(|v| v.as_bool()).unwrap_or(false),
+                "options": options,
+                "allowOther": true,
+            })
+        })
+        .collect();
+    Some(json!(out))
+}
+
 /// Build the chat transcript: per-turn source markdown from the Claude session JSONL when we can
 /// find it, otherwise the old single-system-turn terminal scrape (other runtimes / robustness).
 fn build_transcript(app: &AppState, tab_id: &str, runtime: &str, now: u64) -> Vec<Value> {
@@ -920,9 +969,11 @@ fn build_chat_detail(app: &AppState, tab_id: &str) -> Option<Value> {
         "transcript": transcript,
     });
 
-    // pendingPrompt: synthesized from session state. NOTE: the real prompt text/options and a
-    // stable prompt_id need deeper hook capture (the prompt lives in the TUI, not in
-    // agent_sessions) — that's P3. The shape is contract-correct so the app renders today.
+    // pendingPrompt: the agent's native human ask (mailink-protocol §12). Permission stays
+    // synthesized (the hook carries no structured options; that respond path is proven) and is
+    // respondable now. AskUserQuestion carries the REAL structured questions captured from the
+    // PreToolUse hook (tool_input.questions) and is respondable:false until TUI answer-injection
+    // lands. thread_id == tab_id for a solo thread.
     if state == "permission" {
         let text = tool
             .as_deref()
@@ -930,16 +981,24 @@ fn build_chat_detail(app: &AppState, tab_id: &str) -> Option<Value> {
             .unwrap_or_else(|| "Permission requested".to_string());
         detail["pendingPrompt"] = json!({
             "prompt_id": format!("p_{tab_id}"),
+            "thread_id": tab_id,
             "kind": "permission",
+            "respondable": true,
             "text": text,
             "options": ["Yes", "Yes, don't ask again", "No"],
         });
     } else if tool.as_deref() == Some("AskUserQuestion") {
-        detail["pendingPrompt"] = json!({
+        let mut pp = json!({
             "prompt_id": format!("q_{tab_id}"),
+            "thread_id": tab_id,
             "kind": "question",
-            "text": "The agent is asking a question — see the terminal for details.",
+            "respondable": false,
         });
+        match pending_question_for_tab(app, tab_id).as_ref().and_then(map_ask_questions) {
+            Some(qs) => { pp["questions"] = qs; }
+            None => { pp["text"] = json!("The agent is asking a question — see the terminal for details."); }
+        }
+        detail["pendingPrompt"] = pp;
     }
 
     Some(detail)

@@ -737,10 +737,14 @@ export interface WsAttentionEvent {
 - **transcript** ← per-turn distillation already exists (`mailink/transcript.rs`, §11); add
   `author` (the participant) + `thread_id` per turn and interleave participants by `ts` for a
   topic thread. The app synthesizes the visual grouping; no server-side thread view.
-- **PendingPrompt** ← captured from the **PreToolUse hook**, which carries the full `tool_input`:
-  for `AskUserQuestion`, `tool_input.questions` populates `questions[]` (header/question/
-  multiSelect/options[{label,description}]/allowOther); a permission prompt populates `text` +
-  `options`. `asked_by` = the asking participant.
+- **PendingPrompt** ← captured from the **PreToolUse hook**, which carries the full `tool_input`.
+  **IMPLEMENTED (desktop):** `AskUserQuestion`'s `tool_input` is stored on the session
+  (`AgentSessionInfo.pending_question`, set on PreToolUse / cleared on PostToolUse+Stop) and
+  served by maiLink as a structured `pendingPrompt.questions[]` = `{header, question, multiSelect,
+  options:[{label, description}], allowOther:true}` with `kind:"question"`, `thread_id`,
+  `respondable:false`. Permission stays synthesized (`kind:"permission"`, `respondable:true`,
+  `options:["Yes","Yes, don't ask again","No"]`). `asked_by` for solo threads = the tab's agent
+  (the app's adapter fills it today; native field follows with `/threads`).
 - **respondable staging:**
   - `permission` → `respondable:true` **now**. The permission `/respond`→TUI-inject path is already
     proven end-to-end on hardware (§11 doorbell finale) — converging to threads must NOT regress it.
@@ -748,6 +752,9 @@ export interface WsAttentionEvent {
     "answer on desktop" affordance, still rings the doorbell). Flip to `true` as a **fast-follow**
     once maiTerm can reliably inject the selection back into the TUI selector (arrow/enter
     navigation — the genuinely hard part; bracketed-paste text won't drive it).
-- **answer field names:** `RespondRequest.answers[]` (`{selected[], other?}`) already mirrors
-  Claude's `AskUserQuestion` answer model; exact field names get pinned here when the capture path
-  is built (cosmetic rename for the app).
+- **answer field names — PINNED:** the emitted question fields are exactly
+  `{header, question, multiSelect, options:[{label, description}], allowOther}` (§12.1, verbatim
+  from Claude's `tool_input` + synthesized `allowOther:true`); the answer is
+  `RespondRequest.answers[]` aligned to `questions[]`, each `{selected: string[], other?: string}`.
+  No rename needed app-side — §12.1 is canonical. (`/respond` write path for questions is the
+  remaining desktop item: translate `answers[]` → the TUI selection, then flip `respondable:true`.)
