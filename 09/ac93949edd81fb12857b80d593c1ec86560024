@@ -1,0 +1,40 @@
+src/utils/failure-id.ts
+  s_11968889fc72be::t_df4fef326e13e0 14-27,29
+src/utils/api-evidence-script.ts
+  s_11968889fc72be::t_e6ce04ab9dbf52 207-214
+src/nodes/review-analyse-doc.ts
+  s_11968889fc72be::t_ef2bae8d1d3499 123-138
+src/utils/author-source-evidence.ts
+  s_11968889fc72be::t_99f25bb57183ac 714-747
+  s_11968889fc72be::t_82be1823da668d 1252-1260
+src/utils/persist-probes.ts
+  s_11968889fc72be::t_6b2c60128d0b8b 99-178
+src/nodes/review-compose-comment.ts
+  s_11968889fc72be::t_c08fbfec69b25b 1357-1368,1370-1382,1385
+  s_11968889fc72be::t_8835df191cfc0e 263
+  s_11968889fc72be::t_10244df74f8825 75
+src/nodes/review-dispatch-e2e-review.ts
+  s_11968889fc72be::t_bdc5ccb416a168 81
+  s_11968889fc72be::t_a6c0a22e2b7e6b 1993-2004
+  s_11968889fc72be::t_5efa8038bd6a57 624
+  s_11968889fc72be::t_998649a23ffc91 2589-2596
+  s_11968889fc72be::t_cada4eea9927d2 2509-2523
+  s_11968889fc72be::t_bf6591c53a64ed 2042,2051,2058-2069
+  s_11968889fc72be::t_5902dde78bd46f 2070
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "09ac93949edd81fb12857b80d593c1ec86560024",
+  "prompts": {},
+  "sessions": {
+    "s_11968889fc72be": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4834ce3b-08ba-4d8e-81c9-e6fbfd209d86",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
