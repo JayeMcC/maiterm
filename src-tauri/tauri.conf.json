@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "maiTerm",
+  "productName": "maiTerm2",
   "version": "1.18.0",
-  "identifier": "com.aiterm.app",
+  "identifier": "com.aiterm.app2",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "withGlobalTauri": false,
     "windows": [
       {
-        "title": "maiTerm",
+        "title": "maiTerm2",
         "width": 1200,
         "height": 800,
         "minWidth": 800,

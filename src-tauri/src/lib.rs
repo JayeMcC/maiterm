@@ -4,7 +4,7 @@ mod pty;
 mod state;
 mod terminal;
 
-pub const APP_DISPLAY_NAME: &str = if cfg!(debug_assertions) { "maiTermDev" } else { "maiTerm" };
+pub const APP_DISPLAY_NAME: &str = if cfg!(debug_assertions) { "maiTerm2Dev" } else { "maiTerm2" };
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 use state::{load_state, save_state, AppState, WindowData, Workspace};
