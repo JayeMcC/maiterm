@@ -159,6 +159,32 @@ fn load_or_generate_dev_token() -> Result<String, String> {
     Ok(token)
 }
 
+/// Start the bridge if it isn't already running. Idempotent (a no-op if `mailink_info` is
+/// already published). Called at boot when the pref is on, and on a runtime enable toggle.
+/// Returns `Err` (already logged) if cert/token/TLS init fails.
+pub fn start(app_state: &Arc<AppState>) -> Result<(), String> {
+    if app_state.mailink_info.read().is_some() {
+        return Ok(()); // already running
+    }
+    let cfg = prepare(app_state).ok_or("maiLink bridge failed to initialize (see logs)")?;
+    let st = Arc::clone(app_state);
+    tauri::async_runtime::spawn(async move {
+        serve(st, cfg).await;
+    });
+    Ok(())
+}
+
+/// Stop a running bridge (runtime disable). Clears the published info so `create_pairing`
+/// reports not-running and the doorbell loop self-exits on its next tick, then graceful-
+/// shutdowns the axum listener so the port is released. Idempotent.
+pub fn shutdown(app_state: &Arc<AppState>) {
+    *app_state.mailink_info.write() = None;
+    if let Some(handle) = app_state.mailink_shutdown.write().take() {
+        handle.graceful_shutdown(Some(std::time::Duration::from_secs(1)));
+        log::info!("[maiLink] bridge disabled — listener stopped");
+    }
+}
+
 /// Synchronous setup during Tauri `setup()`: resolve the cert + fingerprint + dev token and
 /// log the pin. Returns `None` (with a logged reason) if init fails — the app still boots.
 pub fn prepare(app_state: &Arc<AppState>) -> Option<MailinkConfig> {
@@ -201,6 +227,11 @@ pub async fn serve(app_state: Arc<AppState>, cfg: MailinkConfig) {
     // content-free push when one needs a human and no phone is connected (docs §6).
     tokio::spawn(doorbell_loop(app_state.clone()));
 
+    // A shutdown handle stored in shared state so a runtime disable can stop this listener
+    // (set before `app_state` is moved into ApiState below).
+    let handle = axum_server::Handle::new();
+    *app_state.mailink_shutdown.write() = Some(handle.clone());
+
     let api = ApiState {
         app: app_state,
         server_name: "maiTerm".to_string(),
@@ -232,6 +263,7 @@ pub async fn serve(app_state: Arc<AppState>, cfg: MailinkConfig) {
     let addr = std::net::SocketAddr::from(([0, 0, 0, 0], cfg.port));
     log::info!("[maiLink] serving https://0.0.0.0:{}", cfg.port);
     if let Err(e) = axum_server::bind_rustls(addr, tls)
+        .handle(handle)
         .serve(router.into_make_service())
         .await
     {
@@ -979,6 +1011,11 @@ async fn doorbell_loop(app: Arc<AppState>) {
     let mut ticker = tokio::time::interval(std::time::Duration::from_millis(2000));
     loop {
         ticker.tick().await;
+        // Stop ringing once the bridge is disabled (runtime toggle clears mailink_info). A fresh
+        // enable spawns a new loop, so this one can exit cleanly.
+        if app.mailink_info.read().is_none() {
+            break;
+        }
         // The relay URL is baked in (shared infra); an explicit pref overrides it for self-hosters.
         let relay_url = {
             let p = &app.app_data.read().preferences;

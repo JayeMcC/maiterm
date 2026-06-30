@@ -301,11 +301,8 @@ pub fn run() {
             // opt-in TLS listener — only started when the user has enabled it. Kept distinct
             // from the localhost-only Claude-Code server above.
             if app_state.app_data.read().preferences.mailink_enabled {
-                if let Some(cfg) = mailink::prepare(&app_state) {
-                    let mailink_state = app_state.clone();
-                    tauri::async_runtime::spawn(async move {
-                        mailink::serve(mailink_state, cfg).await;
-                    });
+                if let Err(e) = mailink::start(&app_state) {
+                    log::error!("[maiLink] {e}");
                 }
             }
 
@@ -431,6 +428,7 @@ pub fn run() {
             commands::terminal::has_saved_scrollback,
             commands::terminal::get_saved_scrollback_text,
             commands::terminal::get_saved_terminal_size,
+            commands::terminal::get_scrollback_tab_times,
             commands::workspace::get_app_data,
             commands::workspace::create_workspace,
             commands::workspace::delete_workspace,
@@ -452,6 +450,7 @@ pub fn run() {
             commands::workspace::set_active_tab,
             commands::workspace::set_tab_pty_id,
             commands::workspace::suspend_tab,
+            commands::workspace::mark_tabs_suspended,
             commands::workspace::set_tab_pinned,
             commands::workspace::set_sidebar_width,
             commands::workspace::set_sidebar_collapsed,
@@ -490,6 +489,7 @@ pub fn run() {
             commands::workspace::set_tab_mailink_native,
             commands::workspace::set_workspace_mailink_native,
             commands::mailink::mailink_create_pairing,
+            commands::mailink::mailink_set_enabled,
             commands::mailink::mailink_list_devices,
             commands::mailink::mailink_remove_device,
             commands::window::get_window_data,

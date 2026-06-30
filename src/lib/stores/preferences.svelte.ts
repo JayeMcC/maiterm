@@ -497,7 +497,14 @@ function createPreferencesStore() {
 
     async setMailinkEnabled(value: boolean) {
       mailinkEnabled = value;
-      await this.save();
+      try {
+        // Dedicated command: persists the flag AND starts/stops the live LAN listener, so the
+        // bridge actually comes up (pairing works) without an app restart.
+        await commands.mailinkSetEnabled(value);
+      } catch (e) {
+        mailinkEnabled = !value; // revert the toggle if start/stop failed
+        throw e;
+      }
     },
 
     async setMailinkRelayUrl(value: string) {

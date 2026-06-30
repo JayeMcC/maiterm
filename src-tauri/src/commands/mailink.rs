@@ -16,6 +16,28 @@ pub fn mailink_create_pairing(
     crate::mailink::create_pairing(&state)
 }
 
+/// Persist the maiLink bridge enable flag AND start/stop the live LAN listener immediately, so
+/// the toggle takes effect without an app restart. On enable, the listener starts and publishes
+/// its (fingerprint, port) so pairing works right away; on disable, it is graceful-shutdown.
+#[tauri::command]
+pub fn mailink_set_enabled(
+    state: State<'_, Arc<AppState>>,
+    enabled: bool,
+) -> Result<(), String> {
+    let data_clone = {
+        let mut app_data = state.app_data.write();
+        app_data.preferences.mailink_enabled = enabled;
+        app_data.clone()
+    };
+    save_state(&data_clone)?;
+    if enabled {
+        crate::mailink::start(&state)?;
+    } else {
+        crate::mailink::shutdown(&state);
+    }
+    Ok(())
+}
+
 /// List paired maiLink devices for the Preferences "Paired devices" list. A sanitized view:
 /// the device's bearer-token hash and relay capability are backend-only and never returned.
 /// Each entry: `{ id, name, push_platform, push_env, has_push, created_at, last_seen_at }`,

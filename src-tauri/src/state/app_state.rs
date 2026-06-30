@@ -132,9 +132,13 @@ pub struct AppState {
     pub pending_agent_sessions: RwLock<Vec<(String, Option<String>, Instant)>>, // (session_id, cwd, timestamp)
     // maiLink: outstanding one-time pairing codes → expiry instant (docs/mailink-protocol.md §3.2)
     pub mailink_pairing_codes: RwLock<HashMap<String, Instant>>,
-    // maiLink: the live listener's (fingerprint, port), set at startup so the pairing-code
-    // command can build the QR payload without re-reading the cert.
+    // maiLink: the live listener's (fingerprint, port), set when the bridge starts so the
+    // pairing-code command can build the QR payload without re-reading the cert. None ⇒ the
+    // listener is not running (boot-with-bridge-off, or toggled off at runtime).
     pub mailink_info: RwLock<Option<(String, u16)>>,
+    // maiLink: graceful-shutdown handle for the running axum listener, so a runtime disable can
+    // stop it (the bridge can be toggled on/off without an app restart).
+    pub mailink_shutdown: RwLock<Option<axum_server::Handle>>,
     // maiLink doorbell coverage: count of live WS connections. >0 ⇒ a phone is connected and
     // receiving events directly, so the push doorbell is suppressed.
     pub mailink_ws_count: std::sync::atomic::AtomicUsize,
@@ -173,6 +177,7 @@ impl AppState {
             pending_agent_sessions: RwLock::new(Vec::new()),
             mailink_pairing_codes: RwLock::new(HashMap::new()),
             mailink_info: RwLock::new(None),
+            mailink_shutdown: RwLock::new(None),
             mailink_ws_count: std::sync::atomic::AtomicUsize::new(0),
         }
     }

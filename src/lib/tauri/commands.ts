@@ -467,6 +467,11 @@ export async function setWorkspaceMailinkNative(workspaceId: string, enabled: bo
   return invoke('set_workspace_mailink_native', { workspaceId, enabled });
 }
 
+/** Persist the maiLink bridge enable flag AND start/stop the live listener (no restart needed). */
+export async function mailinkSetEnabled(enabled: boolean): Promise<void> {
+  return invoke('mailink_set_enabled', { enabled });
+}
+
 /** Mint a one-time pairing code; returns the QR payload the phone scans (120s TTL, single use). */
 export async function mailinkCreatePairing(): Promise<MailinkPairingPayload> {
   return invoke('mailink_create_pairing');
