@@ -1,0 +1,21 @@
+linked-tools/core/scripts/launcher/docs/keybind-hammerspoon.lua
+  s_2faedf32a94ff1::t_a9129c655de252 1-52
+linked-tools/core/scripts/launcher/docs/install.md
+  s_2faedf32a94ff1::t_dca51f7cb7ca39 1-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "212077c0af33ae1b3dca42a1275e85493deff17b",
+  "prompts": {},
+  "sessions": {
+    "s_2faedf32a94ff1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6445d28c-8b55-4fce-aa24-e77fe148004a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
