@@ -1,0 +1,19 @@
+forwood-vault/wiki/changes-archive/forwood-one-review/forwood-one-review-002.md
+  s_3c5806474896bb::t_3ed5afbc1faf1d 1-1595
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "31a905c0959a2d3116224820ff082bbff0edc98c",
+  "prompts": {},
+  "sessions": {
+    "s_3c5806474896bb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "69eadc33-1c30-4f4c-85ba-c689c72fafcb",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
