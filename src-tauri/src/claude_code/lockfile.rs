@@ -607,9 +607,10 @@ fn entry_contains_auth(entry: &serde_json::Value, auth: &str) -> bool {
     false
 }
 
-/// Directory for the /maiterm skill: ~/.claude/skills/maiterm/
+/// Directory for the /maiterm skill: ~/.claude/skills/maiterm2/ on the
+/// fork build (renamed for side-by-side install with upstream maiTerm).
 fn maiterm_skill_dir() -> Option<PathBuf> {
-    dirs::home_dir().map(|h| h.join(".claude").join("skills").join("maiterm"))
+    dirs::home_dir().map(|h| h.join(".claude").join("skills").join("maiterm2"))
 }
 
 /// Legacy pre-rebrand skill dir (~/.claude/skills/aiterm/). Removed on

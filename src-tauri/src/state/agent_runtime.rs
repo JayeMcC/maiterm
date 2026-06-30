@@ -179,10 +179,13 @@ pub fn descriptor(rt: AgentRuntime) -> &'static RuntimeDescriptor {
 /// read correctly when per-runtime names land. Returns `&'static str` so it is a
 /// drop-in for the existing `cfg!(debug_assertions)` ternaries.
 pub fn mcp_server_name(_rt: AgentRuntime) -> &'static str {
+    // Fork build (renamed to maiTerm2 for side-by-side install with upstream):
+    // register under `maiterm2` / `maiterm2-dev` so ~/.claude.json's
+    // mcpServers entry doesn't collide with an upstream maiTerm install.
     if cfg!(debug_assertions) {
-        "maiterm-dev"
+        "maiterm2-dev"
     } else {
-        "maiterm"
+        "maiterm2"
     }
 }
 
