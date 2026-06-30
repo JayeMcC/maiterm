@@ -459,7 +459,14 @@
   }
 
   function noteTitle(content: string): string {
-    const firstLine = content.split('\n')[0]?.trim();
+    // Use the first REAL line as the title — skip hidden HTML-comment markers (e.g. a mesh
+    // status marker) so the panel shows the heading, not "<!-- ... -->". Also strip a leading
+    // markdown heading hash so "# Foo" / "### Foo" read as "Foo".
+    const firstLine = content
+      .split('\n')
+      .map((l) => l.trim())
+      .find((l) => l && !l.startsWith('<!--'))
+      ?.replace(/^#+\s*/, '');
     if (!firstLine) return 'Untitled';
     return firstLine.length > 60 ? firstLine.slice(0, 60) + '...' : firstLine;
   }
