@@ -146,6 +146,11 @@ pub struct AppState {
     // maiLink doorbell coverage: count of live WS connections. >0 ⇒ a phone is connected and
     // receiving events directly, so the push doorbell is suppressed.
     pub mailink_ws_count: std::sync::atomic::AtomicUsize,
+    // maiLink doorbell coverage: millis-since-epoch of the last WS disconnect. A foregrounded
+    // phone's WS can blip (drop+reconnect) in well under a second; without a grace window that
+    // momentary count==0 lets an attention transition ring the doorbell spuriously. The doorbell
+    // treats a tab as covered for a short grace after this instant even at count==0. 0 ⇒ never dropped.
+    pub mailink_ws_last_drop_ms: AtomicU64,
 }
 
 impl AppState {
@@ -183,6 +188,7 @@ impl AppState {
             mailink_info: RwLock::new(None),
             mailink_shutdown: RwLock::new(None),
             mailink_ws_count: std::sync::atomic::AtomicUsize::new(0),
+            mailink_ws_last_drop_ms: AtomicU64::new(0),
         }
     }
 

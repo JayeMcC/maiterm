@@ -61,14 +61,30 @@ struct ApiState {
     dev_token: String,
 }
 
-/// Decrements the live-WS coverage count when a WS connection ends (any exit path).
+/// Decrements the live-WS coverage count when a WS connection ends (any exit path), and stamps
+/// the drop time so the doorbell can hold a short grace window before treating the tab as
+/// uncovered (a foregrounded phone's WS blip must not ring the bell).
 struct WsCoverageGuard(Arc<AppState>);
 impl Drop for WsCoverageGuard {
     fn drop(&mut self) {
         self.0
             .mailink_ws_count
             .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+        self.0
+            .mailink_ws_last_drop_ms
+            .store(now_ms(), std::sync::atomic::Ordering::SeqCst);
     }
+}
+
+/// How long after a WS disconnect the doorbell keeps treating tabs as covered. A foregrounded
+/// phone that briefly loses its socket reconnects in well under a second; this window (spanning a
+/// couple of doorbell ticks) absorbs that blip so a coincident attention transition doesn't ring.
+const WS_COVERAGE_GRACE_MS: u64 = 3000;
+
+/// Doorbell coverage decision: a phone is receiving events directly (suppress the push) if a WS is
+/// live now, OR one disconnected within the grace window (`last_drop_ms == 0` means never dropped).
+fn ws_covered(live: bool, last_drop_ms: u64, now_ms: u64) -> bool {
+    live || (last_drop_ms != 0 && now_ms.saturating_sub(last_drop_ms) < WS_COVERAGE_GRACE_MS)
 }
 
 /// `~/Library/Application Support/<slug>/mailink/` (or the OS equivalent).
@@ -1123,10 +1139,16 @@ async fn doorbell_loop(app: Arc<AppState>) {
                 .map(str::to_string)
                 .unwrap_or_else(|| DEFAULT_MAILINK_RELAY_URL.to_string())
         };
-        let covered = app
-            .mailink_ws_count
-            .load(std::sync::atomic::Ordering::SeqCst)
-            > 0;
+        // Covered if a phone is connected now, OR one disconnected within the grace window (its
+        // WS may just be blipping while foregrounded — don't ring on that momentary count==0).
+        let covered = ws_covered(
+            app.mailink_ws_count
+                .load(std::sync::atomic::Ordering::SeqCst)
+                > 0,
+            app.mailink_ws_last_drop_ms
+                .load(std::sync::atomic::Ordering::SeqCst),
+            now_ms(),
+        );
 
         let chats = build_chats(&app);
         let mut current = std::collections::HashSet::new();
@@ -1256,6 +1278,22 @@ mod tests {
                 eprintln!("[mailink test] openssl unavailable — skipped DER cross-check");
             }
         }
+    }
+
+    #[test]
+    fn ws_coverage_grace_window() {
+        let now = 100_000u64;
+        // A live WS is always covered, regardless of drop time.
+        assert!(ws_covered(true, 0, now));
+        assert!(ws_covered(true, now, now));
+        // No WS and never dropped ⇒ uncovered (a real, un-covered attention should ring).
+        assert!(!ws_covered(false, 0, now));
+        // No WS but dropped just now / within grace ⇒ still covered (absorb the blip).
+        assert!(ws_covered(false, now, now));
+        assert!(ws_covered(false, now - (WS_COVERAGE_GRACE_MS - 1), now));
+        // No WS and the drop is older than the grace ⇒ uncovered again (phone really left).
+        assert!(!ws_covered(false, now - WS_COVERAGE_GRACE_MS, now));
+        assert!(!ws_covered(false, now - 60_000, now));
     }
 
     #[test]
