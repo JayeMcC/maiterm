@@ -824,6 +824,15 @@ async fn send_key(app: &Arc<AppState>, pty_id: &str, bytes: &[u8], settle_ms: u6
     Ok(())
 }
 
+/// Type free-text into the selector's highlighted "Other" inline input (a live field). Collapsed
+/// to a single line so a stray newline can't submit early; settles like a keystroke.
+async fn send_text(app: &Arc<AppState>, pty_id: &str, text: &str) -> Result<(), String> {
+    let one_line: String = text.split(['\n', '\r']).collect::<Vec<_>>().join(" ");
+    crate::pty::write_pty(app, pty_id, one_line.as_bytes())?;
+    tokio::time::sleep(std::time::Duration::from_millis(ADVANCE_SETTLE_MS)).await;
+    Ok(())
+}
+
 /// Move the selector highlight from row `from` to row `to` with arrow keys. Returns `to`.
 async fn nav_to(app: &Arc<AppState>, pty_id: &str, from: usize, to: usize) -> Result<usize, String> {
     if to > from {
@@ -849,10 +858,14 @@ async fn nav_to(app: &Arc<AppState>, pty_id: &str, from: usize, to: usize) -> Re
 ///   (d) multiSelect: Space toggles each row (live, no Enter), then → advances the tab;   [VERIFIED e2e]
 ///   (e) a lone single-select question submits on its own Enter; every other form lands on the
 ///       "Submit" tab and takes one final Enter.                                          [VERIFIED]
-/// The free-text "Other" row is NOT yet pinned (its inline-input flow misfired in probes), so an
-/// answer that uses Other is REJECTED up front below rather than driven. All mapping is resolved
-/// BEFORE any keystroke is sent, so a bad/unsupported answer rejects the whole batch rather than
-/// half-answering a live prompt. `build_chat_detail` keeps `respondable:false` until Other lands.
+///   (f) the free-text "Other" row (labelled "Type something", at index option_count) is a live
+///       inline input — navigate to it and TYPE directly (no Enter-to-open). For a single-select
+///       question, Enter then selects+advances just like a listed pick.                    [VERIFIED e2e]
+/// KNOWN GAP: a multiSelect question with BOTH checkbox picks and Other free-text isn't solved yet
+/// — typing checks the Other row, but the input then swallows the → advance so the form never
+/// reaches Submit. Rare combo; `build_chat_detail` keeps respondable:false until it's handled.
+/// All mapping is resolved BEFORE any keystroke is sent, so a bad answer rejects the whole batch
+/// rather than half-answering a live prompt.
 async fn drive_question_answers(
     app: &Arc<AppState>,
     pty_id: &str,
@@ -873,7 +886,9 @@ async fn drive_question_answers(
 
     struct Plan {
         multi: bool,
-        indices: Vec<usize>, // option rows to select (single-select ⇒ exactly one)
+        option_count: usize,   // # of listed options; the "Type something" (Other) row is at this index
+        indices: Vec<usize>,   // listed-option rows to select/toggle
+        other: Option<String>, // free-text for the "Other" row, if the phone chose it
     }
 
     // Resolve every answer to concrete selector actions up front (fail-closed on any bad map).
@@ -897,23 +912,17 @@ async fn drive_question_answers(
                 None => return Err(format!("question {qi}: label {sel:?} not among options")),
             }
         }
-        if ans.other.as_ref().map(|s| !s.trim().is_empty()).unwrap_or(false) {
-            // The free-text "Other" row's keystroke flow isn't reliably pinned yet, so refuse it
-            // rather than misfire into the wrong option. The app renders this as "answer on the
-            // desktop" (docs §12.3).
-            return Err(format!(
-                "question {qi}: free-text \"Other\" answers aren't supported over maiLink yet — answer on the desktop"
-            ));
+        let other = ans.other.clone().filter(|s| !s.trim().is_empty());
+        if indices.is_empty() && other.is_none() {
+            return Err(format!("question {qi}: no option selected and no Other text"));
         }
-        if indices.is_empty() {
-            return Err(format!("question {qi}: no option selected"));
-        }
-        if !multi && indices.len() > 1 {
+        // single-select accepts exactly one pick total (one listed option XOR Other text).
+        if !multi && indices.len() + other.is_some() as usize > 1 {
             return Err(format!("question {qi}: single-select received multiple picks"));
         }
         indices.sort_unstable();
         indices.dedup();
-        plans.push(Plan { multi, indices });
+        plans.push(Plan { multi, option_count: labels.len(), indices, other });
     }
 
     // Inject, question by question. The form is a row of tabs [Q1..Qn][Submit]; ↑/↓ moves within
@@ -926,9 +935,21 @@ async fn drive_question_answers(
                 cur = nav_to(app, pty_id, cur, idx).await?;
                 send_key(app, pty_id, b" ", NAV_SETTLE_MS).await?; // Space toggles the row (live)
             }
+            if let Some(text) = &plan.other {
+                // The "Type something" row (at option_count) is a live inline input — typing into
+                // it fills and checks it.
+                cur = nav_to(app, pty_id, cur, plan.option_count).await?;
+                send_text(app, pty_id, text).await?;
+            }
             // multiSelect toggles are live and are NOT confirmed with Enter; → advances to the
             // next tab (the next question, or Submit after the last one).
             send_key(app, pty_id, b"\x1b[C", ADVANCE_SETTLE_MS).await?;
+        } else if let Some(text) = &plan.other {
+            // single-select via the Other row: navigate to it, type the text, then Enter — which
+            // selects it and advances exactly like picking a listed option.
+            cur = nav_to(app, pty_id, cur, plan.option_count).await?;
+            send_text(app, pty_id, text).await?;
+            send_key(app, pty_id, b"\r", ADVANCE_SETTLE_MS).await?;
         } else {
             cur = nav_to(app, pty_id, cur, plan.indices[0]).await?;
             send_key(app, pty_id, b"\r", ADVANCE_SETTLE_MS).await?; // Enter selects AND advances
