@@ -489,6 +489,7 @@ pub fn run() {
             commands::workspace::set_workspace_bridge_all,
             commands::workspace::set_workspace_mesh_topics,
             commands::workspace::set_tab_mailink_native,
+            commands::workspace::set_tab_mailink_excluded,
             commands::workspace::set_workspace_mailink_native,
             commands::mailink::mailink_create_pairing,
             commands::mailink::mailink_set_enabled,

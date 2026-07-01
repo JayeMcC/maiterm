@@ -60,6 +60,7 @@ function createPreferencesStore() {
   let codexAutoResume = $state(true);
   let codexHooksBypassTrust = $state(false);
   let mailinkEnabled = $state(false);
+  let mailinkExposeAll = $state(true);
   let mailinkRelayUrl = $state('');
   let composerDefaultOpen = $state(true);
   let windowsShell = $state('powershell');
@@ -134,6 +135,7 @@ function createPreferencesStore() {
     get codexAutoResume() { return codexAutoResume; },
     get codexHooksBypassTrust() { return codexHooksBypassTrust; },
     get mailinkEnabled() { return mailinkEnabled; },
+    get mailinkExposeAll() { return mailinkExposeAll; },
     get mailinkRelayUrl() { return mailinkRelayUrl; },
     get composerDefaultOpen() { return composerDefaultOpen; },
     get windowsShell() { return windowsShell; },
@@ -218,6 +220,7 @@ function createPreferencesStore() {
       codexAutoResume = prefs.codex_auto_resume ?? true;
       codexHooksBypassTrust = prefs.codex_hooks_bypass_trust ?? false;
       mailinkEnabled = prefs.mailink_enabled ?? false;
+      mailinkExposeAll = prefs.mailink_expose_all ?? true;
       mailinkRelayUrl = prefs.mailink_relay_url ?? '';
       composerDefaultOpen = prefs.composer_default_open ?? true;
       windowsShell = prefs.windows_shell ?? 'powershell';
@@ -507,6 +510,11 @@ function createPreferencesStore() {
       }
     },
 
+    async setMailinkExposeAll(value: boolean) {
+      mailinkExposeAll = value;
+      await this.save();
+    },
+
     async setMailinkRelayUrl(value: string) {
       mailinkRelayUrl = value;
       await this.save();
@@ -665,6 +673,7 @@ function createPreferencesStore() {
       codexAutoResume = prefs.codex_auto_resume ?? true;
       codexHooksBypassTrust = prefs.codex_hooks_bypass_trust ?? false;
       mailinkEnabled = prefs.mailink_enabled ?? false;
+      mailinkExposeAll = prefs.mailink_expose_all ?? true;
       mailinkRelayUrl = prefs.mailink_relay_url ?? '';
       composerDefaultOpen = prefs.composer_default_open ?? true;
       windowsShell = prefs.windows_shell ?? 'powershell';
@@ -740,6 +749,7 @@ function createPreferencesStore() {
         codex_auto_resume: codexAutoResume,
         codex_hooks_bypass_trust: codexHooksBypassTrust,
         mailink_enabled: mailinkEnabled,
+        mailink_expose_all: mailinkExposeAll,
         mailink_relay_url: mailinkRelayUrl.trim() || null,
         composer_default_open: composerDefaultOpen,
         windows_shell: windowsShell,

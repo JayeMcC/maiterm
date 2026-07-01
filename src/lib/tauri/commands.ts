@@ -471,6 +471,10 @@ export async function setTabMailinkNative(workspaceId: string, paneId: string, t
   return invoke('set_tab_mailink_native', { workspaceId, paneId, tabId, mailinkNative });
 }
 
+export async function setTabMailinkExcluded(workspaceId: string, paneId: string, tabId: string, excluded: boolean): Promise<void> {
+  return invoke('set_tab_mailink_excluded', { workspaceId, paneId, tabId, excluded });
+}
+
 export async function setWorkspaceMailinkNative(workspaceId: string, enabled: boolean): Promise<void> {
   return invoke('set_workspace_mailink_native', { workspaceId, enabled });
 }

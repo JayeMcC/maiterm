@@ -319,6 +319,12 @@ pub struct Tab {
     /// docs/mailink-protocol.md.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub mailink_native: bool,
+    /// maiLink exception: when true, this tab is held back from maiLink even while the
+    /// "make all tabs available in maiLink" preference is on. Only meaningful in that
+    /// expose-all mode; ignored in "only tabs I designate" mode (which uses
+    /// `mailink_native` instead). See docs/mailink-protocol.md.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub mailink_excluded: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1010,6 +1016,12 @@ pub struct Preferences {
     /// docs/mailink-protocol.md.
     #[serde(default)]
     pub mailink_enabled: bool,
+    /// maiLink exposure default: when true (default), every *agent* tab is available to
+    /// paired phones as a chat, minus per-tab opt-outs (`Tab.mailink_excluded`). When
+    /// false, only tabs the user explicitly designates (`Tab.mailink_native` or
+    /// `Workspace.mailink_native`) are available. See docs/mailink-protocol.md.
+    #[serde(default = "default_true")]
+    pub mailink_expose_all: bool,
     /// maiLink: paired mobile devices (each holds a revocable bearer token). See
     /// docs/mailink-protocol.md §2.3/§3.
     #[serde(default)]
@@ -1125,6 +1137,7 @@ impl Default for Preferences {
             mesh_hard_cap: default_mesh_hard_cap(),
             mesh_topic_ttl_minutes: default_mesh_topic_ttl_minutes(),
             mailink_enabled: false,
+            mailink_expose_all: true,
             mailink_devices: Vec::new(),
             mailink_relay_url: None,
         }
@@ -1168,6 +1181,7 @@ impl Tab {
             agent_bridge: None,
             runtime: None,
             mailink_native: false,
+            mailink_excluded: false,
         }
     }
 
@@ -1207,6 +1221,7 @@ impl Tab {
             agent_bridge: None,
             runtime: None,
             mailink_native: false,
+            mailink_excluded: false,
         }
     }
 
@@ -1246,6 +1261,7 @@ impl Tab {
             agent_bridge: None,
             runtime: None,
             mailink_native: false,
+            mailink_excluded: false,
         }
     }
 }

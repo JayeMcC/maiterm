@@ -141,20 +141,35 @@ pub mailink_native: bool,      // this tab appears as a chat in maiLink
 pub mailink_native: bool,      // all agent tabs in this workspace are maiLink chats
 ```
 
-Effective exposure = `tab.mailink_native || workspace.mailink_native`, intersected with
-"is an agent tab" (has a tracked `agent_sessions` entry — we don't expose plain shells as
-chats). Mirrors the `Workspace.bridge_all` mesh pattern exactly (see mesh-workspace.md):
-designation is *persisted*, the live roster is *derived*.
+**Effective availability** is chosen by the `mailink_expose_all` preference
+(`Preferences`, `serde(default = "default_true")` — *on* by default):
+
+* **expose-all (default):** every *agent* tab is available, minus per-tab opt-outs.
+  Availability = `tab.runtime.is_some() && !tab.mailink_excluded`. "Is an agent tab" keys off
+  the **persisted** `Tab.runtime` (set once at initSession, never cleared) rather than a live
+  `agent_sessions` entry — so a tab whose agent has *stopped* (network drop, quit) stays
+  available and can be auto-resumed from the phone.
+* **designate-only:** availability = `tab.mailink_native || workspace.mailink_native`. This is
+  the opt-in escape hatch and honors plain shells the user hand-picks.
+
+Both branches are intersected with `TabType::Terminal`. The single choke point is
+`designated_tabs()` in `mailink/mod.rs`. Mirrors the `Workspace.bridge_all` mesh pattern (see
+mesh-workspace.md): designation is *persisted*, the live roster is *derived*.
+
+Flags (`Tab`): `mailink_native` (opt-in, designate-only mode) and `mailink_excluded`
+(opt-out, expose-all mode). `Workspace.mailink_native` is the workspace-wide opt-in.
 
 > **Serde round-trip pitfall** (project-wide): `skip_serializing_if`/`default` means loaded
 > JS objects get `undefined`, not `false`. Normalize with `?? false` on the TS side; never
 > `JSON.stringify`-compare.
 
 Commands (follow the New-Tauri-Command checklist in root `CLAUDE.md`):
-`set_tab_mailink_native(tab_id, on)`, `set_workspace_mailink_native(ws_id, on)`.
+`set_tab_mailink_native(tab_id, on)`, `set_tab_mailink_excluded(tab_id, on)`,
+`set_workspace_mailink_native(ws_id, on)`; `mailink_expose_all` rides the bulk `set_preferences`.
 
-UI: a context-menu toggle on a tab ("Expose to maiLink") + a workspace toggle, plus a
-Preferences "maiLink" section (enable bridge, paired devices, designated chats overview).
+UI: a tab right-click toggle — "Make (un)available in maiLink" (targets `mailink_excluded` in
+expose-all mode, `mailink_native` in designate-only mode) — plus a Preferences "maiLink" section
+(enable bridge, "Make all tabs available in maiLink" toggle, paired devices).
 
 ### 2.2 Preferences additions (`Preferences`, `state/workspace.rs:793`)
 
@@ -454,7 +469,8 @@ Relay endpoints (in `update-worker/`):
 | Token theft from disk | Token stored hashed server-side; on the phone it lives in the iOS Keychain |
 | Replay / pairing-code reuse | Pairing code is single-use + ~120 s TTL |
 | Doorbell abuse / data leak via cloud | Relay payload is content-free; relay is stateless; `.p8` never on clients |
-| Exposing plain shells / non-agent tabs | Only agent tabs that are explicitly maiLink-native are listed; designation is opt-in per tab/workspace |
+| Exposing plain shells / non-agent tabs | Only *agent* tabs (with a detected `runtime`) are ever available; plain shells are never auto-exposed. In designate-only mode the user may still hand-pick a shell via `mailink_native` |
+| Reaching a held-back tab by known tab_id | Every tab-scoped endpoint — `context`, `message`, `respond`, `interrupt` (not just list/stream/doorbell) — passes through `is_designated()` and returns `404` for a non-available tab. "Make unavailable in maiLink" is a real gate, not just a visibility toggle |
 | Cross-contaminating the IDE/MCP server | maiLink is a **separate listener**; `claude_code/server.rs` stays bound to `127.0.0.1` |
 | Injection corrupting a TUI mid-prompt | Same FIFO + `deliverable()`/`isAwaitingHumanInput()` gate as the agent bridge |
 

@@ -335,6 +335,9 @@ async fn chat_context(
     Query(q): Query<ContextQuery>,
 ) -> Result<Json<Value>, StatusCode> {
     authorize(&s, &headers)?;
+    if !is_designated(&s.app, &tab_id) {
+        return Err(StatusCode::NOT_FOUND);
+    }
     let lines = q.lines.unwrap_or(40).min(500);
     let text = pty_for_tab(&s.app, &tab_id)
         .and_then(|pty| crate::commands::terminal::recent_text(&s.app, &pty, lines).ok())
@@ -359,6 +362,9 @@ async fn post_message(
     Json(body): Json<MessageBody>,
 ) -> Result<Json<Value>, StatusCode> {
     authorize(&s, &headers)?;
+    if !is_designated(&s.app, &tab_id) {
+        return Err(StatusCode::NOT_FOUND);
+    }
     let pty = pty_for_tab(&s.app, &tab_id).ok_or(StatusCode::CONFLICT)?;
     inject_text(&s.app, &pty, &body.text, body.submit)
         .await
@@ -383,6 +389,9 @@ async fn post_respond(
     Json(body): Json<RespondBody>,
 ) -> Result<Json<Value>, StatusCode> {
     authorize(&s, &headers)?;
+    if !is_designated(&s.app, &tab_id) {
+        return Err(StatusCode::NOT_FOUND);
+    }
     let current = current_prompt(&s.app, &tab_id);
     let (kind, cur_id) = match current {
         Some(p) => p,
@@ -419,6 +428,9 @@ async fn post_interrupt(
     Path(tab_id): Path<String>,
 ) -> Result<Json<Value>, StatusCode> {
     authorize(&s, &headers)?;
+    if !is_designated(&s.app, &tab_id) {
+        return Err(StatusCode::NOT_FOUND);
+    }
     let pty = pty_for_tab(&s.app, &tab_id).ok_or(StatusCode::CONFLICT)?;
     crate::pty::write_pty(&s.app, &pty, b"\x1b").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(json!({ "ok": true })))
@@ -849,19 +861,31 @@ struct TabMeta {
     runtime: AgentRuntime,
 }
 
-/// Enumerate maiLink-native *terminal* tabs (per-tab flag OR workspace-wide flag).
+/// Enumerate the terminal tabs available to maiLink. Two modes, chosen by the
+/// `mailink_expose_all` preference:
+///   * expose-all (default): every *agent* tab (a runtime was ever detected) is available,
+///     minus per-tab opt-outs (`Tab.mailink_excluded`). Runtime persists after the agent
+///     process dies, so a downed agent stays reachable for maiLink auto-resume.
+///   * designate-only: only tabs the user explicitly marks (`Tab.mailink_native` OR the
+///     workspace-wide `Workspace.mailink_native`).
 fn designated_tabs(app: &AppState) -> Vec<TabMeta> {
     let data = app.app_data.read();
+    let expose_all = data.preferences.mailink_expose_all;
     let mut out = Vec::new();
     for win in &data.windows {
         for ws in &win.workspaces {
             let ws_native = ws.mailink_native;
             for pane in &ws.panes {
                 for tab in &pane.tabs {
-                    if !(tab.mailink_native || ws_native) {
+                    if !matches!(tab.tab_type, TabType::Terminal) {
                         continue;
                     }
-                    if !matches!(tab.tab_type, TabType::Terminal) {
+                    let available = if expose_all {
+                        tab.runtime.is_some() && !tab.mailink_excluded
+                    } else {
+                        tab.mailink_native || ws_native
+                    };
+                    if !available {
                         continue;
                     }
                     out.push(TabMeta {
@@ -875,6 +899,15 @@ fn designated_tabs(app: &AppState) -> Vec<TabMeta> {
         }
     }
     out
+}
+
+/// True if `tab_id` is currently available to maiLink — the same gate that governs the chat
+/// list, WS stream, and doorbell. The write + context endpoints call this so a tab held back
+/// via the exposure settings (designate-only mode, or `mailink_excluded` in expose-all mode)
+/// is genuinely unreachable, not merely hidden from discovery. Returns NOT_FOUND-worthy false
+/// for unknown or non-designated tab_ids alike.
+fn is_designated(app: &AppState, tab_id: &str) -> bool {
+    designated_tabs(app).iter().any(|t| t.tab_id == tab_id)
 }
 
 /// tab_id → (state, runtime, current tool), choosing the most attention-worthy session if a

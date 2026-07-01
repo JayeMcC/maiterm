@@ -478,6 +478,7 @@ pub(crate) fn clone_workspace_with_id_mapping(
                 runtime: tab.runtime,
                 // maiLink designation is a per-tab marker (no tab-id refs) — carry it over.
                 mailink_native: tab.mailink_native,
+                mailink_excluded: tab.mailink_excluded,
             }
         }).collect();
 

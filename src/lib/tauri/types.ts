@@ -69,6 +69,9 @@ export interface Tab {
   runtime?: AgentRuntime | null;
   /** maiLink: when true, this tab is exposed to the maiLink mobile companion as a chat. */
   mailink_native?: boolean;
+  /** maiLink exception: when true, hold this tab back from maiLink even while the
+   *  "make all tabs available" preference is on (ignored in designate-only mode). */
+  mailink_excluded?: boolean;
 }
 
 export interface Pane {
@@ -254,6 +257,9 @@ export interface Preferences {
   mesh_topic_ttl_minutes: number;
   /** maiLink: master switch for the mobile-companion LAN bridge (off by default). */
   mailink_enabled?: boolean;
+  /** maiLink: when true (default), every agent tab is available to paired phones minus
+   *  per-tab opt-outs; when false, only tabs the user designates are available. */
+  mailink_expose_all?: boolean;
   /** maiLink doorbell: OPTIONAL override for the shared push relay (self-hosters). Empty ⇒ built-in default. */
   mailink_relay_url?: string | null;
 }

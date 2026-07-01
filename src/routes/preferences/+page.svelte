@@ -2028,9 +2028,10 @@
         <h3 class="section-heading" style="margin-top: 20px;">maiLink Mobile Companion</h3>
         <p class="section-desc">
           maiLink is a phone app that lets you answer your agents (approve a permission, reply to
-          a question, nudge one forward) and drive designated tabs — over your local network or a
-          WireGuard tunnel, with no cloud in the data path. Mark a tab or workspace as a maiLink
-          chat via its right-click menu (“Expose to maiLink”). See <code>docs/mailink-protocol.md</code>.
+          a question, nudge one forward) and drive them — over your local network or a
+          WireGuard tunnel, with no cloud in the data path. By default every agent tab is available;
+          use “Tab availability” below to switch to opt-in, and each tab’s right-click menu to make
+          an individual tab available or unavailable. See <code>docs/mailink-protocol.md</code>.
         </p>
 
         <div class="setting" style="align-items: flex-start;">
@@ -2054,6 +2055,35 @@
         </div>
 
         {#if preferencesStore.mailinkEnabled}
+          <h3 class="section-heading" style="margin-top: 20px;">Tab availability</h3>
+          <p class="section-desc">
+            maiLink only ever surfaces agent tabs (Claude, Codex, …) — never plain shells. A tab
+            whose agent has stopped (network drop, quit) stays available so you can auto-resume it
+            from your phone.
+          </p>
+
+          <div class="setting" style="align-items: flex-start;">
+            <div>
+              <label for="mailink-expose-all">Make all tabs available in maiLink</label>
+              <p class="setting-hint">
+                On by default: every agent tab is available, except ones you mark “Make unavailable
+                in maiLink” from the tab’s right-click menu. Turn this off to make maiLink opt-in —
+                then only tabs (or whole workspaces) you explicitly mark “Make available in maiLink”
+                appear on your phone.
+              </p>
+            </div>
+            <button
+              id="mailink-expose-all"
+              class="toggle"
+              class:active={preferencesStore.mailinkExposeAll}
+              onclick={() => preferencesStore.setMailinkExposeAll(!preferencesStore.mailinkExposeAll)}
+              aria-pressed={preferencesStore.mailinkExposeAll}
+              aria-label="Toggle make all tabs available in maiLink"
+            >
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
+
           <h3 class="section-heading" style="margin-top: 20px;">Doorbell (push wake)</h3>
           <p class="section-desc">
             When a designated chat needs you and no phone is actively connected, maiTerm sends a

@@ -1329,6 +1329,17 @@ function createWorkspacesStore() {
       await commands.setTabMailinkNative(workspaceId, paneId, tabId, mailinkNative);
     },
 
+    /** maiLink: hold a tab back from (or restore it to) maiLink while the "make all tabs
+     *  available" preference is on. No-op in designate-only mode (uses mailink_native). */
+    async setTabMailinkExcluded(workspaceId: string, paneId: string, tabId: string, excluded: boolean) {
+      const ws = workspaces.find(w => w.id === workspaceId);
+      const pane = ws?.panes.find(p => p.id === paneId);
+      const tab = pane?.tabs.find(t => t.id === tabId);
+      if (!tab || (tab.mailink_excluded ?? false) === excluded) return;
+      tab.mailink_excluded = excluded;
+      await commands.setTabMailinkExcluded(workspaceId, paneId, tabId, excluded);
+    },
+
     /** maiLink: toggle whether ALL agent tabs in a workspace are exposed as chats. */
     async setWorkspaceMailinkNative(workspaceId: string, enabled: boolean) {
       const ws = workspaces.find(w => w.id === workspaceId);
