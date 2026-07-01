@@ -1,0 +1,19 @@
+scripts/personal-sync-devcontainer-setup/templates/forwood-one_core/scripts/resetdb-integration.ts
+  s_6b259a54074bb7::t_159b34816ddfa6 1-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "53298b2140545daa604b0ad8d2d74cfe867e728f",
+  "prompts": {},
+  "sessions": {
+    "s_6b259a54074bb7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f71878d-1aef-44be-b05f-fa6a9d0bdae8",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
