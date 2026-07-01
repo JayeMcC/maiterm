@@ -441,6 +441,25 @@ async fn post_respond(
                 log::warn!("[maiLink] AskUserQuestion answer injection failed: {e}");
                 return Ok(Json(json!({ "ok": false, "reason": "inject_failed", "detail": e })));
             }
+            // Confirm the selector actually submitted before claiming success. The PostToolUse hook
+            // clears the tab's pending_question when the AskUserQuestion resolves; if it's still
+            // open after a grace window, the keystrokes didn't drive it to Submit (e.g. an unhandled
+            // selector variant like multiSelect+Other). Return inject_failed instead of a false
+            // ok:true — otherwise the phone optimistically marks it answered while the agent got
+            // nothing ("phone says done, agent never advanced"). The app recovers on !ok.
+            let mut submitted = false;
+            for _ in 0..20 {
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                if pending_question_for_tab(&s.app, &tab_id).is_none() {
+                    submitted = true;
+                    break;
+                }
+            }
+            if !submitted {
+                log::warn!("[maiLink] AskUserQuestion still open ~2s after inject — reporting inject_failed (tab {tab_id})");
+                return Ok(Json(json!({ "ok": false, "reason": "inject_failed",
+                    "detail": "selector still open after injection" })));
+            }
         }
         // free-text fallback: treat choice as a plain message → paste + submit
         _ => {
