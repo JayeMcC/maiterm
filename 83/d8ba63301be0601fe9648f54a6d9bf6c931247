@@ -1,0 +1,73 @@
+scripts/personal-sync-devcontainer-setup/templates/forwood-one_developing/.devcontainer/devcontainer.json
+  s_50c46be58e10ab::t_43a35871740437 5-6
+  s_50c46be58e10ab::t_98c78e0c729649 2
+  s_15b80792f12d41::t_a06414fcda4770 88-89
+  s_50c46be58e10ab::t_fbf84390cb2a27 71
+  s_15b80792f12d41::t_2cc3d57df05ddc 33-42,46,50,54,58,61
+  s_50c46be58e10ab::t_4a8f85c222881b 66
+  s_50c46be58e10ab::t_e3b588f582d30a 1
+  s_50c46be58e10ab::t_b808ec94ea211a 3-4
+  s_15b80792f12d41::t_68fce6eb2ca3c3 43-45
+  s_15b80792f12d41::t_bd7461a042cddc 47-49
+  s_15b80792f12d41::t_42531da1044422 51-53
+  s_15b80792f12d41::t_c2fc8c547d9362 55-57
+  s_15b80792f12d41::t_a12f97c94a0a69 59-60
+  s_50c46be58e10ab::t_b2722ff07d175b 67-70
+  s_15b80792f12d41::t_f8fb7fd529ecba 90-91
+.gitignore
+  s_50c46be58e10ab::t_2e9b2d886ae942 39-40
+scripts/personal-sync-devcontainer-setup/templates/forwood-one_experimenting/.devcontainer/devcontainer.json
+  s_50c46be58e10ab::t_dad8864d4078c3 2
+  s_15b80792f12d41::t_35a7fbb6f46749 88-89
+  s_15b80792f12d41::t_16d28300021b08 33-42,46,50,54,58,61
+  s_50c46be58e10ab::t_351f4a109c4280 1
+  s_15b80792f12d41::t_fe7fc586381403 43-45
+  s_15b80792f12d41::t_6c73491ae33dca 47-49
+  s_15b80792f12d41::t_63e447fb7f10f2 51-53
+  s_15b80792f12d41::t_11ced54ee981bb 55-57
+  s_15b80792f12d41::t_bf402cf1cc0298 59-60
+  s_15b80792f12d41::t_f075877efcb295 62-64,85-87
+  s_15b80792f12d41::t_c3d6872dda02fb 90-91
+scripts/personal-sync-devcontainer-setup/templates/README.md
+  s_50c46be58e10ab::t_77c49b9b7b302e 61
+  s_50c46be58e10ab::t_83a05ab0eae6bb 11
+scripts/personal-sync-devcontainer-setup/templates/forwood-one_core/.devcontainer/docker-compose.yml
+  s_15b80792f12d41::t_99767105bba119 91-97
+  s_50c46be58e10ab::t_c47864b7c3fc07 49-51
+scripts/personal-sync-devcontainer-setup/templates/forwood-one_reviewing/.devcontainer/devcontainer.json
+  s_50c46be58e10ab::t_1aaa666455c4a6 2
+  s_15b80792f12d41::t_cee9a62ec4313f 88-89
+  s_15b80792f12d41::t_afa6e754a5483f 33-42,46,50,54,58,61
+  s_50c46be58e10ab::t_2594ab96aaa113 1
+  s_15b80792f12d41::t_2f998651716db4 43-45
+  s_15b80792f12d41::t_db3507c5531ff7 47-49
+  s_15b80792f12d41::t_cad89a319556cf 51-53
+  s_15b80792f12d41::t_af344afc807b61 55-57
+  s_15b80792f12d41::t_c7f1b5850ac5e4 59-60
+  s_15b80792f12d41::t_6bdc67c8cba08f 62-64,85-87
+  s_15b80792f12d41::t_45405190825b2c 90-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "83d8ba63301be0601fe9648f54a6d9bf6c931247",
+  "prompts": {},
+  "sessions": {
+    "s_15b80792f12d41": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7a8edb5-f6d8-4a6b-b255-010bdfa18f85",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_50c46be58e10ab": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "616e0317-1707-45f8-9b3c-e5dfc57c15d5",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

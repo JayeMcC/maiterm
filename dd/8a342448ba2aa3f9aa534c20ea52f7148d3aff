@@ -1,0 +1,45 @@
+linked-tools/core/scripts/launcher/README.md
+  s_2faedf32a94ff1::t_3c56eabae50aac 1-50
+linked-tools/core/scripts/launcher/bin/forwood-launcher
+  s_2faedf32a94ff1::t_03f6b5e1c6f917 1-9
+linked-tools/core/scripts/launcher/vitest.config.ts
+  s_2faedf32a94ff1::t_612f7ae3bf5c0c 1-8
+linked-tools/core/scripts/launcher/.gitignore
+  s_2faedf32a94ff1::t_71738711eb26c7 1
+linked-tools/core/scripts/launcher/tsconfig.json
+  s_2faedf32a94ff1::t_c55cf62a1acf0a 1-23
+linked-tools/core/scripts/launcher/src/__tests__/task-menu.test.tsx
+  s_2faedf32a94ff1::t_6c911f8af7be7b 1-90
+linked-tools/core/scripts/launcher/src/clone-resolver.ts
+  s_2faedf32a94ff1::t_d5e2da0e357f53 1-89
+linked-tools/core/scripts/launcher/src/index.tsx
+  s_2faedf32a94ff1::t_685fbae33d7abd 1-85
+linked-tools/core/scripts/launcher/src/app.tsx
+  s_2faedf32a94ff1::t_91f78a563d018d 1-135
+linked-tools/core/scripts/launcher/src/task-menu.tsx
+  s_2faedf32a94ff1::t_8028f63b22131f 1-79
+linked-tools/core/scripts/launcher/src/__tests__/clone-resolver.test.ts
+  s_2faedf32a94ff1::t_561e37e712afb4 1-73
+linked-tools/core/scripts/launcher/package.json
+  s_2faedf32a94ff1::t_014430b56c5a7b 1-8,10-14,16-19,22-33
+  s_2faedf32a94ff1::t_e046140897da2b 20-21
+  s_2faedf32a94ff1::t_0d6e82d26b5456 9,15
+linked-tools/core/scripts/launcher/package-lock.json
+  s_2faedf32a94ff1::t_a5d8de3301532f 1-2412
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "dd8a342448ba2aa3f9aa534c20ea52f7148d3aff",
+  "prompts": {},
+  "sessions": {
+    "s_2faedf32a94ff1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6445d28c-8b55-4fce-aa24-e77fe148004a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

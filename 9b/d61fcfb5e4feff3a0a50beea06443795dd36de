@@ -1,0 +1,55 @@
+linked-tools/core/scripts/task-engine/src/__tests__/fixtures/basic/.vscode/tasks.json
+  s_2faedf32a94ff1::t_2fd1644872042b 1-38
+linked-tools/core/scripts/task-engine/src/__tests__/reader.test.ts
+  s_2faedf32a94ff1::t_34bfe89817f954 1-27
+linked-tools/core/scripts/task-engine/src/variables.ts
+  s_2faedf32a94ff1::t_865f0d2e6f5a41 1-132
+linked-tools/core/scripts/task-engine/vitest.config.ts
+  s_2faedf32a94ff1::t_aacfa22f9522dd 1-7
+linked-tools/core/scripts/task-engine/src/__tests__/graph.test.ts
+  s_2faedf32a94ff1::t_a7f68bf3a01fbe 1-109
+linked-tools/core/scripts/task-engine/src/__tests__/fixtures/composite/.vscode/tasks.json
+  s_2faedf32a94ff1::t_1df19363e7d4d5 1-50
+linked-tools/core/scripts/task-engine/src/reader.ts
+  s_2faedf32a94ff1::t_221e6ffa19731b 1-37
+linked-tools/core/scripts/task-engine/tsconfig.json
+  s_2faedf32a94ff1::t_273800afbbaae0 1-23
+linked-tools/core/scripts/task-engine/src/__tests__/variables.test.ts
+  s_2faedf32a94ff1::t_0d5e2648da1c7b 1-110
+linked-tools/core/scripts/task-engine/.gitignore
+  s_2faedf32a94ff1::t_fd2ebf9709e70b 1
+linked-tools/core/scripts/task-engine/src/types.ts
+  s_2faedf32a94ff1::t_059103137e520b 1-96
+linked-tools/core/scripts/task-engine/src/index.ts
+  s_2faedf32a94ff1::t_8e9a9f008264ed 1-72
+linked-tools/core/scripts/task-engine/src/graph.ts
+  s_2faedf32a94ff1::t_78ca9d53cce2fd 1-79
+linked-tools/core/scripts/task-engine/src/__tests__/index.test.ts
+  s_2faedf32a94ff1::t_deaf95382ae7c1 1-59
+linked-tools/core/scripts/task-engine/README.md
+  s_2faedf32a94ff1::t_937f3463f9bd1e 1-70
+linked-tools/core/scripts/task-engine/src/__tests__/fixtures/inputs/.vscode/tasks.json
+  s_2faedf32a94ff1::t_a8c0975927f6a5 1-29
+linked-tools/core/scripts/task-engine/src/cli.ts
+  s_2faedf32a94ff1::t_c241df7f96a44e 1-86
+linked-tools/core/scripts/task-engine/package.json
+  s_2faedf32a94ff1::t_6d25bc646623cd 1-27
+linked-tools/core/scripts/task-engine/package-lock.json
+  s_2faedf32a94ff1::t_4691ef8cc3e961 1-1342
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "9bd61fcfb5e4feff3a0a50beea06443795dd36de",
+  "prompts": {},
+  "sessions": {
+    "s_2faedf32a94ff1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6445d28c-8b55-4fce-aa24-e77fe148004a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

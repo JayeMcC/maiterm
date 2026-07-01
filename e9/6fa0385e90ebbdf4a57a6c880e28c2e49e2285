@@ -1,0 +1,23 @@
+CONTEXT.md
+  s_2faedf32a94ff1::t_4b960c0f399985 27-31,33-38
+  s_2faedf32a94ff1::t_885be891229cea 32
+  s_2faedf32a94ff1::t_9702cd8e16b03f 39-42
+docs/adr/0005-task-engine-and-dispatchers.md
+  s_2faedf32a94ff1::t_55987489029433 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "e96fa0385e90ebbdf4a57a6c880e28c2e49e2285",
+  "prompts": {},
+  "sessions": {
+    "s_2faedf32a94ff1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6445d28c-8b55-4fce-aa24-e77fe148004a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

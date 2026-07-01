@@ -1,0 +1,23 @@
+linked-tools/core/scripts/task-engine/src/__tests__/lockfile.test.ts
+  s_2faedf32a94ff1::t_82bf2f6e700bb5 52,62-68
+  s_2faedf32a94ff1::t_c621749cd9e917 69-71
+  s_2faedf32a94ff1::t_c2ad519064bf14 72-73
+linked-tools/core/scripts/task-engine/src/dispatchers/lockfile.ts
+  s_2faedf32a94ff1::t_84eaf526345e56 66-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "9d763fef8180a1b31e56ee67bf61d85409335b0d",
+  "prompts": {},
+  "sessions": {
+    "s_2faedf32a94ff1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6445d28c-8b55-4fce-aa24-e77fe148004a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
