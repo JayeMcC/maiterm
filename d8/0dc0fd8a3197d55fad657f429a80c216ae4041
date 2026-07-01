@@ -1,0 +1,26 @@
+infra/reset-integration/docker-compose.yml
+  s_6b259a54074bb7::t_d2588a440994af 1-87
+infra/reset-integration/README.md
+  s_6b259a54074bb7::t_3d9017468d9e28 1-104
+src/reset-integration/run-verification.mjs
+  s_6b259a54074bb7::t_297ca5fac3f2fe 1-139,153-183
+  s_6b259a54074bb7::t_aa7c26f6584950 140-152
+scripts/reset-integration.sh
+  s_6b259a54074bb7::t_0363e1bd2e5af3 1-228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "d80dc0fd8a3197d55fad657f429a80c216ae4041",
+  "prompts": {},
+  "sessions": {
+    "s_6b259a54074bb7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f71878d-1aef-44be-b05f-fa6a9d0bdae8",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
