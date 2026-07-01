@@ -725,7 +725,7 @@ export interface PendingPrompt {
   thread_id: string;
   kind: 'permission' | 'question';
   asked_by: Participant;        // card header + doorbell line
-  respondable: boolean;         // permission:true now, question:false until WRITE lands
+  respondable: boolean;         // permission:true; question:true (selector injection landed, §12.3)
   // permission shape:
   text?: string;
   options?: string[];           // e.g. ["Yes","Yes, don't ask again","No"]
@@ -787,10 +787,20 @@ export interface WsAttentionEvent {
 - **respondable staging:**
   - `permission` → `respondable:true` **now**. The permission `/respond`→TUI-inject path is already
     proven end-to-end on hardware (§11 doorbell finale) — converging to threads must NOT regress it.
-  - `AskUserQuestion` → `respondable:false` first (app renders the structured ask read-only + an
-    "answer on desktop" affordance, still rings the doorbell). Flip to `true` as a **fast-follow**
-    once maiTerm can reliably inject the selection back into the TUI selector (arrow/enter
-    navigation — the genuinely hard part; bracketed-paste text won't drive it).
+  - `AskUserQuestion` → `respondable:true` **now** (was staged false). `drive_question_answers`
+    (`mailink/mod.rs`) drives the TUI selector by keystroke; mechanics pinned live against Claude
+    Code 2.1.x. The selector is a tab row `[Q1..Qn][Submit]`, arrow-navigable only (the shown 1..n
+    are labels, not digit keys), highlight starts at row 0:
+    - **single-select:** ↑/↓ to the row, Enter selects AND advances to the next tab.
+    - **multiSelect:** Space toggles each row (live), then → advances the tab.
+    - **Other free-text:** the "Type something" row (index = option_count) is a live inline input —
+      navigate to it and TYPE directly (no Enter-to-open); single-select then Enter-advances.
+    - **submit:** a lone single-select question submits on its own Enter; every other form lands on
+      the Submit tab and takes one final Enter.
+    Verified e2e (agent echoed exact answers): single-select, single-select+Other, multiSelect,
+    mixed multi-question. **Best-guess pending device validation:** multiSelect + Other in the same
+    question (type → Enter-commit → →), because the active input swallowed the raw → in probes.
+    No "answer on desktop" fallback — every phone-reachable shape must work in-app.
 - **answer field names — PINNED:** the emitted question fields are exactly
   `{header, question, multiSelect, options:[{label, description}], allowOther}` (§12.1, verbatim
   from Claude's `tool_input` + synthesized `allowOther:true`); the answer is

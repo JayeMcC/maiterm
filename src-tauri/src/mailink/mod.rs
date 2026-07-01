@@ -861,11 +861,11 @@ async fn nav_to(app: &Arc<AppState>, pty_id: &str, from: usize, to: usize) -> Re
 ///   (f) the free-text "Other" row (labelled "Type something", at index option_count) is a live
 ///       inline input — navigate to it and TYPE directly (no Enter-to-open). For a single-select
 ///       question, Enter then selects+advances just like a listed pick.                    [VERIFIED e2e]
-/// KNOWN GAP: a multiSelect question with BOTH checkbox picks and Other free-text isn't solved yet
-/// — typing checks the Other row, but the input then swallows the → advance so the form never
-/// reaches Submit. Rare combo; `build_chat_detail` keeps respondable:false until it's handled.
-/// All mapping is resolved BEFORE any keystroke is sent, so a bad answer rejects the whole batch
-/// rather than half-answering a live prompt.
+/// BEST-GUESS (pending device validation): a multiSelect question with BOTH checkbox picks and
+/// Other free-text — typing checks the Other row, then Enter commits/releases the input before →
+/// advances. In probes the raw → was swallowed by the active input; the commit-Enter is the fix,
+/// unverified on a real device. All other shapes are verified e2e. All mapping is resolved BEFORE
+/// any keystroke is sent, so a bad answer rejects the whole batch rather than half-answering.
 async fn drive_question_answers(
     app: &Arc<AppState>,
     pty_id: &str,
@@ -940,6 +940,11 @@ async fn drive_question_answers(
                 // it fills and checks it.
                 cur = nav_to(app, pty_id, cur, plan.option_count).await?;
                 send_text(app, pty_id, text).await?;
+                // BEST-GUESS (multiSelect+Other, pending device validation): commit the typed text
+                // with Enter so the input releases; otherwise the active field swallows the → below.
+                // In probes the raw → was captured by the input mid-edit and the form never
+                // advanced — see docs §12.3.
+                send_key(app, pty_id, b"\r", NAV_SETTLE_MS).await?;
             }
             // multiSelect toggles are live and are NOT confirmed with Enter; → advances to the
             // next tab (the next question, or Submit after the last one).
@@ -1426,14 +1431,16 @@ fn build_chat_detail(app: &AppState, tab_id: &str) -> Option<Value> {
     // different from the real question the desktop was showing. The open ask IS the structured
     // question; render THAT. It carries the REAL questions captured from the PreToolUse hook
     // (tool_input.questions). The answer-injection path (`drive_question_answers` + the "question"
-    // arm of post_respond) is built but the selector keystroke mechanics are UNVERIFIED against a
-    // live TUI — keep respondable:false until that live check passes, then flip to true (docs §12.3).
+    // arm of post_respond) is enabled: single-select (incl. Other free-text), multiSelect, and
+    // mixed multi-question forms are verified end-to-end against the live TUI; the one remaining
+    // combo (multiSelect + Other simultaneously) uses a best-guess gesture pending device
+    // validation (docs §12.3).
     if tool.as_deref() == Some("AskUserQuestion") {
         let mut pp = json!({
             "prompt_id": format!("q_{tab_id}"),
             "thread_id": tab_id,
             "kind": "question",
-            "respondable": false,
+            "respondable": true,
         });
         match pending_question_for_tab(app, tab_id).as_ref().and_then(map_ask_questions) {
             Some(qs) => { pp["questions"] = qs; }
