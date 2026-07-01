@@ -247,7 +247,7 @@ fn is_system_noise(text: &str) -> bool {
 /// Parse an RFC3339 / ISO-8601 UTC timestamp (`YYYY-MM-DDTHH:MM:SS.sssZ`) to unix ms. Returns 0
 /// on any parse miss (the maiLink list orders by array position, so `ts` is display-only). No
 /// chrono dependency — the format is fixed, so a tiny civil-days computation suffices.
-fn rfc3339_to_ms(s: &str) -> i64 {
+pub(crate) fn rfc3339_to_ms(s: &str) -> i64 {
     let bytes = s.as_bytes();
     if bytes.len() < 19 {
         return 0;

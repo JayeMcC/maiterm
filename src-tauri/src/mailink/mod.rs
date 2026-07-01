@@ -698,12 +698,18 @@ async fn ws_event_loop(mut socket: WebSocket, s: ApiState) {
 }
 
 fn chat_state_event(c: &Value) -> Value {
+    // Carry the chat's REAL per-tab last-activity (build_chats computed it) as both `ts` and
+    // `lastActivityTs`. The initial WS snapshot replays one chat_state per existing chat, so
+    // stamping `now_ms()` here made every chat land at the same age and jump to "now" together —
+    // the reported lockstep. On a genuine live transition this value ≈ now anyway.
+    let ts = c.get("lastActivityTs").cloned().unwrap_or_else(|| json!(now_ms()));
     let mut ev = json!({
         "type": "chat_state",
         "tabId": c["tabId"],
         "state": c["state"],
         "runtime": c["runtime"],
-        "ts": now_ms(),
+        "ts": ts.clone(),
+        "lastActivityTs": ts,
     });
     // Carry the per-agent meta so the phone's context gauge steps live per turn (peer merges it
     // into the acting participant). Present only for Claude tabs with a resolvable transcript.
@@ -797,12 +803,19 @@ fn attention_event(app: &AppState, tab_id: &str, state: &str, title: &str) -> Va
             _ => ("question", "Has a question"),
         },
     };
+    // Real per-tab last-activity (from the detail we just built) so the phone can sort a chat that
+    // enters attention consistently with the /chats list, rather than by request time.
+    let ts = detail
+        .as_ref()
+        .and_then(|d| d.get("lastActivityTs").cloned())
+        .unwrap_or_else(|| json!(now_ms()));
     let mut ev = json!({
         "type": "attention",
         "tabId": tab_id,
         "kind": kind,
         "summary": format!("{title}: {what}"),
-        "ts": now_ms(),
+        "ts": ts.clone(),
+        "lastActivityTs": ts,
     });
     if let Some(p) = pp {
         ev["prompt"] = p.clone();
@@ -1379,10 +1392,41 @@ fn build_meta(app: &AppState, tab_id: &str) -> Option<Value> {
     Some(m)
 }
 
+/// tab_id → scrollback `updated_at` in unix ms (one DB read). SQLite stores `datetime('now')` as
+/// `YYYY-MM-DD HH:MM:SS` UTC; normalize to RFC3339 (`T` + `Z`) for the shared transcript parser.
+/// Used as the last-activity fallback for tabs without a Claude transcript (Codex/Gemini, or a
+/// Claude tab before its first turn).
+fn scrollback_times(app: &AppState) -> HashMap<String, u64> {
+    let mut out = HashMap::new();
+    if let Ok(rows) = app.scrollback_db.tab_times() {
+        for (tab, updated) in rows {
+            let ms = transcript::rfc3339_to_ms(&format!("{}Z", updated.replace(' ', "T")));
+            if ms > 0 {
+                out.insert(tab, ms as u64);
+            }
+        }
+    }
+    out
+}
+
+/// Per-tab last-activity timestamp (unix ms) that the phone's inbox sorts by. A REAL signal, not
+/// request time: the mtime of the tab's Claude transcript JSONL (bumped on every turn), else the
+/// persisted scrollback `updated_at` (any runtime), else `now` for a brand-new tab that has
+/// neither (legitimately "just now"). Previously every /chats row and the WS chat_state snapshot
+/// carried the same request `now`, so the inbox showed every chat at an identical age and they all
+/// flipped to "now" in lockstep — recency ordering was meaningless.
+fn last_activity_ts(app: &AppState, tab_id: &str, scrollback: &HashMap<String, u64>, now: u64) -> u64 {
+    resolved_session_id_for_tab(app, tab_id)
+        .and_then(|sid| transcript::session_jsonl_mtime(&sid))
+        .or_else(|| scrollback.get(tab_id).copied())
+        .unwrap_or(now)
+}
+
 fn build_chats(app: &AppState) -> Vec<Value> {
     let tabs = designated_tabs(app);
     let states = session_states(app);
     let now = now_ms();
+    let scrollback = scrollback_times(app);
     tabs.into_iter()
         .map(|t| {
             let (state, runtime, tool) = match states.get(&t.tab_id) {
@@ -1399,7 +1443,7 @@ fn build_chats(app: &AppState) -> Vec<Value> {
                 // ask_open guards the case where a build leaves an open AskUserQuestion at
                 // state=="active" — it still needs to surface as unread in the inbox.
                 "unread": ask_open || state == "permission" || state == "idle",
-                "lastActivityTs": now,
+                "lastActivityTs": last_activity_ts(app, &t.tab_id, &scrollback, now),
                 "preview": preview_for(state, tool.as_deref()),
             });
             if let Some(meta) = build_meta(app, &t.tab_id) {
@@ -1414,6 +1458,7 @@ fn build_chat_detail(app: &AppState, tab_id: &str) -> Option<Value> {
     let meta = designated_tabs(app).into_iter().find(|t| t.tab_id == tab_id)?;
     let states = session_states(app);
     let now = now_ms();
+    let last_activity = last_activity_ts(app, tab_id, &scrollback_times(app), now);
     let (state, runtime, tool) = match states.get(tab_id) {
         Some((st, rt, tool)) => (map_state(*st), runtime_key(*rt), tool.clone()),
         None => ("dormant", runtime_key(meta.runtime), None),
@@ -1431,7 +1476,7 @@ fn build_chat_detail(app: &AppState, tab_id: &str) -> Option<Value> {
         "runtime": runtime,
         "state": state,
         "unread": state == "permission" || state == "idle",
-        "lastActivityTs": now,
+        "lastActivityTs": last_activity,
         "transcript": transcript,
     });
 
