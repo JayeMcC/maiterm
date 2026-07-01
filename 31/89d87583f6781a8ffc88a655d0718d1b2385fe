@@ -1,0 +1,22 @@
+.agents/skills/review-monitor/SKILL.md
+  s_3c5806474896bb::t_ade5d62d86d706 12-20
+  s_3c5806474896bb::t_0e05de765513ec 1-11,21-180
+.agents/rules/20-workflow/only-reprobe-non-green-acs.md
+  s_3c5806474896bb::t_2f3f81c407fdf9 1-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "3189d87583f6781a8ffc88a655d0718d1b2385fe",
+  "prompts": {},
+  "sessions": {
+    "s_3c5806474896bb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "69eadc33-1c30-4f4c-85ba-c689c72fafcb",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
