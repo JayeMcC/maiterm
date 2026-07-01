@@ -842,18 +842,17 @@ async fn nav_to(app: &Arc<AppState>, pty_id: &str, from: usize, to: usize) -> Re
 /// injecting keystrokes, in question order.
 ///
 /// RUNTIME-FRAGILE — the selector is a TUI, not a stable API. Mechanics pinned live against
-/// Claude Code 2.1.x (docs §12.3):
-///   (a) each question's highlight starts at row 0;                          [VERIFIED]
-///   (b) single-select: arrow to the row, Enter selects AND advances;        [VERIFIED e2e]
-///   (c) after the LAST question, focus lands on a "Submit" tab — a single-question form submits
-///       on its own Enter, a multi-question form needs one more Enter (handled below); [VERIFIED]
-///   (d) the selector is arrow-only — the shown 1..n are labels, NOT digit-select keys; [VERIFIED]
-///   (e) multiSelect toggles with Space; the free-text "Other" row sits after the last option and
-///       opens an inline input.                                              [NOT yet reliable]
-/// NOTE: (e) is why `build_chat_detail` still keeps multiSelect/Other prompts non-respondable —
-/// live probes lost a multiSelect toggle and mis-fired the Other row. All mapping is resolved
-/// BEFORE any keystroke is sent, so an unmappable answer rejects the whole batch rather than
-/// half-answering a live prompt.
+/// Claude Code 2.1.x (docs §12.3). The form is a row of tabs [Q1..Qn][Submit]:
+///   (a) each question's highlight starts at row 0;                                      [VERIFIED]
+///   (b) the selector is arrow-only — the shown 1..n are labels, NOT digit-select keys;  [VERIFIED]
+///   (c) single-select: ↑/↓ to the row, Enter selects AND advances to the next tab;      [VERIFIED e2e]
+///   (d) multiSelect: Space toggles each row (live, no Enter), then → advances the tab;   [VERIFIED e2e]
+///   (e) a lone single-select question submits on its own Enter; every other form lands on the
+///       "Submit" tab and takes one final Enter.                                          [VERIFIED]
+/// The free-text "Other" row is NOT yet pinned (its inline-input flow misfired in probes), so an
+/// answer that uses Other is REJECTED up front below rather than driven. All mapping is resolved
+/// BEFORE any keystroke is sent, so a bad/unsupported answer rejects the whole batch rather than
+/// half-answering a live prompt. `build_chat_detail` keeps `respondable:false` until Other lands.
 async fn drive_question_answers(
     app: &Arc<AppState>,
     pty_id: &str,
@@ -874,9 +873,7 @@ async fn drive_question_answers(
 
     struct Plan {
         multi: bool,
-        option_count: usize,
-        indices: Vec<usize>,   // option rows to select/toggle (empty ⇒ Other only)
-        other: Option<String>, // free-text for the "Other" row
+        indices: Vec<usize>, // option rows to select (single-select ⇒ exactly one)
     }
 
     // Resolve every answer to concrete selector actions up front (fail-closed on any bad map).
@@ -900,45 +897,49 @@ async fn drive_question_answers(
                 None => return Err(format!("question {qi}: label {sel:?} not among options")),
             }
         }
-        let other = ans.other.clone().filter(|s| !s.trim().is_empty());
-        if indices.is_empty() && other.is_none() {
-            return Err(format!("question {qi}: no selection and no Other text"));
+        if ans.other.as_ref().map(|s| !s.trim().is_empty()).unwrap_or(false) {
+            // The free-text "Other" row's keystroke flow isn't reliably pinned yet, so refuse it
+            // rather than misfire into the wrong option. The app renders this as "answer on the
+            // desktop" (docs §12.3).
+            return Err(format!(
+                "question {qi}: free-text \"Other\" answers aren't supported over maiLink yet — answer on the desktop"
+            ));
         }
-        if !multi && (indices.len() > 1 || (indices.len() == 1 && other.is_some())) {
+        if indices.is_empty() {
+            return Err(format!("question {qi}: no option selected"));
+        }
+        if !multi && indices.len() > 1 {
             return Err(format!("question {qi}: single-select received multiple picks"));
         }
         indices.sort_unstable();
         indices.dedup();
-        plans.push(Plan { multi, option_count: labels.len(), indices, other });
+        plans.push(Plan { multi, indices });
     }
 
-    // Inject, question by question.
+    // Inject, question by question. The form is a row of tabs [Q1..Qn][Submit]; ↑/↓ moves within
+    // a question, and the single-select Enter / a multiSelect → moves to the next tab.
+    let single_q_single_select = plans.len() == 1 && !plans[0].multi;
     for plan in &plans {
-        let mut cur = 0usize; // assumed highlight origin (a)
+        let mut cur = 0usize; // highlight starts at row 0 (a)
         if plan.multi {
             for &idx in &plan.indices {
                 cur = nav_to(app, pty_id, cur, idx).await?;
-                send_key(app, pty_id, b" ", NAV_SETTLE_MS).await?; // Space toggles (d)
+                send_key(app, pty_id, b" ", NAV_SETTLE_MS).await?; // Space toggles the row (live)
             }
-        } else if let Some(&idx) = plan.indices.first() {
-            cur = nav_to(app, pty_id, cur, idx).await?;
-        }
-
-        if let Some(text) = &plan.other {
-            // Other row follows the options (c); open it, then paste the free text.
-            cur = nav_to(app, pty_id, cur, plan.option_count).await?;
-            send_key(app, pty_id, b"\r", ADVANCE_SETTLE_MS).await?;
-            inject_text(app, pty_id, text, true).await?;
+            // multiSelect toggles are live and are NOT confirmed with Enter; → advances to the
+            // next tab (the next question, or Submit after the last one).
+            send_key(app, pty_id, b"\x1b[C", ADVANCE_SETTLE_MS).await?;
         } else {
-            send_key(app, pty_id, b"\r", ADVANCE_SETTLE_MS).await?; // select/confirm + advance (b)
+            cur = nav_to(app, pty_id, cur, plan.indices[0]).await?;
+            send_key(app, pty_id, b"\r", ADVANCE_SETTLE_MS).await?; // Enter selects AND advances
         }
         let _ = cur;
     }
 
-    // Multi-question forms do NOT auto-submit: answering the last question moves focus to the
-    // "Submit" tab in the header bar, which needs one final Enter. A single-question form submits
-    // on the question's own Enter. (Verified live — docs §12.3.)
-    if plans.len() > 1 {
+    // Submit. A lone single-select question submits on its own Enter above (there is no Submit
+    // tab). Every other form — multi-question, or any multiSelect — lands on the "Submit" tab,
+    // which takes one Enter. (Pinned live — docs §12.3.)
+    if !single_q_single_select {
         send_key(app, pty_id, b"\r", ADVANCE_SETTLE_MS).await?;
     }
     Ok(())
