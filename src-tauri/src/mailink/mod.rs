@@ -827,6 +827,37 @@ fn session_id_for_tab(app: &AppState, tab_id: &str) -> Option<String> {
         .map(|(id, _)| id.clone())
 }
 
+/// The tab's persisted resume session id — the runtime's `*SessionId` trigger variable that the
+/// auto-resume command interpolates (`claude --resume %claudeSessionId`). Used to resolve a
+/// transcript for an agent that has auto-resumed but NOT yet re-run initSession: in that window
+/// `agent_sessions` has no live entry, so without this the phone falls back to a raw terminal
+/// scrape (wide, unwrapped) or empty, and the app shows stale/duplicated detail. Claude only.
+fn persisted_session_id_for_tab(app: &AppState, tab_id: &str) -> Option<String> {
+    let data = app.app_data.read();
+    for win in &data.windows {
+        for ws in &win.workspaces {
+            for pane in &ws.panes {
+                for tab in &pane.tabs {
+                    if tab.id == tab_id {
+                        return tab
+                            .trigger_variables
+                            .get("claudeSessionId")
+                            .cloned()
+                            .filter(|s| !s.is_empty());
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Session id for reading a tab's transcript: the LIVE session if one is registered, else the
+/// PERSISTED resume id (covers the resume-before-initSession window after an app relaunch).
+fn resolved_session_id_for_tab(app: &AppState, tab_id: &str) -> Option<String> {
+    session_id_for_tab(app, tab_id).or_else(|| persisted_session_id_for_tab(app, tab_id))
+}
+
 /// The captured AskUserQuestion `tool_input` for a tab (most attention-worthy session), if an
 /// elicitation is currently open. Mirrors how `session_id_for_tab` resolves the tab's session.
 fn pending_question_for_tab(app: &AppState, tab_id: &str) -> Option<Value> {
@@ -880,7 +911,11 @@ fn map_ask_questions(tool_input: &Value) -> Option<Value> {
 /// find it, otherwise the old single-system-turn terminal scrape (other runtimes / robustness).
 fn build_transcript(app: &AppState, tab_id: &str, runtime: &str, now: u64) -> Vec<Value> {
     if runtime == "claude" {
-        if let Some(sid) = session_id_for_tab(app, tab_id) {
+        // Resolve via the LIVE session, or (post-relaunch, pre-initSession) the persisted resume
+        // id — so a dormant/resuming agent still shows its real distilled conversation, keyed to
+        // THIS tab, instead of a raw terminal scrape or empty (which the app rendered as
+        // stale/duplicated "all agents look the same" detail).
+        if let Some(sid) = resolved_session_id_for_tab(app, tab_id) {
             if let Some(turns) =
                 transcript::turns_for_session(&sid, 40, transcript::ToolRender::Marker)
             {
@@ -889,9 +924,12 @@ fn build_transcript(app: &AppState, tab_id: &str, runtime: &str, now: u64) -> Ve
                 }
             }
         }
+        // No JSONL resolvable → empty, NOT the raw terminal scrape: the scrape is wide,
+        // unwrapped, and easily misread as another agent's content on a phone.
+        return Vec::new();
     }
-    // Fallback: distilled recent terminal text as a single system turn (the pre-distillation
-    // behavior). Uses the LIVE tab→pty map, not the persisted tab.pty_id which can be stale.
+    // Non-Claude runtimes (no JSONL distillation): distilled recent terminal text as a single
+    // system turn. Uses the LIVE tab→pty map, not the persisted tab.pty_id which can be stale.
     let recent = pty_for_tab(app, tab_id)
         .and_then(|p| crate::commands::terminal::recent_text(app, &p, 40).ok())
         .unwrap_or_default();
