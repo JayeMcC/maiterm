@@ -1,0 +1,28 @@
+scripts/fresh-tenant.sh
+  s_6b259a54074bb7::t_d7e72045f9cc4e 97-118,127-137
+  s_6b259a54074bb7::t_a2977202edc1e3 1-96,119-126,138-189
+infra/fresh-tenant/docker-compose.yml
+  s_6b259a54074bb7::t_51548de9ba3dea 1-40
+infra/fresh-tenant/init.sql
+  s_6b259a54074bb7::t_9df81e5f1fd293 1-12
+tests/utils/fresh-tenant.test.ts
+  s_6b259a54074bb7::t_d45a01c8976eed 1-93
+src/utils/fresh-tenant.ts
+  s_6b259a54074bb7::t_66f724960fc84b 1-118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "a351c82c21f1b506a0c5fa431c1f5563fb4f0b6e",
+  "prompts": {},
+  "sessions": {
+    "s_6b259a54074bb7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f71878d-1aef-44be-b05f-fa6a9d0bdae8",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

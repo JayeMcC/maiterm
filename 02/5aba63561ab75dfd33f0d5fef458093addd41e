@@ -1,0 +1,59 @@
+.agents/rules/10-project/dev-gaps-to-review-dir.md
+  s_10d7e958b8b364::t_055e9c2814ed38 1-103
+.agents/rules/20-workflow/no-debug-routes-in-verification.md
+  s_6b259a54074bb7::t_dbf635c0b15ef7 1-122
+.agents/rules/10-project/permanent-test-scope.md
+  s_cffcdb85151673::t_cefc8ef7d3c171 309-392
+  s_de93a79e17441b::t_fec9ceb2811ae3 239-308
+  s_cffcdb85151673::t_2cb3ce5a04941e 418-428
+  s_de93a79e17441b::t_1b56a3c0061f10 412-413
+.agents/rules/00-governance/tool-behavior-in-project-rules.md
+  s_10d7e958b8b364::t_c902ae03442577 1-88
+.agents/rules/10-project/quickstart-doc-as-design-of-record.md
+  s_6b259a54074bb7::t_eef4df28a97f53 54-75
+  s_10d7e958b8b364::t_3675cb1499752f 1-53,76-112
+.agents/rules/20-workflow/tests-idempotent-no-db-resets.md
+  s_10d7e958b8b364::t_c3de219d41d71b 1-74
+.agents/rules/10-project/llm-prompts-verify-not-negate.md
+  s_6b259a54074bb7::t_4e5e5b0dce8d3d 1-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "025aba63561ab75dfd33f0d5fef458093addd41e",
+  "prompts": {},
+  "sessions": {
+    "s_10d7e958b8b364": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46384a65-2676-4658-b4d1-9722428b95fa",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_6b259a54074bb7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f71878d-1aef-44be-b05f-fa6a9d0bdae8",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_cffcdb85151673": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f7e649e-6902-4adb-a456-e6e44cd2d2b2",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_de93a79e17441b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "43402ee8-58d3-49f2-834a-2372025cd0dd",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
