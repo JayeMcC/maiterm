@@ -559,6 +559,10 @@ async fn ws_event_loop(mut socket: WebSocket, s: ApiState) {
     let _coverage = WsCoverageGuard(s.app.clone());
 
     let mut last: HashMap<String, String> = HashMap::new();
+    // Streaming state (mailink-protocol §12): per-tab last-window msg_ids + transcript mtime, so the
+    // message ticker diffs cheaply and emits only newly-appended turns.
+    let mut seen: HashMap<String, std::collections::HashSet<String>> = HashMap::new();
+    let mut mtimes: HashMap<String, u64> = HashMap::new();
 
     // initial snapshot: one chat_state per chat
     for c in build_chats(&s.app) {
@@ -571,8 +575,16 @@ async fn ws_event_loop(mut socket: WebSocket, s: ApiState) {
     }
 
     let mut ticker = tokio::time::interval(std::time::Duration::from_millis(1500));
+    // A faster, mtime-gated ticker for per-turn message streaming: near-instant delivery without
+    // paying the full chat rebuild (build_chats) at this cadence.
+    let mut msg_ticker = tokio::time::interval(std::time::Duration::from_millis(400));
     loop {
         tokio::select! {
+            _ = msg_ticker.tick() => {
+                if stream_new_messages(&mut socket, &s.app, &mut seen, &mut mtimes).await.is_err() {
+                    return;
+                }
+            }
             _ = ticker.tick() => {
                 let chats = build_chats(&s.app);
                 let mut current_ids = std::collections::HashSet::new();
@@ -634,6 +646,74 @@ fn chat_state_event(c: &Value) -> Value {
         ev["meta"] = meta.clone();
     }
     ev
+}
+
+/// A `message` WS frame for one appended transcript turn (mailink-protocol §12 streaming). Carries
+/// the SAME msg_id/role/text/ts that GET returns for this turn (turns_for_session), so the phone's
+/// dedup-by-msg_id collapses the streamed frame and the REST re-fetch into one entry.
+fn message_event(tab_id: &str, turn: &Value) -> Value {
+    json!({
+        "type": "message",
+        "tabId": tab_id,
+        "role": turn.get("role"),
+        "text": turn.get("text"),
+        "msg_id": turn.get("msg_id"),
+        "ts": turn.get("ts"),
+    })
+}
+
+/// Stream newly-appended agent/tool turns for every designated tab as `message` frames. Never
+/// streams the phone's OWN user turns (peer option iii: those are rendered optimistically on send
+/// and stay in GET for the full-replace refresh) — only turns the phone can't already have. Cheap
+/// when idle: an mtime gate skips tabs whose transcript hasn't changed. `seen` holds the last-window
+/// msg_ids per tab; a tab's FIRST observation baselines silently (no history replay), then only ids
+/// not previously seen are emitted. Returns Err if the socket died (caller exits the loop).
+async fn stream_new_messages(
+    socket: &mut WebSocket,
+    app: &AppState,
+    seen: &mut HashMap<String, std::collections::HashSet<String>>,
+    mtimes: &mut HashMap<String, u64>,
+) -> Result<(), ()> {
+    for t in designated_tabs(app) {
+        let Some(sid) = resolved_session_id_for_tab(app, &t.tab_id) else { continue };
+        // mtime gate: an unchanged transcript means no new turns, so skip the tail re-parse.
+        if let Some(mt) = transcript::session_jsonl_mtime(&sid) {
+            if mtimes.get(&t.tab_id) == Some(&mt) {
+                continue;
+            }
+            mtimes.insert(t.tab_id.clone(), mt);
+        }
+        // Same call GET uses (limit 40, Marker) so streamed ids are byte-identical to the REST path.
+        let Some(turns) = transcript::turns_for_session(&sid, 40, transcript::ToolRender::Marker)
+        else {
+            continue;
+        };
+        let entry = seen.entry(t.tab_id.clone()).or_default();
+        let baseline = entry.is_empty();
+        let mut window: std::collections::HashSet<String> = std::collections::HashSet::new();
+        for turn in &turns {
+            let Some(id) = turn.get("msg_id").and_then(|v| v.as_str()) else { continue };
+            window.insert(id.to_string());
+            if baseline || entry.contains(id) {
+                continue;
+            }
+            // Skip the phone's own user turns; stream agent/tool/system content only.
+            if turn.get("role").and_then(|v| v.as_str()) == Some("user") {
+                continue;
+            }
+            if socket
+                .send(Message::Text(message_event(&t.tab_id, turn).to_string().into()))
+                .await
+                .is_err()
+            {
+                return Err(());
+            }
+        }
+        // Replace (not merge) → bounded to the window; the transcript only grows, so an id that
+        // leaves the window never returns, making replacement safe against re-emitting.
+        *entry = window;
+    }
+    Ok(())
 }
 
 /// Build an `attention` event for a tab, inlining the open prompt (delta 1) so the client can

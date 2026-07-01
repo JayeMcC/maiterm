@@ -89,6 +89,17 @@ pub fn session_meta(session_id: &str) -> Option<SessionMeta> {
     None
 }
 
+/// Millis-since-epoch mtime of a session's transcript JSONL, if locatable. A cheap change-gate for
+/// WS streaming: an unchanged mtime means no new turns, so the tail isn't re-parsed that tick.
+pub fn session_jsonl_mtime(session_id: &str) -> Option<u64> {
+    let path = locate_jsonl(session_id)?;
+    let modified = std::fs::metadata(&path).ok()?.modified().ok()?;
+    modified
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .map(|d| d.as_millis() as u64)
+}
+
 /// Read at most the last `max` bytes of a file as lossy UTF-8 (for tail scans).
 fn read_tail(path: &std::path::Path, max: u64) -> Option<String> {
     use std::io::{Read, Seek, SeekFrom};
