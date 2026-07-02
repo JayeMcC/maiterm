@@ -1,0 +1,21 @@
+specs/feature/TOOL-05__fleet-hub/spec-changelog.md
+  s_37bc688fcf5888::t_5b2283bd8d65e2 46-56
+specs/feature/TOOL-05__fleet-hub/tasks.md
+  s_37bc688fcf5888::t_6f533671763587 108-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "712e7722ef8784544e5d2d48f749a38fb19d5517",
+  "prompts": {},
+  "sessions": {
+    "s_37bc688fcf5888": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98b6ac43-466f-4147-aee9-8502cc685c9f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
