@@ -70,6 +70,10 @@ It's not just a coordination win — it's a token win. One monolithic agent has 
 
 It travels over **your LAN only**, on an encrypted, authenticated channel — TLS with a pinned certificate and a per-device paired token. **No cloud service sits between your phone and your agents.** The single exception is a content-free push "doorbell" hosted on Cloudflare: when an agent needs you while the app is backgrounded, it wakes the app carrying only the tab name and event kind — never a transcript or message. Away from home? Set up a **WireGuard VPN** back to your LAN rather than exposing anything to the internet.
 
+<figure class="spotlight-figure">
+  <img src="/screenshots/mailink-inbox.webp" alt="maiLink on iPhone — an inbox of AI agents, with the ones that need your attention pinned to the top" width="240" />
+</figure>
+
 <CardGrid>
   <Card title="Live transcripts" icon="comment-alt">
     Each agent streams per turn as a distilled chat — with its model, a live context-window gauge, and compaction shown as a divider in the thread.

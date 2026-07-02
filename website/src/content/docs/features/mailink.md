@@ -7,6 +7,12 @@ maiLink is a companion app for your phone that connects **directly to maiTerm ru
 
 maiLink is not a terminal. It renders a distilled chat transcript of an agent session and injects your replies back into it — the session itself never leaves your machine.
 
+<div class="phone-row">
+  <img src="/screenshots/mailink-inbox.webp" alt="maiLink inbox — agents grouped by whether they need your attention, each with a status and last message" />
+  <img src="/screenshots/mailink-answer.webp" alt="Answering an agent's multiple-choice question from the phone, with an option to type a free-text reply" />
+  <img src="/screenshots/mailink-transcript.webp" alt="A live agent transcript on the phone, with a bar to resume a dormant agent" />
+</div>
+
 ## No cloud in the data path
 
 maiLink's defining design decision is what it *doesn't* do: it doesn't route your agents through anyone's server.

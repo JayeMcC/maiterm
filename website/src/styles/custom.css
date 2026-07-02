@@ -79,3 +79,30 @@
     padding: 1.25rem 1rem 1rem;
   }
 }
+
+/* maiLink phone product shots (gpt-image-2 renders, synthetic demo content) */
+.sl-markdown-content .phone-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  justify-content: center;
+  margin: 1.75rem 0;
+}
+.sl-markdown-content .phone-row img {
+  width: 210px;
+  max-width: 46%;
+  height: auto;
+  border-radius: 1.1rem;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+}
+.sl-markdown-content .spotlight-figure {
+  text-align: center;
+  margin: 1.5rem 0 0.25rem;
+}
+.sl-markdown-content .spotlight-figure img {
+  width: 240px;
+  max-width: 68%;
+  height: auto;
+  border-radius: 1.1rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.16);
+}
