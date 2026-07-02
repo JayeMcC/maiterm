@@ -1,0 +1,21 @@
+src/lib/components/terminal/TerminalPane.svelte
+  s_ad2f963c4afad3::t_b65bab92cdfd07 473-485
+src/lib/stores/claudeCode.svelte.ts
+  s_ad2f963c4afad3::t_b09cc3be472aef 730-734
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "78c40470f51ed19a6fc708c2edb3a676adb01e94",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
