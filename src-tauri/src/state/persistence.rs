@@ -80,17 +80,27 @@ pub fn app_data_slug() -> &'static str {
     }
 }
 
-/// Log-directory slug — the Tauri identifier from `tauri.conf.json`. Unlike
-/// `app_data_slug()`, this does NOT vary by debug/release: the Tauri
-/// identifier is a single compile-time constant baked in via the config
-/// (which `tauri.dev.conf.json` does not override), so both debug and
-/// release builds of the fork log to `~/Library/Logs/com.aiterm.app2/`.
+/// Log-directory slug — the Tauri identifier that `tauri-plugin-log` uses to
+/// pick `~/Library/Logs/<identifier>/` on macOS. Debug and release builds now
+/// use DIFFERENT identifiers so the fork's dev instance is a distinct macOS
+/// app from the fork's prod install — separate Preferences plist, separate
+/// WebKit storage, separate notification / camera / mic permission grants,
+/// separate log directory. Without this, `maiTerm2` (release) and
+/// `maiTerm2Dev` (npm run tauri:dev) both inherited `com.aiterm.app2` from
+/// tauri.conf.json and shared every one of those macOS-level surfaces.
 ///
-/// Keep the returned string in sync with the `identifier` field of
-/// `tauri.conf.json` — `read_app_logs` uses it to locate the file
-/// `tauri-plugin-log` is writing to.
+/// Keep in sync with the `identifier` field:
+///  * release build → `tauri.conf.json` (`com.aiterm.app2`)
+///  * debug build → `tauri.dev.conf.json` override (`com.aiterm.dev2`)
+///
+/// `read_app_logs` uses this slug to locate the file `tauri-plugin-log` is
+/// writing to; mismatched values would silently return empty log output.
 pub fn log_dir_slug() -> &'static str {
-    "com.aiterm.app2"
+    if cfg!(debug_assertions) {
+        "com.aiterm.dev2"
+    } else {
+        "com.aiterm.app2"
+    }
 }
 
 /// First-launch migration: if this fork's data dir doesn't exist but the

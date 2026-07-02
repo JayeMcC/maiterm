@@ -76,13 +76,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: maiterm-e2e-artifacts
-          # tauri-plugin-log follows the Tauri identifier, which is a single
-          # compile-time constant (see state/persistence.rs::log_dir_slug).
-          # Debug and release builds of the fork both write to
-          # ~/Library/Logs/com.aiterm.app2/. The com.aiterm.app path is the
-          # legacy upstream slug — still uploaded so a partial regression
-          # that fell back to it isn't invisible.
+          # tauri-plugin-log follows the Tauri identifier — which now varies
+          # by build (see state/persistence.rs::log_dir_slug):
+          #   debug  → com.aiterm.dev2
+          #   release → com.aiterm.app2
+          # This CI job builds --debug, so logs land in com.aiterm.dev2/.
+          # The other two paths are uploaded defensively so a partial
+          # regression (fell back to the wrong slug) isn't invisible.
           path: |
+            ~/Library/Logs/com.aiterm.dev2/
             ~/Library/Logs/com.aiterm.app2/
             ~/Library/Logs/com.aiterm.app/
             ~/.claude/ide/

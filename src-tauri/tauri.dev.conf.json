@@ -1,4 +1,5 @@
 {
+  "identifier": "com.aiterm.dev2",
   "app": {
     "withGlobalTauri": true,
     "security": {
