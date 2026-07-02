@@ -6,8 +6,8 @@
  */
 
 import { spawn, type ChildProcess } from 'node:child_process';
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { readFileSync, readdirSync, statSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 export interface MaitermLock {
@@ -26,12 +26,10 @@ export interface MaitermHandle {
   kill: () => Promise<void>;
 }
 
-const LOCK_DIR = join(homedir(), '.claude', 'ide');
-
 /** Snapshot the set of `.lock` filenames present right now. */
-function snapshotLocks(): Set<string> {
+function snapshotLocks(lockDir: string): Set<string> {
   try {
-    return new Set(readdirSync(LOCK_DIR).filter((n) => n.endsWith('.lock')));
+    return new Set(readdirSync(lockDir).filter((n) => n.endsWith('.lock')));
   } catch {
     return new Set();
   }
@@ -55,10 +53,28 @@ export async function spawnMaiterm(
   if (!existsSync(opts.binary)) {
     throw new Error(`spawnMaiterm: binary not found at ${opts.binary}`);
   }
-  const beforeLocks = snapshotLocks();
+
+  // Hermetic per-instance HOME: without it every spawn reads/writes the real
+  // user profile — tabs from one run restore into the next (reuse-by-name
+  // tests then match stale tabs), and parallel test files thrash the shared
+  // state file (issue #1). The app derives its data dir, log dir, AND the
+  // ~/.claude/ide lockfile dir from $HOME, so one override isolates all three.
+  const home = mkdtempSync(join(tmpdir(), 'maiterm-e2e-home-'));
+  const lockDir = join(home, '.claude', 'ide');
+
+  const beforeLocks = snapshotLocks(lockDir);
   const proc = spawn(opts.binary, [], {
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, ...(opts.env ?? {}) },
+    env: {
+      ...process.env,
+      HOME: home,
+      XDG_CONFIG_HOME: join(home, '.config'),
+      XDG_DATA_HOME: join(home, '.local', 'share'),
+      // macOS Accessory activation: the spawned instance renders in the
+      // background without stealing focus from whoever is at the keyboard.
+      MAITERM_E2E_BACKGROUND: '1',
+      ...(opts.env ?? {}),
+    },
     detached: false,
   });
 
@@ -88,10 +104,10 @@ export async function spawnMaiterm(
     if (exitState.value) {
       throw new Error(`maiTerm exited before lockfile was written (code=${exitState.value.code}, signal=${exitState.value.signal}). ` + `Last output:\n${tail.join('\n')}`);
     }
-    const after = snapshotLocks();
+    const after = snapshotLocks(lockDir);
     for (const name of after) {
       if (beforeLocks.has(name)) continue;
-      const path = join(LOCK_DIR, name);
+      const path = join(lockDir, name);
       let lock: MaitermLock;
       try {
         lock = JSON.parse(readFileSync(path, 'utf8')) as MaitermLock;
@@ -105,32 +121,35 @@ export async function spawnMaiterm(
       // Sanity-check the lockfile is fresh enough.
       const mtime = statSync(path).mtimeMs;
       if (mtime < start) continue;
-      return makeHandle(proc, lock);
+      return makeHandle(proc, lock, home);
     }
     await sleep(200);
   }
 
   proc.kill('SIGTERM');
+  rmSync(home, { recursive: true, force: true });
   throw new Error(`Timed out after ${timeoutMs}ms waiting for maiTerm lockfile (pid=${proc.pid}). Last output:\n${tail.join('\n')}`);
 }
 
-function makeHandle(proc: ChildProcess, lock: MaitermLock): MaitermHandle {
+function makeHandle(proc: ChildProcess, lock: MaitermLock, home: string): MaitermHandle {
   return {
     proc,
     lock,
     async kill() {
-      if (proc.exitCode !== null) return;
-      proc.kill('SIGTERM');
-      await new Promise<void>((resolve) => {
-        const t = setTimeout(() => {
-          proc.kill('SIGKILL');
-          resolve();
-        }, 3_000);
-        proc.once('exit', () => {
-          clearTimeout(t);
-          resolve();
+      if (proc.exitCode === null) {
+        proc.kill('SIGTERM');
+        await new Promise<void>((resolve) => {
+          const t = setTimeout(() => {
+            proc.kill('SIGKILL');
+            resolve();
+          }, 3_000);
+          proc.once('exit', () => {
+            clearTimeout(t);
+            resolve();
+          });
         });
-      });
+      }
+      rmSync(home, { recursive: true, force: true });
     },
   };
 }

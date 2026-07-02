@@ -150,6 +150,23 @@ pub fn run() {
             // arm_running_marker() captured before the logger was ready.
             log_previous_run_status();
 
+            // Background mode (set MAITERM_E2E_BACKGROUND to any value): run
+            // as a macOS Accessory app — no Dock icon, never steals focus or
+            // switches Spaces. Windows still render normally, which the
+            // terminal mount pipeline needs (fully hidden webviews throttle
+            // rAF and PTYs would never spawn). Used by the e2e harness so
+            // spawned instances don't interrupt whoever is at the keyboard.
+            #[cfg(target_os = "macos")]
+            if std::env::var("MAITERM_E2E_BACKGROUND").is_ok() {
+                // Accessory removes Dock/app-switcher presence, but a shown
+                // window can still become key — also mark every window
+                // non-focusable so spawning never steals the user's focus.
+                let _ = app.handle().set_activation_policy(tauri::ActivationPolicy::Accessory);
+                for (_, win) in app.webview_windows() {
+                    let _ = win.set_focusable(false);
+                }
+            }
+
             // Window title is set dynamically from the frontend (workspace name)
 
             // Restore additional windows beyond "main"

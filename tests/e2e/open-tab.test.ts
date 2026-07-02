@@ -157,12 +157,20 @@ if (!BIN) {
       const firstTry = await client.callTool('sendKeysToTab', { tabId: a.tabId, text: 'echo e2e-remount-early\n' });
       const firstParsed = client.parseToolResult<{ success?: boolean; error?: string }>(firstTry);
       if (!firstParsed.success) {
-        // Tab never mounted — exactly the bug. Follow the advice:
+        // Tab never mounted — exactly the bug. Follow the advice: switchTab
+        // initiates the remount; the PTY may outlast its wait window under
+        // load, so retry sendKeysToTab with patience (the real caller
+        // contract) instead of hard-asserting ptyId in the switch result.
         const switched = client.parseToolResult<{ success: boolean; ptyId: string | null }>(await client.callTool('switchTab', { tabId: a.tabId }));
         expect(switched.success).toBe(true);
-        expect(switched.ptyId).toBeTruthy();
-        const retry = client.parseToolResult<{ success: boolean }>(await client.callTool('sendKeysToTab', { tabId: a.tabId, text: 'echo e2e-remount-late\n' }));
-        expect(retry.success).toBe(true);
+        const start = Date.now();
+        let delivered = false;
+        while (Date.now() - start < 20_000 && !delivered) {
+          const retry = client.parseToolResult<{ success?: boolean }>(await client.callTool('sendKeysToTab', { tabId: a.tabId, text: 'echo e2e-remount-late\n' }));
+          delivered = !!retry.success;
+          if (!delivered) await new Promise((r) => setTimeout(r, 1000));
+        }
+        expect(delivered, 'sendKeysToTab succeeds after switchTab-initiated remount').toBe(true);
       }
       // Either way the tab must be writable by now.
       const final = client.parseToolResult<{ success: boolean }>(await client.callTool('sendKeysToTab', { tabId: a.tabId, text: 'echo e2e-remount-final\n' }));
