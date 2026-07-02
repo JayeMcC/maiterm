@@ -660,6 +660,15 @@ pub(crate) fn compact_tool_arg(input: &Value) -> Option<String> {
                 .and_then(|q| q.get("question"))
                 .and_then(|s| s.as_str())
                 .map(String::from)
+        })
+        // Task/Agent subagent spawns carry no command/path — their meaning lives in `description`
+        // (Claude's 3-5 word label) or, failing that, the full `prompt`. Without this a fan-out of
+        // subagents renders as a run of identical bare `Agent` chips — pure repeated noise. Checked
+        // last so a tool with a real primary key (Bash's `command`, etc.) never lands here.
+        .or_else(|| {
+            ["description", "prompt"]
+                .iter()
+                .find_map(|key| input.get(key).and_then(|v| v.as_str()).map(String::from))
         })?;
     let a = one_line_capped(&arg);
     (!a.trim().is_empty()).then_some(a)
@@ -913,6 +922,28 @@ mod tests {
         assert_eq!(out.len(), 1);
         assert_eq!(out[0]["role"], "tool");
         assert_eq!(out[0]["text"], "AskUserQuestion(Which migration strategy?)");
+    }
+
+    #[test]
+    fn subagent_spawn_chip_carries_description_not_bare_name() {
+        // A Task/Agent spawn has no command/path key; its label is the `description`. Before the
+        // fix a fan-out rendered as identical bare `Agent` chips (repeated noise on the phone).
+        let line = json!({
+            "type": "assistant", "uuid": "a1", "timestamp": "2026-07-02T19:40:18.530Z",
+            "message": { "role": "assistant", "content": [ { "type": "tool_use",
+                "name": "Agent", "input": {
+                    "description": "Investigate the parser",
+                    "subagent_type": "general-purpose",
+                    "prompt": "Read the whole parser module and report every panic path." } } ] }
+        });
+        let mut out = Vec::new();
+        push_line_messages(&line, ToolRender::Marker, &mut out);
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0]["text"], "Agent(Investigate the parser)");
+
+        // Falls back to the full prompt when no description is present.
+        let no_desc = json!({ "name": "Task", "input": { "prompt": "Do the thing." } });
+        assert_eq!(tool_label(&no_desc), "Task(Do the thing.)");
     }
 
     #[test]
