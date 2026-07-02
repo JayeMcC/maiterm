@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.19.0
+
+- **maiLink — reach your agents from your phone.** A companion app that connects **directly to maiTerm running on your own computer** so you can watch and steer your agents from anywhere in the house. It talks to maiTerm over your **LAN only**, on an encrypted, authenticated channel (TLS with a per-device paired token) — **no cloud service sits in the middle**. The one small exception is a content-free push "doorbell": when an agent needs you while the app is backgrounded, a tiny relay hosted on Cloudflare wakes the app, carrying no transcript or message content. To reach your agents from outside your network, set up a WireGuard VPN back to your LAN rather than exposing anything to the internet.
+  - **Live transcripts, streamed per turn.** Each agent's conversation streams over a WebSocket as it happens, with a per-agent meta strip showing the model and a context-window gauge, and context compaction shown as a divider.
+  - **Answer prompts from the phone.** An agent's AskUserQuestion arrives as a native prompt you can answer — single-select, multiSelect, and "Other" free-text all work — and you can respond to or interrupt a running agent. The inbox sorts by real per-tab activity, and answering a question clears its card immediately.
+  - **Secure pairing you control.** Pair a device by scanning a QR code; paired devices are listed and individually revocable, each with its own token, so revoking one phone never touches the others. The relay is multi-tenant with capability auth — no shared secret.
+  - **Send images to a local session.** Attach images to a message and they're injected straight into the local Claude Code session.
+  - Designate which tabs and workspaces are reachable from maiLink — default-on with a per-tab exception — under a new Preferences section.
+- **Full-session restore is now solid.** A tab's PTY is authoritative for whether it's actually live, fixed by a one-time boot reconcile and a sequential relaunch — so after a crash or update, tabs come back actually running instead of looking live but dead, and a mesh auto-recheck now waits until restore finishes before acting.
+- **Mesh polish.** The three loop-control caps default to off, so a mesh never pauses a conversation unless you opt in. Long agent names wrap in the cockpit graph instead of overlapping. Agents report to you only through native AskUserQuestion — status-note scraping is gone — and an AskUserQuestion raises a deterministic "needs you" toast.
+- **New tabs inherit where you were.** Opening a new tab adopts the previous tab's host and working directory (falling back to the suspended majority), so it lands where you were working instead of your home directory.
+- Fix Claude chat history silently not persisting after a deploy or restart — a leaked `CLAUDE_CODE_*` environment marker made a resumed session write to a child transcript that was never saved. The markers are now scrubbed when a terminal spawns.
+- Harden the SSH MCP bridge on a flaky remote: a bridge that fails is retried instead of wedging forever, and a hung tunnel fails fast and is reaped rather than hanging the connection.
+- Fix workspace-note writes auto-opening the notes panel, and scope an agent's workspace-note operations to its own workspace.
+- Run shutdown cleanup on a native (Cmd+Q or window-close) quit, not just a menu quit, so background work is torn down cleanly however you exit.
+
 ## v1.18.0
 
 - **Mesh Workspace — connect a whole workspace of agents, not just two.** The Agent Bridge linked exactly two agents; a Mesh Workspace generalizes that to N:M. Turn on a workspace as a mesh and every named agent tab in it can message any other by role name, with no broadcast — each message is addressed, routed off a stable handle so a rename can never misroute, and an unknown or ambiguous recipient is a hard error with the roster, never a silent drop.
