@@ -1,0 +1,21 @@
+src/fleet/run-errors.ts
+  s_37bc688fcf5888::t_e4b565b0d5c936 1-47
+tests/fleet/run-errors.test.ts
+  s_37bc688fcf5888::t_06a4f26a35f16f 1-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "f0a127e30d2a7888281717fa300cdbeb25963b9d",
+  "prompts": {},
+  "sessions": {
+    "s_37bc688fcf5888": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98b6ac43-466f-4147-aee9-8502cc685c9f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
