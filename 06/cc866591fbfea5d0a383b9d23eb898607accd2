@@ -1,0 +1,53 @@
+src/utils/build-frontmatter.ts
+  s_356dd0b6dcdade::t_e22dc0e0611775 49-52,98-100,104-112
+  s_356dd0b6dcdade::t_afc1339b726e1d 113-114
+src/nodes/review-fetch-artefacts.ts
+  s_d68799056db508::t_f230b2c9f22bd7 250-272
+  s_d68799056db508::t_76fefa6e2b29a8 58
+  s_356dd0b6dcdade::t_240eac58e28cab 302-317
+  s_d68799056db508::t_994b73272a1bb6 119-124
+src/nodes/review-extract-acs.ts
+  s_356dd0b6dcdade::t_51c58871f162a6 55-80
+src/nodes/review-analyse-doc.ts
+  s_356dd0b6dcdade::t_28d113f55b2b6b 361-363
+  s_356dd0b6dcdade::t_595cbdb35b47ed 181
+  s_356dd0b6dcdade::t_348f0b21f73ea5 277,279,297-336
+  s_356dd0b6dcdade::t_6245a912de7b5f 45-51
+  s_356dd0b6dcdade::t_e6bf98dec19174 123-154
+src/utils/epic-spec-grounding.ts
+  s_356dd0b6dcdade::t_093f0d84b62749 245-280
+src/utils/analyse-doc-llm.ts
+  s_356dd0b6dcdade::t_9c2890a88192b6 875-881
+  s_356dd0b6dcdade::t_3999eb2fb6c9f0 1127
+  s_356dd0b6dcdade::t_5dc6e2dd67bb04 59-60
+tests/utils/grounding-index.test.ts
+  s_356dd0b6dcdade::t_259322c7aaf3c5 1-113
+src/review/contracts.ts
+  s_356dd0b6dcdade::t_e22dc0e0611775 182-188
+src/utils/grounding-index.ts
+  s_356dd0b6dcdade::t_ebbd6e899b529b 1-206
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "06cc866591fbfea5d0a383b9d23eb898607accd2",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_d68799056db508": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "647c6832-5706-45ac-929e-c54d4f67a87f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
