@@ -1144,12 +1144,21 @@ fn current_prompt(app: &AppState, tab_id: &str) -> Option<(&'static str, String,
     // AskUserQuestion first: it coincides with a permission_prompt state (see build_chat_detail),
     // but the open ask is the structured question — the stale-guard must agree with what was shown.
     if tool.as_deref() == Some("AskUserQuestion") {
-        Some(("question", format!("q_{tab_id}"), *rt))
+        Some(("question", question_prompt_id(app, tab_id), *rt))
     } else if map_state(*st) == "permission" {
         Some(("permission", format!("p_{tab_id}"), *rt))
     } else {
         None
     }
+}
+
+/// Per-ASK prompt id for an open AskUserQuestion: `q_<tab>_<asked_at>`. The capture timestamp
+/// makes successive asks on one tab distinct, so a late `/respond` against an EXPIRED ask
+/// (Claude auto-resolves after ~60s) can never pass the stale-guard and answer a newer
+/// question that opened meanwhile. Opaque to the app — it just echoes it.
+fn question_prompt_id(app: &AppState, tab_id: &str) -> String {
+    let at = pending_question_at_for_tab(app, tab_id).unwrap_or(0);
+    format!("q_{tab_id}_{at}")
 }
 
 /// Map a permission `choice` to the runtime's TUI keystroke. (Fragile by nature — depends on
@@ -1732,7 +1741,8 @@ fn build_chat_detail(app: &AppState, tab_id: &str) -> Option<Value> {
     // validation (docs §12.3).
     if tool.as_deref() == Some("AskUserQuestion") {
         let mut pp = json!({
-            "prompt_id": format!("q_{tab_id}"),
+            // Per-ask id (q_<tab>_<asked_at>) — must agree with current_prompt's stale-guard.
+            "prompt_id": question_prompt_id(app, tab_id),
             "thread_id": tab_id,
             "kind": "question",
             "respondable": true,
