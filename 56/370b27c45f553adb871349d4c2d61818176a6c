@@ -1,0 +1,23 @@
+.github/workflows/e2e.yml
+  s_0b0a8decae781c::t_e841ec2cd058c9 79-85,87
+src-tauri/src/state/persistence.rs
+  s_0b0a8decae781c::t_a993942bbae94e 83-90,92-97,99-103
+src-tauri/tauri.dev.conf.json
+  s_0b0a8decae781c::t_d6a3e4047901c8 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "56370b27c45f553adb871349d4c2d61818176a6c",
+  "prompts": {},
+  "sessions": {
+    "s_0b0a8decae781c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cfc355c0-94be-492a-be60-d41bbc1f9a19",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
