@@ -1,0 +1,28 @@
+tests/e2e/open-tab.test.ts
+  s_ad2f963c4afad3::t_10b3004060b93c 96-170
+src/lib/stores/terminals.svelte.ts
+  s_ad2f963c4afad3::t_48b257d11f0e3d 154-165
+  s_ad2f963c4afad3::t_4bbd5420efd5b2 62-66
+src/lib/components/terminal/TerminalPane.svelte
+  s_ad2f963c4afad3::t_a1cb40d2aa12e8 755-766
+src/lib/stores/claudeCode.svelte.ts
+  s_ad2f963c4afad3::t_9eea8cf83018ec 704-715,720-740
+  s_ad2f963c4afad3::t_fe8533dc1a2024 842,844-850,852-863,878-880
+  s_ad2f963c4afad3::t_8c692949f5db11 788-815,825-827
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "735f733f2a0a0330eda1c58bd2f6d3f21509c61a",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
