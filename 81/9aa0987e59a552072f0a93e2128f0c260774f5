@@ -1,0 +1,21 @@
+tests/fleet/graceful-shutdown.test.ts
+  s_37bc688fcf5888::t_a4100d71d2ffaf 1-127
+src/fleet/graceful-shutdown.ts
+  s_37bc688fcf5888::t_1bb48f2f042fec 1-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "819aa0987e59a552072f0a93e2128f0c260774f5",
+  "prompts": {},
+  "sessions": {
+    "s_37bc688fcf5888": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98b6ac43-466f-4147-aee9-8502cc685c9f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
