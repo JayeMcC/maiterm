@@ -4,7 +4,26 @@ mod pty;
 mod state;
 mod terminal;
 
-pub const APP_DISPLAY_NAME: &str = if cfg!(debug_assertions) { "maiTerm2Dev" } else { "maiTerm2" };
+/// Channel (via `MAITERM_CHANNEL` env var at build time) × build-type product name:
+///   stable release → `maiTerm2`     (main branch prod builds)
+///   stable debug   → `maiTerm2Dev`  (local `npm run tauri:dev` on main)
+///   dev release    → `maiTerm3`     (dev branch prod builds — installs side-by-side)
+///   dev debug      → `maiTerm3Dev`  (local `npm run tauri:dev` on dev)
+///
+/// A runtime `fn` (not a `const`) because matching `option_env!` against a
+/// string literal in const context requires nightly `const PartialEq`. Both
+/// callers (Claude Code protocol serverInfo, lockfile ideName) already read
+/// this lazily at runtime, so there's no cost to the switch.
+///
+/// Kept in sync with `state::persistence::app_data_slug()`.
+pub fn app_display_name() -> &'static str {
+    match (cfg!(debug_assertions), option_env!("MAITERM_CHANNEL")) {
+        (true, Some("dev")) => "maiTerm3Dev",
+        (false, Some("dev")) => "maiTerm3",
+        (true, _) => "maiTerm2Dev",
+        (false, _) => "maiTerm2",
+    }
+}
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 use state::{load_state, save_state, AppState, WindowData, Workspace};

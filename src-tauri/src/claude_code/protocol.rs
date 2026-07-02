@@ -589,7 +589,7 @@ pub fn initialize_response(client_protocol_version: Option<&str>) -> Value {
     serde_json::json!({
         "protocolVersion": client_protocol_version.unwrap_or("2025-03-26"),
         "capabilities": { "tools": {} },
-        "serverInfo": { "name": crate::APP_DISPLAY_NAME, "version": crate::APP_VERSION },
+        "serverInfo": { "name": crate::app_display_name(), "version": crate::APP_VERSION },
         "instructions": format!(
             "You are running inside a maiTerm terminal tab. At the start of every session (new, resume, compact, clear), \
              you MUST call initSession with your tab ID (from $AITERM_TAB_ID or SessionStart hook context) before responding to the user. \

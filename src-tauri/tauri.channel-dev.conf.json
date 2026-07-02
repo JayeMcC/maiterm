@@ -1,0 +1,11 @@
+{
+  "productName": "maiTerm3",
+  "identifier": "com.aiterm.app3",
+  "app": {
+    "windows": [
+      {
+        "title": "maiTerm3"
+      }
+    ]
+  }
+}

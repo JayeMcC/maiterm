@@ -76,7 +76,7 @@ pub fn write_lockfile(port: u16, auth: &str, workspace_folders: Vec<String>, hoo
     let content = serde_json::json!({
         "pid": std::process::id(),
         "workspaceFolders": workspace_folders,
-        "ideName": crate::APP_DISPLAY_NAME,
+        "ideName": crate::app_display_name(),
         "ideVersion": crate::APP_VERSION,
         "transport": "ws",
         "authToken": auth,

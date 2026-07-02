@@ -72,11 +72,21 @@ pub const UPSTREAM_PROD_SLUG: &str = "com.aiterm.app";
 ///
 /// Debug and release builds get DIFFERENT slugs (dev2 vs app2) so a locally
 /// running dev instance can't clobber a production install's state either.
+///
+/// **Release channel** (`MAITERM_CHANNEL` env var at build time):
+///  * unset (or anything except "dev") → stable channel → `com.aiterm.app2` /
+///    `com.aiterm.dev2`. Built from the `main` branch, installed as maiTerm2.
+///  * `"dev"` → dev channel → `com.aiterm.app3` / `com.aiterm.dev3`. Built
+///    from the `dev` branch, installed as maiTerm3 side-by-side with maiTerm2.
+///
+/// The env var is read via `option_env!` (compile-time), so channels are baked
+/// in at build; there's no runtime channel-switching.
 pub fn app_data_slug() -> &'static str {
-    if cfg!(debug_assertions) {
-        "com.aiterm.dev2"
-    } else {
-        "com.aiterm.app2"
+    match (cfg!(debug_assertions), option_env!("MAITERM_CHANNEL")) {
+        (true, Some("dev")) => "com.aiterm.dev3",
+        (false, Some("dev")) => "com.aiterm.app3",
+        (true, _) => "com.aiterm.dev2",
+        (false, _) => "com.aiterm.app2",
     }
 }
 
@@ -89,18 +99,18 @@ pub fn app_data_slug() -> &'static str {
 /// `maiTerm2Dev` (npm run tauri:dev) both inherited `com.aiterm.app2` from
 /// tauri.conf.json and shared every one of those macOS-level surfaces.
 ///
-/// Keep in sync with the `identifier` field:
-///  * release build → `tauri.conf.json` (`com.aiterm.app2`)
-///  * debug build → `tauri.dev.conf.json` override (`com.aiterm.dev2`)
+/// Keep in sync with the `identifier` field of the Tauri config for each
+/// (channel × build-type) combination:
+///  * stable release → `tauri.conf.json` (`com.aiterm.app2`)
+///  * stable debug   → `tauri.dev.conf.json` (`com.aiterm.dev2`)
+///  * dev release    → `tauri.channel-dev.conf.json` (`com.aiterm.app3`)
+///  * dev debug      → dev config + dev.conf.json (`com.aiterm.dev3`)
 ///
 /// `read_app_logs` uses this slug to locate the file `tauri-plugin-log` is
 /// writing to; mismatched values would silently return empty log output.
+/// Currently identical to `app_data_slug()` — they diverged only historically.
 pub fn log_dir_slug() -> &'static str {
-    if cfg!(debug_assertions) {
-        "com.aiterm.dev2"
-    } else {
-        "com.aiterm.app2"
-    }
+    app_data_slug()
 }
 
 /// First-launch migration: if this fork's data dir doesn't exist but the

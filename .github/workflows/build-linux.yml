@@ -1,7 +1,11 @@
 name: Build Linux
 
+# Every push to a build branch produces installable artefacts.
+# main → stable channel (maiTerm2). dev → dev channel (maiTerm3, side-by-side).
+# Tags still fire so release cuts keep working.
 on:
   push:
+    branches: [main, dev]
     tags: ['v*']
   workflow_dispatch:
 
@@ -11,6 +15,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+
+      - name: Determine channel
+        id: channel
+        run: |
+          if [ "${GITHUB_REF}" = "refs/heads/dev" ]; then
+            echo "channel=dev" >> "$GITHUB_OUTPUT"
+            echo "product=maiTerm3" >> "$GITHUB_OUTPUT"
+            echo "tauri_config_flag=--config src-tauri/tauri.channel-dev.conf.json" >> "$GITHUB_OUTPUT"
+          else
+            echo "channel=stable" >> "$GITHUB_OUTPUT"
+            echo "product=maiTerm2" >> "$GITHUB_OUTPUT"
+            echo "tauri_config_flag=" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Install system dependencies
         run: |
@@ -29,6 +46,8 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          # Cache key includes channel so stable/dev don't stomp each other.
+          key: ${{ steps.channel.outputs.channel }}
 
       - name: Install Node.js
         uses: actions/setup-node@v6
@@ -44,22 +63,26 @@ jobs:
         run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: Build Tauri app
-        run: npx tauri build
+        run: npx tauri build ${{ steps.channel.outputs.tauri_config_flag }}
         env:
+          # Read by app_data_slug() and app_display_name() in the Rust
+          # backend so state dirs and window titles match the config
+          # override applied above.
+          MAITERM_CHANNEL: ${{ steps.channel.outputs.channel == 'dev' && 'dev' || '' }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v7
         with:
-          name: maiterm-${{ steps.version.outputs.version }}-linux-deb
+          name: ${{ steps.channel.outputs.product }}-${{ steps.version.outputs.version }}-linux-deb
           path: src-tauri/target/release/bundle/deb/*.deb
           if-no-files-found: error
 
       - name: Upload updater artifact
         uses: actions/upload-artifact@v7
         with:
-          name: maiterm-${{ steps.version.outputs.version }}-linux-updater
+          name: ${{ steps.channel.outputs.product }}-${{ steps.version.outputs.version }}-linux-updater
           path: |
             src-tauri/target/release/bundle/appimage/*.AppImage
             src-tauri/target/release/bundle/appimage/*.AppImage.sig
