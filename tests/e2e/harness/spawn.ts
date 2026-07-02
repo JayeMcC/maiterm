@@ -23,6 +23,8 @@ export interface MaitermLock {
 export interface MaitermHandle {
   proc: ChildProcess;
   lock: MaitermLock;
+  /** The instance's hermetic HOME (pass back to spawnMaiterm for restarts). */
+  home: string;
   kill: () => Promise<void>;
 }
 
@@ -47,6 +49,12 @@ export async function spawnMaiterm(
     binary: string;
     timeoutMs?: number;
     env?: Record<string, string>;
+    /**
+     * Reuse an existing hermetic HOME (restart tests: kill + respawn with the
+     * same state). Caller owns cleanup when provided; otherwise a fresh
+     * mkdtemp HOME is created and removed on kill().
+     */
+    home?: string;
   } = { binary: '' },
 ): Promise<MaitermHandle> {
   if (!opts.binary) throw new Error('spawnMaiterm: binary path is required');
@@ -59,7 +67,8 @@ export async function spawnMaiterm(
   // tests then match stale tabs), and parallel test files thrash the shared
   // state file (issue #1). The app derives its data dir, log dir, AND the
   // ~/.claude/ide lockfile dir from $HOME, so one override isolates all three.
-  const home = mkdtempSync(join(tmpdir(), 'maiterm-e2e-home-'));
+  const ownsHome = !opts.home;
+  const home = opts.home ?? mkdtempSync(join(tmpdir(), 'maiterm-e2e-home-'));
   const lockDir = join(home, '.claude', 'ide');
 
   const beforeLocks = snapshotLocks(lockDir);
@@ -121,20 +130,21 @@ export async function spawnMaiterm(
       // Sanity-check the lockfile is fresh enough.
       const mtime = statSync(path).mtimeMs;
       if (mtime < start) continue;
-      return makeHandle(proc, lock, home);
+      return makeHandle(proc, lock, home, ownsHome);
     }
     await sleep(200);
   }
 
   proc.kill('SIGTERM');
-  rmSync(home, { recursive: true, force: true });
+  if (ownsHome) rmSync(home, { recursive: true, force: true });
   throw new Error(`Timed out after ${timeoutMs}ms waiting for maiTerm lockfile (pid=${proc.pid}). Last output:\n${tail.join('\n')}`);
 }
 
-function makeHandle(proc: ChildProcess, lock: MaitermLock, home: string): MaitermHandle {
+function makeHandle(proc: ChildProcess, lock: MaitermLock, home: string, ownsHome: boolean): MaitermHandle {
   return {
     proc,
     lock,
+    home,
     async kill() {
       if (proc.exitCode === null) {
         proc.kill('SIGTERM');
@@ -149,7 +159,7 @@ function makeHandle(proc: ChildProcess, lock: MaitermLock, home: string): Maiter
           });
         });
       }
-      rmSync(home, { recursive: true, force: true });
+      if (ownsHome) rmSync(home, { recursive: true, force: true });
     },
   };
 }

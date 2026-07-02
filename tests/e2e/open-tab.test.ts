@@ -9,6 +9,9 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { spawnMaiterm, type MaitermHandle } from './harness/spawn.ts';
 import { McpClient } from './harness/mcp-client.ts';
 
@@ -176,5 +179,88 @@ if (!BIN) {
       const final = client.parseToolResult<{ success: boolean }>(await client.callTool('sendKeysToTab', { tabId: a.tabId, text: 'echo e2e-remount-final\n' }));
       expect(final.success).toBe(true);
     });
+  });
+
+  // Regression: a tab restored after an app RESTART keeps its persisted
+  // pty_id, but that PTY died with the old process. reuseExisting used to
+  // trust the stale id and write the command into a dead PTY.
+  describe('maiTerm E2E — restart (stale pty_id reuse)', () => {
+    /** Find this instance's persisted state file inside its hermetic HOME. */
+    function findStateFile(home: string): string | null {
+      const base = join(home, 'Library', 'Application Support');
+      try {
+        for (const dir of readdirSync(base)) {
+          const p = join(base, dir, 'aiterm-state.json');
+          if (existsSync(p)) return p;
+        }
+      } catch {
+        /* not written yet */
+      }
+      return null;
+    }
+
+    it('reuseExisting delivers the command to a tab restored after a restart', async () => {
+      // The test owns the HOME (both spawns receive it) — a spawn-owned HOME
+      // would be deleted by the first kill(), leaving nothing to restore.
+      const home = mkdtempSync(join(tmpdir(), 'maiterm-e2e-restart-'));
+      const first = await spawnMaiterm({ binary: BIN!, timeoutMs: 90_000, home });
+      try {
+        const c1 = new McpClient(first.lock);
+        await c1.initialize();
+        const created = c1.parseToolResult<{ tabId: string }>(
+          await c1.callTool('openTab', { name: 'e2e-restart-test', command: 'echo e2e-restart-first' }),
+        );
+        expect(created.tabId).toBeTruthy();
+
+        // Wait for the tab to be persisted before killing, so the second
+        // instance genuinely restores it (with its now-stale pty_id).
+        const persistStart = Date.now();
+        let persisted = false;
+        while (Date.now() - persistStart < 20_000 && !persisted) {
+          const stateFile = findStateFile(home);
+          persisted = !!stateFile && readFileSync(stateFile, 'utf8').includes('e2e-restart-test');
+          if (!persisted) await new Promise((r) => setTimeout(r, 500));
+        }
+        expect(persisted, 'tab persisted to state before restart').toBe(true);
+        await first.kill(); // caller-owned home survives
+
+        const second = await spawnMaiterm({ binary: BIN!, timeoutMs: 90_000, home });
+        try {
+          const c2 = new McpClient(second.lock);
+          await c2.initialize();
+
+          // Workspace restore is async after boot; give the frontend a
+          // moment to rebuild the tab tree before reusing. (initSession is
+          // NOT a valid restore probe — it cannot see a restored tab until
+          // that tab has a live PTY again.)
+          await new Promise((res) => setTimeout(res, 5000));
+
+          const reused = c2.parseToolResult<{ action: string; tabId: string; ptyId: string | null; queued?: boolean }>(
+            await c2.callTool('openTab', { name: 'e2e-restart-test', command: 'echo e2e-restart-second', reuseExisting: true }),
+          );
+          // 'focused' + same id proves the RESTORED tab (pty_id nulled by
+          // persistence) was found and taken down the queue-and-mount path.
+          expect(reused.action).toBe('focused');
+          expect(reused.tabId).toBe(created.tabId);
+
+          // The reuse gave the tab a live PTY, so a session can bind now.
+          await c2.callTool('initSession', { tabId: reused.tabId });
+          const start = Date.now();
+          let seen = false;
+          while (Date.now() - start < 20_000 && !seen) {
+            const res = c2.parseToolResult<{ tabs: Array<{ content?: string }> }>(
+              await c2.callTool('getTabContext', { tabIds: [reused.tabId], lines: 50 }),
+            );
+            seen = !!res.tabs?.[0]?.content?.includes('e2e-restart-second');
+            if (!seen) await new Promise((r) => setTimeout(r, 500));
+          }
+          expect(seen, 'command delivered to the restored tab').toBe(true);
+        } finally {
+          await second.kill();
+        }
+      } finally {
+        rmSync(home, { recursive: true, force: true });
+      }
+    }, 300_000);
   });
 }

@@ -723,15 +723,16 @@ function createClaudeCodeStore() {
     // mounted instance, force-activate so TerminalPane mounts — spawning a
     // fresh PTY for suspended tabs, reattaching live ones.
     const isTerminal = !loc.tab.tab_type || loc.tab.tab_type === 'terminal';
-    const hadPty = !!loc.tab.pty_id;
-    let ptyId = loc.tab.pty_id ?? null;
-    if (isTerminal && (!ptyId || !terminalsStore.get(args.tabId))) {
+    const staleId = loc.tab.pty_id ?? null;
+    let ptyId = livePtyId(args.tabId, staleId);
+    const hadPty = !!ptyId;
+    if (isTerminal && !ptyId) {
       forceActivateTab(args.tabId);
       // Mount → spawn goes through rAF + layout settle + several Tauri
       // listen() round-trips, which stretches under load — give it a
       // generous window. If it still isn't ready, the caller retries
       // sendKeysToTab (the remount has been initiated either way).
-      const waited = await waitForPtyId(args.tabId, 10_000);
+      const waited = await waitForPtyId(args.tabId, 10_000, staleId);
       if (waited) ptyId = waited;
     }
     return {
@@ -761,15 +762,28 @@ function createClaudeCodeStore() {
   /**
    * Wait for a tab's `pty_id` to be set by the Terminal component's mount-time spawn.
    * Polls the live `workspacesStore` until set or `timeoutMs` elapses. Returns the
-   * pty_id, or null on timeout.
+   * pty_id, or null on timeout. Pass `not` to wait for a REPLACEMENT pty — a tab
+   * restored after an app restart keeps its stale pty_id in the model until the
+   * mount-time spawn overwrites it, so equality with the stale id doesn't count.
    */
-  async function waitForPtyId(tabId: string, timeoutMs = 5000): Promise<string | null> {
+  async function waitForPtyId(tabId: string, timeoutMs = 5000, not?: string | null): Promise<string | null> {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
       const loc = findTabLocation(tabId);
-      if (loc?.tab.pty_id) return loc.tab.pty_id;
+      if (loc?.tab.pty_id && loc.tab.pty_id !== not) return loc.tab.pty_id;
       await new Promise((r) => setTimeout(r, 50));
     }
+    return null;
+  }
+
+  /**
+   * A tab's pty_id is only trustworthy if a live terminal instance backs it or
+   * the PTY survived a frontend reload (reattachable). After an app RESTART the
+   * persisted pty_id points at a PTY that died with the old process.
+   */
+  function livePtyId(tabId: string, ptyId: string | null | undefined): string | null {
+    if (!ptyId) return null;
+    if (terminalsStore.get(tabId) || terminalsStore.shouldReattach(ptyId)) return ptyId;
     return null;
   }
 
@@ -788,7 +802,8 @@ function createClaudeCodeStore() {
       const existing = findTabByName(ws, args.name);
       if (existing) {
         await navigateToTab(existing.tab.id);
-        let ptyId = existing.tab.pty_id ?? null;
+        const staleId = existing.tab.pty_id ?? null;
+        let ptyId = livePtyId(existing.tab.id, staleId);
         let queued = false;
         if (args.command) {
           if (ptyId) {
@@ -805,7 +820,7 @@ function createClaudeCodeStore() {
             // the write.
             terminalsStore.setPendingCommand(existing.tab.id, args.command);
             forceActivateTab(existing.tab.id);
-            ptyId = await waitForPtyId(existing.tab.id, 5000);
+            ptyId = await waitForPtyId(existing.tab.id, 5000, staleId);
             if (ptyId) {
               const pending = terminalsStore.consumePendingCommand(existing.tab.id);
               if (pending !== undefined) {
@@ -817,7 +832,7 @@ function createClaudeCodeStore() {
           }
         } else if (!ptyId) {
           // No command: wait briefly in case the tab is mid-remount.
-          ptyId = await waitForPtyId(existing.tab.id, 2000);
+          ptyId = await waitForPtyId(existing.tab.id, 2000, staleId);
         }
         return {
           action: 'focused',
@@ -896,16 +911,19 @@ function createClaudeCodeStore() {
     if (tab.tab_type && tab.tab_type !== 'terminal') {
       return { error: `Tab ${args.tabId} is a ${tab.tab_type} tab; sendKeysToTab only supports terminal tabs.` };
     }
-    if (!tab.pty_id) {
-      return { error: `Tab ${args.tabId} has no live PTY (suspended or uninitialised). Try switchTab first to remount, then retry.` };
+    // livePtyId also rejects a STALE pty_id (persisted across an app restart;
+    // its PTY died with the old process) — writing to it would just error.
+    const ptyId = livePtyId(args.tabId, tab.pty_id);
+    if (!ptyId) {
+      return { error: `Tab ${args.tabId} has no live PTY (suspended, uninitialised, or stale after a restart). Try switchTab first to remount, then retry.` };
     }
 
     const bytes = encodeForPty(args.text);
-    await commands.writeTerminal(tab.pty_id, bytes);
+    await commands.writeTerminal(ptyId, bytes);
     return {
       success: true,
       tabId: args.tabId,
-      ptyId: tab.pty_id,
+      ptyId,
       bytes: bytes.length,
     };
   }
