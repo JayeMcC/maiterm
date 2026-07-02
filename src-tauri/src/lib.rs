@@ -159,6 +159,22 @@ pub fn run() {
             // arm_running_marker() captured before the logger was ready.
             log_previous_run_status();
 
+            // [BOOT] identity banner — first thing to read during a
+            // white-screen triage. Names the exact build (version + git SHA,
+            // so we can tell if it's the latest) and the data-dir identity
+            // (catches the com.aiterm.{app3,dev3,dev2} slug-mismatch class
+            // that itself causes white screens). If the frontend [BOOT] lines
+            // that follow this in the log are ABSENT, the JS bundle never ran.
+            log::info!(
+                "[BOOT] maiTerm {} (git {}) | debug={} | channel={:?} | data-slug={} | windows={:?}",
+                env!("CARGO_PKG_VERSION"),
+                env!("MAITERM_GIT_SHA"),
+                cfg!(debug_assertions),
+                option_env!("MAITERM_CHANNEL").unwrap_or("<unset>"),
+                crate::state::persistence::app_data_slug(),
+                app.webview_windows().keys().collect::<Vec<_>>(),
+            );
+
             // Background mode (set MAITERM_E2E_BACKGROUND to any value): run
             // as a macOS Accessory app — no Dock icon, never steals focus or
             // switches Spaces. Windows still render normally, which the

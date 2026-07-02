@@ -20,7 +20,7 @@
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { modLabel, modSymbol } from '$lib/utils/platform';
   import * as commands from '$lib/tauri/commands';
-  import { error as logError } from '@tauri-apps/plugin-log';
+  import { error as logError, info as logInfo } from '@tauri-apps/plugin-log';
 
   let loading = $state(true);
   // Populated when workspacesStore.load() rejects. Previously an unhandled
@@ -191,9 +191,14 @@
   }
 
   onMount(() => {
+    // [BOOT] the workspace page (terminal UI) mounted. If the layout [BOOT]
+    // lines appear but this one doesn't, the shell rendered but the page
+    // content failed — a narrower white screen than a blank shell.
+    logInfo('[BOOT] page onMount — loading workspaces').catch(() => {});
     workspacesStore
       .load()
       .then(() => {
+        logInfo('[BOOT] workspaces loaded — terminal UI live').catch(() => {});
         loading = false;
 
         // Session restore. Two independent reasons to bring a background tab live:

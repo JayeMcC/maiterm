@@ -100,6 +100,12 @@
   // run_scheduled_backup / trim_old_backups commands.
 
   onMount(() => {
+    // [BOOT] trace — white-screen diagnosis. If NONE of these lines appear in
+    // the log, the JS bundle never executed (asset/bundle load failure). If
+    // "onMount entered" appears but "onMount body complete" / "first paint"
+    // do not, boot threw partway — the preceding line locates it. Grep [BOOT].
+    logInfo(`[BOOT] layout onMount entered — frontend build ${__APP_VERSION__} (git ${__GIT_SHA__})`).catch(() => {});
+
     // Attach console for dev mode (Rust logs appear in browser devtools)
     let detachConsole: (() => void) | undefined;
     attachConsole().then((detach) => {
@@ -975,6 +981,14 @@
     window.addEventListener('keydown', handleKeydown, true);
     window.addEventListener('keydown', handleKeydownAlt, true);
     window.addEventListener('keyup', handleKeyupAlt, true);
+
+    // [BOOT] onMount body ran to completion (no throw in init). A visible
+    // window that still shows blank AFTER this line means paint/layout, not
+    // boot logic — check the first-paint line below and CSS/geometry.
+    logInfo('[BOOT] layout onMount body complete').catch(() => {});
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => logInfo('[BOOT] first paint (2 rAF after mount)').catch(() => {})),
+    );
 
     return () => {
       window.removeEventListener('open-agent-bridge-picker', onOpenAgentBridgePicker);
