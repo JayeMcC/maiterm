@@ -466,7 +466,7 @@ async fn post_respond(
         return Err(StatusCode::NOT_FOUND);
     }
     let current = current_prompt(&s.app, &tab_id);
-    let (kind, cur_id) = match current {
+    let (kind, cur_id, runtime) = match current {
         Some(p) => p,
         None => return Ok(Json(json!({ "ok": false, "reason": "stale" }))),
     };
@@ -477,9 +477,10 @@ async fn post_respond(
     }
     let pty = pty_for_tab(&s.app, &tab_id).ok_or(StatusCode::CONFLICT)?;
     match kind {
-        // permission menu: a single numeric keystroke selects the option (no bracketed paste)
+        // permission menu: a single keystroke selects the option (no bracketed paste);
+        // the key is runtime-specific — see permission_key.
         "permission" => {
-            let key = permission_key(body.choice.as_deref().unwrap_or(""));
+            let key = permission_key(runtime, body.choice.as_deref().unwrap_or(""));
             crate::pty::write_pty(&s.app, &pty, key.as_bytes())
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         }
@@ -1113,28 +1114,53 @@ async fn drive_question_answers(
     Ok(())
 }
 
-/// The tab's currently-open prompt, as (kind, prompt_id). Mirrors what `build_chat_detail`
-/// synthesizes, so `/respond`'s stale-guard agrees with what the client was shown.
-fn current_prompt(app: &AppState, tab_id: &str) -> Option<(&'static str, String)> {
+/// The tab's currently-open prompt, as (kind, prompt_id, runtime). Mirrors what
+/// `build_chat_detail` synthesizes, so `/respond`'s stale-guard agrees with what the client was
+/// shown; the runtime picks the keystroke dialect for the answer injection.
+fn current_prompt(app: &AppState, tab_id: &str) -> Option<(&'static str, String, AgentRuntime)> {
     let states = session_states(app);
-    let (st, _rt, tool) = states.get(tab_id)?;
+    let (st, rt, tool) = states.get(tab_id)?;
     // AskUserQuestion first: it coincides with a permission_prompt state (see build_chat_detail),
     // but the open ask is the structured question — the stale-guard must agree with what was shown.
     if tool.as_deref() == Some("AskUserQuestion") {
-        Some(("question", format!("q_{tab_id}")))
+        Some(("question", format!("q_{tab_id}"), *rt))
     } else if map_state(*st) == "permission" {
-        Some(("permission", format!("p_{tab_id}")))
+        Some(("permission", format!("p_{tab_id}"), *rt))
     } else {
         None
     }
 }
 
-/// Map a permission `choice` to the TUI keystroke. Standard Claude menu is 1=yes,
-/// 2=yes+don't-ask, 3=no. A bare digit passes through; an unknown label defaults to deny.
-/// (Fragile by nature — depends on the runtime's current affordance; the robust path is a
-/// free-text /message. See docs §5.)
-fn permission_key(choice: &str) -> String {
+/// Map a permission `choice` to the runtime's TUI keystroke. (Fragile by nature — depends on
+/// the runtime's current affordance; the robust path is a free-text /message. See docs §5.)
+///
+///   * Claude: a fixed numeric menu — 1=yes, 2=yes+don't-ask, 3=no. A bare digit passes
+///     through; an unknown label defaults to deny.
+///   * Codex: the approval overlay is a VARIABLE-length list (2–5 options: approve /
+///     approve-for-prefix / approve-for-session / network-amendment / deny / decline
+///     depending on the request), where digit keys select by POSITION — so Claude's "3"
+///     could land on a "Yes, and don't ask again…" row. Codex's default keymap letter
+///     shortcuts are stable regardless of option count (codex-rs tui/src/keymap.rs):
+///     y=approve, a=approve-for-session, n=decline ("No, and tell Codex what to do
+///     differently" — the analogue of Claude's option 3). Digits from the phone are
+///     translated to those letters, never passed through.
+///   * Gemini: no hook registrar yet, so a Gemini session can't reach the permission
+///     state — falls to the Claude arm as a placeholder.
+fn permission_key(runtime: AgentRuntime, choice: &str) -> String {
     let c = choice.trim();
+    if runtime == AgentRuntime::Codex {
+        let key = match c {
+            "1" => "y",
+            "2" => "a",
+            "3" => "n",
+            _ => match c.to_lowercase().as_str() {
+                "yes" | "approve" | "allow" => "y",
+                "yes, don't ask again" | "yes, and don't ask again" | "always" => "a",
+                _ => "n", // safe default: decline (returns control to the human)
+            },
+        };
+        return key.to_string();
+    }
     if c.len() == 1 && c.chars().next().is_some_and(|ch| ch.is_ascii_digit()) {
         return c.to_string();
     }
@@ -1757,7 +1783,7 @@ async fn doorbell_loop(app: Arc<AppState>) {
                 // Distinguish an open AskUserQuestion (state coincides with "permission") from a
                 // real approval prompt so the push line/route matches what the card will show.
                 let kind = match current_prompt(&app, &tab) {
-                    Some(("question", _)) => "question",
+                    Some(("question", _, _)) => "question",
                     Some(_) => "permission",
                     None => "idle_done",
                 };
@@ -1902,6 +1928,29 @@ mod tests {
         assert_eq!(context_limit_for("claude-opus-4-8-1m"), 1_000_000);
         assert_eq!(context_limit_for("claude-opus-4-8"), 1_000_000);
         assert_eq!(context_limit_for("claude-sonnet-4-5"), 200_000);
+    }
+
+    #[test]
+    fn permission_key_is_runtime_specific() {
+        use AgentRuntime::*;
+        // Claude: fixed numeric menu; bare digits pass through; unknown label → deny (3).
+        assert_eq!(permission_key(Claude, "Yes"), "1");
+        assert_eq!(permission_key(Claude, "yes, don't ask again"), "2");
+        assert_eq!(permission_key(Claude, "No"), "3");
+        assert_eq!(permission_key(Claude, "2"), "2");
+        assert_eq!(permission_key(Claude, "whatever"), "3");
+        // Codex: stable letter shortcuts (y/a/n) — digits are POSITIONAL in codex's
+        // variable-length overlay and must never pass through raw.
+        assert_eq!(permission_key(Codex, "Yes"), "y");
+        assert_eq!(permission_key(Codex, "approve"), "y");
+        assert_eq!(permission_key(Codex, "Yes, don't ask again"), "a");
+        assert_eq!(permission_key(Codex, "always"), "a");
+        assert_eq!(permission_key(Codex, "No"), "n");
+        assert_eq!(permission_key(Codex, "1"), "y");
+        assert_eq!(permission_key(Codex, "2"), "a");
+        assert_eq!(permission_key(Codex, "3"), "n");
+        assert_eq!(permission_key(Codex, "5"), "n"); // unknown digit → safe decline
+        assert_eq!(permission_key(Codex, "whatever"), "n");
     }
 
     #[test]
