@@ -1,0 +1,27 @@
+linked-tools/core/scripts/task-engine/README.md
+  s_ad2f963c4afad3::t_bcd3fdf1c9a83b 35-56
+linked-tools/core/scripts/launcher/README.md
+  s_ad2f963c4afad3::t_b21f707b6c0b04 39-70
+todo.md
+  s_ad2f963c4afad3::t_d1767da9e83d94 11
+docs/plans/15-maiterm-hotbar.md
+  s_ad2f963c4afad3::t_af85f4bec4ad52 98-109
+specs/feature/PLAN-15__maiterm-hotbar/tasks.md
+  s_ad2f963c4afad3::t_407cce05469c25 130-131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "3b19ed6a45a18d428ed9e4feff85cd83db4c51ab",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
