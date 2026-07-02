@@ -648,6 +648,18 @@ pub(crate) fn compact_tool_arg(input: &Value) -> Option<String> {
                 (!parts.is_empty()).then(|| parts.join(" "))
             }
             _ => None,
+        })
+        // AskUserQuestion: the first question's text — so the transcript chip reads
+        // `AskUserQuestion(Which migration strategy?)` instead of a bare tool name (with the
+        // 60s auto-resolve, that chip is often all that remains of an unanswered ask).
+        .or_else(|| {
+            input
+                .get("questions")
+                .and_then(|q| q.as_array())
+                .and_then(|a| a.first())
+                .and_then(|q| q.get("question"))
+                .and_then(|s| s.as_str())
+                .map(String::from)
         })?;
     let a = one_line_capped(&arg);
     (!a.trim().is_empty()).then_some(a)
@@ -885,6 +897,22 @@ mod tests {
         let mut out4 = Vec::new();
         push_line_messages(&tool_img, ToolRender::Marker, &mut out4);
         assert!(out4.is_empty());
+    }
+
+    #[test]
+    fn ask_user_question_chip_carries_the_first_question() {
+        let line = json!({
+            "type": "assistant", "uuid": "q1", "timestamp": "2026-07-02T19:40:18.530Z",
+            "message": { "role": "assistant", "content": [ { "type": "tool_use",
+                "name": "AskUserQuestion", "input": { "questions": [
+                    { "question": "Which migration strategy?", "header": "Approach",
+                      "multiSelect": false, "options": [ { "label": "Big bang" } ] } ] } } ] }
+        });
+        let mut out = Vec::new();
+        push_line_messages(&line, ToolRender::Marker, &mut out);
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0]["role"], "tool");
+        assert_eq!(out[0]["text"], "AskUserQuestion(Which migration strategy?)");
     }
 
     #[test]

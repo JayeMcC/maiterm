@@ -1389,7 +1389,7 @@ fn resolved_session_for_tab(app: &AppState, tab_id: &str) -> Option<(AgentRuntim
 }
 
 /// The captured AskUserQuestion `tool_input` for a tab (most attention-worthy session), if an
-/// elicitation is currently open. Mirrors how `session_id_for_tab` resolves the tab's session.
+/// elicitation is currently open. Mirrors how `live_session_for_tab` resolves the tab's session.
 fn pending_question_for_tab(app: &AppState, tab_id: &str) -> Option<Value> {
     let sessions = app.agent_sessions.read();
     sessions
@@ -1397,6 +1397,17 @@ fn pending_question_for_tab(app: &AppState, tab_id: &str) -> Option<Value> {
         .filter(|(_, s)| s.tab_id == tab_id)
         .max_by_key(|(_, s)| rank(s.state))
         .and_then(|(_, s)| s.pending_question.clone())
+}
+
+/// Unix-ms when the tab's open AskUserQuestion was captured. Claude Code auto-resolves an
+/// unanswered ask after ~60s, so the phone uses this to show/expire its answer card.
+fn pending_question_at_for_tab(app: &AppState, tab_id: &str) -> Option<i64> {
+    let sessions = app.agent_sessions.read();
+    sessions
+        .iter()
+        .filter(|(_, s)| s.tab_id == tab_id)
+        .max_by_key(|(_, s)| rank(s.state))
+        .and_then(|(_, s)| s.pending_question_at)
 }
 
 /// The compact argument label of the tab's current tool (e.g. the Bash command awaiting
@@ -1428,10 +1439,17 @@ fn map_ask_questions(tool_input: &Value) -> Option<Value> {
                 .map(|opts| {
                     opts.iter()
                         .map(|o| {
-                            json!({
+                            let mut opt = json!({
                                 "label": o.get("label").and_then(|v| v.as_str()).unwrap_or(""),
                                 "description": o.get("description").and_then(|v| v.as_str()),
-                            })
+                            });
+                            // Newer Claude Code asks attach a per-option `preview` (ASCII
+                            // mockup / code snippet). Additive passthrough — the app can
+                            // render it in the card whenever it wants to.
+                            if let Some(p) = o.get("preview").and_then(|v| v.as_str()) {
+                                opt["preview"] = json!(p);
+                            }
+                            opt
                         })
                         .collect()
                 })
@@ -1722,6 +1740,12 @@ fn build_chat_detail(app: &AppState, tab_id: &str) -> Option<Value> {
         match pending_question_for_tab(app, tab_id).as_ref().and_then(map_ask_questions) {
             Some(qs) => { pp["questions"] = qs; }
             None => { pp["text"] = json!("The agent is asking a question — see the terminal for details."); }
+        }
+        // Claude Code auto-resolves an unanswered ask after ~60s (undocumented,
+        // non-configurable — anthropics/claude-code#73394). Additive: lets the app show a
+        // countdown / expire the card instead of offering a button that will land stale.
+        if let Some(at) = pending_question_at_for_tab(app, tab_id) {
+            pp["asked_at"] = json!(at);
         }
         detail["pendingPrompt"] = pp;
     } else if state == "permission" {

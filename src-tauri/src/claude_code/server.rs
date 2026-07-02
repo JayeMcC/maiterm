@@ -1176,6 +1176,7 @@ async fn process_message(
                                     tool_name: existing.as_ref().and_then(|e| e.tool_name.clone()),
                                     tool_detail: existing.as_ref().and_then(|e| e.tool_detail.clone()),
                                     pending_question: existing.as_ref().and_then(|e| e.pending_question.clone()),
+                                    pending_question_at: existing.as_ref().and_then(|e| e.pending_question_at),
                                     model: existing.and_then(|e| e.model),
                                     connection_id: Some(connection_id.to_string()),
                                 },
@@ -1207,6 +1208,7 @@ async fn process_message(
                                         tool_name: None,
                                         tool_detail: None,
                                         pending_question: None,
+                                        pending_question_at: None,
                                         model: None,
                                         connection_id: Some(connection_id.to_string()),
                                     },
@@ -1628,6 +1630,7 @@ async fn hooks_handler(
                         tool_name: None,
                         tool_detail: None,
                         pending_question: None,
+                        pending_question_at: None,
                         model: model.clone(),
                         connection_id: None,
                     },
@@ -1784,6 +1787,7 @@ async fn hooks_handler(
                     session.tool_name = None;
                     session.tool_detail = None;
                     session.pending_question = None;
+                    session.pending_question_at = None;
                 }
             }
 
@@ -1846,11 +1850,18 @@ async fn hooks_handler(
                         .and_then(crate::mailink::transcript::compact_tool_arg);
                     // Capture the structured AskUserQuestion prompt (its tool_input.questions feed
                     // the maiLink PendingPrompt); any other tool starting means no open question.
-                    session.pending_question = if tool_name == "AskUserQuestion" {
-                        event.get("tool_input").cloned()
+                    if tool_name == "AskUserQuestion" {
+                        session.pending_question = event.get("tool_input").cloned();
+                        session.pending_question_at = Some(
+                            std::time::SystemTime::now()
+                                .duration_since(std::time::UNIX_EPOCH)
+                                .map(|d| d.as_millis() as i64)
+                                .unwrap_or(0),
+                        );
                     } else {
-                        None
-                    };
+                        session.pending_question = None;
+                        session.pending_question_at = None;
+                    }
                 }
             }
 
@@ -1888,6 +1899,7 @@ async fn hooks_handler(
                     // AskUserQuestion completing means the human answered → no open question.
                     if tool_name == "AskUserQuestion" {
                         session.pending_question = None;
+                        session.pending_question_at = None;
                         // The WaitingPermission coinciding with an open ask (Claude fires a
                         // permission_prompt Notification while AskUserQuestion waits) is spent
                         // the moment the ask completes. Without this reset it lingers until the
