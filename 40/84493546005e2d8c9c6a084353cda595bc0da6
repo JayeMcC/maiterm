@@ -1,0 +1,20 @@
+src/graph/review-loop.ts
+  s_37bc688fcf5888::t_c806919f41f264 64-65
+  s_37bc688fcf5888::t_d922ba15ab79a6 75-118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "4084493546005e2d8c9c6a084353cda595bc0da6",
+  "prompts": {},
+  "sessions": {
+    "s_37bc688fcf5888": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98b6ac43-466f-4147-aee9-8502cc685c9f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
