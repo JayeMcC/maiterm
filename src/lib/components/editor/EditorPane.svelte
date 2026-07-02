@@ -10,7 +10,20 @@
   import { ViewPlugin } from '@codemirror/view';
   import { contentSmartQuoteFix } from '$lib/utils/smartQuotes';
   import type { EditorFileInfo } from '$lib/tauri/types';
-  import { readFile, readFileBase64, writeFile, scpReadFile, scpReadFileBase64, scpWriteFile, watchFile, unwatchFile, getFileMtime, watchRemoteFile, unwatchRemoteFile, getRemoteFileMtime } from '$lib/tauri/commands';
+  import {
+    readFile,
+    readFileBase64,
+    writeFile,
+    scpReadFile,
+    scpReadFileBase64,
+    scpWriteFile,
+    watchFile,
+    unwatchFile,
+    getFileMtime,
+    watchRemoteFile,
+    unwatchRemoteFile,
+    getRemoteFileMtime,
+  } from '$lib/tauri/commands';
   import { loadLanguageExtension, detectLanguageFromContent, isImageFile, getImageMimeType, isPdfFile, isMarkdownFile } from '$lib/utils/languageDetect';
   import { marked } from 'marked';
   import { open as shellOpen } from '@tauri-apps/plugin-shell';
@@ -72,14 +85,20 @@
     try {
       const v = localStorage.getItem(IMAGE_BG_KEY);
       if (v === 'dark' || v === 'light' || v === 'checker') return v;
-    } catch { /* localStorage may be unavailable */ }
+    } catch {
+      /* localStorage may be unavailable */
+    }
     return 'dark';
   }
   let imageBg = $state<ImageBg>(loadImageBg());
   function cycleImageBg() {
     const i = IMAGE_BG_ORDER.indexOf(imageBg);
-    imageBg = IMAGE_BG_ORDER[(i + 1) % IMAGE_BG_ORDER.length];
-    try { localStorage.setItem(IMAGE_BG_KEY, imageBg); } catch { /* ignore */ }
+    imageBg = IMAGE_BG_ORDER[(i + 1) % IMAGE_BG_ORDER.length]!;
+    try {
+      localStorage.setItem(IMAGE_BG_KEY, imageBg);
+    } catch {
+      /* ignore */
+    }
   }
   let wordWrap = $state(false);
   const wrapCompartment = new Compartment();
@@ -90,9 +109,13 @@
   let fileDeleted = $state(false);
   let unlistenFileChanged: UnlistenFn | null = null;
   let unlistenFileDeleted: UnlistenFn | null = null;
-  const isLocalFile = !editorFile.is_remote;
+  const isLocalFile = $derived(!editorFile.is_remote);
 
   // PDF viewer state
+  // pdfjs-dist's document/page types would pull the whole types graph into the top-level
+  // import; the viewer is loaded via a dynamic import, so a scoped `any` is the pragmatic
+  // choice. Scope: the `pdfDoc`/`renderPdfPages` code path only.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let pdfDoc = $state<any>(null);
   let pdfPageCount = $state(0);
   let pdfCurrentPage = $state(1);
@@ -154,7 +177,7 @@
       return;
     }
     const totalLines = editorView.state.doc.lines;
-    const line = Math.max(1, Math.min(totalLines, parseInt(m[1], 10)));
+    const line = Math.max(1, Math.min(totalLines, parseInt(m[1]!, 10)));
     const col = m[2] ? Math.max(1, parseInt(m[2], 10)) : 1;
     const info = editorView.state.doc.line(line);
     const pos = Math.min(info.from + col - 1, info.to);
@@ -176,7 +199,7 @@
       closeGotoLine();
     }
   }
-  const isMarkdown = isMarkdownFile(editorFile.remote_path ?? editorFile.file_path);
+  const isMarkdown = $derived(isMarkdownFile(editorFile.remote_path ?? editorFile.file_path));
 
   /** Resolve a potentially relative path against the directory of the current file. */
   function resolveRelativePath(src: string): string | null {
@@ -190,7 +213,10 @@
     const resolved: string[] = [];
     for (const p of parts) {
       if (p === '.' || p === '') continue;
-      if (p === '..') { resolved.pop(); continue; }
+      if (p === '..') {
+        resolved.pop();
+        continue;
+      }
       resolved.push(p);
     }
     return '/' + resolved.join('/');
@@ -203,7 +229,7 @@
     let match;
     while ((match = imgRe.exec(html)) !== null) {
       const fullTag = match[0];
-      const src = match[2];
+      const src = match[2]!;
       const absPath = resolveRelativePath(src);
       if (!absPath) continue;
       const mime = getImageMimeType(absPath) ?? 'image/png';
@@ -242,7 +268,9 @@
       const html = marked.parse(src, { breaks: true, gfm: true }) as string;
       markdownHtml = html;
       // Async: resolve relative images after initial render
-      resolveMarkdownImages(html).then(resolved => { markdownHtml = resolved; });
+      resolveMarkdownImages(html).then((resolved) => {
+        markdownHtml = resolved;
+      });
     }
   }
 
@@ -316,14 +344,14 @@
 
   function zoomIn(anchorX?: number, anchorY?: number) {
     const current = displayZoom;
-    const next = ZOOM_STEPS.find(z => z > current);
-    zoomTo(next ?? ZOOM_STEPS[ZOOM_STEPS.length - 1], anchorX, anchorY);
+    const next = ZOOM_STEPS.find((z) => z > current);
+    zoomTo(next ?? ZOOM_STEPS[ZOOM_STEPS.length - 1]!, anchorX, anchorY);
   }
 
   function zoomOut(anchorX?: number, anchorY?: number) {
     const current = displayZoom;
-    const prev = [...ZOOM_STEPS].reverse().find(z => z < current);
-    zoomTo(prev ?? ZOOM_STEPS[0], anchorX, anchorY);
+    const prev = [...ZOOM_STEPS].reverse().find((z) => z < current);
+    zoomTo(prev ?? ZOOM_STEPS[0]!, anchorX, anchorY);
   }
 
   function zoomFit() {
@@ -412,7 +440,7 @@
   }
 
   function pdfZoomIn() {
-    const next = PDF_ZOOM_STEPS.find(z => z > pdfZoom);
+    const next = PDF_ZOOM_STEPS.find((z) => z > pdfZoom);
     if (next) {
       pdfZoom = next;
       renderPdfPages();
@@ -420,7 +448,7 @@
   }
 
   function pdfZoomOut() {
-    const prev = [...PDF_ZOOM_STEPS].reverse().find(z => z < pdfZoom);
+    const prev = [...PDF_ZOOM_STEPS].reverse().find((z) => z < pdfZoom);
     if (prev) {
       pdfZoom = prev;
       renderPdfPages();
@@ -497,17 +525,27 @@
         let size: number;
         if (isRemote) {
           const result = await scpReadFileBase64(editorFile.remote_ssh_command!, editorFile.remote_path!);
-          data = result.data; size = result.size;
+          data = result.data;
+          size = result.size;
         } else {
           const result = await readFileBase64(editorFile.file_path);
-          data = result.data; size = result.size;
+          data = result.data;
+          size = result.size;
         }
         // Swap in new image atomically — no loading flash
         stopWatching();
-        if (editorView) { editorView.destroy(); editorView = null; }
-        if (pdfDoc) { pdfDoc.destroy(); pdfDoc = null; }
-        pdfPageCount = 0; pdfFileSize = 0;
-        errorMsg = null; dirty = false;
+        if (editorView) {
+          editorView.destroy();
+          editorView = null;
+        }
+        if (pdfDoc) {
+          pdfDoc.destroy();
+          pdfDoc = null;
+        }
+        pdfPageCount = 0;
+        pdfFileSize = 0;
+        errorMsg = null;
+        dirty = false;
         imageDataUrl = `data:${mime};base64,${data}`;
         imageFileSize = size;
         imageNaturalWidth = 0;
@@ -519,20 +557,27 @@
         let size: number;
         if (isRemote) {
           const result = await scpReadFileBase64(editorFile.remote_ssh_command!, editorFile.remote_path!);
-          data = result.data; size = result.size;
+          data = result.data;
+          size = result.size;
         } else {
           const result = await readFileBase64(editorFile.file_path);
-          data = result.data; size = result.size;
+          data = result.data;
+          size = result.size;
         }
         const pdfjsLib = await import('pdfjs-dist');
-        const raw = Uint8Array.from(atob(data), c => c.charCodeAt(0));
+        const raw = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
         const doc = await pdfjsLib.getDocument({ data: raw }).promise;
         // Swap in new PDF
         stopWatching();
-        if (editorView) { editorView.destroy(); editorView = null; }
+        if (editorView) {
+          editorView.destroy();
+          editorView = null;
+        }
         if (pdfDoc) pdfDoc.destroy();
-        imageDataUrl = null; imageFileSize = 0;
-        errorMsg = null; dirty = false;
+        imageDataUrl = null;
+        imageFileSize = 0;
+        errorMsg = null;
+        dirty = false;
         pdfDoc = doc;
         pdfPageCount = doc.numPages;
         pdfFileSize = size;
@@ -551,9 +596,14 @@
         }
         // Swap in new text content
         stopWatching();
-        if (pdfDoc) { pdfDoc.destroy(); pdfDoc = null; }
-        imageDataUrl = null; imageFileSize = 0;
-        pdfPageCount = 0; pdfFileSize = 0;
+        if (pdfDoc) {
+          pdfDoc.destroy();
+          pdfDoc = null;
+        }
+        imageDataUrl = null;
+        imageFileSize = 0;
+        pdfPageCount = 0;
+        pdfFileSize = 0;
         errorMsg = null;
 
         if (editorView) {
@@ -612,7 +662,15 @@
               '&': { height: '100%', fontSize: `${preferencesStore.fontSize}px` },
               '.cm-scroller': { fontFamily: `"${preferencesStore.fontFamily}", Monaco, "Courier New", monospace`, overflow: 'auto' },
             }),
-            keymap.of([{ key: 'Mod-s', run: () => { saveFile(); return true; } }]),
+            keymap.of([
+              {
+                key: 'Mod-s',
+                run: () => {
+                  saveFile();
+                  return true;
+                },
+              },
+            ]),
           ];
           if (langExt) extensions.push(langExt);
 
@@ -644,10 +702,12 @@
         let size: number;
         if (isRemote) {
           const result = await scpReadFileBase64(editorFile.remote_ssh_command!, editorFile.remote_path!);
-          data = result.data; size = result.size;
+          data = result.data;
+          size = result.size;
         } else {
           const result = await readFileBase64(editorFile.file_path);
-          data = result.data; size = result.size;
+          data = result.data;
+          size = result.size;
         }
         imageDataUrl = `data:${mime};base64,${data}`;
         imageFileSize = size;
@@ -658,14 +718,16 @@
         let size: number;
         if (isRemote) {
           const result = await scpReadFileBase64(editorFile.remote_ssh_command!, editorFile.remote_path!);
-          data = result.data; size = result.size;
+          data = result.data;
+          size = result.size;
         } else {
           const result = await readFileBase64(editorFile.file_path);
-          data = result.data; size = result.size;
+          data = result.data;
+          size = result.size;
         }
         pdfFileSize = size;
         const pdfjsLib = await import('pdfjs-dist');
-        const raw = Uint8Array.from(atob(data), c => c.charCodeAt(0));
+        const raw = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
         pdfDoc.destroy();
         const doc = await pdfjsLib.getDocument({ data: raw }).promise;
         pdfDoc = doc;
@@ -691,9 +753,17 @@
         dirty = false;
         setEditorDirty(tabId, false);
         if (isLocalFile) {
-          try { lastKnownMtime = await getFileMtime(editorFile.file_path); } catch { /* ignore */ }
+          try {
+            lastKnownMtime = await getFileMtime(editorFile.file_path);
+          } catch {
+            /* ignore */
+          }
         } else if (editorFile.remote_ssh_command && editorFile.remote_path) {
-          try { lastKnownMtime = await getRemoteFileMtime(editorFile.remote_ssh_command, editorFile.remote_path); } catch { /* ignore */ }
+          try {
+            lastKnownMtime = await getRemoteFileMtime(editorFile.remote_ssh_command, editorFile.remote_path);
+          } catch {
+            /* ignore */
+          }
         }
         dispatch('Reloaded', fileName, 'info');
       }
@@ -773,9 +843,17 @@
       unlistenFileDeleted = null;
     }
     if (isLocalFile) {
-      try { await unwatchFile(tabId); } catch { /* ignore */ }
+      try {
+        await unwatchFile(tabId);
+      } catch {
+        /* ignore */
+      }
     } else {
-      try { await unwatchRemoteFile(tabId); } catch { /* ignore */ }
+      try {
+        await unwatchRemoteFile(tabId);
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -889,25 +967,11 @@
       mergeView = new MergeView({
         a: {
           doc: diskContent,
-          extensions: [
-            EditorState.readOnly.of(true),
-            lineNumbers(),
-            highlightSpecialChars(),
-            highlightActiveLine(),
-            ...themeExtension,
-            editorTheme,
-          ],
+          extensions: [EditorState.readOnly.of(true), lineNumbers(), highlightSpecialChars(), highlightActiveLine(), ...themeExtension, editorTheme],
         },
         b: {
           doc: editorContent,
-          extensions: [
-            contentSmartQuoteFix,
-            lineNumbers(),
-            highlightSpecialChars(),
-            highlightActiveLine(),
-            ...themeExtension,
-            editorTheme,
-          ],
+          extensions: [contentSmartQuoteFix, lineNumbers(), highlightSpecialChars(), highlightActiveLine(), ...themeExtension, editorTheme],
         },
         parent: mergeContainerEl,
         gutter: true,
@@ -958,9 +1022,17 @@
       setEditorDirty(tabId, false);
       // Update mtime so the watcher doesn't treat our own save as an external change
       if (isLocalFile) {
-        try { lastKnownMtime = await getFileMtime(editorFile.file_path); } catch { /* ignore */ }
+        try {
+          lastKnownMtime = await getFileMtime(editorFile.file_path);
+        } catch {
+          /* ignore */
+        }
       } else if (editorFile.remote_ssh_command && editorFile.remote_path) {
-        try { lastKnownMtime = await getRemoteFileMtime(editorFile.remote_ssh_command, editorFile.remote_path); } catch { /* ignore */ }
+        try {
+          lastKnownMtime = await getRemoteFileMtime(editorFile.remote_ssh_command, editorFile.remote_path);
+        } catch {
+          /* ignore */
+        }
       }
       dispatch('File saved', editorFile.file_path.split('/').pop() ?? 'file', 'info');
     } catch (e) {
@@ -1017,7 +1089,7 @@
         const pdfjsLib = await import('pdfjs-dist');
         pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).href;
 
-        const raw = Uint8Array.from(atob(data), c => c.charCodeAt(0));
+        const raw = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
         const doc = await pdfjsLib.getDocument({ data: raw }).promise;
         pdfDoc = doc;
         pdfPageCount = doc.numPages;
@@ -1078,7 +1150,9 @@
             }
             check(view);
             return {
-              update(update) { check(update.view); },
+              update(update) {
+                check(update.view);
+              },
               destroy() {
                 view.dom.closest('.editor-container')?.classList.remove('search-no-results');
               },
@@ -1090,7 +1164,7 @@
               update(update) {
                 if (!update.selectionSet) return;
                 // Only react to search navigation, not user clicks/edits
-                const isSearchNav = update.transactions.some(tr => tr.isUserEvent('select.search'));
+                const isSearchNav = update.transactions.some((tr) => tr.isUserEvent('select.search'));
                 if (!isSearchNav) return;
                 const sel = update.state.selection.main.from;
                 requestAnimationFrame(() => {
@@ -1203,13 +1277,15 @@
               overflow: 'auto',
             },
           }),
-          keymap.of([{
-            key: 'Mod-s',
-            run: () => {
-              saveFile();
-              return true;
+          keymap.of([
+            {
+              key: 'Mod-s',
+              run: () => {
+                saveFile();
+                return true;
+              },
             },
-          }]),
+          ]),
         ];
 
         if (langExt) {
@@ -1228,13 +1304,25 @@
 
         // Record initial mtime and start watching if visible
         if (isLocalFile) {
-          try { lastKnownMtime = await getFileMtime(editorFile.file_path); } catch { /* ignore */ }
+          try {
+            lastKnownMtime = await getFileMtime(editorFile.file_path);
+          } catch {
+            /* ignore */
+          }
         } else if (editorFile.remote_ssh_command && editorFile.remote_path) {
-          try { lastKnownMtime = await getRemoteFileMtime(editorFile.remote_ssh_command, editorFile.remote_path); } catch { /* ignore */ }
+          try {
+            lastKnownMtime = await getRemoteFileMtime(editorFile.remote_ssh_command, editorFile.remote_path);
+          } catch {
+            /* ignore */
+          }
         }
         if (visible) {
-          (async () => { await startWatching(); })();
-          requestAnimationFrame(() => { editorView?.focus(); });
+          (async () => {
+            await startWatching();
+          })();
+          requestAnimationFrame(() => {
+            editorView?.focus();
+          });
         }
 
         // Apply pending selection from Claude Code openFile
@@ -1244,9 +1332,7 @@
           const doc = editorView.state.doc;
           if (pending.startLine !== undefined) {
             const line = doc.line(Math.min(pending.startLine + 1, doc.lines));
-            const endLine = pending.endLine !== undefined
-              ? doc.line(Math.min(pending.endLine + 1, doc.lines))
-              : line;
+            const endLine = pending.endLine !== undefined ? doc.line(Math.min(pending.endLine + 1, doc.lines)) : line;
             editorView.dispatch({
               selection: EditorSelection.range(line.from, endLine.to),
               scrollIntoView: true,
@@ -1255,9 +1341,7 @@
             const text = doc.toString();
             const idx = text.indexOf(pending.startText);
             if (idx >= 0) {
-              const endIdx = pending.endText
-                ? text.indexOf(pending.endText, idx) + pending.endText.length
-                : idx + pending.startText.length;
+              const endIdx = pending.endText ? text.indexOf(pending.endText, idx) + pending.endText.length : idx + pending.startText.length;
               editorView.dispatch({
                 selection: EditorSelection.range(idx, endIdx >= 0 ? endIdx : idx + pending.startText.length),
                 scrollIntoView: true,
@@ -1309,8 +1393,12 @@
   // Track Alt key for zoom-out cursor on image viewer
   $effect(() => {
     if (!imageDataUrl && !pdfDoc) return;
-    const onKey = (e: KeyboardEvent) => { altKeyHeld = e.altKey; };
-    const onBlur = () => { altKeyHeld = false; };
+    const onKey = (e: KeyboardEvent) => {
+      altKeyHeld = e.altKey;
+    };
+    const onBlur = () => {
+      altKeyHeld = false;
+    };
     window.addEventListener('keydown', onKey);
     window.addEventListener('keyup', onKey);
     window.addEventListener('blur', onBlur);
@@ -1342,12 +1430,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-  class="editor-container"
-  class:hidden={!visible}
-  bind:this={containerRef}
-  onmousedowncapture={focusPane}
->
+<div class="editor-container" class:hidden={!visible} bind:this={containerRef} onmousedowncapture={focusPane}>
   {#if loading}
     <div class="editor-loading">Loading...</div>
   {:else if errorMsg}
@@ -1357,7 +1440,13 @@
         <span class="error-text">{errorMsg}</span>
       </div>
       <div class="error-actions">
-        <Button variant="secondary" onclick={() => { navigator.clipboard.writeText(errorMsg ?? ''); }} style="padding:4px 12px;border-radius:4px;font-size: 0.923rem">Copy error</Button>
+        <Button
+          variant="secondary"
+          onclick={() => {
+            navigator.clipboard.writeText(errorMsg ?? '');
+          }}
+          style="padding:4px 12px;border-radius:4px;font-size: 0.923rem">Copy error</Button
+        >
         <Button variant="secondary" onclick={() => workspacesStore.deleteTab(workspaceId, paneId, tabId)} style="padding:4px 12px;border-radius:4px;font-size: 0.923rem">Close tab</Button>
       </div>
     </div>
@@ -1373,9 +1462,11 @@
           <span class="info-sep"></span>
         {/if}
         <div class="zoom-controls">
-          <IconButton tooltip="Zoom out" style="width:22px;height:20px;border-radius:3px;font-size: 1.077rem" onclick={() => zoomOut()} disabled={displayZoom <= ZOOM_STEPS[0]}>&minus;</IconButton>
+          <IconButton tooltip="Zoom out" style="width:22px;height:20px;border-radius:3px;font-size: 1.077rem" onclick={() => zoomOut()} disabled={displayZoom <= ZOOM_STEPS[0]!}>&minus;</IconButton>
           <button class="zoom-label" class:zoom-fit={imageZoom === 0} onclick={zoomFit} title="Fit to window">{displayZoom}%</button>
-          <IconButton tooltip="Zoom in" style="width:22px;height:20px;border-radius:3px;font-size: 1.077rem" onclick={() => zoomIn()} disabled={displayZoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]}>+</IconButton>
+          <IconButton tooltip="Zoom in" style="width:22px;height:20px;border-radius:3px;font-size: 1.077rem" onclick={() => zoomIn()} disabled={displayZoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]!}
+            >+</IconButton
+          >
         </div>
         <span class="info-sep"></span>
         <IconButton tooltip={`Background: ${IMAGE_BG_LABEL[imageBg]} — click to change (for transparent images)`} style="width:22px;height:20px;border-radius:3px" onclick={cycleImageBg}>
@@ -1387,28 +1478,39 @@
       </div>
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="image-scroll" class:bg-light={imageBg === 'light'} class:bg-checker={imageBg === 'checker'} bind:this={imageScrollEl} onclick={handleImageClick} oncontextmenu={handleImageContextMenu} onmousemove={handleImageMouseMove} onmouseleave={handleImageMouseLeave}>
+      <div
+        class="image-scroll"
+        class:bg-light={imageBg === 'light'}
+        class:bg-checker={imageBg === 'checker'}
+        bind:this={imageScrollEl}
+        onclick={handleImageClick}
+        oncontextmenu={handleImageContextMenu}
+        onmousemove={handleImageMouseMove}
+        onmouseleave={handleImageMouseLeave}
+      >
         <img
           bind:this={imageEl}
           src={imageDataUrl}
           alt={editorFile.file_path.split('/').pop() ?? 'image'}
           onload={handleImageLoad}
-          style="{imageZoom === 0 ? 'max-width: 100%; max-height: 100%;' : `width: ${imageNaturalWidth * imageZoom / 100}px; height: ${imageNaturalHeight * imageZoom / 100}px;`} object-fit: contain;"
+          style="{imageZoom === 0
+            ? 'max-width: 100%; max-height: 100%;'
+            : `width: ${(imageNaturalWidth * imageZoom) / 100}px; height: ${(imageNaturalHeight * imageZoom) / 100}px;`} object-fit: contain;"
         />
       </div>
     </div>
     {#if cursorVisible}
       <div class="zoom-cursor" style="left: {cursorX}px; top: {cursorY}px;">
         <svg width="24" height="24" viewBox="0 0 24 24">
-          <circle cx="10" cy="10" r="6.5" fill="rgba(0,0,0,0.15)" stroke="#000" stroke-width="2.5" opacity=".3"/>
-          <circle cx="10" cy="10" r="6.5" fill="rgba(0,0,0,0.15)" stroke="#fff" stroke-width="1.5"/>
-          <line x1="15" y1="15" x2="22" y2="22" stroke="#000" stroke-width="2.5" stroke-linecap="round" opacity=".3"/>
-          <line x1="15" y1="15" x2="22" y2="22" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="10" cy="10" r="6.5" fill="rgba(0,0,0,0.15)" stroke="#000" stroke-width="2.5" opacity=".3" />
+          <circle cx="10" cy="10" r="6.5" fill="rgba(0,0,0,0.15)" stroke="#fff" stroke-width="1.5" />
+          <line x1="15" y1="15" x2="22" y2="22" stroke="#000" stroke-width="2.5" stroke-linecap="round" opacity=".3" />
+          <line x1="15" y1="15" x2="22" y2="22" stroke="#fff" stroke-width="1.5" stroke-linecap="round" />
           {#if altKeyHeld}
-            <line x1="7.5" y1="10" x2="12.5" y2="10" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="7.5" y1="10" x2="12.5" y2="10" stroke="#fff" stroke-width="1.5" stroke-linecap="round" />
           {:else}
-            <line x1="7.5" y1="10" x2="12.5" y2="10" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-            <line x1="10" y1="7.5" x2="10" y2="12.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="7.5" y1="10" x2="12.5" y2="10" stroke="#fff" stroke-width="1.5" stroke-linecap="round" />
+            <line x1="10" y1="7.5" x2="10" y2="12.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round" />
           {/if}
         </svg>
       </div>
@@ -1417,18 +1519,15 @@
     <div class="pdf-preview">
       <div class="image-info-bar">
         <div class="pdf-page-nav">
-          <IconButton tooltip="Previous page" style="width:22px;height:20px;border-radius:3px;font-size: 1.077rem" onclick={() => pdfGoToPage(pdfCurrentPage - 1)} disabled={pdfCurrentPage <= 1}>&#x25C0;</IconButton>
+          <IconButton tooltip="Previous page" style="width:22px;height:20px;border-radius:3px;font-size: 1.077rem" onclick={() => pdfGoToPage(pdfCurrentPage - 1)} disabled={pdfCurrentPage <= 1}
+            >&#x25C0;</IconButton
+          >
           <span class="info-item">
-            <input
-              type="number"
-              class="pdf-page-input"
-              value={pdfCurrentPage}
-              min="1"
-              max={pdfPageCount}
-              onchange={(e) => pdfGoToPage(parseInt((e.target as HTMLInputElement).value) || 1)}
-            /> / {pdfPageCount}
+            <input type="number" class="pdf-page-input" value={pdfCurrentPage} min="1" max={pdfPageCount} onchange={(e) => pdfGoToPage(parseInt((e.target as HTMLInputElement).value) || 1)} /> / {pdfPageCount}
           </span>
-          <IconButton tooltip="Next page" style="width:22px;height:20px;border-radius:3px;font-size: 1.077rem" onclick={() => pdfGoToPage(pdfCurrentPage + 1)} disabled={pdfCurrentPage >= pdfPageCount}>&#x25B6;</IconButton>
+          <IconButton tooltip="Next page" style="width:22px;height:20px;border-radius:3px;font-size: 1.077rem" onclick={() => pdfGoToPage(pdfCurrentPage + 1)} disabled={pdfCurrentPage >= pdfPageCount}
+            >&#x25B6;</IconButton
+          >
         </div>
         <span class="info-sep"></span>
         {#if pdfFileSize > 0}
@@ -1436,22 +1535,18 @@
           <span class="info-sep"></span>
         {/if}
         <div class="zoom-controls">
-          <IconButton tooltip="Zoom out" style="width:22px;height:20px;border-radius:3px;font-size: 1.077rem" onclick={pdfZoomOut} disabled={pdfZoom <= PDF_ZOOM_STEPS[0]}>&minus;</IconButton>
+          <IconButton tooltip="Zoom out" style="width:22px;height:20px;border-radius:3px;font-size: 1.077rem" onclick={pdfZoomOut} disabled={pdfZoom <= PDF_ZOOM_STEPS[0]!}>&minus;</IconButton>
           <span class="zoom-label">{pdfZoom}%</span>
-          <IconButton tooltip="Zoom in" style="width:22px;height:20px;border-radius:3px;font-size: 1.077rem" onclick={pdfZoomIn} disabled={pdfZoom >= PDF_ZOOM_STEPS[PDF_ZOOM_STEPS.length - 1]}>+</IconButton>
+          <IconButton tooltip="Zoom in" style="width:22px;height:20px;border-radius:3px;font-size: 1.077rem" onclick={pdfZoomIn} disabled={pdfZoom >= PDF_ZOOM_STEPS[PDF_ZOOM_STEPS.length - 1]!}
+            >+</IconButton
+          >
         </div>
       </div>
       <div class="pdf-scroll" bind:this={pdfScrollEl} onscroll={handlePdfScroll}>
-        {#each Array(pdfPageCount) as _, i}
+        {#each Array(pdfPageCount) as _, i (i)}
           <div class="pdf-page-wrapper">
-            <canvas
-              bind:this={pdfCanvasRefs[i]}
-              class="pdf-page"
-            ></canvas>
-            <div
-              bind:this={pdfTextLayerRefs[i]}
-              class="pdf-text-layer"
-            ></div>
+            <canvas bind:this={pdfCanvasRefs[i]} class="pdf-page"></canvas>
+            <div bind:this={pdfTextLayerRefs[i]} class="pdf-text-layer"></div>
           </div>
         {/each}
       </div>
@@ -1490,21 +1585,11 @@
   {/if}
   {#if !loading && !errorMsg && !imageDataUrl && !pdfDoc}
     <div class="editor-bar">
-      <IconButton
-        tooltip={wordWrap ? 'Soft wrap: ON (Alt+Z)' : 'Soft wrap: OFF (Alt+Z)'}
-        active={wordWrap}
-        onclick={toggleWordWrap}
-        size={26}
-      >
+      <IconButton tooltip={wordWrap ? 'Soft wrap: ON (Alt+Z)' : 'Soft wrap: OFF (Alt+Z)'} active={wordWrap} onclick={toggleWordWrap} size={26}>
         <Icon name="word-wrap" size={16} />
       </IconButton>
       {#if isMarkdown}
-        <IconButton
-          tooltip={markdownPreview ? 'Edit markdown' : 'Preview markdown'}
-          active={markdownPreview}
-          onclick={toggleMarkdownPreview}
-          size={26}
-        >
+        <IconButton tooltip={markdownPreview ? 'Edit markdown' : 'Preview markdown'} active={markdownPreview} onclick={toggleMarkdownPreview} size={26}>
           {#if markdownPreview}
             <Icon name="pencil" size={16} />
           {:else}
@@ -1516,13 +1601,20 @@
     {#if markdownPreview}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <!-- markdownHtml is rendered from the user's own open file via marked; resolveMarkdownImages only rewrites image URLs -->
+      <!-- eslint-disable-next-line svelte/no-at-html-tags -->
       <div class="md-render" onclick={handleMarkdownClick}>{@html markdownHtml}</div>
     {/if}
   {/if}
   {#if gotoOpen}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="goto-backdrop" onclick={(e) => { if (e.target === e.currentTarget) closeGotoLine(); }}>
+    <div
+      class="goto-backdrop"
+      onclick={(e) => {
+        if (e.target === e.currentTarget) closeGotoLine();
+      }}
+    >
       <div class="goto-modal" role="dialog" aria-modal="true" aria-label="Go to line">
         <div class="goto-title">Go to line</div>
         <input
@@ -1585,7 +1677,7 @@
     font-size: 1rem;
   }
 
-  .editor-container :global(.cm-panel.cm-search input[type="text"]) {
+  .editor-container :global(.cm-panel.cm-search input[type='text']) {
     padding: 3px 6px;
     border-radius: 3px;
     border: 1px solid var(--bg-light);
@@ -1593,13 +1685,13 @@
     color: var(--fg);
   }
 
-  .editor-container :global(.cm-panel.cm-search input[type="text"]:focus) {
+  .editor-container :global(.cm-panel.cm-search input[type='text']:focus) {
     border-color: var(--accent);
     outline: none;
   }
 
   /* No-results indicator: red border on search input when query has no matches */
-  :global(.search-no-results .cm-panel.cm-search input[name="search"]) {
+  :global(.search-no-results .cm-panel.cm-search input[name='search']) {
     border-color: var(--red, #f7768e) !important;
     background: color-mix(in srgb, var(--red, #f7768e) 15%, var(--bg-dark)) !important;
   }
@@ -1704,12 +1796,14 @@
   .image-scroll.bg-checker {
     background-color: #ffffff;
     background-image:
-      linear-gradient(45deg, #c4c4c4 25%, transparent 25%),
-      linear-gradient(-45deg, #c4c4c4 25%, transparent 25%),
-      linear-gradient(45deg, transparent 75%, #c4c4c4 75%),
+      linear-gradient(45deg, #c4c4c4 25%, transparent 25%), linear-gradient(-45deg, #c4c4c4 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #c4c4c4 75%),
       linear-gradient(-45deg, transparent 75%, #c4c4c4 75%);
     background-size: 20px 20px;
-    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    background-position:
+      0 0,
+      0 10px,
+      10px -10px,
+      -10px 0;
   }
 
   .image-scroll img {
@@ -2089,10 +2183,18 @@
     line-height: 1.3;
   }
 
-  .md-render :global(h1) { font-size: 1.5em; }
-  .md-render :global(h2) { font-size: 1.3em; }
-  .md-render :global(h3) { font-size: 1.15em; }
-  .md-render :global(h4) { font-size: 1.05em; }
+  .md-render :global(h1) {
+    font-size: 1.5em;
+  }
+  .md-render :global(h2) {
+    font-size: 1.3em;
+  }
+  .md-render :global(h3) {
+    font-size: 1.15em;
+  }
+  .md-render :global(h4) {
+    font-size: 1.05em;
+  }
 
   .md-render :global(p) {
     margin: 0 0 0.6em;
@@ -2174,7 +2276,7 @@
     border-radius: 4px;
   }
 
-  .md-render :global(input[type="checkbox"]) {
+  .md-render :global(input[type='checkbox']) {
     appearance: none;
     width: 1em;
     height: 1em;
@@ -2187,12 +2289,12 @@
     top: -1px;
   }
 
-  .md-render :global(input[type="checkbox"]:checked) {
+  .md-render :global(input[type='checkbox']:checked) {
     background: var(--accent);
     border-color: var(--accent);
   }
 
-  .md-render :global(input[type="checkbox"]:checked::after) {
+  .md-render :global(input[type='checkbox']:checked::after) {
     content: '';
     position: absolute;
     left: 50%;
@@ -2204,7 +2306,7 @@
     transform: translate(-50%, -60%) rotate(45deg);
   }
 
-  .md-render :global(li:has(> input[type="checkbox"])) {
+  .md-render :global(li:has(> input[type='checkbox'])) {
     list-style: none;
     margin-left: -1.5em;
   }

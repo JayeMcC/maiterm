@@ -17,7 +17,7 @@ function detectSshCommand(ptyInfo: { foreground_command: string | null }, tabId:
   // Fallback: check persisted SSH command on the tab
   for (const ws of workspacesStore.workspaces) {
     for (const pane of ws.panes) {
-      const tab = pane.tabs.find(t => t.id === tabId);
+      const tab = pane.tabs.find((t) => t.id === tabId);
       if (tab) return tab.restore_ssh_command ?? tab.auto_resume_ssh_command ?? null;
     }
   }
@@ -28,12 +28,7 @@ function detectSshCommand(ptyInfo: { foreground_command: string | null }, tabId:
  * Open a file from a terminal context.
  * Creates the editor tab immediately — EditorPane handles loading and errors.
  */
-export async function openFileFromTerminal(
-  workspaceId: string,
-  paneId: string,
-  tabId: string,
-  filePath: string,
-) {
+export async function openFileFromTerminal(workspaceId: string, paneId: string, tabId: string, filePath: string) {
   try {
     const instance = terminalsStore.get(tabId);
     if (!instance) return;

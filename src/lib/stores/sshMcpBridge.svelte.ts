@@ -16,6 +16,7 @@ import { error as logError, info as logInfo } from '@tauri-apps/plugin-log';
 import { setVariable } from '$lib/stores/triggers.svelte';
 import { countedListen as listen } from '$lib/utils/listenCounter';
 import type { UnlistenFn } from '@tauri-apps/api/event';
+import { SvelteMap } from 'svelte/reactivity';
 
 export type BridgeStatus = 'connected' | 'pending' | 'failed';
 
@@ -26,10 +27,11 @@ interface BridgeState {
   error?: string;
 }
 
-/** Reactive map of tabId → bridge state. Svelte 5 $state for reactivity in TerminalTabs. */
-let bridgeStates = $state<Map<string, BridgeState>>(new Map());
+/** Reactive map of tabId → bridge state. Read reactively in TerminalTabs via getBridgeStatus(). */
+const bridgeStates = new SvelteMap<string, BridgeState>();
 
 /** Per-tab event listeners for tunnel-down events from Rust. */
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative listener registry; entries are UnlistenFn callbacks
 const tunnelListeners = new Map<string, UnlistenFn>();
 
 /**
@@ -37,9 +39,7 @@ const tunnelListeners = new Map<string, UnlistenFn>();
  * Used when Rust notifies us the tunnel died.
  */
 function clearBridgeState(tabId: string): void {
-  if (!bridgeStates.has(tabId)) return;
-  bridgeStates.delete(tabId);
-  bridgeStates = new Map(bridgeStates);
+  if (!bridgeStates.delete(tabId)) return;
   logInfo(`SSH MCP bridge cleared for tab ${tabId} (tunnel down)`);
 }
 
@@ -77,10 +77,7 @@ function extractHostKey(sshArgs: string): string {
  * SSH short flags that take a following argument.
  * See `man ssh` OPTIONS section.
  */
-const SSH_FLAGS_WITH_ARG = new Set([
-  '-b', '-c', '-D', '-E', '-e', '-F', '-I', '-i', '-J', '-L',
-  '-l', '-m', '-O', '-o', '-p', '-Q', '-R', '-S', '-W', '-w',
-]);
+const SSH_FLAGS_WITH_ARG = new Set(['-b', '-c', '-D', '-E', '-e', '-F', '-I', '-i', '-J', '-L', '-l', '-m', '-O', '-o', '-p', '-Q', '-R', '-S', '-W', '-w']);
 
 /**
  * Detect whether an ssh process is running an interactive shell or a one-shot remote command.
@@ -94,11 +91,14 @@ const SSH_FLAGS_WITH_ARG = new Set([
  *   - trailing command contains `exec $SHELL` (maiTerm's split/restore reconnect pattern)
  */
 export function isInteractiveSshSession(cmd: string): boolean {
-  const tokens = cmd.replace(/^ssh\s+/, '').split(/\s+/).filter(Boolean);
+  const tokens = cmd
+    .replace(/^ssh\s+/, '')
+    .split(/\s+/)
+    .filter(Boolean);
   let i = 0;
   let sawHost = false;
   while (i < tokens.length) {
-    const t = tokens[i];
+    const t = tokens[i]!;
     if (t.startsWith('-')) {
       // Known flag+arg pair, unless written as -oKey=Value (combined).
       if (SSH_FLAGS_WITH_ARG.has(t) && t.length === 2) i += 2;
@@ -120,14 +120,9 @@ export function isInteractiveSshSession(cmd: string): boolean {
  * This runs as a non-interactive command, not through the user's PTY.
  * Sets up: lockfile, MCP entry in ~/.claude.json, hooks in ~/.claude/settings.json.
  */
-function buildSetupScript(
-  remotePort: number,
-  authToken: string,
-  tabId: string,
-  scripts: commands.MaitermSkillScripts,
-): string {
+function buildSetupScript(remotePort: number, authToken: string, tabId: string, scripts: commands.MaitermSkillScripts): string {
   const lockContent = JSON.stringify({
-    pid: 0,  // Background SSH — no persistent PID on remote
+    pid: 0, // Background SSH — no persistent PID on remote
     transport: 'ws',
     authToken,
     serverPort: remotePort,
@@ -151,7 +146,7 @@ function buildSetupScript(
   // ── Hooks registration ──
   // Build hooks data for ~/.claude/settings.json on the remote.
   // HTTP hooks tunnel back through the reverse SSH tunnel to our local MCP server.
-  const hooksUrl = "http://127.0.0.1:" + remotePort + "/hooks";
+  const hooksUrl = 'http://127.0.0.1:' + remotePort + '/hooks';
 
   // SessionStart command hook: reads $AITERM_TAB_ID (injected into PTY after bridge setup),
   // extracts session_id from hook stdin, echoes both into Claude's context.
@@ -159,23 +154,22 @@ function buildSetupScript(
   // SessionStart hook: reads $AITERM_TAB_ID from env, falls back to ~/.aiterm file
   // (needed when Claude runs inside tmux where env vars weren't inherited).
   const sessionStartCmd =
-    "{ [ -z \"$AITERM_TAB_ID\" ] && [ -f ~/.aiterm ] && . ~/.aiterm; } 2>/dev/null; " +
-    "{ [ \"$AITERM_PORT\" = \"" + remotePort + "\" ] || [ -z \"$AITERM_PORT\" ]; } && " +
-    "[ -n \"$AITERM_TAB_ID\" ] && " +
-    "AITERM_SID=$(cat | sed -n 's/.*\"session_id\" *: *\"\\([^\"]*\\)\".*/\\1/p' | head -1) && " +
+    '{ [ -z "$AITERM_TAB_ID" ] && [ -f ~/.aiterm ] && . ~/.aiterm; } 2>/dev/null; ' +
+    '{ [ "$AITERM_PORT" = "' +
+    remotePort +
+    '" ] || [ -z "$AITERM_PORT" ]; } && ' +
+    '[ -n "$AITERM_TAB_ID" ] && ' +
+    'AITERM_SID=$(cat | sed -n \'s/.*"session_id" *: *"\\([^"]*\\)".*/\\1/p\' | head -1) && ' +
     "echo 'Your maiTerm tab ID is '$AITERM_TAB_ID'. Your session ID is '$AITERM_SID'. " +
     "You MUST immediately call the maiterm initSession tool with this tabId and sessionId before responding to the user. This is required for correct tab targeting.' || true";
 
-  const httpHook = { matcher: "", hooks: [{ type: "http", url: hooksUrl, headers: { "x-claude-code-ide-authorization": authToken } }] };
+  const httpHook = { matcher: '', hooks: [{ type: 'http', url: hooksUrl, headers: { 'x-claude-code-ide-authorization': authToken } }] };
 
   const hooksData = JSON.stringify({
     url: hooksUrl,
     port: remotePort,
     hooks: {
-      SessionStart: [
-        { matcher: "", hooks: [{ type: "command", command: sessionStartCmd, timeout: 5 }] },
-        httpHook,
-      ],
+      SessionStart: [{ matcher: '', hooks: [{ type: 'command', command: sessionStartCmd, timeout: 5 }] }, httpHook],
       SessionEnd: [httpHook],
       Notification: [httpHook],
       Stop: [httpHook],
@@ -241,10 +235,10 @@ function buildSetupScript(
     'printf \'%s\' "$__mcp" | python3 -c \'import json,sys,os; e=json.load(sys.stdin); p=os.path.expanduser("~/.claude.json"); d=json.load(open(p)) if os.path.exists(p) else {}; m=d.setdefault("mcpServers",{}); m["maiterm"]=e; m.pop("aiterm",None); open(p,"w").write(json.dumps(d,indent=2))\'',
     "printf '%s' \"$__hooks\" | python3 -c '" + pythonHooks + "'",
     'elif command -v jq >/dev/null 2>&1; then',
-    '[ -f ~/.claude.json ] || echo \'{}\' > ~/.claude.json',
+    "[ -f ~/.claude.json ] || echo '{}' > ~/.claude.json",
     'jq --argjson entry "$__mcp" \'.mcpServers.maiterm = $entry | del(.mcpServers.aiterm)\' ~/.claude.json > ~/.claude.json.tmp && mv ~/.claude.json.tmp ~/.claude.json',
     'else',
-    '[ -f ~/.claude.json ] || echo \'{}\' > ~/.claude.json',
+    "[ -f ~/.claude.json ] || echo '{}' > ~/.claude.json",
     'fi',
     // Write tab ID + port to ~/.aiterm so tmux/new shells can source it
     `printf 'export AITERM_TAB_ID=${tabId}\\nexport AITERM_PORT=${remotePort}\\n' > ~/.aiterm`,
@@ -252,10 +246,10 @@ function buildSetupScript(
     'rm -rf ~/.claude/skills/aiterm',
     'mkdir -p ~/.claude/skills/maiterm',
     "cat > ~/.claude/skills/maiterm/SKILL.md << 'SKILLEOF'\n" +
-    // Single source of truth: the SKILL.md body comes from the bundled resource
-    // (get_maiterm_skill_scripts), identical to the local install — no drift.
-    scripts.skill_md +
-    'SKILLEOF',
+      // Single source of truth: the SKILL.md body comes from the bundled resource
+      // (get_maiterm_skill_scripts), identical to the local install — no drift.
+      scripts.skill_md +
+      'SKILLEOF',
     // Bundle the /maiterm statusline helper scripts on the remote too, so
     // `/maiterm statusline` works in remote (SSH-bridged) Claude sessions.
     'mkdir -p ~/.claude/skills/maiterm/bin',
@@ -297,14 +291,13 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
 
   // Mark as pending immediately to prevent concurrent calls from racing
   const hostKey = extractHostKey(sshArgs);
-  bridgeStates = new Map(bridgeStates.set(tabId, { hostKey, remotePort: 0, status: 'pending' }));
+  bridgeStates.set(tabId, { hostKey, remotePort: 0, status: 'pending' });
 
   const localPort = await commands.getMcpPort();
   const authToken = await commands.getMcpAuth();
   if (!localPort || !authToken) {
     logError('Cannot enable SSH MCP bridge: MCP server not running');
     bridgeStates.delete(tabId);
-    bridgeStates = new Map(bridgeStates);
     return false;
   }
 
@@ -347,15 +340,15 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
       try {
         const info = await commands.getPtyInfo(ptyId);
         if (!info.foreground_command || !isInteractiveSshSession(info.foreground_command)) {
-          logInfo("SSH MCP bridge: skipping env-var injection — ssh no longer foreground for tab " + tabId);
+          logInfo('SSH MCP bridge: skipping env-var injection — ssh no longer foreground for tab ' + tabId);
         } else {
-          const envCmd = " export AITERM_TAB_ID=" + tabId + " AITERM_PORT=" + tunnelInfo.remote_port + "\n";
+          const envCmd = ' export AITERM_TAB_ID=' + tabId + ' AITERM_PORT=' + tunnelInfo.remote_port + '\n';
           const bytes = Array.from(new TextEncoder().encode(envCmd));
           await commands.writeTerminal(ptyId, bytes);
-          logInfo("SSH MCP bridge: injected env vars into remote shell for tab " + tabId);
+          logInfo('SSH MCP bridge: injected env vars into remote shell for tab ' + tabId);
         }
       } catch (e) {
-        logError("SSH MCP bridge: failed to inject env vars: " + e);
+        logError('SSH MCP bridge: failed to inject env vars: ' + e);
       }
     }
 
@@ -363,11 +356,11 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
     // If any setup failed, this throws and the outer catch marks the bridge as failed.
     await Promise.all(setupPromises);
 
-    bridgeStates = new Map(bridgeStates.set(tabId, {
+    bridgeStates.set(tabId, {
       hostKey,
       remotePort: tunnelInfo.remote_port,
       status: 'connected',
-    }));
+    });
 
     // Listen for tunnel process death from Rust — clears indicator in real-time
     listenForTunnelDown(tabId).catch(() => {});
@@ -378,12 +371,12 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
     const errMsg = String(e);
     logError(`SSH MCP bridge failed for ${hostKey}: ${errMsg}`);
 
-    bridgeStates = new Map(bridgeStates.set(tabId, {
+    bridgeStates.set(tabId, {
       hostKey,
       remotePort: 0,
       status: 'failed',
       error: errMsg,
-    }));
+    });
 
     dispatch('MCP Bridge Failed', `Could not connect to ${hostKey}: ${errMsg}`, 'error', { tabId });
     return false;
@@ -399,7 +392,6 @@ export async function disableBridge(tabId: string): Promise<void> {
 
   cleanupListener(tabId);
   bridgeStates.delete(tabId);
-  bridgeStates = new Map(bridgeStates);
 
   try {
     await commands.detachSshTunnel(bridge.hostKey, tabId);

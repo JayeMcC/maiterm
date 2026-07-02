@@ -4,12 +4,12 @@ import { workspacesStore } from '$lib/stores/workspaces.svelte';
 import { activityStore } from '$lib/stores/activity.svelte';
 import { writeTerminal, setTabTriggerVariables, getPtyInfo, cleanSshCommand, buildSshCommand, shellEscapePath } from '$lib/tauri/commands';
 import { stripAnsi } from '$lib/utils/ansi';
-import { getCompiledTitlePatterns, getCompiledPatterns, extractDirFromTitle } from '$lib/utils/promptPattern';
+import { getCompiledTitlePatterns, extractDirFromTitle } from '$lib/utils/promptPattern';
 import { dispatch } from './notificationDispatch';
 import { error as logError } from '@tauri-apps/plugin-log';
 import { parseCondition, evaluateCondition } from '$lib/triggers/variableCondition';
 import { isForkCommand } from '$lib/agents/resume';
-import type { Trigger, MatchMode } from '$lib/tauri/types';
+import type { MatchMode } from '$lib/tauri/types';
 
 const BUFFER_CAP = 4096;
 
@@ -20,9 +20,11 @@ const BUFFER_CAP = 4096;
 const REDRAW_RE = /\x1b\[\d*[AHf]|\x1b\[\d+;\d+[Hf]|\x1b\[\d*J/;
 
 // Per-tab sliding window buffer (ANSI-stripped, multiline)
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative module-level buffer, only read via functions
 const buffers = new Map<string, string>();
 
 // Cooldown tracking: triggerId → tabId → lastFiredMs
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative tracking, no reactive reads
 const cooldowns = new Map<string, Map<string, number>>();
 
 // Diagnostic counters for trigger processing
@@ -70,22 +72,28 @@ export function getTriggerStats() {
 // repaints "Enter to confirm" on every frame, producing the same stripped text).
 // Dedup expires after DEDUP_WINDOW_MS so genuinely new identical matches can fire.
 const DEDUP_WINDOW_MS = 10_000;
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative dedup tracker, no reactive reads
 const lastMatches = new Map<string, Map<string, { text: string; ts: number }>>();
 
 // Compiled regex cache: pattern string → RegExp (or null if invalid)
 // Uses 's' (dotAll) flag so `.` matches newlines for multiline patterns
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- pure compilation cache
 const regexCache = new Map<string, RegExp | null>();
 
 // Runtime variable storage: tabId → Map<varName, value>
+// UI updates flow through the varChangeListeners pub/sub below, not Svelte's fine-grained tracking.
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- manual listener pattern (notifyVarChange) drives UI, not Svelte tracking
 const variableMap = new Map<string, Map<string, string>>();
 
 // Tabs where triggers should extract variables but NOT fire actions.
 // Used during terminal restore/auto-resume to prevent old output from
 // triggering notifications and commands.
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative flag set, read only from processOutput
 const suppressedTabs = new Set<string>();
 
 // Variable trigger transition tracking: triggerId → tabId → { result, varsSnapshot }
 // Fires on false→true transition OR when condition stays true but variable values change.
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative transition tracker, no reactive reads
 const variableTransitions = new Map<string, Map<string, { result: boolean; snapshot: string }>>();
 
 /** Deterministic snapshot of variable values for change detection. */
@@ -102,13 +110,12 @@ export function resolveMatchMode(trigger: { match_mode?: MatchMode | null; plain
 
 // Change listeners for reactive UI updates
 type VarChangeCallback = (tabId: string, vars: Map<string, string>) => void;
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- callback registry (subscribe/unsubscribe pattern)
 const varChangeListeners = new Set<VarChangeCallback>();
 
 /** Escape a plain-text fragment: metacharacters escaped, whitespace → \s*. */
 function escapePlainSegment(text: string): string {
-  return text
-    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    .replace(/\\?\s+/g, '\\s*');
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\?\s+/g, '\\s*');
 }
 
 /**
@@ -133,7 +140,7 @@ function buildHybridSource(pattern: string): string {
       if (inner.includes('|')) {
         // Alternation group — preserve structure, escape each alternative
         const alternatives = inner.split('|');
-        result += '(?:' + alternatives.map(a => escapePlainSegment(a)).join('|') + ')';
+        result += '(?:' + alternatives.map((a) => escapePlainSegment(a)).join('|') + ')';
       } else {
         // No alternation — treat parens + content as literal
         result += escapePlainSegment(pattern.slice(i, close + 1));
@@ -183,8 +190,8 @@ function getOscTitle(tabId: string): string {
 function getTabName(tabId: string): string {
   const instance = terminalsStore.get(tabId);
   if (instance) {
-    const ws = workspacesStore.workspaces.find(w => w.id === instance.workspaceId);
-    const tab = ws?.panes.flatMap(p => p.tabs).find(t => t.id === tabId);
+    const ws = workspacesStore.workspaces.find((w) => w.id === instance.workspaceId);
+    const tab = ws?.panes.flatMap((p) => p.tabs).find((t) => t.id === tabId);
     if (tab) return tab.name;
   }
   return 'Terminal';
@@ -194,8 +201,8 @@ function getTabName(tabId: string): string {
 function getTabDisplayName(tabId: string): string {
   const instance = terminalsStore.get(tabId);
   if (!instance) return 'Terminal';
-  const ws = workspacesStore.workspaces.find(w => w.id === instance.workspaceId);
-  const tab = ws?.panes.flatMap(p => p.tabs).find(t => t.id === tabId);
+  const ws = workspacesStore.workspaces.find((w) => w.id === instance.workspaceId);
+  const tab = ws?.panes.flatMap((p) => p.tabs).find((t) => t.id === tabId);
   if (!tab) return 'Terminal';
 
   const oscTitle = terminalsStore.getOsc(tabId)?.title;
@@ -230,6 +237,7 @@ function checkCooldown(triggerId: string, tabId: string, cooldownSecs: number): 
 function markFired(triggerId: string, tabId: string) {
   let tabMap = cooldowns.get(triggerId);
   if (!tabMap) {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- inner map of imperative cooldowns store
     tabMap = new Map();
     cooldowns.set(triggerId, tabMap);
   }
@@ -243,15 +251,12 @@ function notifyVarChange(tabId: string) {
   }
 }
 
-function extractAndStoreVariables(
-  tabId: string,
-  match: RegExpMatchArray,
-  variables: { name: string; group: number; template?: string }[],
-) {
+function extractAndStoreVariables(tabId: string, match: RegExpMatchArray, variables: { name: string; group: number; template?: string }[]) {
   if (!variables.length) return;
 
   let vars = variableMap.get(tabId);
   if (!vars) {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- inner map of imperative variableMap store
     vars = new Map();
     variableMap.set(tabId, vars);
   }
@@ -274,8 +279,7 @@ function extractAndStoreVariables(
     if (instance) {
       const plain: Record<string, string> = {};
       for (const [k, val] of vars) plain[k] = val;
-      setTabTriggerVariables(instance.workspaceId, instance.paneId, tabId, plain)
-        .catch(e => logError(`Failed to persist trigger variables: ${e}`));
+      setTabTriggerVariables(instance.workspaceId, instance.paneId, tabId, plain).catch((e) => logError(`Failed to persist trigger variables: ${e}`));
     }
   }
 }
@@ -293,7 +297,7 @@ async function executeActions(
         let cmd = entry.command;
         const vars = variableMap.get(tabId);
         if (vars) {
-          cmd = cmd.replace(/%(\w+)/g, (m, name) => vars.has(name) ? vars.get(name)! : m);
+          cmd = cmd.replace(/%(\w+)/g, (m, name) => (vars.has(name) ? vars.get(name)! : m));
         }
         const bytes = Array.from(new TextEncoder().encode(cmd + '\n'));
         await writeTerminal(instance.ptyId, bytes);
@@ -303,12 +307,13 @@ async function executeActions(
     } else if (entry.action_type === 'notify') {
       try {
         const vars = variableMap.get(tabId);
-        const interpolate = (text: string) => text.replace(/%([\w]+)/g, (m: string, name: string) => {
-          if (name === 'title') return getOscTitle(tabId);
-          if (name === 'tab') return getTabName(tabId);
-          if (name === 'tabtitle') return getTabDisplayName(tabId);
-          return vars?.has(name) ? vars.get(name)! : m;
-        });
+        const interpolate = (text: string) =>
+          text.replace(/%([\w]+)/g, (m: string, name: string) => {
+            if (name === 'title') return getOscTitle(tabId);
+            if (name === 'tab') return getTabName(tabId);
+            if (name === 'tabtitle') return getTabDisplayName(tabId);
+            return vars?.has(name) ? vars.get(name)! : m;
+          });
         const title = interpolate(entry.title || '%tabtitle');
         const body = interpolate(entry.message || '');
         await dispatch(title, body, 'info', { tabId });
@@ -327,7 +332,12 @@ async function executeActions(
 }
 
 async function fireTrigger(
-  trigger: { id: string; name: string; actions: { action_type: string; command: string | null; title: string | null; message: string | null; tab_state: string | null }[]; variables: { name: string; group: number; template?: string }[] },
+  trigger: {
+    id: string;
+    name: string;
+    actions: { action_type: string; command: string | null; title: string | null; message: string | null; tab_state: string | null }[];
+    variables: { name: string; group: number; template?: string }[];
+  },
   tabId: string,
   match: RegExpMatchArray,
 ) {
@@ -358,15 +368,15 @@ export async function handleEnableAutoResume(tabId: string, commandTemplate: str
       const osc7Cwd = oscState?.cwd ?? null;
       const promptCwd = oscState?.promptCwd ?? null;
       const isOsc7Stale = osc7Cwd === localCwd;
-      remoteCwd = (osc7Cwd && !isOsc7Stale) ? osc7Cwd : promptCwd ?? null;
+      remoteCwd = osc7Cwd && !isOsc7Stale ? osc7Cwd : (promptCwd ?? null);
     }
 
     // Preserve existing custom command — only fall back to the trigger's
     // command template when the tab has no command set yet.
     // Old commands are migrated at startup in workspaces.svelte.ts load().
-    const ws = workspacesStore.workspaces.find(w => w.id === instance.workspaceId);
-    const pane = ws?.panes.find(p => p.id === instance.paneId);
-    const tab = pane?.tabs.find(t => t.id === tabId);
+    const ws = workspacesStore.workspaces.find((w) => w.id === instance.workspaceId);
+    const pane = ws?.panes.find((p) => p.id === instance.paneId);
+    const tab = pane?.tabs.find((t) => t.id === tabId);
     const existingRaw = tab?.auto_resume_command ?? tab?.auto_resume_remembered_command ?? null;
     // A `--fork-session` command is never a valid auto-resume command: it re-forks
     // the ORIGINAL session into a brand-new session on every resume, losing this
@@ -376,26 +386,19 @@ export async function handleEnableAutoResume(tabId: string, commandTemplate: str
     // template (claudeState sets %claudeSessionId to the fork's id before calling
     // this). So never preserve a fork command — let the template take over.
     const existing = isForkCommand(workspacesStore.getTabRuntime(tabId), existingRaw) ? null : existingRaw;
-    const cmd = existing || (commandTemplate || null);
+    const cmd = existing || commandTemplate || null;
 
     // Prevent SSH context downgrade: if the tab already has an SSH auto-resume
     // context but the current PTY shows no SSH (e.g. SSH replay failed on
     // restore), preserve the existing SSH/CWD fields and only update the command.
     if (!sshCmd) {
       if (tab?.auto_resume_ssh_command) {
-        await workspacesStore.setTabAutoResumeContext(
-          instance.workspaceId, instance.paneId, tabId,
-          tab.auto_resume_cwd, tab.auto_resume_ssh_command,
-          tab.auto_resume_remote_cwd, cmd,
-        );
+        await workspacesStore.setTabAutoResumeContext(instance.workspaceId, instance.paneId, tabId, tab.auto_resume_cwd, tab.auto_resume_ssh_command, tab.auto_resume_remote_cwd, cmd);
         return;
       }
     }
 
-    await workspacesStore.setTabAutoResumeContext(
-      instance.workspaceId, instance.paneId, tabId,
-      localCwd, sshCmd, remoteCwd, cmd,
-    );
+    await workspacesStore.setTabAutoResumeContext(instance.workspaceId, instance.paneId, tabId, localCwd, sshCmd, remoteCwd, cmd);
   } catch (e) {
     logError(`enable_auto_resume failed for tab ${tabId}: ${e}`);
   }
@@ -405,9 +408,9 @@ export async function handleEnableAutoResume(tabId: string, commandTemplate: str
 export async function replayAutoResume(tabId: string) {
   const instance = terminalsStore.get(tabId);
   if (!instance) return;
-  const ws = workspacesStore.workspaces.find(w => w.id === instance.workspaceId);
-  const pane = ws?.panes.find(p => p.id === instance.paneId);
-  const tab = pane?.tabs.find(t => t.id === tabId);
+  const ws = workspacesStore.workspaces.find((w) => w.id === instance.workspaceId);
+  const pane = ws?.panes.find((p) => p.id === instance.paneId);
+  const tab = pane?.tabs.find((t) => t.id === tabId);
   if (!tab) return;
 
   const sshCmd = tab.auto_resume_ssh_command ?? null;
@@ -476,6 +479,7 @@ function evaluateVariableTriggers(tabId: string) {
     // Get previous state
     let tabTransitions = variableTransitions.get(trigger.id);
     if (!tabTransitions) {
+      // eslint-disable-next-line svelte/prefer-svelte-reactivity -- inner map of imperative variableTransitions store
       tabTransitions = new Map();
       variableTransitions.set(trigger.id, tabTransitions);
     }
@@ -554,7 +558,7 @@ export function processOutput(tabId: string, data: Uint8Array) {
       // repeated repaints keep pushing the expiry forward without firing.
       const now = Date.now();
       const prev = lastMatches.get(trigger.id)?.get(tabId);
-      if (prev && prev.text === matchedText && (now - prev.ts) < DEDUP_WINDOW_MS) {
+      if (prev && prev.text === matchedText && now - prev.ts < DEDUP_WINDOW_MS) {
         if (isRedraw) prev.ts = now;
         continue;
       }
@@ -562,6 +566,7 @@ export function processOutput(tabId: string, data: Uint8Array) {
       // Track matched text + timestamp for dedup
       let tabMap = lastMatches.get(trigger.id);
       if (!tabMap) {
+        // eslint-disable-next-line svelte/prefer-svelte-reactivity -- inner map of imperative lastMatches store
         tabMap = new Map();
         lastMatches.set(trigger.id, tabMap);
       }
@@ -615,6 +620,7 @@ export function unsuppressTab(tabId: string) {
  *  Seeds variable transition state without firing to prevent false positives on restart. */
 export function loadTabVariables(tabId: string, vars: Record<string, string>) {
   if (!vars || !Object.keys(vars).length) return;
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- inner map of imperative variableMap store, built once and installed
   const map = new Map<string, string>();
   for (const [k, v] of Object.entries(vars)) map.set(k, v);
   variableMap.set(tabId, map);
@@ -637,6 +643,7 @@ function initializeVariableTransitions(tabId: string, vars: Map<string, string>)
       const result = evaluateCondition(node, vars);
       let tabMap = variableTransitions.get(trigger.id);
       if (!tabMap) {
+        // eslint-disable-next-line svelte/prefer-svelte-reactivity -- inner map of imperative variableTransitions store
         tabMap = new Map();
         variableTransitions.set(trigger.id, tabMap);
       }
@@ -662,6 +669,7 @@ export function getVariables(tabId: string): Map<string, string> | undefined {
 export async function setVariable(tabId: string, name: string, value: string | null) {
   let vars = variableMap.get(tabId);
   if (!vars) {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- inner map of imperative variableMap store
     vars = new Map();
     variableMap.set(tabId, vars);
   }
@@ -692,15 +700,16 @@ export function clearTabVariables(tabId: string) {
   notifyVarChange(tabId);
   const instance = terminalsStore.get(tabId);
   if (instance) {
-    setTabTriggerVariables(instance.workspaceId, instance.paneId, tabId, {})
-      .catch(e => logError(`Failed to clear trigger variables: ${e}`));
+    setTabTriggerVariables(instance.workspaceId, instance.paneId, tabId, {}).catch((e) => logError(`Failed to clear trigger variables: ${e}`));
   }
 }
 
 /** Subscribe to variable changes. Returns unsubscribe function. */
 export function onVariablesChange(cb: VarChangeCallback): () => void {
   varChangeListeners.add(cb);
-  return () => { varChangeListeners.delete(cb); };
+  return () => {
+    varChangeListeners.delete(cb);
+  };
 }
 
 /** Interpolate %varName references in a string from tab's trigger variables.

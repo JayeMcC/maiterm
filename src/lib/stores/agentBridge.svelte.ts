@@ -7,6 +7,7 @@ import { claudeStateStore } from '$lib/stores/agentState.svelte';
 import { getAdapter } from '$lib/agents/adapter';
 import { bracketedPasteSubmit } from '$lib/utils/agentPrompt';
 import { createDeliveryController } from '$lib/stores/agentDelivery';
+import { SvelteMap } from 'svelte/reactivity';
 import { error as logError, info as logInfo } from '@tauri-apps/plugin-log';
 
 /**
@@ -47,9 +48,9 @@ import { error as logError, info as logInfo } from '@tauri-apps/plugin-log';
  * breaking, and a closed tab tears the bridge down cleanly.
  */
 
-const FORK_BOOT_POLL_MS = 500;       // poll interval while waiting for the fork's Claude to register
+const FORK_BOOT_POLL_MS = 500; // poll interval while waiting for the fork's Claude to register
 const FORK_BOOT_TIMEOUT_MS = 15_000; // cap on waiting for the fork to boot before priming anyway
-const FORK_SETTLE_MS = 1500;         // extra settle after the fork registers, so its TUI accepts input
+const FORK_SETTLE_MS = 1500; // extra settle after the fork registers, so its TUI accepts input
 const FORK_INIT_TIMEOUT_MS = 25_000; // if the fork never re-inits on this instance, tell the caller
 
 type BridgeRole = 'caller' | 'fork' | 'peer';
@@ -76,7 +77,10 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 function createAgentBridgeStore() {
   // Both tabs of a bridge get an entry pointing at each other (symmetric).
-  const bridges = new Map<string, BridgeEntry>();
+  // SvelteMap so the UI-facing getters (isBridged, isBridgedToLivePartner, getBridgeInfo,
+  // getPartnerLabel) light up on structural changes; explicit bump()s still cover in-place
+  // value mutations (bridge.turn++, partnerSessionId re-bind) which SvelteMap can't track.
+  const bridges = new SvelteMap<string, BridgeEntry>();
   // Recipient-keyed FIFO delivery mailbox (queue + cooldown + drain), shared with the mesh.
   // injectPrompt is hoisted (function declaration), so referencing it here is safe.
   const deliveryCtl = createDeliveryController({
@@ -88,14 +92,18 @@ function createAgentBridgeStore() {
     },
   });
   // Forked partners awaiting init → opener-into-caller (keyed by fork tab id).
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- internal handshake tracker; read only in event handlers / primeFork, never in reactive contexts
   const pendingOpeners = new Map<string, { callerTabId: string }>();
   // Best-effort cwd label when live OSC cwd isn't available yet.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative cwd cache; consumed inside getCwd for envelope builders, not read reactively
   const cwdHint = new Map<string, string>();
   // Reactive version bump so UI ($derived) can react to bridge changes.
   let version = $state(0);
   const unlisteners: (() => void)[] = [];
 
-  function bump() { version++; }
+  function bump() {
+    version++;
+  }
 
   function resolveTab(tabId: string) {
     for (const ws of workspacesStore.workspaces) {
@@ -194,9 +202,7 @@ function createAgentBridgeStore() {
     const partnerName = bridge?.partnerLabel ?? label(partnerTabId);
     const cwd = getCwd(partnerTabId);
     const where = cwd ? ` (working in ${cwd})` : '';
-    const what = forked
-      ? `a peer AI agent forked with the FULL context of that session`
-      : `a peer AI agent running in another tab`;
+    const what = forked ? `a peer AI agent forked with the FULL context of that session` : `a peer AI agent running in another tab`;
     const purpose = bridge?.purpose?.trim();
     const ctx = purpose ? ` Your human operator describes it as: "${purpose}".` : '';
     return (
@@ -231,8 +237,8 @@ function createAgentBridgeStore() {
    *  hanging. */
   async function primeFork(forkTabId: string) {
     for (let waited = 0; waited < FORK_BOOT_TIMEOUT_MS; waited += FORK_BOOT_POLL_MS) {
-      if (!pendingOpeners.has(forkTabId)) return;            // already handshaked / disconnected
-      if (claudeStateStore.getState(forkTabId)) break;        // fork's Claude is up on this instance
+      if (!pendingOpeners.has(forkTabId)) return; // already handshaked / disconnected
+      if (claudeStateStore.getState(forkTabId)) break; // fork's Claude is up on this instance
       await sleep(FORK_BOOT_POLL_MS);
     }
     await sleep(FORK_SETTLE_MS);
@@ -247,7 +253,7 @@ function createAgentBridgeStore() {
     // Backstop: if the fork doesn't re-init on this instance, don't leave the caller waiting.
     setTimeout(() => {
       const po = pendingOpeners.get(forkTabId);
-      if (!po) return;                                        // handshake completed
+      if (!po) return; // handshake completed
       pendingOpeners.delete(forkTabId);
       if (tabExists(po.callerTabId)) void deliveryCtl.deliver(po.callerTabId, buildBridgeFailedNote(forkTabId));
     }, FORK_INIT_TIMEOUT_MS);
@@ -263,7 +269,9 @@ function createAgentBridgeStore() {
   }
 
   return {
-    get version() { return version; },
+    get version() {
+      return version;
+    },
 
     getInternalSizes() {
       return { bridges: bridges.size, delivery: deliveryCtl.size(), pending_openers: pendingOpeners.size };
@@ -294,7 +302,10 @@ function createAgentBridgeStore() {
      *  at the one being closed. Call this BEFORE the tab is removed from state so the
      *  survivor can still be resolved (for the disconnect notice + persisted clear). */
     handleTabClosed(tabId: string) {
-      if (bridges.has(tabId)) { this.disconnect(tabId); return; }
+      if (bridges.has(tabId)) {
+        this.disconnect(tabId);
+        return;
+      }
       for (const [other, b] of bridges) {
         if (b.partnerTabId === tabId) this.disconnect(other);
       }
@@ -327,12 +338,18 @@ function createAgentBridgeStore() {
       // Re-key anything else keyed by the old id (pending opener, cwd hint), and any
       // opener that referenced the old id as its caller.
       const po = pendingOpeners.get(oldTabId);
-      if (po) { pendingOpeners.delete(oldTabId); pendingOpeners.set(newTabId, po); }
+      if (po) {
+        pendingOpeners.delete(oldTabId);
+        pendingOpeners.set(newTabId, po);
+      }
       for (const [forkId, o] of pendingOpeners) {
         if (o.callerTabId === oldTabId) pendingOpeners.set(forkId, { callerTabId: newTabId });
       }
       const ch = cwdHint.get(oldTabId);
-      if (ch !== undefined) { cwdHint.delete(oldTabId); cwdHint.set(newTabId, ch); }
+      if (ch !== undefined) {
+        cwdHint.delete(oldTabId);
+        cwdHint.set(newTabId, ch);
+      }
 
       bump();
       // Persist the new reciprocal pairing. The old tab's record dies with the deleted
@@ -427,11 +444,7 @@ function createAgentBridgeStore() {
      * For when the split is already set up (e.g. auto-reconnect failed but both agents
      * are still live) and the human just wants to re-establish the bridge.
      */
-    async bridgeExistingTab(
-      callerTabId: string,
-      targetTabId: string,
-      purpose?: string,
-    ): Promise<{ ok: true; partnerTabId: string; partnerLabel: string } | { ok: false; error: string }> {
+    async bridgeExistingTab(callerTabId: string, targetTabId: string, purpose?: string): Promise<{ ok: true; partnerTabId: string; partnerLabel: string } | { ok: false; error: string }> {
       if (callerTabId === targetTabId) return { ok: false, error: 'Cannot bridge a tab to itself.' };
       const callerLoc = resolveTab(callerTabId);
       const targetLoc = resolveTab(targetTabId);
@@ -464,12 +477,21 @@ function createAgentBridgeStore() {
 
       // Symmetric bridge between two established agents — both ready, both trust
       // claudeState immediately, each records the other's live session id.
-      bridges.set(callerTabId, { partnerTabId: targetTabId, partnerLabel: targetLabel, turn: callerTurn, partnerSessionId: targetState.sessionId, role: 'caller', purpose: purpose?.trim() || undefined });
+      bridges.set(callerTabId, {
+        partnerTabId: targetTabId,
+        partnerLabel: targetLabel,
+        turn: callerTurn,
+        partnerSessionId: targetState.sessionId,
+        role: 'caller',
+        purpose: purpose?.trim() || undefined,
+      });
       bridges.set(targetTabId, { partnerTabId: callerTabId, partnerLabel: callerLabel, turn: targetTurn, partnerSessionId: callerState?.sessionId, role: 'peer' });
       deliveryCtl.ensure(callerTabId, true);
       deliveryCtl.ensure(targetTabId, true);
-      const callerCwd = getCwd(callerTabId); if (callerCwd) cwdHint.set(callerTabId, callerCwd);
-      const targetCwd = getCwd(targetTabId); if (targetCwd) cwdHint.set(targetTabId, targetCwd);
+      const callerCwd = getCwd(callerTabId);
+      if (callerCwd) cwdHint.set(callerTabId, callerCwd);
+      const targetCwd = getCwd(targetTabId);
+      if (targetCwd) cwdHint.set(targetTabId, targetCwd);
 
       bump();
       void persistBridge(callerTabId);
@@ -569,7 +591,10 @@ function createAgentBridgeStore() {
         if (po) {
           pendingOpeners.delete(tab_id);
           const callerBridge = bridges.get(po.callerTabId);
-          if (callerBridge) { callerBridge.partnerSessionId = session_id; void persistBridge(po.callerTabId); }
+          if (callerBridge) {
+            callerBridge.partnerSessionId = session_id;
+            void persistBridge(po.callerTabId);
+          }
           deliveryCtl.markReady(tab_id);
           if (tabExists(po.callerTabId)) void deliveryCtl.deliver(po.callerTabId, buildOpener(po.callerTabId, tab_id));
           logInfo(`agentBridge: fork ${tab_id.slice(0, 8)} initialized → opener to caller ${po.callerTabId.slice(0, 8)}`);
@@ -622,11 +647,9 @@ function createAgentBridgeStore() {
      *  reference each other; orphans are cleared. Last-known session ids are refreshed
      *  as each agent re-inits (Case 2 above). */
     rehydrate() {
+      // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local scratchpad; built and consumed inside rehydrate() only
       const persisted = new Map<string, AgentBridge>();
-      for (const ws of workspacesStore.workspaces)
-        for (const pane of ws.panes)
-          for (const tab of pane.tabs)
-            if (tab.agent_bridge) persisted.set(tab.id, tab.agent_bridge);
+      for (const ws of workspacesStore.workspaces) for (const pane of ws.panes) for (const tab of pane.tabs) if (tab.agent_bridge) persisted.set(tab.id, tab.agent_bridge);
 
       let restored = 0;
       for (const [tabId, al] of persisted) {
@@ -657,7 +680,10 @@ function createAgentBridgeStore() {
         deliveryCtl.ensure(tabId, live);
         restored++;
       }
-      if (restored) { bump(); logInfo(`agentBridge: rehydrated ${restored / 2} bridge(s) from persisted state`); }
+      if (restored) {
+        bump();
+        logInfo(`agentBridge: rehydrated ${restored / 2} bridge(s) from persisted state`);
+      }
     },
 
     destroy() {

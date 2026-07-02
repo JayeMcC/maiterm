@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick, onDestroy, untrack } from 'svelte';
+  import { SvelteMap } from 'svelte/reactivity';
   import type { Tab, Pane } from '$lib/tauri/types';
   import { workspacesStore } from '$lib/stores/workspaces.svelte';
   import { activityStore } from '$lib/stores/activity.svelte';
@@ -33,19 +34,18 @@
   let archiveDropdownEl = $state<HTMLElement | null>(null);
   let archiveDropdownPos = $state<{ top: number; left?: number; right?: number }>({ top: 0, left: 0 });
   const archivedTabs = $derived(
-    [...(workspacesStore.workspaces.find(w => w.id === workspaceId)?.archived_tabs ?? [])]
-      .sort((a, b) => {
-        const aTime = a.archived_at ? new Date(a.archived_at).getTime() : 0;
-        const bTime = b.archived_at ? new Date(b.archived_at).getTime() : 0;
-        return bTime - aTime; // most recent first
-      })
+    [...(workspacesStore.workspaces.find((w) => w.id === workspaceId)?.archived_tabs ?? [])].sort((a, b) => {
+      const aTime = a.archived_at ? new Date(a.archived_at).getTime() : 0;
+      const bTime = b.archived_at ? new Date(b.archived_at).getTime() : 0;
+      return bTime - aTime; // most recent first
+    }),
   );
   const archiveItems = $derived(
-    archivedTabs.map(t => ({
+    archivedTabs.map((t) => ({
       tab: t,
       label: t.archived_name ?? t.name,
       meta: t.archived_at ? relativeTime(t.archived_at) : null,
-    }))
+    })),
   );
 
   // Overflow menu: tabs scrolled out of view in the bar (not fully visible).
@@ -62,17 +62,18 @@
   // Track OSC titles for tabs in this pane.
   // Seed from existing terminal state so titles survive component recreation
   // (e.g., workspace switch destroys and recreates SplitPane → TerminalTabs).
-  let oscTitles = $state<Map<string, string>>(new Map());
-  // svelte-ignore state_referenced_locally -- intentional one-time seed from existing terminal state; live updates come from onOscChange subscription below
+  // Reactive: read via `.get()`/`.has()` in $derived and template on every tab render.
+  const oscTitles = new SvelteMap<string, string>();
+  // Intentional one-time seed from existing terminal state; live updates come from
+  // the onOscChange subscription below.
+  // svelte-ignore state_referenced_locally
   for (const tab of pane.tabs) {
     const osc = terminalsStore.getOsc(tab.id);
-    // svelte-ignore state_referenced_locally
     if (osc?.title) oscTitles.set(tab.id, osc.title);
   }
 
   const unsubOsc = terminalsStore.onOscChange((tabId: string, osc: OscState) => {
-    if (osc.title && pane.tabs.some(t => t.id === tabId)) {
-      oscTitles = new Map(oscTitles);
+    if (osc.title && pane.tabs.some((t) => t.id === tabId)) {
       oscTitles.set(tabId, osc.title);
     }
   });
@@ -86,9 +87,15 @@
       modHeld = false;
       return;
     }
-    function onKeyDown(e: KeyboardEvent) { if (isModKey(e)) modHeld = true; }
-    function onKeyUp(e: KeyboardEvent) { if (!e.metaKey && !e.ctrlKey) modHeld = false; }
-    function onBlur() { modHeld = false; }
+    function onKeyDown(e: KeyboardEvent) {
+      if (isModKey(e)) modHeld = true;
+    }
+    function onKeyUp(e: KeyboardEvent) {
+      if (!e.metaKey && !e.ctrlKey) modHeld = false;
+    }
+    function onBlur() {
+      modHeld = false;
+    }
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('blur', onBlur);
@@ -105,8 +112,8 @@
   // Pinned tabs are exempt from the active/suspended split: they hold their slot
   // regardless of liveness.
   const groupedTabs = $derived.by(() => {
-    const pinned = pane.tabs.filter(t => t.pinned);
-    const rest = pane.tabs.filter(t => !t.pinned);
+    const pinned = pane.tabs.filter((t) => t.pinned);
+    const rest = pane.tabs.filter((t) => !t.pinned);
     if (!preferencesStore.groupActiveTabs) {
       // No active-grouping — but pinned still cluster at the front.
       if (pinned.length === 0) return { tabs: pane.tabs, activeCount: 0, pinnedCount: 0 };
@@ -137,15 +144,17 @@
   const pinnedCount = $derived(groupedTabs.pinnedCount);
 
   // Tabs scrolled out of view (not fully visible) in the bar, in display order.
-  const overflowTabs = $derived(displayTabs.filter(t => overflowTabIds.has(t.id)));
-  const overflowItems = $derived(overflowTabs.map(t => {
-    // Only suspended terminals carry an "age" — how long since they were
-    // suspended. Live (active) tabs and viewers have none.
-    const isTerm = t.tab_type === 'terminal' || !t.tab_type;
-    const isLive = !!(terminalsStore.get(t.id) || terminalsStore.isSpawning(t.id));
-    const meta = isTerm && !isLive && t.suspended_at ? relativeTime(t.suspended_at) : null;
-    return { tab: t, label: displayName(t), meta };
-  }));
+  const overflowTabs = $derived(displayTabs.filter((t) => overflowTabIds.has(t.id)));
+  const overflowItems = $derived(
+    overflowTabs.map((t) => {
+      // Only suspended terminals carry an "age" — how long since they were
+      // suspended. Live (active) tabs and viewers have none.
+      const isTerm = t.tab_type === 'terminal' || !t.tab_type;
+      const isLive = !!(terminalsStore.get(t.id) || terminalsStore.isSpawning(t.id));
+      const meta = isTerm && !isLive && t.suspended_at ? relativeTime(t.suspended_at) : null;
+      return { tab: t, label: displayName(t), meta };
+    }),
+  );
 
   // When grouping first turns on, auto-switch away from a suspended tab to the first active one.
   // Only fires on the groupActiveTabs toggle, not on every active tab change.
@@ -157,12 +166,12 @@
     if (!grouping || !wasOff) return;
     const activeTabId = pane.active_tab_id;
     if (!activeTabId) return;
-    const activeTab = pane.tabs.find(t => t.id === activeTabId);
+    const activeTab = pane.tabs.find((t) => t.id === activeTabId);
     if (!activeTab) return;
     const isTerminal = activeTab.tab_type === 'terminal' || !activeTab.tab_type;
     if (isTerminal && !terminalsStore.get(activeTabId)) {
       // Current tab is suspended — switch to first active (non-suspended) tab if one exists
-      const firstActive = groupedTabs.tabs.find(t => {
+      const firstActive = groupedTabs.tabs.find((t) => {
         const isTerm = t.tab_type === 'terminal' || !t.tab_type;
         return !isTerm || terminalsStore.get(t.id);
       });
@@ -182,6 +191,7 @@
   // `everLive` distinguishes a real resume (was live, suspended, now live) from
   // the initial lazy-spawn on app load and from brand-new tabs (createTab keeps
   // its own placement next to the active tab) — neither should be promoted.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- non-reactive tracker read/written only inside the promotion $effect below
   const everLive = new Set<string>();
   let prevLive = new Set<string>();
   let liveSeeded = false;
@@ -194,21 +204,19 @@
   // a tab's first live transition (so the passive lazy-spawn on app load isn't
   // reordered), but a deliberate click IS a resume and must promote even the
   // first time — otherwise re-suspending it drops it back to its old slot.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- non-reactive tracker read/written only inside the promotion $effect below
   const userResumedIds = new Set<string>();
   // For click-driven unsuspends, the tab the user was on at click time. The
   // promotion below places the resumed tab right after this anchor (when the
   // anchor is still in the active group) instead of at the end of the group.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- non-reactive tracker read/written only inside the promotion $effect below
   const resumeAnchorIds = new Map<string, string>();
   $effect(() => {
     void terminalsStore.instanceVersion;
     const grouping = preferencesStore.groupActiveTabs;
     untrack(() => {
       const isTerminal = (t: Tab) => t.tab_type === 'terminal' || !t.tab_type;
-      const liveNow = new Set(
-        pane.tabs
-          .filter(t => isTerminal(t) && (terminalsStore.get(t.id) || terminalsStore.isSpawning(t.id)))
-          .map(t => t.id)
-      );
+      const liveNow = new Set(pane.tabs.filter((t) => isTerminal(t) && (terminalsStore.get(t.id) || terminalsStore.isSpawning(t.id))).map((t) => t.id));
       const resumed: { id: string; anchor: string | null }[] = [];
       for (const t of pane.tabs) {
         // Only tabs that just went live this tick are candidates.
@@ -244,7 +252,7 @@
   // Track trigger variable changes for reactive tab title updates
   let varVersion = $state(0);
   const unsubVars = onVariablesChange((tabId: string) => {
-    if (pane.tabs.some(t => t.id === tabId)) {
+    if (pane.tabs.some((t) => t.id === tabId)) {
       varVersion++;
     }
   });
@@ -300,7 +308,6 @@
         await workspacesStore.renameTab(workspaceId, pane.id, editingId, defaultName, false);
         // Populate oscTitles so displayName picks it up immediately
         if (oscTitle) {
-          oscTitles = new Map(oscTitles);
           oscTitles.set(editingId, oscTitle);
         }
       }
@@ -351,7 +358,7 @@
 
   async function handleArchiveTab(tabId: string, e: MouseEvent) {
     e.stopPropagation();
-    const tab = pane.tabs.find(t => t.id === tabId);
+    const tab = pane.tabs.find((t) => t.id === tabId);
     if (!tab) return;
     const name = displayName(tab);
     const ws = workspacesStore.activeWorkspace;
@@ -390,14 +397,13 @@
   }
 
   $effect(() => {
-    if (archiveDropdownOpen) {
-      document.addEventListener('click', handleArchiveDropdownClickOutside, true);
-      document.addEventListener('keydown', handleArchiveDropdownKeydown);
-      return () => {
-        document.removeEventListener('click', handleArchiveDropdownClickOutside, true);
-        document.removeEventListener('keydown', handleArchiveDropdownKeydown);
-      };
-    }
+    if (!archiveDropdownOpen) return;
+    document.addEventListener('click', handleArchiveDropdownClickOutside, true);
+    document.addEventListener('keydown', handleArchiveDropdownKeydown);
+    return () => {
+      document.removeEventListener('click', handleArchiveDropdownClickOutside, true);
+      document.removeEventListener('keydown', handleArchiveDropdownKeydown);
+    };
   });
 
   // Recompute which tabs are scrolled out of view. Cheap geometry check against
@@ -408,6 +414,7 @@
       return;
     }
     const barRect = tabsBarEl.getBoundingClientRect();
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local scratchpad; reactivity comes from the reassignment of overflowTabIds below
     const next = new Set<string>();
     for (const el of tabsBarEl.querySelectorAll<HTMLElement>('.tab[data-tab-id]')) {
       const r = el.getBoundingClientRect();
@@ -416,7 +423,7 @@
         if (id) next.add(id);
       }
     }
-    if (next.size !== overflowTabIds.size || [...next].some(id => !overflowTabIds.has(id))) {
+    if (next.size !== overflowTabIds.size || [...next].some((id) => !overflowTabIds.has(id))) {
       overflowTabIds = next;
     }
   }
@@ -437,14 +444,13 @@
   }
 
   $effect(() => {
-    if (overflowDropdownOpen) {
-      document.addEventListener('click', handleOverflowDropdownClickOutside, true);
-      document.addEventListener('keydown', handleOverflowDropdownKeydown);
-      return () => {
-        document.removeEventListener('click', handleOverflowDropdownClickOutside, true);
-        document.removeEventListener('keydown', handleOverflowDropdownKeydown);
-      };
-    }
+    if (!overflowDropdownOpen) return;
+    document.addEventListener('click', handleOverflowDropdownClickOutside, true);
+    document.addEventListener('keydown', handleOverflowDropdownKeydown);
+    return () => {
+      document.removeEventListener('click', handleOverflowDropdownClickOutside, true);
+      document.removeEventListener('keydown', handleOverflowDropdownKeydown);
+    };
   });
 
   // Close the overflow menu once nothing is left hidden (e.g. after archiving
@@ -465,7 +471,7 @@
 
   async function handleTogglePin(tabId: string, e: MouseEvent) {
     e.stopPropagation();
-    const tab = pane.tabs.find(t => t.id === tabId);
+    const tab = pane.tabs.find((t) => t.id === tabId);
     if (!tab) return;
     await workspacesStore.setTabPinned(workspaceId, pane.id, tabId, !(tab.pinned ?? false));
   }
@@ -496,7 +502,7 @@
     // A suspended terminal under active-grouping will be reordered into the
     // active group once its PTY registers; defer the scroll to the promotion
     // effect so it lands on the final slot rather than the suspended-group spot.
-    const tab = pane.tabs.find(t => t.id === tabId);
+    const tab = pane.tabs.find((t) => t.id === tabId);
     const isTerm = !!tab && (tab.tab_type === 'terminal' || !tab.tab_type);
     const isLive = !!(terminalsStore.get(tabId) || terminalsStore.isSpawning(tabId));
     if (isTerm && !isLive && preferencesStore.groupActiveTabs) {
@@ -536,7 +542,7 @@
   // Drop target: another pane's tab bar (move tab into that pane).
   // beforeTabId null = append at end.
   let dropPane: { paneId: string; beforeTabId: string | null } | null = null;
-  let foreignDropEl: HTMLElement | null = null;    // foreign tab carrying drop-before/after
+  let foreignDropEl: HTMLElement | null = null; // foreign tab carrying drop-before/after
   let foreignDropBarEl: HTMLElement | null = null; // foreign bar carrying drop-target-bar
   // Drop target: a pane's body — edges create a new split, center moves into the pane.
   type DropEdge = 'left' | 'right' | 'top' | 'bottom' | 'center';
@@ -626,9 +632,8 @@
     const tabEls = tabsBarEl.querySelectorAll<HTMLElement>('.tab');
     let foundTabTarget = false;
     for (let i = 0; i < tabEls.length; i++) {
-      const rect = tabEls[i].getBoundingClientRect();
-      if (e.clientX >= rect.left && e.clientX <= rect.right &&
-          e.clientY >= rect.top && e.clientY <= rect.bottom) {
+      const rect = tabEls[i]!.getBoundingClientRect();
+      if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
         const midX = rect.left + rect.width / 2;
         dropSide = e.clientX < midX ? 'before' : 'after';
         dropTargetIndex = i;
@@ -645,8 +650,7 @@
     let foundWsId: string | null = null;
     for (const wsEl of wsEls) {
       const rect = wsEl.getBoundingClientRect();
-      if (e.clientX >= rect.left && e.clientX <= rect.right &&
-          e.clientY >= rect.top && e.clientY <= rect.bottom) {
+      if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
         const wsId = wsEl.getAttribute('data-workspace-id');
         if (wsId && wsId !== workspaceId) {
           foundWsId = wsId;
@@ -692,22 +696,19 @@
       let overAnyBar = false;
       for (const barEl of document.querySelectorAll<HTMLElement>('.tabs-bar[data-pane-id]')) {
         const rect = barEl.getBoundingClientRect();
-        if (rect.width === 0 || e.clientX < rect.left || e.clientX > rect.right ||
-            e.clientY < rect.top || e.clientY > rect.bottom) continue;
+        if (rect.width === 0 || e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) continue;
         overAnyBar = true;
         const barPaneId = barEl.getAttribute('data-pane-id');
         if (!barPaneId || barPaneId === pane.id) break; // own bar: reorder logic owns it
         const tabEls = Array.from(barEl.querySelectorAll<HTMLElement>('.tab[data-tab-id]'));
         let beforeTabId: string | null = null;
         for (let i = 0; i < tabEls.length; i++) {
-          const r = tabEls[i].getBoundingClientRect();
+          const r = tabEls[i]!.getBoundingClientRect();
           if (e.clientX >= r.left && e.clientX <= r.right) {
             const after = e.clientX >= r.left + r.width / 2;
-            nextForeignEl = tabEls[i];
+            nextForeignEl = tabEls[i]!;
             nextForeignSide = after ? 'after' : 'before';
-            beforeTabId = after
-              ? tabEls[i + 1]?.getAttribute('data-tab-id') ?? null
-              : tabEls[i].getAttribute('data-tab-id');
+            beforeTabId = after ? (tabEls[i + 1]?.getAttribute('data-tab-id') ?? null) : tabEls[i]!.getAttribute('data-tab-id');
             break;
           }
         }
@@ -720,15 +721,19 @@
       if (!overAnyBar && !nextPane) {
         for (const paneEl of document.querySelectorAll<HTMLElement>('.split-pane[data-pane-id]')) {
           const rect = paneEl.getBoundingClientRect();
-          if (rect.width === 0 || e.clientX < rect.left || e.clientX > rect.right ||
-              e.clientY < rect.top || e.clientY > rect.bottom) continue;
+          if (rect.width === 0 || e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) continue;
           const paneId = paneEl.getAttribute('data-pane-id');
           if (!paneId) break;
           const rx = (e.clientX - rect.left) / rect.width;
           const ry = (e.clientY - rect.top) / rect.height;
-          const edges: Array<[DropEdge, number]> = [['left', rx], ['right', 1 - rx], ['top', ry], ['bottom', 1 - ry]];
+          const edges: Array<[DropEdge, number]> = [
+            ['left', rx],
+            ['right', 1 - rx],
+            ['top', ry],
+            ['bottom', 1 - ry],
+          ];
           edges.sort((a, b) => a[1] - b[1]);
-          const edge: DropEdge = edges[0][1] < 0.3 ? edges[0][0] : 'center';
+          const edge: DropEdge = edges[0]![1] < 0.3 ? edges[0]![0] : 'center';
           const isOwnPane = paneId === pane.id;
           // Dropping a tab in its own pane's center is a no-op; splitting a
           // pane off with its only tab just churns pane IDs.
@@ -768,11 +773,19 @@
     const paneEl = document.querySelector<HTMLElement>(`.split-pane[data-pane-id="${dropSplit.paneId}"]`);
     if (!paneEl) return;
     const r = paneEl.getBoundingClientRect();
-    let left = r.left, top = r.top, width = r.width, height = r.height;
+    let left = r.left,
+      top = r.top,
+      width = r.width,
+      height = r.height;
     if (dropSplit.edge === 'left') width = r.width / 2;
-    else if (dropSplit.edge === 'right') { left += r.width / 2; width = r.width / 2; }
-    else if (dropSplit.edge === 'top') height = r.height / 2;
-    else if (dropSplit.edge === 'bottom') { top += r.height / 2; height = r.height / 2; }
+    else if (dropSplit.edge === 'right') {
+      left += r.width / 2;
+      width = r.width / 2;
+    } else if (dropSplit.edge === 'top') height = r.height / 2;
+    else if (dropSplit.edge === 'bottom') {
+      top += r.height / 2;
+      height = r.height / 2;
+    }
     if (!splitOverlay) {
       splitOverlay = document.createElement('div');
       splitOverlay.className = 'split-drop-overlay';
@@ -853,7 +866,7 @@
     if (dragTabId && dropTargetIndex !== null) {
       // Use displayTabs for index mapping since that's what the DOM reflects
       const displayed = displayTabs;
-      const fromIndex = displayed.findIndex(t => t.id === dragTabId);
+      const fromIndex = displayed.findIndex((t) => t.id === dragTabId);
       if (fromIndex !== -1) {
         let toIndex = dropSide === 'after' ? dropTargetIndex + 1 : dropTargetIndex;
         // Keep the pin boundary intact: a pinned tab can only land within the
@@ -864,9 +877,9 @@
         else toIndex = Math.max(toIndex, pinnedCount);
         if (fromIndex < toIndex) toIndex--;
         if (fromIndex !== toIndex) {
-          const ids = displayed.map(t => t.id);
+          const ids = displayed.map((t) => t.id);
           const [moved] = ids.splice(fromIndex, 1);
-          ids.splice(toIndex, 0, moved);
+          ids.splice(toIndex, 0, moved!);
           workspacesStore.reorderTabs(workspaceId, pane.id, ids);
         }
       }
@@ -881,7 +894,9 @@
     if (wasDragging && pane.active_tab_id) {
       justDragged = true;
       // Clear flag after the click event that follows pointerup
-      requestAnimationFrame(() => { justDragged = false; });
+      requestAnimationFrame(() => {
+        justDragged = false;
+      });
       tick().then(() => {
         const instance = terminalsStore.get(pane.active_tab_id!);
         if (instance) {
@@ -948,9 +963,9 @@
 
   function tabMenuItems(tabId: string) {
     const onlyTab = pane.tabs.length === 1;
-    const ws = workspacesStore.workspaces.find(w => w.id === workspaceId);
-    const otherPanes = (ws?.panes ?? []).filter(p => p.id !== pane.id);
-    const isPinned = !!pane.tabs.find(t => t.id === tabId)?.pinned;
+    const ws = workspacesStore.workspaces.find((w) => w.id === workspaceId);
+    const otherPanes = (ws?.panes ?? []).filter((p) => p.id !== pane.id);
+    const isPinned = !!pane.tabs.find((t) => t.id === tabId)?.pinned;
     const items: Array<{ label: string; action: () => void; disabled?: boolean; separator?: boolean }> = [
       {
         label: isPinned ? 'Unpin tab' : 'Pin tab',
@@ -971,7 +986,7 @@
     if (otherPanes.length > 0) {
       items.push({ label: '', separator: true, action: () => {} });
       for (const p of otherPanes) {
-        const activeTab = p.tabs.find(t => t.id === p.active_tab_id) ?? p.tabs[0];
+        const activeTab = p.tabs.find((t) => t.id === p.active_tab_id) ?? p.tabs[0];
         const hint = activeTab ? ` (${activeTab.name})` : '';
         items.push({
           label: `Move to ${p.name}${hint}`,
@@ -989,202 +1004,208 @@
 {/snippet}
 
 <div class="tabs-bar" data-tauri-drag-region data-pane-id={pane.id}>
-    <div class="tabbar-menu-wrapper" bind:this={archiveDropdownEl}>
-      <Tooltip text={archivedTabs.length > 0 ? `Archived tabs (${archivedTabs.length})` : 'No archived tabs'}>
-        <button
-          class="tabbar-menu-btn"
-          disabled={archivedTabs.length === 0}
-          onclick={(e) => {
-            e.stopPropagation();
-            if (!archiveDropdownOpen) {
-              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-              archiveDropdownPos = { top: rect.bottom + 2, left: rect.left };
-            }
-            archiveDropdownOpen = !archiveDropdownOpen;
-          }}
-        >
-          <Icon name="archive" size={12} />{#if archivedTabs.length > 0} {archivedTabs.length}{/if}
-        </button>
-      </Tooltip>
-      {#if archiveDropdownOpen}
-        <TabListMenu
-          items={archiveItems}
-          position={archiveDropdownPos}
-          searchable
-          onActivate={(t) => handleRestoreArchivedTab(t.id)}
-        >
-          {#snippet actions(t)}
-            <IconButton tooltip="Restore" onclick={() => handleRestoreArchivedTab(t.id)}><Icon name="restore" size={12} /></IconButton>
-            <IconButton tooltip="Delete permanently" danger onclick={(e) => handleDeleteArchivedTab(t.id, e)}><Icon name="close" size={12} /></IconButton>
-          {/snippet}
-        </TabListMenu>
-      {/if}
-    </div>
-
-  <div class="tabs-scroll" bind:this={tabsBarEl}
-    onwheel={(e) => { if (tabsBarEl) { e.preventDefault(); tabsBarEl.scrollLeft += e.deltaY || e.deltaX; } }}
-    onscroll={computeOverflow}
-  >
-  {#each displayTabs as tab, index (tab.id)}
-    {#if activeGroupCount > 0 && index === activeGroupCount}
-      <div class="group-divider"></div>
+  <div class="tabbar-menu-wrapper" bind:this={archiveDropdownEl}>
+    <Tooltip text={archivedTabs.length > 0 ? `Archived tabs (${archivedTabs.length})` : 'No archived tabs'}>
+      <button
+        class="tabbar-menu-btn"
+        disabled={archivedTabs.length === 0}
+        onclick={(e) => {
+          e.stopPropagation();
+          if (!archiveDropdownOpen) {
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            archiveDropdownPos = { top: rect.bottom + 2, left: rect.left };
+          }
+          archiveDropdownOpen = !archiveDropdownOpen;
+        }}
+      >
+        <Icon name="archive" size={12} />{#if archivedTabs.length > 0}
+          {archivedTabs.length}{/if}
+      </button>
+    </Tooltip>
+    {#if archiveDropdownOpen}
+      <TabListMenu items={archiveItems} position={archiveDropdownPos} searchable onActivate={(t) => handleRestoreArchivedTab(t.id)}>
+        {#snippet actions(t)}
+          <IconButton tooltip="Restore" onclick={() => handleRestoreArchivedTab(t.id)}><Icon name="restore" size={12} /></IconButton>
+          <IconButton tooltip="Delete permanently" danger onclick={(e) => handleDeleteArchivedTab(t.id, e)}><Icon name="close" size={12} /></IconButton>
+        {/snippet}
+      </TabListMenu>
     {/if}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    {@const isEditor = tab.tab_type === 'editor'}
-    {@const isDiff = tab.tab_type === 'diff'}
-    {@const isSuspendedTab = activeGroupCount > 0 && index >= activeGroupCount}
-    {@const shellState = !isEditor && tab.id !== pane.active_tab_id ? activityStore.getShellState(tab.id) : undefined}
-    {@const hasActivity = !isEditor && tab.id !== pane.active_tab_id && activityStore.hasActivity(tab.id)}
-    {@const tabState = !isEditor && tab.id !== pane.active_tab_id ? activityStore.getTabState(tab.id) : undefined}
-    {@const claudeState = !isEditor ? claudeStateStore.getState(tab.id) : undefined}
-    {@const sshDropped = !isEditor ? sshDisconnectStore.isDisconnected(tab.id) : false}
-    <div
-      class="tab"
-      class:tab-suspended={isSuspendedTab}
-      class:active={tab.id === pane.active_tab_id}
-      class:unclamped={editingId === tab.id || tab.custom_name || oscTitles.has(tab.id)}
-      class:activity={!shellState && !tabState && hasActivity}
-      class:completed={!tabState && shellState?.state === 'completed' && shellState?.exitCode === 0}
-      class:failed={!tabState && shellState?.state === 'completed' && shellState?.exitCode !== 0}
-      class:tab-alert={tabState === 'alert'}
-      class:tab-question={tabState === 'question'}
-      class:import-highlight={tab.import_highlight}
-      class:dragging={dragTabId === tab.id}
-      class:buttons-always={preferencesStore.tabButtonStyle === 'always'}
-      class:buttons-never={preferencesStore.tabButtonStyle === 'never'}
-      class:buttons-modifier={preferencesStore.tabButtonStyle === 'modifier'}
-      class:mod-held={preferencesStore.tabButtonStyle === 'modifier' && modHeld}
-      class:drop-before={dropTargetIndex === index && dropSide === 'before' && dragTabId !== tab.id}
-      class:drop-after={dropTargetIndex === index && dropSide === 'after' && dragTabId !== tab.id}
-      data-tab-id={tab.id}
-      onclick={() => { if (!dragTabId && !justDragged) handleTabClick(tab.id); }}
-      ondblclick={(e) => startEditing(tab, e)}
-      oncontextmenu={(e) => {
-        if (editingId === tab.id) return; // native menu for the rename input
-        e.preventDefault();
-        e.stopPropagation();
-        tabContextMenu = { x: e.clientX, y: e.clientY, tabId: tab.id };
-      }}
-      onpointerdown={(e) => handlePointerDown(e, tab.id)}
-      onpointermove={handlePointerMove}
-      onpointerup={handlePointerUp}
-      role="tab"
-      tabindex="0"
-      aria-selected={tab.id === pane.active_tab_id}
-      onkeydown={(e) => e.key === 'Enter' && handleTabClick(tab.id)}
-    >
-      {#if editingId === tab.id}
-        <div class="edit-wrapper">
-          <span class="edit-sizer">{editingName || ' '}</span>
-          <!-- svelte-ignore a11y_autofocus -->
-          <input
-            type="text"
-            size="1"
-            bind:value={editingName}
-            bind:this={editInput}
-            onblur={finishEditing}
-            onkeydown={handleKeydown}
-            class="edit-input"
-            placeholder="%title, %dir, or %varName for dynamic name"
-            autofocus
-          />
-        </div>
-      {:else}
-        {#if isDiff}
-          {#if tab.pinned}{@render pinGlyph(tab)}{:else}<Tooltip text="Diff"><span class="editor-icon"><Icon name="diff" size={12} /></span></Tooltip>{/if}
-        {:else if isEditor}
-          {#if tab.pinned}
-            {@render pinGlyph(tab)}
-          {:else if tab.editor_file && isPdfFile(tab.editor_file.file_path)}
-            <Tooltip text="PDF"><span class="editor-icon"><Icon name="pdf" size={12} /></span></Tooltip>
-          {:else if tab.editor_file && isImageFile(tab.editor_file.file_path)}
-            <Tooltip text="Image"><span class="editor-icon"><Icon name="image" size={12} /></span></Tooltip>
-          {:else}
-            <Tooltip text={isEditorDirty(tab.id) ? 'Unsaved changes' : 'Editor'}><span class="editor-icon" class:editor-dirty={isEditorDirty(tab.id)}><Icon name="file" size={12} /></span></Tooltip>
-          {/if}
-        {:else if sshDropped}
-          <Tooltip text={`SSH disconnected${sshDisconnectStore.getInfo(tab.id)?.host ? ' from ' + sshDisconnectStore.getInfo(tab.id)?.host : ''} — click to reconnect`}><button class="indicator ssh-disconnected" onclick={(e) => handleReconnect(tab.id, e)} aria-label="Reconnect SSH"><Icon name="restore" size={11} /></button></Tooltip>
-        {:else if tabState === 'alert'}
-          <span class="indicator alert-indicator"><Icon name="warning" size={11} /></span>
-        {:else if tabState === 'question'}
-          <span class="indicator question-indicator"><Icon name="help" size={11} /></span>
-        {:else if claudeState?.state === 'permission'}
-          <Tooltip text="Claude needs permission"><span class="indicator claude-permission"><Icon name="warning" size={11} /></span></Tooltip>
-        {:else if claudeState?.state === 'active'}
-          <Tooltip text={claudeState.toolName ? `Claude: ${claudeState.toolName}${claudeState.toolDetail ? ': ' + claudeState.toolDetail : ''}` : 'Claude is working'}><span class="indicator claude-active"><Icon name="circle" size={10} /></span></Tooltip>
-        {:else if claudeState?.state === 'idle'}
-          <Tooltip text={claudeState.read ? 'Claude finished (seen)' : 'Claude waiting for input'}><span class="indicator claude-idle"><Icon name={claudeState.read ? 'circle-outline' : 'circle'} size={10} /></span></Tooltip>
-        {:else if shellState?.state === 'completed'}
-          <span class="indicator" class:completed-indicator={shellState.exitCode === 0} class:failed-indicator={shellState.exitCode !== 0}>{#if shellState.exitCode === 0}<Icon name="check" size={11} />{:else}<Icon name="cross" size={11} />{/if}</span>
-        {:else if hasActivity}
-          <span class="indicator"><StatusDot color="accent" /></span>
-        {:else if tab.pinned}
-          {@render pinGlyph(tab)}
-        {/if}
-        {#if !isEditor && preferencesStore.claudeCodeIde && preferencesStore.claudeCodeIdeSsh}
-          {@const bridgeStatus = getBridgeStatus(tab.id)}
-          {#if bridgeStatus}
-            <Tooltip text={bridgeStatus === 'connected' ? 'MCP bridge active' : bridgeStatus === 'pending' ? 'MCP bridge connecting\u2026' : 'MCP bridge failed'}><span
-              class="bridge-indicator"
-              class:bridge-connected={bridgeStatus === 'connected'}
-              class:bridge-pending={bridgeStatus === 'pending'}
-              class:bridge-failed={bridgeStatus === 'failed'}
-            ><Icon name="bolt" size={12} /></span></Tooltip>
-          {/if}
-        {/if}
-        {#if !isEditor && tab.auto_resume_enabled && (tab.auto_resume_ssh_command || tab.auto_resume_cwd || tab.auto_resume_command)}
-          <Tooltip text={
-            tab.auto_resume_ssh_command
-              ? `Auto-resume: ${tab.auto_resume_ssh_command}${tab.auto_resume_remote_cwd ? ` (${tab.auto_resume_remote_cwd})` : ''}`
-              : `Auto-resume: ${tab.auto_resume_cwd ?? 'enabled'}`
-          }><span class="auto-resume-indicator"><Icon name="resume" size={12} /></span></Tooltip>
-        {/if}
-        {#if !isEditor && agentBridgeStore.isBridged(tab.id)}
-          <Tooltip text={`Bridged to ${agentBridgeStore.getPartnerLabel(tab.id) ?? 'an agent'} — they can message this agent`}><span class="agent-bridge-indicator">⇄</span></Tooltip>
-        {/if}
-        <span class="tab-name">{displayName(tab)}</span>
-        {@const hasRunningPty = !isEditor && !isDiff && !!terminalsStore.get(tab.id)}
-        <div class="tab-actions" class:always-visible={preferencesStore.tabButtonStyle === 'always'} class:modifier-only={preferencesStore.tabButtonStyle === 'modifier'} class:modifier-active={preferencesStore.tabButtonStyle === 'modifier' && modHeld} class:never-visible={preferencesStore.tabButtonStyle === 'never'} class:triple-action={isEditor || isDiff} class:quadruple-action={!isEditor && !isDiff && !hasRunningPty} class:quintuple-action={hasRunningPty}>
-          <IconButton
-            tooltip={tab.pinned ? 'Unpin tab' : 'Pin tab'}
-            style="width:22px;height:18px;border-radius:3px"
-            onclick={(e) => handleTogglePin(tab.id, e)}
-          ><span class="pin-action" class:pinned={tab.pinned}><Icon name="pin" size={11} /></span></IconButton>
-          <IconButton
-            tooltip="Archive tab"
-            style="width:22px;height:18px;border-radius:3px"
-            onclick={(e) => handleArchiveTab(tab.id, e)}
-          ><Icon name="archive" size={11} /></IconButton>
-          {#if !isEditor && !isDiff}
-            <IconButton
-              tooltip="Duplicate tab ({modLabel}+Shift+T)"
-              style="width:22px;height:18px;border-radius:3px"
-              onclick={(e) => handleDuplicateTab(tab.id, e)}
-            ><Icon name="duplicate" size={11} /></IconButton>
-            {#if terminalsStore.get(tab.id)}
-              <IconButton
-                tooltip="Suspend tab"
-                style="width:22px;height:18px;border-radius:3px"
-                onclick={(e) => handleSuspendTab(tab.id, e)}
-              ><Icon name="pause" size={11} /></IconButton>
-            {/if}
-          {/if}
-          <IconButton
-            tooltip="Close tab ({modLabel}+W)"
-            style="width:22px;height:18px;border-radius:3px"
-            onclick={(e) => handleCloseTab(tab.id, e)}
-          >
-            <Icon name="close" size={11} />
-          </IconButton>
-        </div>
-      {/if}
-    </div>
-  {/each}
   </div>
 
-  <Tooltip text="New tab ({modLabel}+T)"><button class="new-tab-btn" onclick={handleNewTab}>
-    <Icon name="plus" size={14} />
-  </button></Tooltip>
+  <div
+    class="tabs-scroll"
+    bind:this={tabsBarEl}
+    onwheel={(e) => {
+      if (tabsBarEl) {
+        e.preventDefault();
+        tabsBarEl.scrollLeft += e.deltaY || e.deltaX;
+      }
+    }}
+    onscroll={computeOverflow}
+  >
+    {#each displayTabs as tab, index (tab.id)}
+      {#if activeGroupCount > 0 && index === activeGroupCount}
+        <div class="group-divider"></div>
+      {/if}
+      {@const isEditor = tab.tab_type === 'editor'}
+      {@const isDiff = tab.tab_type === 'diff'}
+      {@const isSuspendedTab = activeGroupCount > 0 && index >= activeGroupCount}
+      {@const shellState = !isEditor && tab.id !== pane.active_tab_id ? activityStore.getShellState(tab.id) : undefined}
+      {@const hasActivity = !isEditor && tab.id !== pane.active_tab_id && activityStore.hasActivity(tab.id)}
+      {@const tabState = !isEditor && tab.id !== pane.active_tab_id ? activityStore.getTabState(tab.id) : undefined}
+      {@const claudeState = !isEditor ? claudeStateStore.getState(tab.id) : undefined}
+      {@const sshDropped = !isEditor ? sshDisconnectStore.isDisconnected(tab.id) : false}
+      <div
+        class="tab"
+        class:tab-suspended={isSuspendedTab}
+        class:active={tab.id === pane.active_tab_id}
+        class:unclamped={editingId === tab.id || tab.custom_name || oscTitles.has(tab.id)}
+        class:activity={!shellState && !tabState && hasActivity}
+        class:completed={!tabState && shellState?.state === 'completed' && shellState?.exitCode === 0}
+        class:failed={!tabState && shellState?.state === 'completed' && shellState?.exitCode !== 0}
+        class:tab-alert={tabState === 'alert'}
+        class:tab-question={tabState === 'question'}
+        class:import-highlight={tab.import_highlight}
+        class:dragging={dragTabId === tab.id}
+        class:buttons-always={preferencesStore.tabButtonStyle === 'always'}
+        class:buttons-never={preferencesStore.tabButtonStyle === 'never'}
+        class:buttons-modifier={preferencesStore.tabButtonStyle === 'modifier'}
+        class:mod-held={preferencesStore.tabButtonStyle === 'modifier' && modHeld}
+        class:drop-before={dropTargetIndex === index && dropSide === 'before' && dragTabId !== tab.id}
+        class:drop-after={dropTargetIndex === index && dropSide === 'after' && dragTabId !== tab.id}
+        data-tab-id={tab.id}
+        onclick={() => {
+          if (!dragTabId && !justDragged) handleTabClick(tab.id);
+        }}
+        ondblclick={(e) => startEditing(tab, e)}
+        oncontextmenu={(e) => {
+          if (editingId === tab.id) return; // native menu for the rename input
+          e.preventDefault();
+          e.stopPropagation();
+          tabContextMenu = { x: e.clientX, y: e.clientY, tabId: tab.id };
+        }}
+        onpointerdown={(e) => handlePointerDown(e, tab.id)}
+        onpointermove={handlePointerMove}
+        onpointerup={handlePointerUp}
+        role="tab"
+        tabindex="0"
+        aria-selected={tab.id === pane.active_tab_id}
+        onkeydown={(e) => e.key === 'Enter' && handleTabClick(tab.id)}
+      >
+        {#if editingId === tab.id}
+          <div class="edit-wrapper">
+            <span class="edit-sizer">{editingName || ' '}</span>
+            <!-- svelte-ignore a11y_autofocus -->
+            <input
+              type="text"
+              size="1"
+              bind:value={editingName}
+              bind:this={editInput}
+              onblur={finishEditing}
+              onkeydown={handleKeydown}
+              class="edit-input"
+              placeholder="%title, %dir, or %varName for dynamic name"
+              autofocus
+            />
+          </div>
+        {:else}
+          {#if isDiff}
+            {#if tab.pinned}{@render pinGlyph(tab)}{:else}<Tooltip text="Diff"><span class="editor-icon"><Icon name="diff" size={12} /></span></Tooltip>{/if}
+          {:else if isEditor}
+            {#if tab.pinned}
+              {@render pinGlyph(tab)}
+            {:else if tab.editor_file && isPdfFile(tab.editor_file.file_path)}
+              <Tooltip text="PDF"><span class="editor-icon"><Icon name="pdf" size={12} /></span></Tooltip>
+            {:else if tab.editor_file && isImageFile(tab.editor_file.file_path)}
+              <Tooltip text="Image"><span class="editor-icon"><Icon name="image" size={12} /></span></Tooltip>
+            {:else}
+              <Tooltip text={isEditorDirty(tab.id) ? 'Unsaved changes' : 'Editor'}><span class="editor-icon" class:editor-dirty={isEditorDirty(tab.id)}><Icon name="file" size={12} /></span></Tooltip>
+            {/if}
+          {:else if sshDropped}
+            <Tooltip text={`SSH disconnected${sshDisconnectStore.getInfo(tab.id)?.host ? ' from ' + sshDisconnectStore.getInfo(tab.id)?.host : ''} — click to reconnect`}
+              ><button class="indicator ssh-disconnected" onclick={(e) => handleReconnect(tab.id, e)} aria-label="Reconnect SSH"><Icon name="restore" size={11} /></button></Tooltip
+            >
+          {:else if tabState === 'alert'}
+            <span class="indicator alert-indicator"><Icon name="warning" size={11} /></span>
+          {:else if tabState === 'question'}
+            <span class="indicator question-indicator"><Icon name="help" size={11} /></span>
+          {:else if claudeState?.state === 'permission'}
+            <Tooltip text="Claude needs permission"><span class="indicator claude-permission"><Icon name="warning" size={11} /></span></Tooltip>
+          {:else if claudeState?.state === 'active'}
+            <Tooltip text={claudeState.toolName ? `Claude: ${claudeState.toolName}${claudeState.toolDetail ? ': ' + claudeState.toolDetail : ''}` : 'Claude is working'}
+              ><span class="indicator claude-active"><Icon name="circle" size={10} /></span></Tooltip
+            >
+          {:else if claudeState?.state === 'idle'}
+            <Tooltip text={claudeState.read ? 'Claude finished (seen)' : 'Claude waiting for input'}
+              ><span class="indicator claude-idle"><Icon name={claudeState.read ? 'circle-outline' : 'circle'} size={10} /></span></Tooltip
+            >
+          {:else if shellState?.state === 'completed'}
+            <span class="indicator" class:completed-indicator={shellState.exitCode === 0} class:failed-indicator={shellState.exitCode !== 0}
+              >{#if shellState.exitCode === 0}<Icon name="check" size={11} />{:else}<Icon name="cross" size={11} />{/if}</span
+            >
+          {:else if hasActivity}
+            <span class="indicator"><StatusDot color="accent" /></span>
+          {:else if tab.pinned}
+            {@render pinGlyph(tab)}
+          {/if}
+          {#if !isEditor && preferencesStore.claudeCodeIde && preferencesStore.claudeCodeIdeSsh}
+            {@const bridgeStatus = getBridgeStatus(tab.id)}
+            {#if bridgeStatus}
+              <Tooltip text={bridgeStatus === 'connected' ? 'MCP bridge active' : bridgeStatus === 'pending' ? 'MCP bridge connecting\u2026' : 'MCP bridge failed'}
+                ><span class="bridge-indicator" class:bridge-connected={bridgeStatus === 'connected'} class:bridge-pending={bridgeStatus === 'pending'} class:bridge-failed={bridgeStatus === 'failed'}
+                  ><Icon name="bolt" size={12} /></span
+                ></Tooltip
+              >
+            {/if}
+          {/if}
+          {#if !isEditor && tab.auto_resume_enabled && (tab.auto_resume_ssh_command || tab.auto_resume_cwd || tab.auto_resume_command)}
+            <Tooltip
+              text={tab.auto_resume_ssh_command
+                ? `Auto-resume: ${tab.auto_resume_ssh_command}${tab.auto_resume_remote_cwd ? ` (${tab.auto_resume_remote_cwd})` : ''}`
+                : `Auto-resume: ${tab.auto_resume_cwd ?? 'enabled'}`}><span class="auto-resume-indicator"><Icon name="resume" size={12} /></span></Tooltip
+            >
+          {/if}
+          {#if !isEditor && agentBridgeStore.isBridged(tab.id)}
+            <Tooltip text={`Bridged to ${agentBridgeStore.getPartnerLabel(tab.id) ?? 'an agent'} — they can message this agent`}><span class="agent-bridge-indicator">⇄</span></Tooltip>
+          {/if}
+          <span class="tab-name">{displayName(tab)}</span>
+          {@const hasRunningPty = !isEditor && !isDiff && !!terminalsStore.get(tab.id)}
+          <div
+            class="tab-actions"
+            class:always-visible={preferencesStore.tabButtonStyle === 'always'}
+            class:modifier-only={preferencesStore.tabButtonStyle === 'modifier'}
+            class:modifier-active={preferencesStore.tabButtonStyle === 'modifier' && modHeld}
+            class:never-visible={preferencesStore.tabButtonStyle === 'never'}
+            class:triple-action={isEditor || isDiff}
+            class:quadruple-action={!isEditor && !isDiff && !hasRunningPty}
+            class:quintuple-action={hasRunningPty}
+          >
+            <IconButton tooltip={tab.pinned ? 'Unpin tab' : 'Pin tab'} style="width:22px;height:18px;border-radius:3px" onclick={(e) => handleTogglePin(tab.id, e)}
+              ><span class="pin-action" class:pinned={tab.pinned}><Icon name="pin" size={11} /></span></IconButton
+            >
+            <IconButton tooltip="Archive tab" style="width:22px;height:18px;border-radius:3px" onclick={(e) => handleArchiveTab(tab.id, e)}><Icon name="archive" size={11} /></IconButton>
+            {#if !isEditor && !isDiff}
+              <IconButton tooltip="Duplicate tab ({modLabel}+Shift+T)" style="width:22px;height:18px;border-radius:3px" onclick={(e) => handleDuplicateTab(tab.id, e)}
+                ><Icon name="duplicate" size={11} /></IconButton
+              >
+              {#if terminalsStore.get(tab.id)}
+                <IconButton tooltip="Suspend tab" style="width:22px;height:18px;border-radius:3px" onclick={(e) => handleSuspendTab(tab.id, e)}><Icon name="pause" size={11} /></IconButton>
+              {/if}
+            {/if}
+            <IconButton tooltip="Close tab ({modLabel}+W)" style="width:22px;height:18px;border-radius:3px" onclick={(e) => handleCloseTab(tab.id, e)}>
+              <Icon name="close" size={11} />
+            </IconButton>
+          </div>
+        {/if}
+      </div>
+    {/each}
+  </div>
+
+  <Tooltip text="New tab ({modLabel}+T)"
+    ><button class="new-tab-btn" onclick={handleNewTab}>
+      <Icon name="plus" size={14} />
+    </button></Tooltip
+  >
 
   <div class="tabbar-menu-wrapper" bind:this={overflowDropdownEl}>
     <Tooltip text={overflowTabs.length > 0 ? `Hidden tabs (${overflowTabs.length})` : 'No hidden tabs'}>
@@ -1201,16 +1222,12 @@
           overflowDropdownOpen = !overflowDropdownOpen;
         }}
       >
-        <Icon name="list" size={14} />{#if overflowTabs.length > 0} {overflowTabs.length}{/if}
+        <Icon name="list" size={14} />{#if overflowTabs.length > 0}
+          {overflowTabs.length}{/if}
       </button>
     </Tooltip>
     {#if overflowDropdownOpen}
-      <TabListMenu
-        items={overflowItems}
-        position={overflowDropdownPos}
-        searchable
-        onActivate={(t) => handleOverflowActivate(t.id)}
-      >
+      <TabListMenu items={overflowItems} position={overflowDropdownPos} searchable onActivate={(t) => handleOverflowActivate(t.id)}>
         {#snippet actions(t)}
           <IconButton tooltip="Archive tab" onclick={(e) => handleArchiveTab(t.id, e)}><Icon name="archive" size={12} /></IconButton>
           <IconButton tooltip="Close tab" danger onclick={(e) => handleCloseTab(t.id, e)}><Icon name="close" size={12} /></IconButton>
@@ -1220,24 +1237,14 @@
   </div>
 
   {#if pane.active_tab_id}
-    <IconButton
-      tooltip="Toggle notes ({modLabel}+E)"
-      size={26}
-      style="margin-right:4px;flex-shrink:0;-webkit-app-region:no-drag"
-      onclick={() => workspacesStore.toggleNotes(pane.active_tab_id!)}
-    >
+    <IconButton tooltip="Toggle notes ({modLabel}+E)" size={26} style="margin-right:4px;flex-shrink:0;-webkit-app-region:no-drag" onclick={() => workspacesStore.toggleNotes(pane.active_tab_id!)}>
       <Icon name="notes" />
     </IconButton>
   {/if}
 </div>
 
 {#if tabContextMenu}
-  <ContextMenu
-    items={tabMenuItems(tabContextMenu.tabId)}
-    x={tabContextMenu.x}
-    y={tabContextMenu.y}
-    onclose={() => tabContextMenu = null}
-  />
+  <ContextMenu items={tabMenuItems(tabContextMenu.tabId)} x={tabContextMenu.x} y={tabContextMenu.y} onclose={() => (tabContextMenu = null)} />
 {/if}
 
 <style>
@@ -1298,22 +1305,31 @@
     border-radius: 4px;
     cursor: pointer;
     max-width: 180px;
-    transition: background 0.1s, padding-right 0.15s ease, border-color 0.1s;
+    transition:
+      background 0.1s,
+      padding-right 0.15s ease,
+      border-color 0.1s;
     -webkit-app-region: no-drag;
     flex-shrink: 0;
   }
 
   .tab.buttons-always {
     padding-right: 2px;
-    transition: background 0.1s, border-color 0.1s;
+    transition:
+      background 0.1s,
+      border-color 0.1s;
   }
 
   .tab.buttons-never {
-    transition: background 0.1s, border-color 0.1s;
+    transition:
+      background 0.1s,
+      border-color 0.1s;
   }
 
   .tab.buttons-modifier {
-    transition: background 0.1s, border-color 0.1s;
+    transition:
+      background 0.1s,
+      border-color 0.1s;
   }
 
   .tab.buttons-modifier.mod-held:hover {
@@ -1389,7 +1405,11 @@
     background: color-mix(in srgb, var(--accent) 18%, transparent);
     border: 2px solid var(--accent);
     border-radius: 4px;
-    transition: left 0.08s ease, top 0.08s ease, width 0.08s ease, height 0.08s ease;
+    transition:
+      left 0.08s ease,
+      top 0.08s ease,
+      width 0.08s ease,
+      height 0.08s ease;
   }
 
   :global(.drag-ghost) {
@@ -1489,7 +1509,6 @@
     opacity: 1;
   }
 
-
   .indicator {
     flex-shrink: 0;
     display: flex;
@@ -1560,13 +1579,25 @@
   }
 
   @keyframes ssh-disconnected-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.4;
+    }
   }
 
   @keyframes claude-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.3; transform: scale(0.7); }
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.3;
+      transform: scale(0.7);
+    }
   }
 
   .tab-name {
@@ -1584,7 +1615,10 @@
     opacity: 0;
     width: 0;
     overflow: hidden;
-    transition: width 0.15s ease, opacity 0.15s ease, margin-left 0.15s ease;
+    transition:
+      width 0.15s ease,
+      opacity 0.15s ease,
+      margin-left 0.15s ease;
   }
 
   .tab:hover .tab-actions {
@@ -1734,5 +1768,4 @@
     background: var(--bg-light);
     color: var(--fg);
   }
-
 </style>

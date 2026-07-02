@@ -363,7 +363,7 @@ pub fn open_help_window(window: tauri::WebviewWindow, app: tauri::AppHandle, sec
     Ok(())
 }
 
-fn build_window_sync(app: &tauri::AppHandle, label: &str) -> Result<(), String> {
+pub(crate) fn build_window_sync(app: &tauri::AppHandle, label: &str) -> Result<(), String> {
     let url = if cfg!(debug_assertions) {
         tauri::WebviewUrl::External("http://localhost:1420".parse().unwrap())
     } else {

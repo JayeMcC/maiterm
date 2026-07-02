@@ -37,6 +37,7 @@ export interface SelectionInfo {
 function createClaudeCodeStore() {
   let connected = $state(false);
   let latestSelection = $state<SelectionInfo | null>(null);
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative selection stash; set by handleOpenFile, drained by editor mount, never read reactively
   const pendingSelections = new Map<string, PendingSelection>();
 
   /** Resolve workspace + pane from a tabId, falling back to active workspace. */
@@ -44,14 +45,14 @@ function createClaudeCodeStore() {
     if (tabId) {
       for (const ws of workspacesStore.workspaces) {
         for (const pane of ws.panes) {
-          if (pane.tabs.some(t => t.id === tabId)) {
+          if (pane.tabs.some((t) => t.id === tabId)) {
             return { ws, pane };
           }
         }
       }
     }
     const ws = workspacesStore.activeWorkspace;
-    const pane = ws?.panes.find(p => p.id === ws.active_pane_id);
+    const pane = ws?.panes.find((p) => p.id === ws.active_pane_id);
     if (ws && pane) return { ws, pane };
     return null;
   }
@@ -85,25 +86,30 @@ function createClaudeCodeStore() {
           result = handleGetSelection();
           break;
         case 'openFile':
-          result = await handleOpenFile(args as {
-            filePath: string;
-            tabId?: string;
-            targetTabId?: string;
-            startLine?: number;
-            endLine?: number;
-            startText?: string;
-            endText?: string;
-          });
+          result = await handleOpenFile(
+            args as {
+              filePath: string;
+              tabId?: string;
+              targetTabId?: string;
+              startLine?: number;
+              endLine?: number;
+              startText?: string;
+              endText?: string;
+            },
+          );
           break;
         case 'openDiff':
           // openDiff is blocking -- do NOT respond here, DiffPane responds later
-          await handleOpenDiff(request_id, args as {
-            old_file_path?: string;
-            new_file_path: string;
-            new_file_contents: string;
-            tab_name?: string;
-            tabId?: string;
-          });
+          await handleOpenDiff(
+            request_id,
+            args as {
+              old_file_path?: string;
+              new_file_path: string;
+              new_file_contents: string;
+              tab_name?: string;
+              tabId?: string;
+            },
+          );
           return;
         case 'showDiff':
           result = await handleShowDiff(args as { filePath: string; ref?: string; tabId?: string });
@@ -118,13 +124,15 @@ function createClaudeCodeStore() {
           result = await handleSwitchTab(args as { tabId: string });
           break;
         case 'openTab':
-          result = await handleOpenTab(args as {
-            name: string;
-            workspaceName?: string;
-            command?: string;
-            cwd?: string;
-            reuseExisting?: boolean;
-          });
+          result = await handleOpenTab(
+            args as {
+              name: string;
+              workspaceName?: string;
+              command?: string;
+              cwd?: string;
+              reuseExisting?: boolean;
+            },
+          );
           break;
         case 'sendKeysToTab':
           result = await handleSendKeysToTab(args as { tabId: string; text: string });
@@ -229,7 +237,9 @@ function createClaudeCodeStore() {
       let scrollInfo = null;
       try {
         scrollInfo = await commands.getTerminalScrollbackInfo(inst.ptyId);
-      } catch { /* terminal may have been killed */ }
+      } catch {
+        /* terminal may have been killed */
+      }
       terminalDetails.push({
         tabId,
         ptyId: inst.ptyId,
@@ -276,15 +286,17 @@ function createClaudeCodeStore() {
       ...backend,
       frontend: {
         terminal_instances: instances.size,
-        canvas_renderer_active: terminalDetails.filter(t => t.canvasRenderer).length,
+        canvas_renderer_active: terminalDetails.filter((t) => t.canvasRenderer).length,
         terminals: terminalDetails,
         trigger_engine: triggerStats,
         render_fps: fps,
-        js_heap: perfMem ? {
-          used_mb: Math.round(perfMem.usedJSHeapSize / 1048576),
-          total_mb: Math.round(perfMem.totalJSHeapSize / 1048576),
-          limit_mb: Math.round(perfMem.jsHeapSizeLimit / 1048576),
-        } : null,
+        js_heap: perfMem
+          ? {
+              used_mb: Math.round(perfMem.usedJSHeapSize / 1048576),
+              total_mb: Math.round(perfMem.totalJSHeapSize / 1048576),
+              limit_mb: Math.round(perfMem.jsHeapSizeLimit / 1048576),
+            }
+          : null,
         dom: {
           total_nodes: domAll,
           terminal_slots: detachedSlots.slots,
@@ -326,6 +338,7 @@ function createClaudeCodeStore() {
 
   function handleGetWorkspaceFolders() {
     const folders: { name: string; uri: string; path: string }[] = [];
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local scratchpad for cwd dedup, scoped to this call
     const seenPaths = new Set<string>();
 
     for (const ws of workspacesStore.workspaces) {
@@ -381,15 +394,7 @@ function createClaudeCodeStore() {
     };
   }
 
-  async function handleOpenFile(args: {
-    filePath: string;
-    tabId?: string;
-    targetTabId?: string;
-    startLine?: number;
-    endLine?: number;
-    startText?: string;
-    endText?: string;
-  }) {
+  async function handleOpenFile(args: { filePath: string; tabId?: string; targetTabId?: string; startLine?: number; endLine?: number; startText?: string; endText?: string }) {
     const { filePath, tabId, targetTabId, startLine, endLine, startText, endText } = args;
     const fileName = filePath.split('/').pop() ?? filePath;
     const { detectLanguageFromPath } = await import('$lib/utils/languageDetect');
@@ -403,13 +408,15 @@ function createClaudeCodeStore() {
         try {
           const ptyInfo = await commands.getPtyInfo(instance.ptyId);
           sshCommand = ptyInfo.foreground_command;
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
       // Fallback: persisted SSH command on the tab
       if (!sshCommand) {
         for (const ws of workspacesStore.workspaces) {
           for (const pane of ws.panes) {
-            const tab = pane.tabs.find(t => t.id === tabId);
+            const tab = pane.tabs.find((t) => t.id === tabId);
             if (tab) {
               sshCommand = tab.restore_ssh_command ?? tab.auto_resume_ssh_command ?? null;
               break;
@@ -434,7 +441,7 @@ function createClaudeCodeStore() {
       let found = false;
       for (const ws of workspacesStore.workspaces) {
         for (const pane of ws.panes) {
-          const tab = pane.tabs.find(t => t.id === targetTabId && t.tab_type === 'editor');
+          const tab = pane.tabs.find((t) => t.id === targetTabId && t.tab_type === 'editor');
           if (tab) {
             await workspacesStore.updateEditorTabFile(targetTabId, fileName, fileInfo);
             window.dispatchEvent(new CustomEvent('editor-replace-file', { detail: { tabId: targetTabId } }));
@@ -485,7 +492,7 @@ function createClaudeCodeStore() {
     const { ws, pane } = target;
 
     // Insert after the session tab (tabId) if it's in this pane
-    const afterTabId = tabId && pane.tabs.some(t => t.id === tabId) ? tabId : pane.active_tab_id ?? undefined;
+    const afterTabId = tabId && pane.tabs.some((t) => t.id === tabId) ? tabId : (pane.active_tab_id ?? undefined);
 
     const tab = await workspacesStore.createEditorTab(ws.id, pane.id, fileName, fileInfo, afterTabId);
 
@@ -496,13 +503,16 @@ function createClaudeCodeStore() {
     return { success: true, filePath, tabId: tab.id };
   }
 
-  async function handleOpenDiff(requestId: string, args: {
-    old_file_path?: string;
-    new_file_path: string;
-    new_file_contents: string;
-    tab_name?: string;
-    tabId?: string;
-  }) {
+  async function handleOpenDiff(
+    requestId: string,
+    args: {
+      old_file_path?: string;
+      new_file_path: string;
+      new_file_contents: string;
+      tab_name?: string;
+      tabId?: string;
+    },
+  ) {
     const filePath = args.old_file_path ?? args.new_file_path;
     const tabName = args.tab_name ?? `Diff: ${filePath.split('/').pop()}`;
     const newContent = args.new_file_contents;
@@ -532,7 +542,7 @@ function createClaudeCodeStore() {
       tab_name: tabName,
     };
 
-    const afterTabId = args.tabId && pane.tabs.some(t => t.id === args.tabId) ? args.tabId : pane.active_tab_id;
+    const afterTabId = args.tabId && pane.tabs.some((t) => t.id === args.tabId) ? args.tabId : pane.active_tab_id;
     await workspacesStore.createDiffTab(ws.id, pane.id, tabName, diffContext, afterTabId);
   }
 
@@ -569,7 +579,7 @@ function createClaudeCodeStore() {
       tab_name: tabName,
     };
 
-    const afterTabId = args.tabId && pane.tabs.some(t => t.id === args.tabId) ? args.tabId : pane.active_tab_id;
+    const afterTabId = args.tabId && pane.tabs.some((t) => t.id === args.tabId) ? args.tabId : pane.active_tab_id;
     await workspacesStore.createDiffTab(ws.id, pane.id, tabName, diffContext, afterTabId);
 
     return { success: true, filePath, ref: gitRef };
@@ -596,7 +606,7 @@ function createClaudeCodeStore() {
   function findTabLocation(tabId: string): { workspace: Workspace; pane: Pane; tab: Tab } | null {
     for (const ws of workspacesStore.workspaces) {
       for (const pane of ws.panes) {
-        const tab = pane.tabs.find(t => t.id === tabId);
+        const tab = pane.tabs.find((t) => t.id === tabId);
         if (tab) return { workspace: ws, pane, tab };
       }
     }
@@ -604,7 +614,7 @@ function createClaudeCodeStore() {
   }
 
   function resolveWorkspace(workspaceId?: string): Workspace | null {
-    if (workspaceId) return workspacesStore.workspaces.find(ws => ws.id === workspaceId) ?? null;
+    if (workspaceId) return workspacesStore.workspaces.find((ws) => ws.id === workspaceId) ?? null;
     return workspacesStore.activeWorkspace;
   }
 
@@ -633,18 +643,18 @@ function createClaudeCodeStore() {
     return {
       windowId: workspacesStore.windowId,
       windowLabel: workspacesStore.windowLabel,
-      workspaces: workspacesStore.workspaces.map(ws => ({
+      workspaces: workspacesStore.workspaces.map((ws) => ({
         id: ws.id,
         name: ws.name,
         isActive: ws.id === workspacesStore.activeWorkspaceId,
         suspended: ws.suspended ?? false,
         noteCount: ws.workspace_notes.length,
         archivedTabCount: ws.archived_tabs?.length ?? 0,
-        panes: ws.panes.map(pane => ({
+        panes: ws.panes.map((pane) => ({
           id: pane.id,
           name: pane.name,
           isActive: pane.id === ws.active_pane_id,
-          tabs: pane.tabs.map(tab => {
+          tabs: pane.tabs.map((tab) => {
             const claude = claudeStateStore.getState(tab.id);
             return {
               id: tab.id,
@@ -661,15 +671,13 @@ function createClaudeCodeStore() {
   }
 
   function handleListArchivedTabs(args: { workspaceId?: string }) {
-    const ws = args.workspaceId
-      ? workspacesStore.workspaces.find(w => w.id === args.workspaceId)
-      : workspacesStore.activeWorkspace;
+    const ws = args.workspaceId ? workspacesStore.workspaces.find((w) => w.id === args.workspaceId) : workspacesStore.activeWorkspace;
     if (!ws) return { error: args.workspaceId ? `Workspace not found: ${args.workspaceId}` : 'No active workspace' };
 
     return {
       workspaceId: ws.id,
       workspaceName: ws.name,
-      archivedTabs: (ws.archived_tabs ?? []).map(tab => ({
+      archivedTabs: (ws.archived_tabs ?? []).map((tab) => ({
         id: tab.id,
         displayName: tab.archived_name ?? tab.name,
         archivedAt: tab.archived_at ?? null,
@@ -683,12 +691,10 @@ function createClaudeCodeStore() {
   }
 
   async function handleRestoreArchivedTab(args: { workspaceId?: string; tabId: string }) {
-    const ws = args.workspaceId
-      ? workspacesStore.workspaces.find(w => w.id === args.workspaceId)
-      : workspacesStore.activeWorkspace;
+    const ws = args.workspaceId ? workspacesStore.workspaces.find((w) => w.id === args.workspaceId) : workspacesStore.activeWorkspace;
     if (!ws) return { error: args.workspaceId ? `Workspace not found: ${args.workspaceId}` : 'No active workspace' };
 
-    const archived = ws.archived_tabs?.find(t => t.id === args.tabId);
+    const archived = ws.archived_tabs?.find((t) => t.id === args.tabId);
     if (!archived) return { error: `Archived tab not found: ${args.tabId}` };
 
     await workspacesStore.restoreArchivedTab(ws.id, args.tabId);
@@ -710,7 +716,7 @@ function createClaudeCodeStore() {
   /** Find the first terminal tab in `workspace` whose `name` equals `name`. */
   function findTabByName(workspace: Workspace, name: string): { pane: Pane; tab: Tab } | null {
     for (const pane of workspace.panes) {
-      const tab = pane.tabs.find(t => (t.tab_type === 'terminal' || !t.tab_type) && t.name === name);
+      const tab = pane.tabs.find((t) => (t.tab_type === 'terminal' || !t.tab_type) && t.name === name);
       if (tab) return { pane, tab };
     }
     return null;
@@ -726,23 +732,15 @@ function createClaudeCodeStore() {
     while (Date.now() - start < timeoutMs) {
       const loc = findTabLocation(tabId);
       if (loc?.tab.pty_id) return loc.tab.pty_id;
-      await new Promise(r => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 50));
     }
     return null;
   }
 
-  async function handleOpenTab(args: {
-    name: string;
-    workspaceName?: string;
-    command?: string;
-    cwd?: string;
-    reuseExisting?: boolean;
-  }) {
+  async function handleOpenTab(args: { name: string; workspaceName?: string; command?: string; cwd?: string; reuseExisting?: boolean }) {
     if (!args.name) return { error: 'name is required' };
 
-    const ws = args.workspaceName
-      ? workspacesStore.workspaces.find(w => w.name === args.workspaceName)
-      : workspacesStore.activeWorkspace;
+    const ws = args.workspaceName ? workspacesStore.workspaces.find((w) => w.name === args.workspaceName) : workspacesStore.activeWorkspace;
     if (!ws) {
       return { error: args.workspaceName ? `Workspace not found: ${args.workspaceName}` : 'No active workspace' };
     }
@@ -765,7 +763,7 @@ function createClaudeCodeStore() {
           // new command lands. Small inter-write delay lets the shell's signal
           // handler print its prompt before we type over it.
           await commands.writeTerminal(ptyId, encodeForPty('\x03'));
-          await new Promise(r => setTimeout(r, 50));
+          await new Promise((r) => setTimeout(r, 50));
           await commands.writeTerminal(ptyId, encodeForPty(args.command + '\n'));
         }
         return {
@@ -782,13 +780,13 @@ function createClaudeCodeStore() {
     // Create path: pick the active pane (or first pane if none active), create
     // the tab via the workspace store (which handles sibling CWD inference),
     // then wait for the Terminal component to spawn its PTY before writing.
-    const pane = ws.panes.find(p => p.id === ws.active_pane_id) ?? ws.panes[0];
+    const pane = ws.panes.find((p) => p.id === ws.active_pane_id) ?? ws.panes[0];
     if (!pane) return { error: `Workspace has no panes: ${ws.id}` };
 
     const tab = await workspacesStore.createTab(ws.id, pane.id, args.name);
     await navigateToTab(tab.id);
 
-    let ptyId: string | null = null;
+    let ptyId: string | null;
     if (args.command) {
       ptyId = await waitForPtyId(tab.id, 5000);
       if (!ptyId) {
@@ -918,7 +916,7 @@ function createClaudeCodeStore() {
     if (editList.length === 0) return { error: 'Provide old_string/new_string or an edits array.' };
 
     for (let i = 0; i < editList.length; i++) {
-      const edit = editList[i];
+      const edit = editList[i]!;
       const idx = current.indexOf(edit.old_string);
       if (idx === -1) return { error: `Edit ${i + 1}/${editList.length}: old_string not found in notes.`, failed_edit: edit };
       const secondIdx = current.indexOf(edit.old_string, idx + 1);
@@ -940,7 +938,7 @@ function createClaudeCodeStore() {
     return {
       workspaceId: ws.id,
       workspaceName: ws.name,
-      notes: ws.workspace_notes.map(note => ({
+      notes: ws.workspace_notes.map((note) => ({
         id: note.id,
         preview: note.content.length > 100 ? note.content.slice(0, 100) + '...' : note.content,
         mode: note.mode ?? null,
@@ -954,7 +952,7 @@ function createClaudeCodeStore() {
     const ws = resolveWorkspace(args.workspaceId);
     if (!ws) return { error: `Workspace not found${args.workspaceId ? `: ${args.workspaceId}` : ''}` };
 
-    const note = ws.workspace_notes.find(n => n.id === args.noteId);
+    const note = ws.workspace_notes.find((n) => n.id === args.noteId);
     if (!note) return { error: `Note not found: ${args.noteId}` };
 
     return {
@@ -975,7 +973,7 @@ function createClaudeCodeStore() {
 
     if (args.noteId) {
       // Update existing
-      const note = ws.workspace_notes.find(n => n.id === args.noteId);
+      const note = ws.workspace_notes.find((n) => n.id === args.noteId);
       if (!note) return { error: `Note not found: ${args.noteId}` };
       await workspacesStore.updateWorkspaceNote(ws.id, args.noteId, args.content, args.mode ?? note.mode ?? null);
       resultNoteId = args.noteId;
@@ -996,9 +994,8 @@ function createClaudeCodeStore() {
       await preferencesStore.setNotesScope('workspace');
     }
     const activeTab = workspacesStore.activeWorkspace?.panes
-      .find(p => p.id === workspacesStore.activeWorkspace?.active_pane_id)
-      ?.tabs.find(t => t.id === workspacesStore.activeWorkspace?.panes
-        .find(p => p.id === workspacesStore.activeWorkspace?.active_pane_id)?.active_tab_id);
+      .find((p) => p.id === workspacesStore.activeWorkspace?.active_pane_id)
+      ?.tabs.find((t) => t.id === workspacesStore.activeWorkspace?.panes.find((p) => p.id === workspacesStore.activeWorkspace?.active_pane_id)?.active_tab_id);
     if (activeTab && !workspacesStore.isNotesVisible(activeTab.id)) {
       workspacesStore.toggleNotes(activeTab.id);
     }
@@ -1010,7 +1007,7 @@ function createClaudeCodeStore() {
     const ws = resolveWorkspace(args.workspaceId);
     if (!ws) return { error: `Workspace not found${args.workspaceId ? `: ${args.workspaceId}` : ''}` };
 
-    const note = ws.workspace_notes.find(n => n.id === args.noteId);
+    const note = ws.workspace_notes.find((n) => n.id === args.noteId);
     if (!note) return { error: `Note not found: ${args.noteId}` };
 
     await workspacesStore.deleteWorkspaceNote(ws.id, args.noteId);
@@ -1035,8 +1032,8 @@ function createClaudeCodeStore() {
         paneId = loc.pane.id;
       } else {
         const ws = workspacesStore.activeWorkspace;
-        const pane = ws?.panes.find(p => p.id === ws.active_pane_id);
-        tab = pane?.tabs.find(t => t.id === pane.active_tab_id) as Tab;
+        const pane = ws?.panes.find((p) => p.id === ws.active_pane_id);
+        tab = pane?.tabs.find((t) => t.id === pane.active_tab_id) as Tab;
         if (!ws || !pane || !tab) return { error: 'No active tab' };
         wsId = args.workspaceId ?? ws.id;
         paneId = pane.id;
@@ -1055,14 +1052,13 @@ function createClaudeCodeStore() {
       await preferencesStore.setNotesScope('workspace');
 
       return { success: true, direction: 'tab_to_workspace', noteId: note.id, tabId: tab.id };
-
     } else if (args.direction === 'workspace_to_tab') {
       if (!args.noteId) return { error: 'noteId is required for workspace_to_tab' };
 
       // Resolve workspace + note
       const ws = resolveWorkspace(args.workspaceId);
       if (!ws) return { error: `Workspace not found${args.workspaceId ? `: ${args.workspaceId}` : ''}` };
-      const note = ws.workspace_notes.find(n => n.id === args.noteId);
+      const note = ws.workspace_notes.find((n) => n.id === args.noteId);
       if (!note) return { error: `Note not found: ${args.noteId}` };
 
       // Resolve tab
@@ -1075,8 +1071,8 @@ function createClaudeCodeStore() {
         tab = loc.tab;
         paneId = loc.pane.id;
       } else {
-        const pane = ws.panes.find(p => p.id === ws.active_pane_id);
-        tab = pane?.tabs.find(t => t.id === pane.active_tab_id) as Tab;
+        const pane = ws.panes.find((p) => p.id === ws.active_pane_id);
+        tab = pane?.tabs.find((t) => t.id === pane.active_tab_id) as Tab;
         if (!pane || !tab) return { error: 'No active tab' };
         paneId = pane.id;
       }
@@ -1100,7 +1096,6 @@ function createClaudeCodeStore() {
       await preferencesStore.setNotesScope('tab');
 
       return { success: true, direction: 'workspace_to_tab', noteId: args.noteId, tabId: tab.id };
-
     } else {
       return { error: `Invalid direction: ${args.direction}. Must be 'tab_to_workspace' or 'workspace_to_tab'.` };
     }
@@ -1159,7 +1154,7 @@ function createClaudeCodeStore() {
     let targetTabs: typeof allTabs;
     if (args.tabIds && args.tabIds.length > 0) {
       const idSet = new Set(args.tabIds);
-      targetTabs = allTabs.filter(t => idSet.has(t.tab.id));
+      targetTabs = allTabs.filter((t) => idSet.has(t.tab.id));
     } else if (allTabs.length < 10) {
       targetTabs = allTabs;
     } else {
@@ -1169,32 +1164,34 @@ function createClaudeCodeStore() {
       };
     }
 
-    const results = await Promise.all(targetTabs.map(async ({ tab, workspace, pane }) => {
-      const tabType = tab.tab_type ?? 'terminal';
-      let content: string | null = null;
+    const results = await Promise.all(
+      targetTabs.map(async ({ tab, workspace, pane }) => {
+        const tabType = tab.tab_type ?? 'terminal';
+        let content: string | null = null;
 
-      if (tabType === 'terminal') {
-        content = await getTerminalText(tab.id, lineCount);
-      } else if (tabType === 'editor') {
-        content = getEditorText(tab.id, lineCount);
-      }
-      // diff tabs: no context extraction needed
+        if (tabType === 'terminal') {
+          content = await getTerminalText(tab.id, lineCount);
+        } else if (tabType === 'editor') {
+          content = getEditorText(tab.id, lineCount);
+        }
+        // diff tabs: no context extraction needed
 
-      const claude = claudeStateStore.getState(tab.id);
-      return {
-        tabId: tab.id,
-        displayName: tabDisplayName(tab),
-        tabType,
-        workspace: workspace.name,
-        workspaceId: workspace.id,
-        pane: pane.name,
-        isActive: tab.id === pane.active_tab_id && workspace.id === workspacesStore.activeWorkspaceId,
-        hasNotes: !!tab.notes,
-        ...(tab.editor_file ? { filePath: tab.editor_file.file_path } : {}),
-        ...(claude ? { claudeState: claude.state, claudeTool: claude.toolName } : {}),
-        content,
-      };
-    }));
+        const claude = claudeStateStore.getState(tab.id);
+        return {
+          tabId: tab.id,
+          displayName: tabDisplayName(tab),
+          tabType,
+          workspace: workspace.name,
+          workspaceId: workspace.id,
+          pane: pane.name,
+          isActive: tab.id === pane.active_tab_id && workspace.id === workspacesStore.activeWorkspaceId,
+          hasNotes: !!tab.notes,
+          ...(tab.editor_file ? { filePath: tab.editor_file.file_path } : {}),
+          ...(claude ? { claudeState: claude.state, claudeTool: claude.toolName } : {}),
+          content,
+        };
+      }),
+    );
 
     return { tabs: results, lineCount };
   }
@@ -1210,8 +1207,8 @@ function createClaudeCodeStore() {
       tab = loc.tab;
     } else {
       const ws = workspacesStore.activeWorkspace;
-      const pane = ws?.panes.find(p => p.id === ws.active_pane_id);
-      tab = pane?.tabs.find(t => t.id === pane.active_tab_id);
+      const pane = ws?.panes.find((p) => p.id === ws.active_pane_id);
+      tab = pane?.tabs.find((t) => t.id === pane.active_tab_id);
     }
     if (!tab) return { error: 'No active tab' };
 
@@ -1234,11 +1231,11 @@ function createClaudeCodeStore() {
   }
 
   function handleGetActiveTab() {
-    const ws = workspacesStore.workspaces.find(w => w.id === workspacesStore.activeWorkspaceId);
+    const ws = workspacesStore.workspaces.find((w) => w.id === workspacesStore.activeWorkspaceId);
     if (!ws) return { error: 'No active workspace' };
-    const pane = ws.panes.find(p => p.id === ws.active_pane_id);
+    const pane = ws.panes.find((p) => p.id === ws.active_pane_id);
     if (!pane) return { error: 'No active pane' };
-    const tab = pane.tabs.find(t => t.id === pane.active_tab_id);
+    const tab = pane.tabs.find((t) => t.id === pane.active_tab_id);
     if (!tab) return { error: 'No active tab' };
     const claude = claudeStateStore.getState(tab.id);
     return {
@@ -1337,10 +1334,7 @@ function createClaudeCodeStore() {
     // If all context fields are provided, set directly
     if (args.cwd !== undefined || args.sshCommand !== undefined || args.remoteCwd !== undefined) {
       const cmd = args.command ?? getResumeCommand(workspacesStore.getTabRuntime(tab.id));
-      await workspacesStore.setTabAutoResumeContext(
-        workspace.id, pane.id, tab.id,
-        args.cwd ?? null, args.sshCommand ?? null, args.remoteCwd ?? null, cmd,
-      );
+      await workspacesStore.setTabAutoResumeContext(workspace.id, pane.id, tab.id, args.cwd ?? null, args.sshCommand ?? null, args.remoteCwd ?? null, cmd);
       return { success: true, tabId: tab.id, enabled: true, command: cmd };
     }
 
@@ -1415,22 +1409,24 @@ function createClaudeCodeStore() {
       if (!loc) return { error: `Tab not found: ${tabId}` };
       return loc;
     }
-    const ws = workspacesStore.workspaces.find(w => w.id === workspacesStore.activeWorkspaceId);
+    const ws = workspacesStore.workspaces.find((w) => w.id === workspacesStore.activeWorkspaceId);
     if (!ws) return { error: 'No active workspace' };
-    const pane = ws.panes.find(p => p.id === ws.active_pane_id);
+    const pane = ws.panes.find((p) => p.id === ws.active_pane_id);
     if (!pane) return { error: 'No active pane' };
-    const tab = pane.tabs.find(t => t.id === pane.active_tab_id);
+    const tab = pane.tabs.find((t) => t.id === pane.active_tab_id);
     if (!tab) return { error: 'No active tab' };
     return { workspace: ws, pane, tab };
   }
 
   function updateSelection(info: SelectionInfo) {
     latestSelection = info;
-    commands.claudeCodeNotifySelection({
-      jsonrpc: '2.0',
-      method: 'notifications/selection_changed',
-      params: info,
-    }).catch(() => {});
+    commands
+      .claudeCodeNotifySelection({
+        jsonrpc: '2.0',
+        method: 'notifications/selection_changed',
+        params: info,
+      })
+      .catch(() => {});
   }
 
   function setConnected(value: boolean) {
@@ -1446,8 +1442,12 @@ function createClaudeCodeStore() {
   }
 
   return {
-    get connected() { return connected; },
-    get latestSelection() { return latestSelection; },
+    get connected() {
+      return connected;
+    },
+    get latestSelection() {
+      return latestSelection;
+    },
     handleToolRequest,
     updateSelection,
     setConnected,

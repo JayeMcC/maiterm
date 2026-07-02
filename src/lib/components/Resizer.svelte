@@ -45,13 +45,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<div
-  class="resizer {direction}"
-  class:dragging={isDragging}
-  onmousedown={handleMouseDown}
-  role="separator"
-  aria-orientation={direction === 'horizontal' ? 'vertical' : 'horizontal'}
-></div>
+<div class="resizer {direction}" class:dragging={isDragging} onmousedown={handleMouseDown} role="separator" aria-orientation={direction === 'horizontal' ? 'vertical' : 'horizontal'}></div>
 
 <style>
   .resizer {

@@ -5,24 +5,19 @@ import { getResumeCommand } from '$lib/agents/resume';
 export const CLAUDE_RESUME_COMMAND = getResumeCommand('claude');
 
 /** App-provided default trigger templates. Keyed by stable default_id. */
-export const DEFAULT_TRIGGERS: Record<string, Omit<Trigger, 'id' | 'enabled' | 'workspaces' | 'tabs' | 'default_id'> & { match_mode?: MatchMode }> = {
-};
+export const DEFAULT_TRIGGERS: Record<string, Omit<Trigger, 'id' | 'enabled' | 'workspaces' | 'tabs' | 'default_id'> & { match_mode?: MatchMode }> = {};
 
 /**
  * Seed default triggers into an existing trigger list.
  * Returns the updated list if changes were made, or null if no changes needed.
  */
-export function seedDefaultTriggers(
-  existing: Trigger[],
-  hiddenIds: string[],
-  enableAll = false,
-): Trigger[] | null {
+export function seedDefaultTriggers(existing: Trigger[], hiddenIds: string[], enableAll = false): Trigger[] | null {
   let list = [...existing];
   let changed = false;
 
   // Remove triggers whose default_id no longer exists in DEFAULT_TRIGGERS
   const before = list.length;
-  list = list.filter(t => {
+  list = list.filter((t) => {
     if (!t.default_id) return true; // user-created
     if (t.default_id in DEFAULT_TRIGGERS) return true; // still active
     return false; // stale default — remove
@@ -32,7 +27,7 @@ export function seedDefaultTriggers(
   for (const [defaultId, tmpl] of Object.entries(DEFAULT_TRIGGERS)) {
     if (hiddenIds.includes(defaultId)) continue;
 
-    const linked = list.find(t => t.default_id === defaultId);
+    const linked = list.find((t) => t.default_id === defaultId);
     if (linked) {
       // Auto-update unmodified defaults to latest template values
       if (!linked.user_modified) {
@@ -50,7 +45,7 @@ export function seedDefaultTriggers(
     }
 
     // Adopt existing trigger that matches by name
-    const match = list.find(t => !t.default_id && t.name === tmpl.name);
+    const match = list.find((t) => !t.default_id && t.name === tmpl.name);
     if (match) {
       match.default_id = defaultId;
       if (!match.description && tmpl.description) {
@@ -61,14 +56,17 @@ export function seedDefaultTriggers(
     }
 
     // Seed new default trigger
-    list = [{
-      id: crypto.randomUUID(),
-      ...structuredClone(tmpl),
-      enabled: enableAll,
-      workspaces: [],
-      tabs: [],
-      default_id: defaultId,
-    }, ...list];
+    list = [
+      {
+        id: crypto.randomUUID(),
+        ...structuredClone(tmpl),
+        enabled: enableAll,
+        workspaces: [],
+        tabs: [],
+        default_id: defaultId,
+      },
+      ...list,
+    ];
     changed = true;
   }
 

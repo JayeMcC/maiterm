@@ -37,19 +37,54 @@
 
   // ── File type icon colors ──────────────────────────────────────────
   const EXT_COLORS: Record<string, string> = {
-    ts: '#3178c6', tsx: '#3178c6', js: '#f7df1e', jsx: '#f7df1e', mjs: '#f7df1e',
-    svelte: '#ff3e00', vue: '#42b883', rs: '#dea584', go: '#00add8',
-    py: '#3776ab', rb: '#cc342d', java: '#b07219', kt: '#a97bff',
-    c: '#555555', cpp: '#f34b7d', h: '#555555', hpp: '#f34b7d',
-    css: '#563d7c', scss: '#c6538c', less: '#1d365d', html: '#e34c26',
-    json: '#292929', yaml: '#cb171e', yml: '#cb171e', toml: '#9c4121',
-    md: '#083fa1', mdx: '#083fa1', txt: '#6a737d',
-    sh: '#89e051', bash: '#89e051', zsh: '#89e051', fish: '#89e051',
-    sql: '#e38c00', graphql: '#e10098', gql: '#e10098',
-    png: '#a074c4', jpg: '#a074c4', jpeg: '#a074c4', gif: '#a074c4',
-    webp: '#a074c4', svg: '#ffb13b', ico: '#a074c4',
-    wasm: '#654ff0', docker: '#384d54', dockerfile: '#384d54',
-    lock: '#6a737d', xml: '#0060ac', csv: '#237346',
+    ts: '#3178c6',
+    tsx: '#3178c6',
+    js: '#f7df1e',
+    jsx: '#f7df1e',
+    mjs: '#f7df1e',
+    svelte: '#ff3e00',
+    vue: '#42b883',
+    rs: '#dea584',
+    go: '#00add8',
+    py: '#3776ab',
+    rb: '#cc342d',
+    java: '#b07219',
+    kt: '#a97bff',
+    c: '#555555',
+    cpp: '#f34b7d',
+    h: '#555555',
+    hpp: '#f34b7d',
+    css: '#563d7c',
+    scss: '#c6538c',
+    less: '#1d365d',
+    html: '#e34c26',
+    json: '#292929',
+    yaml: '#cb171e',
+    yml: '#cb171e',
+    toml: '#9c4121',
+    md: '#083fa1',
+    mdx: '#083fa1',
+    txt: '#6a737d',
+    sh: '#89e051',
+    bash: '#89e051',
+    zsh: '#89e051',
+    fish: '#89e051',
+    sql: '#e38c00',
+    graphql: '#e10098',
+    gql: '#e10098',
+    png: '#a074c4',
+    jpg: '#a074c4',
+    jpeg: '#a074c4',
+    gif: '#a074c4',
+    webp: '#a074c4',
+    svg: '#ffb13b',
+    ico: '#a074c4',
+    wasm: '#654ff0',
+    docker: '#384d54',
+    dockerfile: '#384d54',
+    lock: '#6a737d',
+    xml: '#0060ac',
+    csv: '#237346',
   };
 
   function getFileColor(name: string): string | null {
@@ -76,7 +111,7 @@
 
     for (let pi = 0; pi < lp.length && qi < lq.length; pi++) {
       if (lp[pi] === lq[qi]) {
-        score += (pi === lastMatch + 1) ? 10 : 1;
+        score += pi === lastMatch + 1 ? 10 : 1;
         if (pi === 0 || lp[pi - 1] === '/') score += 5;
         lastMatch = pi;
         indices.push(pi);
@@ -132,10 +167,7 @@
 
   /** Extract the static directory prefix before the first glob character. */
   function getGlobDirPrefix(q: string): string | null {
-    const firstGlob = Math.min(
-      q.includes('*') ? q.indexOf('*') : Infinity,
-      q.includes('?') ? q.indexOf('?') : Infinity,
-    );
+    const firstGlob = Math.min(q.includes('*') ? q.indexOf('*') : Infinity, q.includes('?') ? q.indexOf('?') : Infinity);
     const prefixPart = q.slice(0, firstGlob);
     const lastSlash = prefixPart.lastIndexOf('/');
     if (lastSlash <= 0) return null; // no directory component
@@ -144,7 +176,6 @@
 
   let targetedFiles = $state<string[] | null>(null);
   let targetedLoading = $state(false);
-  let targetedDir = $state<string | null>(null);
   let targetedTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Trigger targeted search when glob query has a directory prefix
@@ -152,14 +183,12 @@
     const q = query.trim();
     if (!isGlob || !lastCtx) {
       targetedFiles = null;
-      targetedDir = null;
       return;
     }
 
     const dirPrefix = getGlobDirPrefix(q);
     if (!dirPrefix) {
       targetedFiles = null;
-      targetedDir = null;
       return;
     }
 
@@ -170,16 +199,17 @@
     }, 200);
 
     return () => {
-      if (targetedTimer) { clearTimeout(targetedTimer); targetedTimer = null; }
+      if (targetedTimer) {
+        clearTimeout(targetedTimer);
+        targetedTimer = null;
+      }
     };
   });
 
   async function doTargetedSearch(dirPrefix: string) {
     const ctx = lastCtx;
     if (!ctx) return;
-    const subPath = ctx.cwd.endsWith('/')
-      ? ctx.cwd + dirPrefix
-      : ctx.cwd + '/' + dirPrefix;
+    const subPath = ctx.cwd.endsWith('/') ? ctx.cwd + dirPrefix : ctx.cwd + '/' + dirPrefix;
 
     targetedLoading = true;
     try {
@@ -190,11 +220,9 @@
         result = await listFiles(subPath, MAX_FILES, showHidden, showIgnored);
       }
       // Prefix results with the directory so they match the full relative path
-      targetedFiles = result.map(f => `${dirPrefix}/${f}`);
-      targetedDir = dirPrefix;
+      targetedFiles = result.map((f) => `${dirPrefix}/${f}`);
     } catch {
       targetedFiles = null;
-      targetedDir = null;
     } finally {
       targetedLoading = false;
     }
@@ -207,7 +235,7 @@
       // Show recently opened files first, then mtime-sorted files
       const recent = getRecentFiles();
       const recentRelative = recent
-        .map(fp => {
+        .map((fp) => {
           if (basePath && fp.startsWith(basePath)) {
             const rel = fp.slice(basePath.length).replace(/^\//, '');
             if (rel) return rel;
@@ -217,6 +245,7 @@
         .filter((r): r is string => r !== null && files.includes(r));
 
       const items: FilteredItem[] = [];
+      // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local dedup tracker inside a $derived-computed list; not read reactively
       const seen = new Set<string>();
 
       for (const r of recentRelative) {
@@ -234,9 +263,7 @@
     if (isGlob) {
       const re = globToRegex(q);
       // Search both the pre-loaded files and targeted subdirectory files
-      const searchPool = targetedFiles
-        ? [...new Set([...files, ...targetedFiles])]
-        : files;
+      const searchPool = targetedFiles ? [...new Set([...files, ...targetedFiles])] : files;
       const matched: FilteredItem[] = [];
       for (const f of searchPool) {
         if (matched.length >= MAX_RESULTS) break;
@@ -251,7 +278,7 @@
       if (result) scored.push(result);
     }
     scored.sort((a, b) => b.score - a.score);
-    return scored.slice(0, MAX_RESULTS).map(s => ({ path: s.path, indices: s.indices }));
+    return scored.slice(0, MAX_RESULTS).map((s) => ({ path: s.path, indices: s.indices }));
   });
 
   // ── Terminal context detection ─────────────────────────────────────
@@ -447,7 +474,10 @@
     }, 150);
 
     return () => {
-      if (dirCheckTimer) { clearTimeout(dirCheckTimer); dirCheckTimer = null; }
+      if (dirCheckTimer) {
+        clearTimeout(dirCheckTimer);
+        dirCheckTimer = null;
+      }
     };
   });
 
@@ -456,7 +486,6 @@
     query = '';
     selectedIndex = 0;
     targetedFiles = null;
-    targetedDir = null;
     await loadFiles(false, dir);
   }
 
@@ -467,7 +496,6 @@
     query = '';
     selectedIndex = 0;
     targetedFiles = null;
-    targetedDir = null;
     loadFiles(false, prev);
   }
 
@@ -591,7 +619,6 @@
   let dragOffset = $state<{ x: number; y: number } | null>(null);
   let palettePos = $state<{ x: number; y: number }>({ x: 0, y: 0 });
   let savedPos: { x: number; y: number } | null = null;
-  let paletteRef = $state<HTMLDivElement | null>(null);
 
   /** Check if saved position keeps the palette reasonably visible. */
   function validatePosition(pos: { x: number; y: number }): { x: number; y: number } | null {
@@ -627,7 +654,7 @@
 
   /** Build highlighted spans for a filename with matched indices. */
   function highlightChars(text: string, indices: number[], offset: number): Array<{ text: string; highlight: boolean }> {
-    const indexSet = new Set(indices.filter(i => i >= offset && i < offset + text.length).map(i => i - offset));
+    const indexSet = new Set(indices.filter((i) => i >= offset && i < offset + text.length).map((i) => i - offset));
     const spans: Array<{ text: string; highlight: boolean }> = [];
     let current = '';
     let currentHighlight = false;
@@ -636,12 +663,12 @@
       const isMatch = indexSet.has(i);
       if (i === 0) {
         currentHighlight = isMatch;
-        current = text[i];
+        current = text[i]!;
       } else if (isMatch === currentHighlight) {
         current += text[i];
       } else {
         spans.push({ text: current, highlight: currentHighlight });
-        current = text[i];
+        current = text[i]!;
         currentHighlight = isMatch;
       }
     }
@@ -651,25 +678,13 @@
 </script>
 
 {#if open}
-  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-  <div
-    class="backdrop"
-    onclick={handleBackdropClick}
-    onkeydown={handleKeydown}
-    role="dialog"
-    aria-modal="true"
-    tabindex="-1"
-  >
+  <div class="backdrop" onclick={handleBackdropClick} onkeydown={handleKeydown} role="dialog" aria-modal="true" tabindex="-1">
     <div class="palette" style={palettePos.x || palettePos.y ? `transform: translate(${palettePos.x}px, ${palettePos.y}px)` : ''}>
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div class="input-row" onmousedown={onDragStart}>
         <div class="input-wrapper">
           {#if navStack.length > 0}
-            <button
-              class="back-btn"
-              title="Go back (or press Backspace when empty)"
-              onclick={navigateBack}
-            >←</button>
+            <button class="back-btn" title="Go back (or press Backspace when empty)" onclick={navigateBack}>←</button>
           {/if}
           <input
             bind:this={inputRef}
@@ -686,33 +701,32 @@
               <Tooltip text="Refresh file list">
                 <button
                   class="refresh-btn"
-                  onclick={() => { cache = null; loadFiles(true); }}
-                >↻</button>
+                  onclick={() => {
+                    cache = null;
+                    loadFiles(true);
+                  }}>↻</button
+                >
               </Tooltip>
               {#if basePath !== originalCwd}
                 <Tooltip text="Return to terminal CWD">
                   <button
                     class="home-btn"
-                    onclick={() => { navStack = []; query = ''; loadFiles(false, originalCwd); }}
-                  >⌂</button>
+                    onclick={() => {
+                      navStack = [];
+                      query = '';
+                      loadFiles(false, originalCwd);
+                    }}>⌂</button
+                  >
                 </Tooltip>
               {/if}
               <span class="base-path" title={basePath}>{basePath}</span>
             </div>
             <div class="input-actions">
               <Tooltip text={showHidden ? 'Dotfiles: shown · click to hide' : 'Dotfiles: hidden · click to show (.env always shows)'}>
-                <button
-                  class="toggle-btn"
-                  class:active={showHidden}
-                  onclick={toggleHidden}
-                >.*</button>
+                <button class="toggle-btn" class:active={showHidden} onclick={toggleHidden}>.*</button>
               </Tooltip>
               <Tooltip text={showIgnored ? 'Gitignored files: shown · click to hide' : 'Gitignored files: hidden · click to show (.env always shows)'}>
-                <button
-                  class="toggle-btn"
-                  class:active={showIgnored}
-                  onclick={toggleIgnored}
-                >.gi</button>
+                <button class="toggle-btn" class:active={showIgnored} onclick={toggleIgnored}>.gi</button>
               </Tooltip>
             </div>
           </div>
@@ -738,7 +752,7 @@
             {query ? 'No matching files' : 'No files found'}
           </div>
         {:else}
-          {#each filtered as item, i}
+          {#each filtered as item, i (item.path)}
             {@const { name, dir } = splitPath(item.path)}
             {@const color = getFileColor(name)}
             {@const nameOffset = dir ? dir.length + 1 : 0}
@@ -746,12 +760,14 @@
               class="result-item"
               class:selected={i === selectedIndex}
               onclick={() => onselect(resolveFullPath(item.path))}
-              onmouseenter={() => { selectedIndex = i; }}
+              onmouseenter={() => {
+                selectedIndex = i;
+              }}
             >
               <span class="file-icon" style={color ? `background: ${color}` : ''}></span>
               <span class="file-name">
                 {#if item.indices}
-                  {#each highlightChars(name, item.indices, nameOffset) as span}
+                  {#each highlightChars(name, item.indices, nameOffset) as span, si (si)}
                     {#if span.highlight}<mark>{span.text}</mark>{:else}{span.text}{/if}
                   {/each}
                 {:else}
@@ -761,7 +777,7 @@
               {#if dir}
                 <span class="file-dir">
                   {#if item.indices}
-                    {#each highlightChars(dir, item.indices, 0) as span}
+                    {#each highlightChars(dir, item.indices, 0) as span, si (si)}
                       {#if span.highlight}<mark>{span.text}</mark>{:else}{span.text}{/if}
                     {/each}
                   {:else}
@@ -781,8 +797,10 @@
         <div class="footer">
           <span class="count">
             {files.length} files{capped ? ' (limit reached)' : ''}
-            {#if loading} · refreshing…{/if}
-            {#if targetedLoading} · searching…{/if}
+            {#if loading}
+              · refreshing…{/if}
+            {#if targetedLoading}
+              · searching…{/if}
           </span>
           <span class="shortcut-hint">↑↓ navigate · ↵ open · ⇥ enter dir · esc close</span>
         </div>

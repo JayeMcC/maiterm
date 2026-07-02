@@ -2,26 +2,91 @@ import type { ILink, ILinkProvider, Terminal } from '@xterm/xterm';
 
 /** Extensions we recognize as files (to reduce false positives) */
 const FILE_EXTENSIONS = new Set([
-  'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'mts', 'cts',
-  'rs', 'py', 'rb', 'go', 'java', 'c', 'cpp', 'h', 'hpp',
-  'html', 'htm', 'css', 'scss', 'less', 'svelte', 'vue',
-  'json', 'yaml', 'yml', 'toml', 'xml', 'svg',
-  'md', 'mdx', 'txt', 'log', 'csv',
-  'sql', 'sh', 'bash', 'zsh', 'fish',
-  'conf', 'cfg', 'ini', 'env',
-  'lock', 'dockerfile', 'makefile',
-  'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'avif',
+  'ts',
+  'tsx',
+  'js',
+  'jsx',
+  'mjs',
+  'cjs',
+  'mts',
+  'cts',
+  'rs',
+  'py',
+  'rb',
+  'go',
+  'java',
+  'c',
+  'cpp',
+  'h',
+  'hpp',
+  'html',
+  'htm',
+  'css',
+  'scss',
+  'less',
+  'svelte',
+  'vue',
+  'json',
+  'yaml',
+  'yml',
+  'toml',
+  'xml',
+  'svg',
+  'md',
+  'mdx',
+  'txt',
+  'log',
+  'csv',
+  'sql',
+  'sh',
+  'bash',
+  'zsh',
+  'fish',
+  'conf',
+  'cfg',
+  'ini',
+  'env',
+  'lock',
+  'dockerfile',
+  'makefile',
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'webp',
+  'bmp',
+  'ico',
+  'avif',
 ]);
 
 /** Well-known extensionless filenames */
 const KNOWN_FILENAMES = new Set([
-  'Makefile', 'Dockerfile', 'Containerfile', 'Vagrantfile', 'Procfile',
-  'Gemfile', 'Rakefile', 'Brewfile', 'Justfile', 'Taskfile',
-  'LICENSE', 'LICENCE', 'COPYING', 'AUTHORS', 'CONTRIBUTORS',
-  'CHANGELOG', 'CHANGES', 'HISTORY', 'NEWS',
-  'README', 'INSTALL', 'TODO', 'HACKING',
+  'Makefile',
+  'Dockerfile',
+  'Containerfile',
+  'Vagrantfile',
+  'Procfile',
+  'Gemfile',
+  'Rakefile',
+  'Brewfile',
+  'Justfile',
+  'Taskfile',
+  'LICENSE',
+  'LICENCE',
+  'COPYING',
+  'AUTHORS',
+  'CONTRIBUTORS',
+  'CHANGELOG',
+  'CHANGES',
+  'HISTORY',
+  'NEWS',
+  'README',
+  'INSTALL',
+  'TODO',
+  'HACKING',
   'CMakeLists.txt',
-  'configure', 'gradlew',
+  'configure',
+  'gradlew',
 ]);
 
 function hasKnownExtension(path: string): boolean {
@@ -73,8 +138,8 @@ const COMBINED_PATTERN = new RegExp(
     '|' +
     // Known extensionless filenames
     '(?:Makefile|Dockerfile|Containerfile|Vagrantfile|Procfile|Gemfile|Rakefile|Brewfile|Justfile|Taskfile|LICENSE|LICENCE|COPYING|AUTHORS|CONTRIBUTORS|CHANGELOG|CHANGES|HISTORY|NEWS|README|INSTALL|TODO|HACKING|configure|gradlew)' +
-  ')(?=[\\s\'"\\)\\],:;]|$)',
-  'g'
+    ')(?=[\\s\'"\\)\\],:;]|$)',
+  'g',
 );
 
 /**
@@ -85,10 +150,7 @@ const COMBINED_PATTERN = new RegExp(
  * ls -l file linking is handled separately via OSC 8 hyperlinks
  * (the `l` shell function + xterm.js linkHandler).
  */
-export function createFilePathLinkProvider(
-  terminal: Terminal,
-  onActivate: (path: string, event: MouseEvent) => void,
-): { dispose: () => void } {
+export function createFilePathLinkProvider(terminal: Terminal, onActivate: (path: string, event: MouseEvent) => void): { dispose: () => void } {
   const provider: ILinkProvider = {
     provideLinks(bufferLineNumber: number, callback: (links: ILink[] | undefined) => void) {
       const line = terminal.buffer.active.getLine(bufferLineNumber - 1);

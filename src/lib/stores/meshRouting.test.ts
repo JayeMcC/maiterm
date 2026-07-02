@@ -107,7 +107,10 @@ describe('topic registry', () => {
     if (!a.ok) throw new Error('setup');
     const b = router.resolveTopicForSend('t-mob', a.topic.id);
     expect(b.ok).toBe(true);
-    if (b.ok) { expect(b.created).toBe(false); expect(b.topic.id).toBe(a.topic.id); }
+    if (b.ok) {
+      expect(b.created).toBe(false);
+      expect(b.topic.id).toBe(a.topic.id);
+    }
   });
 
   it('rejects a send on a completed topic by id (Codex #9)', () => {
@@ -154,8 +157,8 @@ describe('topic registry', () => {
     expect(router.bumpTurn(a.topic.id)).toBe(1);
     expect(router.bumpTurn(a.topic.id)).toBe(2);
     const snap = router.snapshot();
-    expect(snap[0].participants).toEqual(['t-api', 't-mob']);
-    expect(snap[0].turn).toBe(2);
+    expect(snap[0]!.participants).toEqual(['t-api', 't-mob']);
+    expect(snap[0]!.turn).toBe(2);
   });
 
   it('round-trips through load() (persisted seed)', () => {
@@ -168,6 +171,9 @@ describe('topic registry', () => {
     // a new send with the same normalized label reuses the persisted topic
     const b = r2.resolveTopicForSend('t-mob', 'persisted');
     expect(b.ok).toBe(true);
-    if (b.ok) { expect(b.created).toBe(false); expect(b.topic.id).toBe(a.topic.id); }
+    if (b.ok) {
+      expect(b.created).toBe(false);
+      expect(b.topic.id).toBe(a.topic.id);
+    }
   });
 });

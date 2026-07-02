@@ -1,3 +1,4 @@
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { TabStateName } from '$lib/tauri/types';
 
 export interface ShellState {
@@ -9,11 +10,14 @@ type CommandStartListener = (tabId: string) => void;
 type CommandCompleteListener = (tabId: string, exitCode: number) => void;
 
 function createActivityStore() {
-  let active = $state<Set<string>>(new Set());
-  let shellStates = $state<Map<string, ShellState>>(new Map());
-  let tabStates = $state<Map<string, TabStateName>>(new Map());
+  // Reactive: read via `.has()`/`.get()` in tab list templates (hasActivity, getShellState, getTabState).
+  const active = new SvelteSet<string>();
+  const shellStates = new SvelteMap<string, ShellState>();
+  const tabStates = new SvelteMap<string, TabStateName>();
 
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- listener registry; not read in reactive contexts
   const commandStartListeners = new Set<CommandStartListener>();
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- listener registry; not read in reactive contexts
   const commandCompleteListeners = new Set<CommandCompleteListener>();
 
   return {
@@ -31,13 +35,11 @@ function createActivityStore() {
 
     markActive(tabId: string) {
       if (active.has(tabId)) return;
-      active = new Set(active);
       active.add(tabId);
     },
 
     clearActive(tabId: string) {
       if (!active.has(tabId)) return;
-      active = new Set(active);
       active.delete(tabId);
     },
 
@@ -49,7 +51,6 @@ function createActivityStore() {
       if (state === null) {
         // B/C: command started running
         if (shellStates.has(tabId)) {
-          shellStates = new Map(shellStates);
           shellStates.delete(tabId);
         }
         for (const fn of commandStartListeners) fn(tabId);
@@ -60,7 +61,6 @@ function createActivityStore() {
         const current = shellStates.get(tabId);
         if (current?.state === 'completed') return;
       }
-      shellStates = new Map(shellStates);
       shellStates.set(tabId, { state, exitCode });
       if (state === 'completed') {
         for (const fn of commandCompleteListeners) fn(tabId, exitCode ?? 0);
@@ -69,20 +69,23 @@ function createActivityStore() {
 
     clearShellState(tabId: string) {
       if (!shellStates.has(tabId)) return;
-      shellStates = new Map(shellStates);
       shellStates.delete(tabId);
     },
 
     /** Subscribe to command start events (B/C sequence). Returns unsubscribe function. */
     onCommandStart(fn: CommandStartListener): () => void {
       commandStartListeners.add(fn);
-      return () => { commandStartListeners.delete(fn); };
+      return () => {
+        commandStartListeners.delete(fn);
+      };
     },
 
     /** Subscribe to command complete events (D sequence). Returns unsubscribe function. */
     onCommandComplete(fn: CommandCompleteListener): () => void {
       commandCompleteListeners.add(fn);
-      return () => { commandCompleteListeners.delete(fn); };
+      return () => {
+        commandCompleteListeners.delete(fn);
+      };
     },
 
     // Tab state (alert / question) — set by trigger actions, cleared on tab focus
@@ -96,13 +99,11 @@ function createActivityStore() {
       // Alert overwrites question; same state is a no-op
       if (current === state) return;
       if (current === 'alert' && state === 'question') return;
-      tabStates = new Map(tabStates);
       tabStates.set(tabId, state);
     },
 
     clearTabState(tabId: string) {
       if (!tabStates.has(tabId)) return;
-      tabStates = new Map(tabStates);
       tabStates.delete(tabId);
     },
 

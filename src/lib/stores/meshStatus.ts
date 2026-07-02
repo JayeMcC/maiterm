@@ -13,12 +13,7 @@ export function statusMarker(role: string): string {
 
 export function buildStatusNoteTemplate(role: string, purpose: string | null): string {
   return (
-    `${statusMarker(role)}\n` +
-    `### ${role}\n` +
-    `_${purpose && purpose.trim() ? purpose.trim() : 'purpose not set'}_\n\n` +
-    `**Done:**\n- \n\n` +
-    `**NEEDS DECISION:**\n- \n\n` +
-    `**Blocked:**\n- \n`
+    `${statusMarker(role)}\n` + `### ${role}\n` + `_${purpose && purpose.trim() ? purpose.trim() : 'purpose not set'}_\n\n` + `**Done:**\n- \n\n` + `**NEEDS DECISION:**\n- \n\n` + `**Blocked:**\n- \n`
   );
 }
 

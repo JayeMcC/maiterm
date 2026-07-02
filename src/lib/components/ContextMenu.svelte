@@ -90,32 +90,20 @@
   });
 </script>
 
-<div
-  class="context-menu"
-  bind:this={menuEl}
-  style="left: {layout.left}px; top: {layout.top}px; max-height: {layout.maxHeight}px"
-  role="menu"
-  tabindex="-1"
->
-    {#each items as item}
-      {#if item.separator}
-        <div class="separator"></div>
-      {:else}
-        <button
-          class="menu-item"
-          class:disabled={item.disabled}
-          onclick={() => handleItemClick(item)}
-          role="menuitem"
-          disabled={item.disabled}
-        >
-          <span class="menu-label">{item.label}</span>
-          {#if item.shortcut}
-            <span class="menu-shortcut">{item.shortcut}</span>
-          {/if}
-        </button>
-      {/if}
-    {/each}
-  </div>
+<div class="context-menu" bind:this={menuEl} style="left: {layout.left}px; top: {layout.top}px; max-height: {layout.maxHeight}px" role="menu" tabindex="-1">
+  {#each items as item, i (i)}
+    {#if item.separator}
+      <div class="separator"></div>
+    {:else}
+      <button class="menu-item" class:disabled={item.disabled} onclick={() => handleItemClick(item)} role="menuitem" disabled={item.disabled}>
+        <span class="menu-label">{item.label}</span>
+        {#if item.shortcut}
+          <span class="menu-shortcut">{item.shortcut}</span>
+        {/if}
+      </button>
+    {/if}
+  {/each}
+</div>
 
 <style>
   .context-menu {

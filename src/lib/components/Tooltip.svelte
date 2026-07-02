@@ -44,21 +44,11 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<span
-  class="tooltip-wrapper"
-  bind:this={wrapperEl}
-  onmouseenter={show}
-  onmouseleave={hide}
->
+<span class="tooltip-wrapper" bind:this={wrapperEl} onmouseenter={show} onmouseleave={hide}>
   {@render children()}
 </span>
 
-<span
-  class="tooltip-bubble"
-  class:visible
-  bind:this={tipEl}
-  {style}
->
+<span class="tooltip-bubble" class:visible bind:this={tipEl} {style}>
   {text}
 </span>
 

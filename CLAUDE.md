@@ -58,6 +58,7 @@ src-tauri/src/                # Backend (Rust)
 ```
 
 **Module-specific docs**: Detailed documentation for individual subsystems lives in CLAUDE.md files within their directories:
+
 - `src/lib/components/terminal/CLAUDE.md` — Portal pattern, terminal architecture (alacritty_terminal + xterm.js), OSC, shell integration, split cloning
 - `src/lib/components/editor/CLAUDE.md` — CodeMirror, diff tabs, editor registry
 - `src-tauri/src/claude_code/CLAUDE.md` — Claude Code IDE integration, SSH MCP bridge
@@ -86,12 +87,14 @@ function createMyStore() {
   let value = $state<Type>(initial);
 
   return {
-    get value() { return value; },  // Getter for reactivity
+    get value() {
+      return value;
+    }, // Getter for reactivity
 
     async setValue(newValue: Type) {
-      await commands.setValue(newValue);  // Persist to backend
-      value = newValue;                   // Update local state
-    }
+      await commands.setValue(newValue); // Persist to backend
+      value = newValue; // Update local state
+    },
   };
 }
 
@@ -123,12 +126,12 @@ export const myStore = createMyStore();
 **Theme system**: 10 built-in themes + custom theme support. Default is Tokyo Night.
 
 ```css
---bg-dark: #1a1b26;     /* Main background */
---bg-medium: #24283b;   /* Elevated surfaces */
---bg-light: #414868;    /* Borders, hover states */
---fg: #c0caf5;          /* Primary text */
---fg-dim: #565f89;      /* Secondary text */
---accent: #7aa2f7;      /* Interactive elements */
+--bg-dark: #1a1b26; /* Main background */
+--bg-medium: #24283b; /* Elevated surfaces */
+--bg-light: #414868; /* Borders, hover states */
+--fg: #c0caf5; /* Primary text */
+--fg-dim: #565f89; /* Secondary text */
+--accent: #7aa2f7; /* Interactive elements */
 ```
 
 Themes defined in `src/lib/themes/index.ts`. Applied via `applyUiTheme()` which sets CSS variables on `document.documentElement`. Use CSS variables from `app.css`. Component styles are scoped.
@@ -197,25 +200,25 @@ Controlled by `cfg!(debug_assertions)` in `state/persistence.rs` → `app_data_s
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| Cmd+T | New tab |
-| Cmd+W | Close tab (or pane if last tab) — requires two presses within 2s |
-| Cmd+1-9 | Switch to tab |
-| Cmd+Shift+[ / ] | Previous / next tab |
-| Cmd+Shift+T | Duplicate tab |
-| Cmd+Shift+R | Reload tab (duplicate + close original) |
-| Cmd+D | Split pane (duplicate current tab) |
-| Cmd+N | New window |
-| Cmd+Shift+N | Duplicate window |
-| Cmd+O | Open file in editor tab |
-| Cmd+S | Save file (editor tabs only) |
-| Cmd+F | Find/replace (editor tabs) / terminal search |
-| Cmd+G | Goto line (editor tabs; find-next while search panel is open) |
-| Cmd+E | Toggle notes panel |
-| Cmd+Shift+C | Toggle composer dock |
-| Cmd+, | Preferences |
-| Cmd+/ | Help |
+| Shortcut        | Action                                                           |
+| --------------- | ---------------------------------------------------------------- |
+| Cmd+T           | New tab                                                          |
+| Cmd+W           | Close tab (or pane if last tab) — requires two presses within 2s |
+| Cmd+1-9         | Switch to tab                                                    |
+| Cmd+Shift+[ / ] | Previous / next tab                                              |
+| Cmd+Shift+T     | Duplicate tab                                                    |
+| Cmd+Shift+R     | Reload tab (duplicate + close original)                          |
+| Cmd+D           | Split pane (duplicate current tab)                               |
+| Cmd+N           | New window                                                       |
+| Cmd+Shift+N     | Duplicate window                                                 |
+| Cmd+O           | Open file in editor tab                                          |
+| Cmd+S           | Save file (editor tabs only)                                     |
+| Cmd+F           | Find/replace (editor tabs) / terminal search                     |
+| Cmd+G           | Goto line (editor tabs; find-next while search panel is open)    |
+| Cmd+E           | Toggle notes panel                                               |
+| Cmd+Shift+C     | Toggle composer dock                                             |
+| Cmd+,           | Preferences                                                      |
+| Cmd+/           | Help                                                             |
 
 Defined in `+layout.svelte` handleKeydown. Cmd+F/K/S/D intercepted in capture phase — returns early for editor tabs to let CodeMirror handle them.
 
@@ -228,6 +231,7 @@ Defined in `+layout.svelte` handleKeydown. Cmd+F/K/S/D intercepted in capture ph
 ## Adding a New Feature Checklist
 
 ### New Tauri Command
+
 1. [ ] Add/modify struct in `src-tauri/src/state/workspace.rs`
 2. [ ] Add command function in `src-tauri/src/commands/workspace.rs`
 3. [ ] Register command in `src-tauri/src/lib.rs` generate_handler!
@@ -237,12 +241,14 @@ Defined in `+layout.svelte` handleKeydown. Cmd+F/K/S/D intercepted in capture ph
 7. [ ] Run `cargo check` and `npm run check`
 
 ### New Store
+
 1. [ ] Create `src/lib/stores/mystore.svelte.ts`
 2. [ ] Use factory function pattern with `$state` runes
 3. [ ] Export getters for reactive access
 4. [ ] Call Tauri commands in async methods
 
 ### New Modal
+
 1. [ ] Create component following `HelpModal.svelte` pattern
 2. [ ] Add state variable in `+layout.svelte`
 3. [ ] Add keyboard shortcut in handleKeydown
@@ -262,11 +268,11 @@ Uncaught webview errors and unhandled promise rejections are captured in `+layou
 
 ### Log file locations
 
-| OS | Dev | Prod |
-|----|-----|------|
-| **macOS** | `~/Library/Logs/com.aiterm.app/aiterm-dev.log` | `~/Library/Logs/com.aiterm.app/aiterm.log` |
-| **Linux** | `~/.config/aiterm/logs/aiterm-dev.log` | `~/.config/aiterm/logs/aiterm.log` |
-| **Windows** | `%APPDATA%\aiterm\logs\aiterm-dev.log` | `%APPDATA%\aiterm\logs\aiterm.log` |
+| OS          | Dev                                            | Prod                                       |
+| ----------- | ---------------------------------------------- | ------------------------------------------ |
+| **macOS**   | `~/Library/Logs/com.aiterm.app/aiterm-dev.log` | `~/Library/Logs/com.aiterm.app/aiterm.log` |
+| **Linux**   | `~/.config/aiterm/logs/aiterm-dev.log`         | `~/.config/aiterm/logs/aiterm.log`         |
+| **Windows** | `%APPDATA%\aiterm\logs\aiterm-dev.log`         | `%APPDATA%\aiterm\logs\aiterm.log`         |
 
 ### State file
 
@@ -287,7 +293,7 @@ Memory trend (`aiterm-memory-trend.json`) is reseeded into the in-memory ring bu
 - **Map reactivity**: When mutating Maps in stores, create new Map: `instances = new Map(instances)`
 - **PTY lifecycle**: Kill PTY in onDestroy, save scrollback before disposal
 - **`\u` in Svelte templates**: Interpreted as unicode escape. Use expression syntax: `{'\\u'}`
-- **Svelte $effect reactive loops with stores**: `clearFoo()` that reads `$state` inside `$effect` subscribes the effect to that state. Wrap in `untrack()` to prevent re-triggering.
+- **Svelte $effect reactive loops with stores**: `clearFoo()` that reads `$state`inside`$effect`subscribes the effect to that state. Wrap in`untrack()` to prevent re-triggering.
 - **`confirm()` doesn't work in Tauri webviews**: Use inline confirmation UI instead of `window.confirm()`.
 - **Tauri PluginListener cleanup**: `onAction()` and similar return `PluginListener` objects, not functions. Clean up with `.unregister()`.
 - **Serde round-trip pitfall**: Rust `skip_serializing_if = "Option::is_none"` omits null fields → loaded JS objects have `undefined` instead of `null`. Use field-by-field comparison with `?? null` normalization, NOT `JSON.stringify`.

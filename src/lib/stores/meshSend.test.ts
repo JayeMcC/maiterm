@@ -18,10 +18,15 @@ function harness(roster: MeshMember[], deliverImpl: (tabId: string, text: string
   let persists = 0;
   const deps: MeshSendDeps = {
     router,
-    deliver: async (tabId, text) => { delivered.push({ tabId, text }); return deliverImpl(tabId, text); },
+    deliver: async (tabId, text) => {
+      delivered.push({ tabId, text });
+      return deliverImpl(tabId, text);
+    },
     buildEnvelope: (_s, role, topic, turn, msg) => `[${role}|${topic.label}|${turn}] ${msg}`,
     emitEdge: (e) => edges.push(e),
-    persistTopics: () => { persists++; },
+    persistTopics: () => {
+      persists++;
+    },
     isLive: (tabId) => roster.find((m) => m.tabId === tabId)?.live ?? false,
     now: () => 1234,
   };
@@ -35,14 +40,17 @@ describe('performMeshSend', () => {
     const h = harness(ROSTER, async () => 'delivered');
     const r = await performMeshSend(h.deps, { senderTabId: 't-api', recipient: 'Mobile App', topic: 'Auth', message: 'hello' });
     expect(r.ok).toBe(true);
-    if (r.ok) { expect(r.delivered).toBe(true); expect(r.recipient).toBe('Mobile App'); }
+    if (r.ok) {
+      expect(r.delivered).toBe(true);
+      expect(r.recipient).toBe('Mobile App');
+    }
     // routed to the recipient handle, not the sender or the role string
     expect(h.delivered).toEqual([{ tabId: 't-mob', text: '[Mobile App|Auth|1] hello' }]);
     // exactly one confirmed edge, sender→recipient
     expect(h.edges).toHaveLength(1);
     expect(h.edges[0]).toMatchObject({ sender: 't-api', recipient: 't-mob', turn: 1, ts: 1234 });
     // topic committed: turn 1, both participants
-    const t = h.router.all()[0];
+    const t = h.router.all()[0]!;
     expect(t.turn).toBe(1);
     expect(t.participants.sort()).toEqual(['t-api', 't-mob']);
   });
@@ -51,9 +59,12 @@ describe('performMeshSend', () => {
     const h = harness(ROSTER, async () => 'queued');
     const r = await performMeshSend(h.deps, { senderTabId: 't-api', recipient: 't-mob', topic: 'Auth', message: 'hi' });
     expect(r.ok).toBe(true);
-    if (r.ok) { expect(r.queued).toBe(true); expect(r.delivered).toBe(false); }
+    if (r.ok) {
+      expect(r.queued).toBe(true);
+      expect(r.delivered).toBe(false);
+    }
     expect(h.edges).toHaveLength(0);
-    expect(h.router.all()[0].turn).toBe(1); // committed — it is in the recipient's queue, not lost
+    expect(h.router.all()[0]!.turn).toBe(1); // committed — it is in the recipient's queue, not lost
   });
 
   it('failed send commits NOTHING and emits no edge', async () => {
@@ -62,7 +73,7 @@ describe('performMeshSend', () => {
     expect(r.ok).toBe(false);
     expect(h.edges).toHaveLength(0);
     // topic was created by resolveTopicForSend, but no turn was committed (no phantom turn)
-    expect(h.router.all()[0].turn).toBe(0);
+    expect(h.router.all()[0]!.turn).toBe(0);
   });
 
   it('rejects an unknown recipient with a clear error and never delivers', async () => {
@@ -104,9 +115,13 @@ describe('performMeshSend', () => {
       { senderTabId: 't-mob', recipient: 't-api', topic: start.topic.id, message: 'one more?' },
     );
     expect(r.ok).toBe(true);
-    if (r.ok) { expect(r.paused).toBe(true); expect(r.pauseReason).toBe('soft'); expect(r.delivered).toBe(false); }
-    expect(h.delivered).toHaveLength(0);            // nothing injected
-    expect(h.edges).toHaveLength(0);                // no edge
+    if (r.ok) {
+      expect(r.paused).toBe(true);
+      expect(r.pauseReason).toBe('soft');
+      expect(r.delivered).toBe(false);
+    }
+    expect(h.delivered).toHaveLength(0); // nothing injected
+    expect(h.edges).toHaveLength(0); // no edge
     expect(h.router.get(start.topic.id)?.turn).toBe(2); // turn not advanced
   });
 
@@ -137,7 +152,10 @@ describe('performMeshSend × real delivery controller (routed to recipient queue
       mintId: () => 'topic-1',
     });
     ctl = createDeliveryController({
-      inject: async (_tabId, text) => { injected.push(text); return true; },
+      inject: async (_tabId, text) => {
+        injected.push(text);
+        return true;
+      },
       liveState: (tabId) => live.has(tabId),
       awaitingHuman: () => false,
     });
@@ -158,8 +176,8 @@ describe('performMeshSend × real delivery controller (routed to recipient queue
     const r2 = await performMeshSend(deps, { senderTabId: 't-api', recipient: 't-mob', topic: 'topic-1', message: 'second' });
     expect(r1.ok && !r1.delivered).toBe(true);
     expect(r2.ok && !r2.delivered).toBe(true);
-    expect(injected).toHaveLength(0);   // nothing delivered while offline
-    expect(edges).toHaveLength(0);       // no edges for queued sends
+    expect(injected).toHaveLength(0); // nothing delivered while offline
+    expect(edges).toHaveLength(0); // no edges for queued sends
 
     // Recipient comes online → queue drains oldest-first.
     live.add('t-mob');

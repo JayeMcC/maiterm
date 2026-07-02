@@ -31,14 +31,19 @@ function makeHarness(opts: { cooldownMs?: number; drainTickMs?: number } = {}) {
     attempts,
     live,
     awaiting,
-    setInjectResult: (v: boolean) => { injectResult = v; },
+    setInjectResult: (v: boolean) => {
+      injectResult = v;
+    },
     textsFor: (tabId: string) => attempts.filter((a) => a.tabId === tabId).map((a) => a.text),
   };
 }
 
 describe('agentDelivery — FIFO mailbox', () => {
   beforeEach(() => vi.useFakeTimers());
-  afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); });
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
 
   it('delivers immediately when ready and the queue is empty', async () => {
     const h = makeHarness();
@@ -93,7 +98,7 @@ describe('agentDelivery — FIFO mailbox', () => {
     h.ctl.ensure('A', true);
 
     expect(await h.ctl.deliver('A', 'm1')).toBe('delivered'); // immediate, arms cooldown
-    expect(await h.ctl.deliver('A', 'm2')).toBe('queued');    // held by cooldown
+    expect(await h.ctl.deliver('A', 'm2')).toBe('queued'); // held by cooldown
     expect(h.textsFor('A')).toEqual(['m1']);
 
     await vi.runAllTimersAsync();

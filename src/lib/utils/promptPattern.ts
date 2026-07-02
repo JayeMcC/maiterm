@@ -47,14 +47,14 @@ export function compilePromptPattern(pattern: string, opts?: { optionalPrompt?: 
       continue;
     }
 
-    if (/\s/.test(pattern[i])) {
+    if (/\s/.test(pattern[i]!)) {
       regex += '\\s+';
-      while (i < pattern.length && /\s/.test(pattern[i])) i++;
+      while (i < pattern.length && /\s/.test(pattern[i]!)) i++;
       continue;
     }
 
     // Literal character — escape if regex-special
-    regex += pattern[i].replace(REGEX_SPECIAL, '\\$&');
+    regex += pattern[i]!.replace(REGEX_SPECIAL, '\\$&');
     i++;
   }
 
@@ -88,17 +88,10 @@ let compiledTitlePatterns: RegExp[] = [];
  * Recompiles only when the pattern array contents change.
  */
 export function getCompiledPatterns(patterns: string[]): RegExp[] {
-  if (
-    patterns.length !== cachedPatterns.length ||
-    patterns.some((p, i) => p !== cachedPatterns[i])
-  ) {
+  if (patterns.length !== cachedPatterns.length || patterns.some((p, i) => p !== cachedPatterns[i])) {
     cachedPatterns = [...patterns];
-    compiledPatterns = patterns
-      .map(p => compilePromptPattern(p))
-      .filter((r): r is RegExp => r !== null);
-    compiledTitlePatterns = patterns
-      .map(p => compilePromptPattern(p, { optionalPrompt: true }))
-      .filter((r): r is RegExp => r !== null);
+    compiledPatterns = patterns.map((p) => compilePromptPattern(p)).filter((r): r is RegExp => r !== null);
+    compiledTitlePatterns = patterns.map((p) => compilePromptPattern(p, { optionalPrompt: true })).filter((r): r is RegExp => r !== null);
   }
   return compiledPatterns;
 }

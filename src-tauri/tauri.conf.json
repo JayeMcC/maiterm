@@ -33,14 +33,7 @@
     "active": true,
     "targets": "all",
     "createUpdaterArtifacts": true,
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.ico",
-      "icons/icon.png",
-      "icons/Assets.car"
-    ],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico", "icons/icon.png", "icons/Assets.car"],
     "windows": {
       "nsis": {
         "installMode": "perMachine"
@@ -51,11 +44,7 @@
     },
     "linux": {
       "deb": {
-        "depends": [
-          "libwebkit2gtk-4.1-0",
-          "libgtk-3-0",
-          "libayatana-appindicator3-1"
-        ],
+        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0", "libayatana-appindicator3-1"],
         "section": "utils",
         "priority": "optional"
       }
@@ -63,12 +52,8 @@
   },
   "plugins": {
     "updater": {
-      "endpoints": [
-        "https://updates.maiterm.dev/latest.json?v={{current_version}}&t={{target}}&a={{arch}}",
-        "https://github.com/Flexmark-Intl/maiterm/releases/latest/download/latest.json"
-      ],
+      "endpoints": ["https://updates.maiterm.dev/latest.json?v={{current_version}}&t={{target}}&a={{arch}}", "https://github.com/Flexmark-Intl/maiterm/releases/latest/download/latest.json"],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZCNEZDRjQxRDBDMzZDRTYKUldUbWJNUFFRYzlQYTJSTEJWT1g1a3hrUTRPL0JyT3NmM3JqNUVhWjQ3Y1k3TnhwSHZhK3F4S2gK"
     }
   }
-
 }

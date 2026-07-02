@@ -49,7 +49,7 @@ class Parser {
     while (this.match('||')) {
       children.push(this.parseAnd());
     }
-    return children.length === 1 ? children[0] : { type: 'or', children };
+    return children.length === 1 ? children[0]! : { type: 'or', children };
   }
 
   private parseAnd(): ConditionNode {
@@ -57,7 +57,7 @@ class Parser {
     while (this.match('&&')) {
       children.push(this.parseAtom());
     }
-    return children.length === 1 ? children[0] : { type: 'and', children };
+    return children.length === 1 ? children[0]! : { type: 'and', children };
   }
 
   private parseAtom(): ConditionNode {
@@ -95,7 +95,7 @@ class Parser {
   private readIdent(): string {
     this.skipWhitespace();
     const start = this.pos;
-    while (this.pos < this.input.length && /[\w]/.test(this.input[this.pos])) {
+    while (this.pos < this.input.length && /[\w]/.test(this.input[this.pos]!)) {
       this.pos++;
     }
     if (this.pos === start) {
@@ -136,7 +136,7 @@ class Parser {
   }
 
   private skipWhitespace() {
-    while (this.pos < this.input.length && /\s/.test(this.input[this.pos])) {
+    while (this.pos < this.input.length && /\s/.test(this.input[this.pos]!)) {
       this.pos++;
     }
   }
@@ -155,16 +155,16 @@ export function parseCondition(expr: string): ConditionNode {
 export function evaluateCondition(node: ConditionNode, vars: Map<string, string>): boolean {
   switch (node.type) {
     case 'truthy':
-      return !!(vars.get(node.name));
+      return !!vars.get(node.name);
     case 'falsy':
-      return !(vars.get(node.name));
+      return !vars.get(node.name);
     case 'eq':
       return vars.get(node.name) === node.value;
     case 'neq':
       return vars.get(node.name) !== node.value;
     case 'and':
-      return node.children.every(c => evaluateCondition(c, vars));
+      return node.children.every((c) => evaluateCondition(c, vars));
     case 'or':
-      return node.children.some(c => evaluateCondition(c, vars));
+      return node.children.some((c) => evaluateCondition(c, vars));
   }
 }

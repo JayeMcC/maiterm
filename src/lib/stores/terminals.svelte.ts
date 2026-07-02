@@ -1,8 +1,9 @@
 import type { Terminal } from '@xterm/xterm';
-import { setTabScrollback, killTerminal, serializeTerminal, searchTerminal, clearTerminalScrollback, saveTerminalScrollback } from '$lib/tauri/commands';
+import { killTerminal, searchTerminal, clearTerminalScrollback, saveTerminalScrollback } from '$lib/tauri/commands';
 import { error as logError } from '@tauri-apps/plugin-log';
 import { getCompiledTitlePatterns } from '$lib/utils/promptPattern';
 import { preferencesStore } from '$lib/stores/preferences.svelte';
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
 /**
  * Per-terminal state collected from OSC escape sequences.
@@ -42,33 +43,39 @@ export interface SplitContext {
 }
 
 function createTerminalsStore() {
-  let instances = $state<Map<string, TerminalInstance>>(new Map());
+  const instances = new SvelteMap<string, TerminalInstance>();
   /** Bumped on register/unregister so external $derived can track instance set changes. */
   let instanceVersion = $state(0);
   let searchVisibleFor = $state<string | null>(null);
-  let canvasTabs = $state(new Set<string>());
+  const canvasTabs = new SvelteSet<string>();
   let _shuttingDown = false;
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative split-context handoff; not read in templates or $derived
   const splitContexts = new Map<string, SplitContext>();
   // PTY IDs that should NOT be killed on component destroy (e.g. tab moving between workspaces)
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative preservation flag registry; consumed once in onDestroy
   const preservedPtyIds = new Set<string>();
   // PTY IDs found still alive in the Rust registry at load time (window reload,
   // not a full app restart). A tab whose persisted pty_id is in here reattaches
   // to the running PTY instead of respawning. Consumed when the tab registers.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- seeded once at load, consumed imperatively at register time
   const reattachPtyIds = new Set<string>();
   // Listeners notified when any terminal's OSC state changes
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- callback listener registry
   const oscListeners = new Set<(tabId: string, osc: OscState) => void>();
   // Dirty tracking: tabs that have received PTY output since last auto-save.
   // Prevents pointless serialization of idle terminals, which creates large
   // temporary strings that pressure the GC (81 terminals × ~300KB = 24MB/cycle).
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- scratchpad checked imperatively inside auto-save setInterval
   const dirtyTabs = new Set<string>();
   // Tabs whose PTY is being spawned — treated as "active" by the tab grouping
   // logic so they don't flash into the suspended group before registration.
-  let spawningTabs = $state(new Set<string>());
+  const spawningTabs = new SvelteSet<string>();
   // Tabs just restored from the archive. restoreArchivedTab gives them a
   // deliberate placement (next to the active tab), so the active-group
   // promotion effect in TerminalTabs must NOT yank them to the group boundary
   // on their first live transition. One-shot: consumed the first time the tab
   // goes live (unlike suspend→resume, which should still be promoted).
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- one-shot marker consumed imperatively on first live transition
   const restoredFromArchive = new Set<string>();
 
   function emitOscChange(tabId: string, osc: OscState) {
@@ -76,19 +83,45 @@ function createTerminalsStore() {
   }
 
   return {
-    get instances() { return instances; },
-    get shuttingDown() { return _shuttingDown; },
-    get searchVisibleFor() { return searchVisibleFor; },
-    isCanvasRenderer(tabId: string) { return canvasTabs.has(tabId); },
-    markDirty(tabId: string) { dirtyTabs.add(tabId); },
-    isDirty(tabId: string) { return dirtyTabs.has(tabId); },
-    clearDirty(tabId: string) { dirtyTabs.delete(tabId); },
-    markSpawning(tabId: string) { spawningTabs = new Set(spawningTabs).add(tabId); },
-    isSpawning(tabId: string) { return spawningTabs.has(tabId); },
-    markRestoredFromArchive(tabId: string) { restoredFromArchive.add(tabId); },
-    consumeRestoredFromArchive(tabId: string): boolean { return restoredFromArchive.delete(tabId); },
-    canvasRendererLoaded(tabId: string) { canvasTabs = new Set(canvasTabs).add(tabId); },
-    canvasRendererUnloaded(tabId: string) { const s = new Set(canvasTabs); s.delete(tabId); canvasTabs = s; },
+    get instances() {
+      return instances;
+    },
+    get shuttingDown() {
+      return _shuttingDown;
+    },
+    get searchVisibleFor() {
+      return searchVisibleFor;
+    },
+    isCanvasRenderer(tabId: string) {
+      return canvasTabs.has(tabId);
+    },
+    markDirty(tabId: string) {
+      dirtyTabs.add(tabId);
+    },
+    isDirty(tabId: string) {
+      return dirtyTabs.has(tabId);
+    },
+    clearDirty(tabId: string) {
+      dirtyTabs.delete(tabId);
+    },
+    markSpawning(tabId: string) {
+      spawningTabs.add(tabId);
+    },
+    isSpawning(tabId: string) {
+      return spawningTabs.has(tabId);
+    },
+    markRestoredFromArchive(tabId: string) {
+      restoredFromArchive.add(tabId);
+    },
+    consumeRestoredFromArchive(tabId: string): boolean {
+      return restoredFromArchive.delete(tabId);
+    },
+    canvasRendererLoaded(tabId: string) {
+      canvasTabs.add(tabId);
+    },
+    canvasRendererUnloaded(tabId: string) {
+      canvasTabs.delete(tabId);
+    },
 
     preservePty(ptyId: string) {
       preservedPtyIds.add(ptyId);
@@ -123,32 +156,23 @@ function createTerminalsStore() {
       return splitContexts.has(tabId);
     },
 
-    register(
-      tabId: string,
-      terminal: Terminal,
-      ptyId: string,
-      workspaceId: string,
-      paneId: string
-    ) {
-      instances = new Map(instances);
+    register(tabId: string, terminal: Terminal, ptyId: string, workspaceId: string, paneId: string) {
       instances.set(tabId, {
-        terminal, ptyId,
-        workspaceId, paneId, tabId,
+        terminal,
+        ptyId,
+        workspaceId,
+        paneId,
+        tabId,
         osc: { title: null, cwd: null, cwdHost: null, promptCwd: null },
       });
       // This PTY is now live in the frontend — consume any reattach eligibility
       // so a later remount (split/move) can't try to reattach a stale ID.
       reattachPtyIds.delete(ptyId);
-      if (spawningTabs.has(tabId)) {
-        const s = new Set(spawningTabs);
-        s.delete(tabId);
-        spawningTabs = s;
-      }
+      spawningTabs.delete(tabId);
       instanceVersion++;
     },
 
     unregister(tabId: string) {
-      instances = new Map(instances);
       instances.delete(tabId);
       instanceVersion++;
     },
@@ -158,7 +182,9 @@ function createTerminalsStore() {
       if (!instance) return;
       instance.workspaceId = workspaceId;
       instance.paneId = paneId;
-      instances = new Map(instances);
+      // Mutated object identity is unchanged; bump version so external $derived
+      // consumers keyed on instanceVersion re-run.
+      instanceVersion++;
     },
 
     get(tabId: string): TerminalInstance | undefined {
@@ -166,7 +192,9 @@ function createTerminalsStore() {
     },
 
     /** Reactive version counter — read this in $derived to track register/unregister. */
-    get instanceVersion() { return instanceVersion; },
+    get instanceVersion() {
+      return instanceVersion;
+    },
 
     /** Diagnostic snapshot of internal map/set sizes (for getDiagnostics). */
     getInternalSizes() {
@@ -193,7 +221,10 @@ function createTerminalsStore() {
         const patterns = getCompiledTitlePatterns(preferencesStore.promptPatterns);
         for (const re of patterns) {
           const m = patch.title.match(re);
-          if (m?.[1]) { patch.promptCwd = m[1].trim(); break; }
+          if (m?.[1]) {
+            patch.promptCwd = m[1].trim();
+            break;
+          }
         }
       }
       Object.assign(instance.osc, patch);
@@ -227,7 +258,9 @@ function createTerminalsStore() {
         await clearTerminalScrollback(instance.ptyId);
         // Persist the cleared state so auto-save doesn't re-save stale content
         await saveTerminalScrollback(instance.ptyId, instance.tabId);
-      } catch { /* terminal may have been killed */ }
+      } catch {
+        /* terminal may have been killed */
+      }
       dirtyTabs.delete(tabId);
     },
 
@@ -258,7 +291,9 @@ function createTerminalsStore() {
       if (instance && query) {
         try {
           await searchTerminal(instance.ptyId, query, false);
-        } catch { /* terminal may have been killed */ }
+        } catch {
+          /* terminal may have been killed */
+        }
       }
     },
 
@@ -267,15 +302,15 @@ function createTerminalsStore() {
       if (instance && query) {
         try {
           await searchTerminal(instance.ptyId, query, false);
-        } catch { /* terminal may have been killed */ }
+        } catch {
+          /* terminal may have been killed */
+        }
       }
     },
 
     async killAllTerminals(): Promise<void> {
-      const ptyIds = [...instances.values()].map(i => i.ptyId);
-      await Promise.allSettled(
-        ptyIds.map(id => killTerminal(id).catch(e => logError(`killAll: ${id} failed: ${e}`)))
-      );
+      const ptyIds = [...instances.values()].map((i) => i.ptyId);
+      await Promise.allSettled(ptyIds.map((id) => killTerminal(id).catch((e) => logError(`killAll: ${id} failed: ${e}`))));
     },
 
     async saveAllScrollback(): Promise<void> {
@@ -291,7 +326,7 @@ function createTerminalsStore() {
             } catch (e) {
               logError(`saveAllScrollback: FAILED ${tabId} - ${e}`);
             }
-          })()
+          })(),
         );
       }
 
@@ -299,7 +334,7 @@ function createTerminalsStore() {
       for (const r of results) {
         if (r.status === 'rejected') logError(`Failed to save scrollback: ${r.reason}`);
       }
-    }
+    },
   };
 }
 

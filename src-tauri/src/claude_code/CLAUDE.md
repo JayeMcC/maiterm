@@ -9,11 +9,13 @@ Claude Code CLI ←→ WebSocket/SSE ←→ axum server (Rust) ←→ Tauri even
 ```
 
 **Backend** (`src-tauri/src/claude_code/`):
+
 - `server.rs` — axum router with WebSocket (`/`) and SSE (`/sse` + `/message`) endpoints. Random port (10000–65535), 32-char auth token.
 - `protocol.rs` — JSON-RPC request/response types, `tool_list_response()` (46 tools), `initialize_response()`
 - `lockfile.rs` — writes `~/.claude/ide/{port}.lock` for discovery, registers `mcpServers.maiterm` (or `maiterm-dev`) in `~/.claude.json` (stripping the legacy `aiterm`/`aiterm-dev` key on write — rebrand migration), registers hooks in `~/.claude/settings.json`
 
 **Frontend** (`src/lib/stores/claudeCode.svelte.ts`):
+
 - Listens for `claude-code-tool` Tauri events
 - Dispatches to tool handlers (getOpenEditors, openFile, openDiff, etc.)
 - Responds via `claude_code_respond` Tauri command
@@ -22,54 +24,54 @@ Claude Code CLI ←→ WebSocket/SSE ←→ axum server (Rust) ←→ Tauri even
 
 ## Tools Exposed
 
-| Tool | Description |
-|------|-------------|
-| initSession | **REQUIRED first call.** Registers tab ID + session ID → enables auto-inject of tabId on all subsequent calls |
-| getOpenEditors | List open editor tabs (path, language, dirty state) |
-| getWorkspaceFolders | Workspace root paths |
-| getDiagnostics | App version, tab/PTY counts, WebGL status, FPS, memory/CPU, performance metrics |
-| checkDocumentDirty | Check if file has unsaved changes |
-| saveDocument | Save file to disk |
-| getCurrentSelection | Active editor selection + cursor |
-| getLatestSelection | Most recent selection in any tab |
-| openFile | Open file in editor tab (with optional line/text selection) |
-| openDiff | Show side-by-side diff for review (blocking) |
-| showDiff | Open read-only diff tab comparing file to a git ref (default HEAD) |
-| closeAllDiffTabs | Close all pending diff tabs |
-| listWindows | List all maiTerm windows with IDs, labels, and workspace summaries |
-| listWorkspaces | List all workspaces with panes, tabs, archived tab count (IDs, display names, types, active state, notes, Claude state) |
-| switchTab | Navigate to a tab by ID (auto-resolves workspace/pane) |
-| getTabNotes | Read notes for a tab (optional tabId, defaults to active) |
-| setTabNotes | Write/clear notes for a tab |
-| editTabNotes | Precision edit: find old_string in notes, replace with new_string (must match uniquely) |
-| listWorkspaceNotes | List workspace-level notes (IDs, previews, timestamps) |
-| readWorkspaceNote | Read full content of a workspace note |
-| writeWorkspaceNote | Create or update a workspace note |
-| deleteWorkspaceNote | Delete a workspace note |
-| moveNote | Move note between tab and workspace (with conflict detection) |
-| getTabContext | Get recent terminal output/editor content for tab discovery |
-| openNotesPanel | Open/close/toggle the notes panel for the active tab |
-| setNotesScope | Switch notes panel between 'tab' and 'workspace' views |
-| getActiveTab | Get the currently active workspace, pane, and tab info |
-| setTriggerVariable | Set/clear a trigger variable (e.g. claudeSessionId) for a tab |
-| getTriggerVariables | Read all trigger variables for a tab |
-| setAutoResume | Enable/disable auto-resume with optional command/cwd/ssh overrides |
-| getAutoResume | Get current auto-resume configuration for a tab |
-| findNotes | Search all tabs and workspaces for notes, returns previews |
-| sendNotification | Send in-app toast notification (title, body, type) |
-| readLogs | Read recent maiTerm log entries (filterable by level, search string) |
-| getPreferences | Return current preferences with metadata (filterable by query) |
-| setPreference | Update a single preference by key |
-| createBackup | Create gzip-compressed backup of entire maiTerm state |
-| getClaudeSessions | All active Claude sessions across tabs (state, tool, model, cwd) — multi-agent coordination |
-| listArchivedTabs | List archived (suspended) tabs with names, dates, restore context |
-| restoreArchivedTab | Restore an archived tab back into the active workspace |
-| sendToBridgedAgent | Send a message to a peer agent. 1:1 bridge: omit recipient/topic. Mesh Workspace: recipient (role/handle) + topic required. Async — reply arrives as a new prompt turn |
-| getBridgedAgent | Report whether this tab is bridged and, if so, the partner's label/cwd (in a mesh, returns the roster) |
-| listBridgedPeers | Mesh only: roster of reachable peers — handle (tabId), role, cwd, purpose, live |
-| listTopics | Mesh only: conversation topics — id, label, state, owner, participants, turn count |
-| startTopic | Mesh only: start/reuse a topic (caller becomes owner); returns the topic id |
-| completeTopic | Mesh only: owner marks a topic complete; signals participants, rejects further sends |
+| Tool                | Description                                                                                                                                                            |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| initSession         | **REQUIRED first call.** Registers tab ID + session ID → enables auto-inject of tabId on all subsequent calls                                                          |
+| getOpenEditors      | List open editor tabs (path, language, dirty state)                                                                                                                    |
+| getWorkspaceFolders | Workspace root paths                                                                                                                                                   |
+| getDiagnostics      | App version, tab/PTY counts, WebGL status, FPS, memory/CPU, performance metrics                                                                                        |
+| checkDocumentDirty  | Check if file has unsaved changes                                                                                                                                      |
+| saveDocument        | Save file to disk                                                                                                                                                      |
+| getCurrentSelection | Active editor selection + cursor                                                                                                                                       |
+| getLatestSelection  | Most recent selection in any tab                                                                                                                                       |
+| openFile            | Open file in editor tab (with optional line/text selection)                                                                                                            |
+| openDiff            | Show side-by-side diff for review (blocking)                                                                                                                           |
+| showDiff            | Open read-only diff tab comparing file to a git ref (default HEAD)                                                                                                     |
+| closeAllDiffTabs    | Close all pending diff tabs                                                                                                                                            |
+| listWindows         | List all maiTerm windows with IDs, labels, and workspace summaries                                                                                                     |
+| listWorkspaces      | List all workspaces with panes, tabs, archived tab count (IDs, display names, types, active state, notes, Claude state)                                                |
+| switchTab           | Navigate to a tab by ID (auto-resolves workspace/pane)                                                                                                                 |
+| getTabNotes         | Read notes for a tab (optional tabId, defaults to active)                                                                                                              |
+| setTabNotes         | Write/clear notes for a tab                                                                                                                                            |
+| editTabNotes        | Precision edit: find old_string in notes, replace with new_string (must match uniquely)                                                                                |
+| listWorkspaceNotes  | List workspace-level notes (IDs, previews, timestamps)                                                                                                                 |
+| readWorkspaceNote   | Read full content of a workspace note                                                                                                                                  |
+| writeWorkspaceNote  | Create or update a workspace note                                                                                                                                      |
+| deleteWorkspaceNote | Delete a workspace note                                                                                                                                                |
+| moveNote            | Move note between tab and workspace (with conflict detection)                                                                                                          |
+| getTabContext       | Get recent terminal output/editor content for tab discovery                                                                                                            |
+| openNotesPanel      | Open/close/toggle the notes panel for the active tab                                                                                                                   |
+| setNotesScope       | Switch notes panel between 'tab' and 'workspace' views                                                                                                                 |
+| getActiveTab        | Get the currently active workspace, pane, and tab info                                                                                                                 |
+| setTriggerVariable  | Set/clear a trigger variable (e.g. claudeSessionId) for a tab                                                                                                          |
+| getTriggerVariables | Read all trigger variables for a tab                                                                                                                                   |
+| setAutoResume       | Enable/disable auto-resume with optional command/cwd/ssh overrides                                                                                                     |
+| getAutoResume       | Get current auto-resume configuration for a tab                                                                                                                        |
+| findNotes           | Search all tabs and workspaces for notes, returns previews                                                                                                             |
+| sendNotification    | Send in-app toast notification (title, body, type)                                                                                                                     |
+| readLogs            | Read recent maiTerm log entries (filterable by level, search string)                                                                                                   |
+| getPreferences      | Return current preferences with metadata (filterable by query)                                                                                                         |
+| setPreference       | Update a single preference by key                                                                                                                                      |
+| createBackup        | Create gzip-compressed backup of entire maiTerm state                                                                                                                  |
+| getClaudeSessions   | All active Claude sessions across tabs (state, tool, model, cwd) — multi-agent coordination                                                                            |
+| listArchivedTabs    | List archived (suspended) tabs with names, dates, restore context                                                                                                      |
+| restoreArchivedTab  | Restore an archived tab back into the active workspace                                                                                                                 |
+| sendToBridgedAgent  | Send a message to a peer agent. 1:1 bridge: omit recipient/topic. Mesh Workspace: recipient (role/handle) + topic required. Async — reply arrives as a new prompt turn |
+| getBridgedAgent     | Report whether this tab is bridged and, if so, the partner's label/cwd (in a mesh, returns the roster)                                                                 |
+| listBridgedPeers    | Mesh only: roster of reachable peers — handle (tabId), role, cwd, purpose, live                                                                                        |
+| listTopics          | Mesh only: conversation topics — id, label, state, owner, participants, turn count                                                                                     |
+| startTopic          | Mesh only: start/reuse a topic (caller becomes owner); returns the topic id                                                                                            |
+| completeTopic       | Mesh only: owner marks a topic complete; signals participants, rejects further sends                                                                                   |
 
 ## Agent Bridge (agent-to-agent bridge)
 
@@ -81,12 +83,13 @@ terminal turn in the recipient's pane, so the human watches the whole exchange a
 interrupt with Esc.
 
 **Two bridge modes (picker toggle):**
+
 - **Fork into new pane** (default) — `establishBridge()` forks the target session
   (`claude --resume <id> --fork-session`) into a split pane beside the caller: an
   isolated peer with the target's full context that doesn't disturb the original.
 - **Connect existing tab** — `bridgeExistingTab()` bridges two already-running Claude tabs
   directly, no fork/new pane (for when the split already exists, e.g. a failed
-  auto-reconnect). Idempotent: re-selecting the caller's own partner *repairs* a broken
+  auto-reconnect). Idempotent: re-selecting the caller's own partner _repairs_ a broken
   bridge in place; it refuses to hijack a tab bridged to a third agent.
 
 **Human-guided opener:** the picker has an optional textarea where the human describes
@@ -97,6 +100,7 @@ direction before using `sendToBridgedAgent`. The description is in-memory (one-t
 persisted).
 
 **Key files:**
+
 - `src/lib/stores/agentBridge.svelte.ts` — bridge registry (keyed by tab_id, symmetric),
   `establishBridge()` (fork + handshake), `bridgeExistingTab()` (no-fork bridge/repair),
   `primeFork()` (auto-init directive), `rehydrate()` (rebuild from persisted state),
@@ -109,7 +113,7 @@ persisted).
 - Persistence: `Tab.agent_bridge` (Rust `AgentBridge` struct) via the `set_tab_agent_bridge`
   command — durable pairing written both sides
 
-**Design decisions (v1):** async-only (no blocking RPC); fork-only (the fork *is* the
+**Design decisions (v1):** async-only (no blocking RPC); fork-only (the fork _is_ the
 target, isolated); loop control = framing + human Esc (no circuit breaker); identity is
 stamped by maiTerm from the registry (tamper-proof — recipient can't mistake a peer for
 the human); bridge keyed by tab_id (survives the fork's new session id).
@@ -133,7 +137,7 @@ cleared). `session-end` only **suspends** the in-memory bridge (keeps the durabl
 the agent may auto-resume and re-bind; only an explicit disconnect or a closed tab tears it
 down. Because `claude --resume` can mint a new session id, the recorded `partner_session_id`
 is refreshed when a partner re-inits (`claude-init-session`), and a send-time id mismatch
-**re-binds** rather than breaking. The fork's auto-resume command is *not* `--fork-session`
+**re-binds** rather than breaking. The fork's auto-resume command is _not_ `--fork-session`
 (that would re-fork on every resume) — once the fork has its own id, `handleEnableAutoResume`
 drops the fork flag so it resumes its own conversation like any Claude tab.
 
@@ -148,6 +152,7 @@ tab in it is reachable by every other, over **topic-scoped** threads, with **no 
 is headless (agents run in normal splits); the stage/filmstrip view is Phase 2.
 
 **Layered for testability** (each layer unit-tested, no Svelte/Tauri in the cores):
+
 - `src/lib/stores/agentDelivery.ts` — the recipient-keyed FIFO mailbox, **shared** with the
   1:1 bridge (the mesh constructs its own controller instance).
 - `src/lib/stores/meshRouting.ts` — recipient resolution + the topic registry. Routing keys
@@ -181,6 +186,7 @@ when the tab is in a mesh workspace, else the 1:1 `agentBridgeStore`.
 Hooks registered in `~/.claude/settings.json` on MCP server startup, cleaned up on app exit and stale lockfile sweep.
 
 **Hooks registered:**
+
 - `SessionStart` (command): Echoes tab ID into Claude's context. Gated on `$AITERM_PORT` matching server port (prevents dev/prod cross-talk). Output appears collapsed in TUI ("Ran 1 start hook") but injected into model context as system-reminder.
 - `SessionStart` (HTTP): POST to `/hooks` with `{session_id, cwd, source, model}`. Registers session→tab mapping in `AppState.agent_sessions`.
 - `SessionEnd` (HTTP): Removes session from mapping.
@@ -188,6 +194,7 @@ Hooks registered in `~/.claude/settings.json` on MCP server startup, cleaned up 
 - `Stop` (HTTP): Receives stop events.
 
 **Connection tab affinity (`initSession`):**
+
 - Claude calls `initSession({ tabId, sessionId })` as its first MCP tool call
 - Server stores connection_id → tab_id mapping in `ServerState.connection_tabs`
 - All subsequent tool calls on that connection auto-inject `tabId` if missing
@@ -211,12 +218,14 @@ key; mint a per-request id instead so distinct agents can't merge.
 **SSE reconnect recovery:** SSE connections over SSH tunnels flap frequently (disconnect/reconnect every few seconds). Each reconnect creates a new SSE session ID, clearing the old `connection_tabs` entry. Without recovery, every tool call after a reconnect fails with "Session not initialized." Fix: when a tool call arrives with no connection affinity, `agent_sessions` is checked for active sessions. Recovery only binds when unambiguous — exactly one active session, or (with multiple bridged agents) exactly one of them currently lacks a live connection. With 2+ ambiguous candidates it declines and requires an explicit `initSession`, because guessing could bind one agent's call to another agent's tab (the same class of cross-agent corruption as the shared-key bug above).
 
 **Dev/prod isolation:**
+
 - PTY env vars: `AITERM_TAB_ID` (tab ID), `AITERM_PORT` (server port) — set at spawn in `pty/manager.rs`
 - Command hook gates on `$AITERM_PORT` match
 - MCP tool guard in `server.rs` rejects `tabId` that doesn't exist in this instance
 - MCP instructions specify server name (`maiterm` vs `maiterm-dev`)
 
 **`/maiterm` skill (auto-installed):**
+
 - Written to `~/.claude/skills/maiterm/SKILL.md` on startup, removed on exit (`write_aiterm_skill` / `remove_aiterm_skill` in `lockfile.rs`)
 - Provides fast slash-command access: `/maiterm notes`, `/maiterm diag`, `/maiterm tabs`, etc.
 - Reduces LLM inference by giving explicit tool→parameter mappings
@@ -236,6 +245,7 @@ key; mint a per-request id instead so distinct agents can't merge.
 Exposes local MCP tools to Claude Code running on remote servers via SSH reverse tunnels.
 
 **Architecture:**
+
 ```
 Local maiTerm → SSH reverse tunnel (-R 0:127.0.0.1:{mcp_port}) → Remote :allocated_port
                Background SSH → writes lockfile + ~/.claude.json on remote
@@ -243,6 +253,7 @@ Remote Claude Code → discovers ~/.claude/ide/{port}.lock → connects through 
 ```
 
 **Key files:**
+
 - `src-tauri/src/commands/ssh_tunnel.rs` — tunnel lifecycle (start, detach, kill), port parsing, `ssh_run_setup` for background lockfile writing
 - `src/lib/stores/sshMcpBridge.svelte.ts` — bridge orchestration, reactive status tracking, ref counting
 
@@ -257,6 +268,7 @@ Remote Claude Code → discovers ~/.claude/ide/{port}.lock → connects through 
 **`~/.aiterm` env file:** Written during bridge setup with `export AITERM_TAB_ID=... AITERM_PORT=...`. Sourced as a fallback by the SessionStart hook when `$AITERM_TAB_ID` is empty (e.g. inside tmux where env vars weren't inherited). Users can manually `source ~/.aiterm` in any shell. Overwritten on each bridge connect — self-correcting for stale values.
 
 **Context menu items (SSH tabs with active bridge):**
+
 - "Inject maiTerm Env Vars" — re-writes `export AITERM_TAB_ID=... AITERM_PORT=...` to the PTY for the current shell (useful after tmux attach, sudo, su)
 - "Install MCP for Current User" — writes the full setup script (lockfile, MCP, hooks, skill) to the PTY, executing as the current user. Needed after `sudo -i` or `su -l otheruser` where `~/` changed but the tunnel is still accessible on localhost.
 

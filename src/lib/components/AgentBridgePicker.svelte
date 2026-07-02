@@ -91,12 +91,7 @@
   // What the list actually renders: most-recently-active first, narrowed by the filter.
   const visibleCandidates = $derived.by((): Candidate[] => {
     const q = filter.trim().toLowerCase();
-    const list = q
-      ? candidates.filter((c) =>
-          c.tabName.toLowerCase().includes(q) ||
-          c.workspaceName.toLowerCase().includes(q) ||
-          (c.cwd?.toLowerCase().includes(q) ?? false))
-      : candidates.slice();
+    const list = q ? candidates.filter((c) => c.tabName.toLowerCase().includes(q) || c.workspaceName.toLowerCase().includes(q) || (c.cwd?.toLowerCase().includes(q) ?? false)) : candidates.slice();
     list.sort((a, b) => b.lastActivity - a.lastActivity);
     return list;
   });
@@ -141,7 +136,11 @@
       // Connect directly to the existing tab — no fork, no new pane.
       if (mode === 'existing') {
         const res = await agentBridgeStore.bridgeExistingTab(callerTabId, c.tabId, purpose);
-        if (!res.ok) { errorMsg = res.error; busy = false; return; }
+        if (!res.ok) {
+          errorMsg = res.error;
+          busy = false;
+          return;
+        }
         onclose();
         return;
       }
@@ -159,17 +158,23 @@
             remoteCwd = c.cwd; // OSC cwd is the remote cwd when SSH is active
             cwd = info.cwd ?? null; // local cwd to launch ssh from
           }
-        } catch { /* pty gone; fall through local */ }
+        } catch {
+          /* pty gone; fall through local */
+        }
       }
 
-      const res = await agentBridgeStore.establishBridge(callerTabId, {
-        sessionId: c.sessionId,
-        tabName: c.tabName,
-        workspaceName: c.workspaceName,
-        cwd,
-        sshCommand,
-        remoteCwd,
-      }, purpose);
+      const res = await agentBridgeStore.establishBridge(
+        callerTabId,
+        {
+          sessionId: c.sessionId,
+          tabName: c.tabName,
+          workspaceName: c.workspaceName,
+          cwd,
+          sshCommand,
+          remoteCwd,
+        },
+        purpose,
+      );
       if (!res.ok) {
         errorMsg = res.error;
         busy = false;
@@ -228,15 +233,7 @@
 </script>
 
 {#if open}
-  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-  <div
-    class="backdrop"
-    onclick={handleBackdropClick}
-    onkeydown={handleKeydown}
-    role="dialog"
-    aria-modal="true"
-    tabindex="-1"
-  >
+  <div class="backdrop" onclick={handleBackdropClick} onkeydown={handleKeydown} role="dialog" aria-modal="true" tabindex="-1">
     <div class="palette">
       <div class="header">
         <div class="title">Agent Bridge</div>
@@ -246,8 +243,7 @@
           {:else}
             Connect an already-running tab directly to
           {/if}
-          {#if callerName}<strong>{callerName}</strong>{:else}this tab{/if}.
-          The two agents can then talk to each other.
+          {#if callerName}<strong>{callerName}</strong>{:else}this tab{/if}. The two agents can then talk to each other.
         </div>
         <div class="mode-toggle" role="radiogroup" aria-label="Bridge mode">
           <button
@@ -256,26 +252,25 @@
             role="radio"
             aria-checked={mode === 'existing'}
             disabled={busy}
-            onclick={() => { mode = 'existing'; }}
-          >Connect existing tab</button>
+            onclick={() => {
+              mode = 'existing';
+            }}>Connect existing tab</button
+          >
           <button
             class="mode-btn"
             class:active={mode === 'fork'}
             role="radio"
             aria-checked={mode === 'fork'}
             disabled={busy}
-            onclick={() => { mode = 'fork'; }}
-          >Fork into new pane</button>
+            onclick={() => {
+              mode = 'fork';
+            }}>Fork into new pane</button
+          >
         </div>
       </div>
 
       <div class="purpose-field">
-        <textarea
-          bind:value={purpose}
-          rows="2"
-          disabled={busy}
-          placeholder="Describe this agent for your agent (optional) — what's it an expert on? How should your agent use it?"
-        ></textarea>
+        <textarea bind:value={purpose} rows="2" disabled={busy} placeholder="Describe this agent for your agent (optional) — what's it an expert on? How should your agent use it?"></textarea>
       </div>
 
       {#if errorMsg}
@@ -290,7 +285,9 @@
             type="text"
             disabled={busy}
             placeholder="Filter agents by name, workspace, or path…"
-            oninput={() => { selectedIndex = 0; }}
+            oninput={() => {
+              selectedIndex = 0;
+            }}
           />
         </div>
       {/if}
@@ -300,10 +297,8 @@
           <div class="status">Open this from a terminal tab running an agent.</div>
         {:else if candidates.length === 0}
           <div class="status">
-            No other registered agents found. An agent appears here once it has
-            registered with maiTerm — i.e. it has made at least one tool call (or you ran
-            <code>/maiterm init</code> in its tab). Start an agent in another tab, let it take
-            one turn, then reopen this.
+            No other registered agents found. An agent appears here once it has registered with maiTerm — i.e. it has made at least one tool call (or you ran
+            <code>/maiterm init</code> in its tab). Start an agent in another tab, let it take one turn, then reopen this.
           </div>
         {:else if visibleCandidates.length === 0}
           <div class="status">No agents match “{filter}”.</div>
@@ -314,7 +309,9 @@
               class:selected={i === selectedIndex}
               disabled={busy}
               onclick={() => choose(c)}
-              onmouseenter={() => { selectedIndex = i; }}
+              onmouseenter={() => {
+                selectedIndex = i;
+              }}
             >
               <span class="state-dot" class:active={c.state === 'active'} class:permission={c.state === 'permission'}></span>
               <span class="info">

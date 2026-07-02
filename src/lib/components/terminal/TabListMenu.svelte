@@ -26,40 +26,25 @@
   let { items, position, onActivate, actions, searchable = false }: Props = $props();
 
   let query = $state('');
-  const filtered = $derived(
-    query.trim()
-      ? items.filter(i => i.label.toLowerCase().includes(query.trim().toLowerCase()))
-      : items
-  );
+  const filtered = $derived(query.trim() ? items.filter((i) => i.label.toLowerCase().includes(query.trim().toLowerCase())) : items);
 
   // Group terminals and viewers (editors/diffs) into sections, matching the tab bar.
-  const shellItems = $derived(filtered.filter(i => i.tab.tab_type === 'terminal' || !i.tab.tab_type));
-  const viewerItems = $derived(filtered.filter(i => i.tab.tab_type === 'editor' || i.tab.tab_type === 'diff'));
+  const shellItems = $derived(filtered.filter((i) => i.tab.tab_type === 'terminal' || !i.tab.tab_type));
+  const viewerItems = $derived(filtered.filter((i) => i.tab.tab_type === 'editor' || i.tab.tab_type === 'diff'));
   const showHeaders = $derived(shellItems.length > 0 && viewerItems.length > 0);
 
-  const posStyle = $derived(
-    `top:${position.top}px;` +
-      (position.right != null ? `right:${position.right}px;` : `left:${position.left ?? 0}px;`)
-  );
+  const posStyle = $derived(`top:${position.top}px;` + (position.right != null ? `right:${position.right}px;` : `left:${position.left ?? 0}px;`));
 
   function autofocus(node: HTMLInputElement) {
     node.focus();
   }
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="tab-menu" style={posStyle} onwheel={(e) => e.stopPropagation()}>
   {#if searchable}
     <div class="tab-menu-search">
       <Icon name="search" size={12} />
-      <input
-        type="text"
-        placeholder="Search tabs…"
-        bind:value={query}
-        use:autofocus
-        spellcheck="false"
-        autocomplete="off"
-      />
+      <input type="text" placeholder="Search tabs…" bind:value={query} use:autofocus spellcheck="false" autocomplete="off" />
     </div>
   {/if}
   {#if filtered.length === 0}

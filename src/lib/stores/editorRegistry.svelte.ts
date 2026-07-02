@@ -1,4 +1,5 @@
 import type { EditorView } from '@codemirror/view';
+import { SvelteSet } from 'svelte/reactivity';
 
 export interface EditorRegistryEntry {
   view: EditorView;
@@ -7,10 +8,11 @@ export interface EditorRegistryEntry {
 }
 
 // Simple mutable map - not reactive (accessed by reference)
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative lookup registry; entries are read via getEditorByTabId/getEditorByFilePath, never in reactive templates
 const registry = new Map<string, EditorRegistryEntry>();
 
-// Reactive set of dirty tab IDs for UI (e.g. tab indicators)
-let dirtyTabs = $state(new Set<string>());
+// Reactive set of dirty tab IDs read via `isEditorDirty()` in tab-list templates.
+const dirtyTabs = new SvelteSet<string>();
 
 export function registerEditor(tabId: string, view: EditorView, filePath: string): void {
   registry.set(tabId, { view, filePath, isDirty: false });
@@ -18,20 +20,14 @@ export function registerEditor(tabId: string, view: EditorView, filePath: string
 
 export function unregisterEditor(tabId: string): void {
   registry.delete(tabId);
-  if (dirtyTabs.has(tabId)) {
-    dirtyTabs = new Set([...dirtyTabs].filter(id => id !== tabId));
-  }
+  dirtyTabs.delete(tabId);
 }
 
 export function setEditorDirty(tabId: string, dirty: boolean): void {
   const entry = registry.get(tabId);
   if (entry) entry.isDirty = dirty;
-  // Update reactive set
-  if (dirty && !dirtyTabs.has(tabId)) {
-    dirtyTabs = new Set(dirtyTabs).add(tabId);
-  } else if (!dirty && dirtyTabs.has(tabId)) {
-    dirtyTabs = new Set([...dirtyTabs].filter(id => id !== tabId));
-  }
+  if (dirty) dirtyTabs.add(tabId);
+  else dirtyTabs.delete(tabId);
 }
 
 export function isEditorDirty(tabId: string): boolean {

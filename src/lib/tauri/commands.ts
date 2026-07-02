@@ -1,5 +1,24 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { AgentBridge, AppData, DiffContext, DuplicateWorkspaceResult, EditorFileInfo, MeshTopic, Pane, Preferences, ScrollInfo, SearchResult, ShellInfo, SplitDirection, Tab, TerminalFrame, WindowData, Workspace, WorkspaceNote } from './types';
+import type {
+  AgentBridge,
+  AppData,
+  DiffContext,
+  DuplicateWorkspaceResult,
+  EditorFileInfo,
+  MeshTopic,
+  Pane,
+  Preferences,
+  ScrollInfo,
+  SearchResult,
+  ShellInfo,
+  SplitDirection,
+  Tab,
+  TerminalFrame,
+  WindowData,
+  WindowPreset,
+  Workspace,
+  WorkspaceNote,
+} from './types';
 
 // Terminal commands
 export async function spawnTerminal(ptyId: string, tabId: string, cols: number, rows: number, cwd?: string | null): Promise<void> {
@@ -345,11 +364,7 @@ export async function reorderWorkspaces(workspaceIds: string[]): Promise<void> {
   return invoke('reorder_workspaces', { workspaceIds });
 }
 
-export async function duplicateWorkspaceCmd(
-  workspaceId: string,
-  position: number,
-  tabContexts: TabContext[],
-): Promise<DuplicateWorkspaceResult> {
+export async function duplicateWorkspaceCmd(workspaceId: string, position: number, tabContexts: TabContext[]): Promise<DuplicateWorkspaceResult> {
   return invoke('duplicate_workspace', { workspaceId, position, tabContexts });
 }
 
@@ -372,32 +387,15 @@ export async function copyTabHistory(sourceTabId: string, destTabId: string): Pr
   return invoke('copy_tab_history', { sourceTabId, destTabId });
 }
 
-export async function setTabLastCwd(
-  workspaceId: string,
-  paneId: string,
-  tabId: string,
-  cwd: string | null,
-): Promise<void> {
+export async function setTabLastCwd(workspaceId: string, paneId: string, tabId: string, cwd: string | null): Promise<void> {
   return invoke('set_tab_last_cwd', { workspaceId, paneId, tabId, cwd });
 }
 
-export async function setTabRestoreContext(
-  workspaceId: string,
-  paneId: string,
-  tabId: string,
-  cwd: string | null,
-  sshCommand: string | null,
-  remoteCwd: string | null,
-): Promise<void> {
+export async function setTabRestoreContext(workspaceId: string, paneId: string, tabId: string, cwd: string | null, sshCommand: string | null, remoteCwd: string | null): Promise<void> {
   return invoke('set_tab_restore_context', { workspaceId, paneId, tabId, cwd, sshCommand, remoteCwd });
 }
 
-export async function setTabTriggerVariables(
-  workspaceId: string,
-  paneId: string,
-  tabId: string,
-  vars: Record<string, string>,
-): Promise<void> {
+export async function setTabTriggerVariables(workspaceId: string, paneId: string, tabId: string, vars: Record<string, string>): Promise<void> {
   return invoke('set_tab_trigger_variables', { workspaceId, paneId, tabId, vars });
 }
 
@@ -422,21 +420,11 @@ export async function setTabAutoResumeContext(
   return invoke('set_tab_auto_resume_context', { workspaceId, paneId, tabId, cwd, sshCommand, remoteCwd, command, pinned: pinned ?? null });
 }
 
-export async function setTabAutoResumeEnabled(
-  workspaceId: string,
-  paneId: string,
-  tabId: string,
-  enabled: boolean,
-): Promise<void> {
+export async function setTabAutoResumeEnabled(workspaceId: string, paneId: string, tabId: string, enabled: boolean): Promise<void> {
   return invoke('set_tab_auto_resume_enabled', { workspaceId, paneId, tabId, enabled });
 }
 
-export async function setTabAgentBridge(
-  workspaceId: string,
-  paneId: string,
-  tabId: string,
-  bridge: AgentBridge | null,
-): Promise<void> {
+export async function setTabAgentBridge(workspaceId: string, paneId: string, tabId: string, bridge: AgentBridge | null): Promise<void> {
   return invoke('set_tab_agent_bridge', { workspaceId, paneId, tabId, bridge });
 }
 
@@ -526,6 +514,27 @@ export async function openPreferencesWindow(): Promise<void> {
 
 export async function openHelpWindow(section?: string): Promise<void> {
   return invoke('open_help_window', { section: section ?? null });
+}
+
+// Window preset commands
+export async function listWindowPresets(): Promise<WindowPreset[]> {
+  return invoke('list_window_presets');
+}
+
+export async function saveWindowPreset(name: string, tabContexts: TabContext[], overwrite: boolean): Promise<WindowPreset> {
+  return invoke('save_window_preset', { name, tabContexts, overwrite });
+}
+
+export async function openWindowPreset(presetId: string): Promise<string> {
+  return invoke('open_window_preset', { presetId });
+}
+
+export async function deleteWindowPreset(presetId: string): Promise<void> {
+  return invoke('delete_window_preset', { presetId });
+}
+
+export async function renameWindowPreset(presetId: string, newName: string): Promise<void> {
+  return invoke('rename_window_preset', { presetId, newName });
 }
 
 // Editor commands
@@ -632,13 +641,7 @@ export async function claudeCodeNotifySelection(payload: unknown): Promise<void>
   return invoke('claude_code_notify_selection', { payload });
 }
 
-export async function createDiffTab(
-  workspaceId: string,
-  paneId: string,
-  name: string,
-  diffContext: DiffContext,
-  afterTabId?: string | null,
-): Promise<Tab> {
+export async function createDiffTab(workspaceId: string, paneId: string, name: string, diffContext: DiffContext, afterTabId?: string | null): Promise<Tab> {
   return invoke('create_diff_tab', { workspaceId, paneId, name, diffContext, afterTabId: afterTabId ?? null });
 }
 
@@ -656,18 +659,11 @@ export async function archiveTab(
   return invoke('archive_tab', { workspaceId, paneId, tabId, displayName, scrollback, cwd, sshCommand, remoteCwd });
 }
 
-export async function restoreArchivedTab(
-  workspaceId: string,
-  paneId: string,
-  tabId: string,
-): Promise<Tab> {
+export async function restoreArchivedTab(workspaceId: string, paneId: string, tabId: string): Promise<Tab> {
   return invoke('restore_archived_tab', { workspaceId, paneId, tabId });
 }
 
-export async function deleteArchivedTab(
-  workspaceId: string,
-  tabId: string,
-): Promise<void> {
+export async function deleteArchivedTab(workspaceId: string, tabId: string): Promise<void> {
   return invoke('delete_archived_tab', { workspaceId, tabId });
 }
 

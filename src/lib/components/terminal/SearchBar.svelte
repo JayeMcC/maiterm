@@ -50,21 +50,9 @@
         if (query) terminalsStore.findNext(tabId, query);
       }}
     />
-    <IconButton
-      tooltip="Previous match (Shift+Enter)"
-      style="font-size: 0.923rem;line-height:1"
-      onclick={() => terminalsStore.findPrevious(tabId, query)}
-    >&#x25B2;</IconButton>
-    <IconButton
-      tooltip="Next match (Enter)"
-      style="font-size: 0.923rem;line-height:1"
-      onclick={() => terminalsStore.findNext(tabId, query)}
-    >&#x25BC;</IconButton>
-    <IconButton
-      tooltip="Close (Escape)"
-      style="font-size: 1.231rem"
-      onclick={close}
-    >&times;</IconButton>
+    <IconButton tooltip="Previous match (Shift+Enter)" style="font-size: 0.923rem;line-height:1" onclick={() => terminalsStore.findPrevious(tabId, query)}>&#x25B2;</IconButton>
+    <IconButton tooltip="Next match (Enter)" style="font-size: 0.923rem;line-height:1" onclick={() => terminalsStore.findNext(tabId, query)}>&#x25BC;</IconButton>
+    <IconButton tooltip="Close (Escape)" style="font-size: 1.231rem" onclick={close}>&times;</IconButton>
   </div>
 {/if}
 
@@ -103,5 +91,4 @@
   .search-input::placeholder {
     color: var(--fg-dim);
   }
-
 </style>

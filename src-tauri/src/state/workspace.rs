@@ -506,10 +506,31 @@ impl WindowData {
     }
 }
 
+/// A named snapshot of a `WindowData` used to spawn a fresh window with the same
+/// workspace/pane/tab shape (and cwd/editor/notes context) without keeping the
+/// original window's webview alive. PTY handles, scrollback, mesh topics, agent
+/// bridges, and the transient trigger-variable map are stripped at save time
+/// because they don't belong in a reusable template.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WindowPreset {
+    pub id: String,
+    pub name: String,
+    pub created_at: String,
+    pub updated_at: String,
+    /// Sanitised WindowData holding just the template shape. `label` is unused
+    /// (each restore mints a new label) and `window_geometry` is empty.
+    pub window: WindowData,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AppData {
     #[serde(default)]
     pub windows: Vec<WindowData>,
+    /// Named window snapshots restorable from the Window menu. Sibling of
+    /// `windows` (not a Preferences field) so preference roundtrips can't
+    /// clobber them.
+    #[serde(default)]
+    pub window_presets: Vec<WindowPreset>,
     // Old fields kept for migration deserialization only
     #[serde(default, skip_serializing)]
     pub workspaces: Option<Vec<Workspace>>,

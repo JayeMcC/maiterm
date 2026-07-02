@@ -9,10 +9,10 @@
   (Svelte 5 + xterm.js + CodeMirror frontend, `alacritty_terminal` Rust core) can
   target macOS, Windows, Linux, **iOS, and Android** from the same repo.
 - **The wall is the backend process model.** Everything that makes maiTerm a
-  *terminal* spawns local child processes (`portable-pty` → `/bin/bash`; even
+  _terminal_ spawns local child processes (`portable-pty` → `/bin/bash`; even
   "SSH" shells out to the system `ssh` binary). Mobile sandboxes restrict or
   forbid that.
-- **Clearest path: redefine the mobile product as a *remote* terminal** (an
+- **Clearest path: redefine the mobile product as a _remote_ terminal** (an
   embedded SSH/Mosh client), not a local shell. One codebase, ~80% reuse, a small
   `#[cfg]`-gated transport layer swaps PTY (desktop) for SSH (mobile).
 - **Cross-platform source: yes** (one codebase → 5 targets).
@@ -23,25 +23,25 @@
 
 ## 1. The one constraint that determines everything
 
-The frontend and the terminal *rendering* brain are already portable. The blocker
-is that the whole terminal *model* is local-process-based:
+The frontend and the terminal _rendering_ brain are already portable. The blocker
+is that the whole terminal _model_ is local-process-based:
 
-| Concern | Where | Mobile problem |
-|---|---|---|
-| Spawn shell | `pty/manager.rs` → `native_pty_system().openpty()` + `spawn_command` | iOS forbids `fork`/`exec`; Android restricts it |
-| "SSH" sessions | detection of user-typed `ssh`/`mosh` in a local PTY (`is_ssh_command`) | relies on a local PTY + system `ssh` binary |
-| MCP reverse tunnel | `commands/ssh_tunnel.rs:68` → `tokio::process::Command::new("ssh")` | shells out to system `ssh`; no such binary on iOS |
+| Concern            | Where                                                                  | Mobile problem                                    |
+| ------------------ | ---------------------------------------------------------------------- | ------------------------------------------------- |
+| Spawn shell        | `pty/manager.rs` → `native_pty_system().openpty()` + `spawn_command`   | iOS forbids `fork`/`exec`; Android restricts it   |
+| "SSH" sessions     | detection of user-typed `ssh`/`mosh` in a local PTY (`is_ssh_command`) | relies on a local PTY + system `ssh` binary       |
+| MCP reverse tunnel | `commands/ssh_tunnel.rs:68` → `tokio::process::Command::new("ssh")`    | shells out to system `ssh`; no such binary on iOS |
 
-**Key insight:** maiTerm does **not** contain an SSH *implementation* today — it
+**Key insight:** maiTerm does **not** contain an SSH _implementation_ today — it
 detects and wraps the OS `ssh` binary. None of that transfers to mobile. Mobile
 needs a real in-process SSH client.
 
 ## 2. Platform reality
 
-| | Can spawn local processes? | Verdict |
-|---|---|---|
-| **iOS** | **No.** Sandbox forbids `fork`/`exec`. No `/bin/sh`, no `/usr/bin/ssh`. | Local terminal **impossible**. Only a network terminal (in-process SSH/Mosh) works. Same reason Blink Shell / Termius / Prompt are SSH clients, never local shells. (iSH is the exception — ships a usermode x86 emulator; huge effort, shaky App Store footing.) |
-| **Android** | **Partial.** Can exec, but since API 29 (W^X) only from the app's native-lib dir, not writable storage. | Local shell *possible* but heavy (Termux-style binary bootstrap) and Play Store distribution is hostile to it. In-process SSH works cleanly. |
+|             | Can spawn local processes?                                                                              | Verdict                                                                                                                                                                                                                                                           |
+| ----------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **iOS**     | **No.** Sandbox forbids `fork`/`exec`. No `/bin/sh`, no `/usr/bin/ssh`.                                 | Local terminal **impossible**. Only a network terminal (in-process SSH/Mosh) works. Same reason Blink Shell / Termius / Prompt are SSH clients, never local shells. (iSH is the exception — ships a usermode x86 emulator; huge effort, shaky App Store footing.) |
+| **Android** | **Partial.** Can exec, but since API 29 (W^X) only from the app's native-lib dir, not writable storage. | Local shell _possible_ but heavy (Termux-style binary bootstrap) and Play Store distribution is hostile to it. In-process SSH works cleanly.                                                                                                                      |
 
 A straight lift-and-shift = beautiful UI with a **dead terminal** on iOS.
 
@@ -95,11 +95,11 @@ Everything downstream of the byte stream (`handle.rs`, `render.rs`, `serialize`,
 specifically.
 
 > Note: optionally compile `SshChannel` on desktop too (behind a feature flag) —
-> it would give the desktop app a *native* SSH client instead of wrapping the OS
+> it would give the desktop app a _native_ SSH client instead of wrapping the OS
 > `ssh` binary, which is a nice bonus and a good way to test the mobile transport
 > on desktop first.
 
-### Why this is also the better *product*
+### Why this is also the better _product_
 
 maiTerm already has the Claude Code hooks integration, multi-session awareness
 (`getClaudeSessions`), and notifications. The SSH-client framing turns mobile into
@@ -140,22 +140,22 @@ permission prompt. Differentiated, not a degraded desktop clone.
 
 ## 5. Build & release setup
 
-### Cross-platform *source* — yes. Cross-platform *deployment* — no.
+### Cross-platform _source_ — yes. Cross-platform _deployment_ — no.
 
 One codebase compiles to five targets, but there's no single artifact that runs
 everywhere. Each target ships its own bundle on its own channel:
 
-| Target | Artifact | Distribution | Updates |
-|---|---|---|---|
-| macOS | `.dmg` / `.app` | Direct download (current flow) | `tauri-plugin-updater` + `latest.json` |
-| Windows | `.exe` | Direct download | updater |
-| Linux | `.deb` / `.AppImage` | Direct download | updater |
-| **iOS** | `.ipa` | **App Store only** | **Store-mediated** (no Tauri updater) |
-| **Android** | `.apk` / `.aab` | Play Store / sideload | Store-mediated |
+| Target      | Artifact             | Distribution                   | Updates                                |
+| ----------- | -------------------- | ------------------------------ | -------------------------------------- |
+| macOS       | `.dmg` / `.app`      | Direct download (current flow) | `tauri-plugin-updater` + `latest.json` |
+| Windows     | `.exe`               | Direct download                | updater                                |
+| Linux       | `.deb` / `.AppImage` | Direct download                | updater                                |
+| **iOS**     | `.ipa`               | **App Store only**             | **Store-mediated** (no Tauri updater)  |
+| **Android** | `.apk` / `.aab`      | Play Store / sideload          | Store-mediated                         |
 
 **Implication:** the existing desktop Release workflow (`latest.json` + GitHub
 Release machinery) **stays as-is for the three desktop targets**. Mobile gets a
-*parallel* lane:
+_parallel_ lane:
 
 - **Build:** `cargo tauri ios build` / `cargo tauri android build`
 - **iOS:** signed `.ipa` → App Store Connect (TestFlight for beta, then review)
@@ -174,17 +174,19 @@ Release machinery) **stays as-is for the three desktop targets**. Mobile gets a
 ## 6. Effort & risks
 
 **Effort (Path A):**
+
 - Toolchain bring-up: days.
 - Transport refactor + cfg-gating: ~couple of weeks to a usable alpha.
 - Long tail: mobile UX (keyboard bar, reconnect, secure key storage) + store
   paperwork/review.
 
 **Risks / gotchas:**
+
 - Code that calls `native_pty_system()` won't even **link** on iOS — the cfg-split
   is mandatory, not cosmetic.
 - **App Store:** a generic "connect to your server over SSH" app is fine
   (Termius/Blink exist); anything that looks like it downloads + runs code
-  *locally* is a rejection risk on iOS.
+  _locally_ is a rejection risk on iOS.
 - WebView differs per platform (WKWebView iOS/macOS, Android System WebView,
   WebView2 Windows) — occasional CSS/JS quirks. The dev-CSP/`unsafe-eval` lessons
   from the MCP bridge apply to WKWebView.

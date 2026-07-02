@@ -72,8 +72,8 @@ function splitRowSpans(src: string, lineStart: number, text: string): TableCellS
 
   const isBlank = ([s, e]: [number, number]) => text.slice(s, e).trim() === '';
   // A leading pipe is row decoration, not an empty first cell; same for trailing.
-  if (segs.length > 1 && isBlank(segs[0])) segs.shift();
-  if (segs.length > 1 && isBlank(segs[segs.length - 1])) segs.pop();
+  if (segs.length > 1 && isBlank(segs[0]!)) segs.shift();
+  if (segs.length > 1 && isBlank(segs[segs.length - 1]!)) segs.pop();
 
   return segs.map(([s, e]) => {
     let cs = s;
@@ -96,13 +96,13 @@ export function scanTables(src: string): TableSpan[] {
   let inFence = false;
   let fenceChar = '';
   for (let i = 0; i < lines.length; i++) {
-    const { start, text } = lines[i];
+    const { start, text } = lines[i]!;
     const fence = text.match(FENCE);
     if (fence) {
       if (!inFence) {
         inFence = true;
-        fenceChar = fence[1][0];
-      } else if (fence[1][0] === fenceChar) {
+        fenceChar = fence[1]![0]!;
+      } else if (fence[1]![0] === fenceChar) {
         inFence = false;
       }
       continue;
@@ -111,18 +111,18 @@ export function scanTables(src: string): TableSpan[] {
 
     if (i + 1 >= lines.length) break;
     if (text.trim() === '' || /^ {4,}/.test(text) || isBlockStart(text)) continue;
-    if (!isDelimiterRow(lines[i + 1].text)) continue;
+    if (!isDelimiterRow(lines[i + 1]!.text)) continue;
 
     const headerCells = splitRowSpans(src, start, text);
-    const delimCells = splitRowSpans(src, lines[i + 1].start, lines[i + 1].text);
+    const delimCells = splitRowSpans(src, lines[i + 1]!.start, lines[i + 1]!.text);
     if (headerCells.length !== delimCells.length) continue;
 
     const rows: TableCellSpan[][] = [headerCells];
     let j = i + 2;
     while (j < lines.length) {
-      const row = lines[j].text;
+      const row = lines[j]!.text;
       if (row.trim() === '' || isBlockStart(row)) break;
-      rows.push(splitRowSpans(src, lines[j].start, row));
+      rows.push(splitRowSpans(src, lines[j]!.start, row));
       j++;
     }
     tables.push({ rows });
@@ -138,5 +138,8 @@ export function displayCellText(raw: string): string {
 
 /** Edited text → cell source text (escape pipes, collapse newlines). */
 export function encodeCellText(text: string): string {
-  return text.replace(/\s*\n\s*/g, ' ').trim().replace(/\|/g, '\\|');
+  return text
+    .replace(/\s*\n\s*/g, ' ')
+    .trim()
+    .replace(/\|/g, '\\|');
 }

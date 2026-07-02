@@ -35,15 +35,17 @@ interface TimerState {
 function createToastStore() {
   let toasts = $state<Toast[]>([]);
   let windowFocused = $state(true);
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative timer registry; reactivity is signalled via timerVersion
   const timers = new Map<string, TimerState>();
   // Track which toasts are hovered (to avoid resuming on focus if still hovered)
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative hover tracker; checked only inside pointer handlers
   const hoveredIds = new Set<string>();
   // Reactive signal bumped on every timer state change so isActive() triggers re-renders
   let timerVersion = $state(0);
 
   /** Returns the active (index 0) toast id, or null. */
   function activeId(): string | null {
-    return toasts.length > 0 ? toasts[0].id : null;
+    return toasts.length > 0 ? toasts[0]!.id : null;
   }
 
   function startTimer(id: string, ms: number) {
@@ -99,7 +101,7 @@ function createToastStore() {
       timers.delete(id);
     }
     hoveredIds.delete(id);
-    toasts = toasts.filter(t => t.id !== id);
+    toasts = toasts.filter((t) => t.id !== id);
     if (wasActive) activateNext();
   }
 
@@ -145,7 +147,7 @@ function createToastStore() {
 
     // Evict oldest if over max
     while (toasts.length > MAX_VISIBLE) {
-      removeToast(toasts[0].id);
+      removeToast(toasts[0]!.id);
     }
   }
 
@@ -167,16 +169,13 @@ function createToastStore() {
     toasts = [...toasts, toast];
     // Sticky toasts get no timer — they persist until updated/removed.
     while (toasts.length > MAX_VISIBLE) {
-      removeToast(toasts[0].id);
+      removeToast(toasts[0]!.id);
     }
     return id;
   }
 
   /** Patch an existing toast in place (used to stream progress updates). */
-  function updateToast(
-    id: string,
-    patch: Partial<Pick<Toast, 'title' | 'body' | 'type' | 'progress' | 'indeterminate'>>,
-  ) {
+  function updateToast(id: string, patch: Partial<Pick<Toast, 'title' | 'body' | 'type' | 'progress' | 'indeterminate'>>) {
     const t = toasts.find((x) => x.id === id);
     if (!t) return;
     if (patch.title !== undefined) t.title = patch.title;
@@ -222,7 +221,9 @@ function createToastStore() {
   }
 
   return {
-    get toasts() { return toasts; },
+    get toasts() {
+      return toasts;
+    },
     addToast,
     addProgressToast,
     updateToast,

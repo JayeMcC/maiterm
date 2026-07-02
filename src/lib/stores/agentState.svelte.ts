@@ -8,6 +8,7 @@ import { dispatch } from './notificationDispatch';
 import { preferencesStore } from './preferences.svelte';
 import { getResumeCommand, sessionIdVar } from '$lib/agents/resume';
 import { getDescriptor } from '$lib/agents/descriptor';
+import { SvelteMap } from 'svelte/reactivity';
 import type { AgentRuntime, AgentState, WorkspaceAgentState } from '$lib/agents/types';
 
 /** Per-runtime auto-resume preference (Claude default on; Codex opt-in; Gemini has
@@ -64,10 +65,14 @@ function buildActionString(runtime: AgentRuntime, toolName: string, toolInput: R
 }
 
 function createAgentStateStore() {
-  // tabId → session info
-  let sessions = $state<Map<string, AgentTabSession>>(new Map());
+  // tabId → session info.
+  // SvelteMap so getState / breakdown / rollups (all read in reactive getters below) pick up
+  // per-entry mutations directly, which lets us drop the `sessions = new Map(sessions)`
+  // reactivity workaround at every set/delete site.
+  const sessions = new SvelteMap<string, AgentTabSession>();
   const unlisteners: (() => void)[] = [];
   // tabId → timeout handle for stale tool detection
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- timer handle registry; only cleared/inserted by imperative code paths
   const staleTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   function setState(tabId: string, sessionId: string, state: AgentState, toolName?: string, toolDetail?: string, runtime: AgentRuntime = 'claude') {
@@ -75,7 +80,6 @@ function createAgentStateStore() {
     if (current?.sessionId === sessionId && current?.state === state && current?.toolName === toolName) return;
     // Entering idle fresh = unread; staying idle preserves whatever read flag we had.
     const read = state === 'idle' ? (current?.state === 'idle' ? current.read : false) : undefined;
-    sessions = new Map(sessions);
     sessions.set(tabId, { runtime, sessionId, state, toolName, toolDetail, read, updatedAt: Date.now() });
 
     // Propagate permission state to activityStore tab state so workspace sidebar shows alert.
@@ -89,13 +93,16 @@ function createAgentStateStore() {
     // Manage stale tool timer
     clearStaleTimer(tabId);
     if (toolName) {
-      staleTimers.set(tabId, setTimeout(() => {
-        const s = sessions.get(tabId);
-        if (s?.toolName === toolName) {
-          setState(tabId, sessionId, state);
-          setVariable(tabId, 'claudeAction', '');
-        }
-      }, getDescriptor(runtime).toolStaleTimeoutMs));
+      staleTimers.set(
+        tabId,
+        setTimeout(() => {
+          const s = sessions.get(tabId);
+          if (s?.toolName === toolName) {
+            setState(tabId, sessionId, state);
+            setVariable(tabId, 'claudeAction', '');
+          }
+        }, getDescriptor(runtime).toolStaleTimeoutMs),
+      );
     }
   }
 
@@ -116,7 +123,6 @@ function createAgentStateStore() {
     // refers to the session we're currently showing.
     if (expectedSessionId && was.sessionId !== expectedSessionId) return;
     clearStaleTimer(tabId);
-    sessions = new Map(sessions);
     sessions.delete(tabId);
     // Clean up tab state if session ended while in permission state
     if (was.state === 'permission') {
@@ -128,8 +134,10 @@ function createAgentStateStore() {
    *  unread/read. Shared by the dominant-state rollup and the per-category
    *  footer breakdown so the priority/bucketing logic lives in one place. */
   function computeBreakdown(scope?: ReadonlySet<string>): { permission: string[]; active: string[]; idleUnread: string[]; idleRead: string[] } {
-    const permission: string[] = [], active: string[] = [];
-    const idleUnread: string[] = [], idleRead: string[] = [];
+    const permission: string[] = [],
+      active: string[] = [];
+    const idleUnread: string[] = [],
+      idleRead: string[] = [];
     for (const [tabId, s] of sessions) {
       if (scope && !scope.has(tabId)) continue;
       if (s.state === 'permission') permission.push(tabId);
@@ -217,10 +225,10 @@ function createAgentStateStore() {
      *  navigate to them (`navigateToTab` only searches this window's workspaces). */
     getGlobalClaudeState(scope?: ReadonlySet<string>): { state: WorkspaceAgentState; tabId: string; tabIds: string[]; count: number } | null {
       const { permission, active, idleUnread, idleRead } = computeBreakdown(scope);
-      if (permission.length) return { state: 'permission', tabId: permission[0], tabIds: permission, count: permission.length };
-      if (active.length) return { state: 'active', tabId: active[0], tabIds: active, count: active.length };
-      if (idleUnread.length) return { state: 'idle-unread', tabId: idleUnread[0], tabIds: idleUnread, count: idleUnread.length };
-      if (idleRead.length) return { state: 'idle-read', tabId: idleRead[0], tabIds: idleRead, count: idleRead.length };
+      if (permission.length) return { state: 'permission', tabId: permission[0]!, tabIds: permission, count: permission.length };
+      if (active.length) return { state: 'active', tabId: active[0]!, tabIds: active, count: active.length };
+      if (idleUnread.length) return { state: 'idle-unread', tabId: idleUnread[0]!, tabIds: idleUnread, count: idleUnread.length };
+      if (idleRead.length) return { state: 'idle-read', tabId: idleRead[0]!, tabIds: idleRead, count: idleRead.length };
       return null;
     },
 
@@ -238,7 +246,6 @@ function createAgentStateStore() {
     markRead(tabId: string) {
       const s = sessions.get(tabId);
       if (!s || s.state !== 'idle' || s.read) return;
-      sessions = new Map(sessions);
       sessions.set(tabId, { ...s, read: true });
     },
 
@@ -328,9 +335,9 @@ function createAgentStateStore() {
         // Skip auto-resume setup if the tab has a pinned auto-resume — don't overwrite user's config
         const instance = terminalsStore.get(tab_id);
         if (instance) {
-          const ws = workspacesStore.workspaces.find(w => w.id === instance.workspaceId);
-          const pane = ws?.panes.find(p => p.id === instance.paneId);
-          const tab = pane?.tabs.find(t => t.id === tab_id);
+          const ws = workspacesStore.workspaces.find((w) => w.id === instance.workspaceId);
+          const pane = ws?.panes.find((p) => p.id === instance.paneId);
+          const tab = pane?.tabs.find((t) => t.id === tab_id);
           if (tab?.auto_resume_pinned) {
             logInfo(`Agent init: tab ${tab_id.slice(0, 8)} has pinned auto-resume, skipping`);
             return;

@@ -20,7 +20,9 @@
     border-radius: 6px;
     font-size: 1rem;
     cursor: pointer;
-    transition: background 0.1s, color 0.1s;
+    transition:
+      background 0.1s,
+      color 0.1s;
   }
 
   .btn:disabled {

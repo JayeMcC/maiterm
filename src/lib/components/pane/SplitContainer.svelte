@@ -20,7 +20,7 @@
   let containerEl = $state<HTMLElement | null>(null);
 
   function findPane(paneId: string): Pane | undefined {
-    return panes.find(p => p.id === paneId);
+    return panes.find((p) => p.id === paneId);
   }
 
   // Children of a split node, or null for leaves / transient empty nodes.
@@ -36,9 +36,7 @@
 
   function handleResize(splitId: string, direction: 'horizontal' | 'vertical', delta: number) {
     if (!containerEl || node?.type !== 'split') return;
-    const containerSize = direction === 'horizontal'
-      ? containerEl.clientWidth
-      : containerEl.clientHeight;
+    const containerSize = direction === 'horizontal' ? containerEl.clientWidth : containerEl.clientHeight;
     if (containerSize === 0) return;
 
     const deltaRatio = delta / containerSize;
@@ -56,26 +54,14 @@
 {#if node?.type === 'leaf'}
   {@const pane = findPane(node.pane_id)}
   {#if pane}
-    <SplitPane
-      {workspaceId}
-      {pane}
-      isActive={pane.id === workspacesStore.activeWorkspace?.active_pane_id}
-      showHeader={panes.length > 1}
-    />
+    <SplitPane {workspaceId} {pane} isActive={pane.id === workspacesStore.activeWorkspace?.active_pane_id} showHeader={panes.length > 1} />
   {/if}
 {:else if node?.type === 'split'}
   {@const children = splitChildren(node)}
   {#if children}
-    <div
-      class="split-container {node.direction}"
-      bind:this={containerEl}
-    >
+    <div class="split-container {node.direction}" bind:this={containerEl}>
       <div class="split-child" style="flex: {node.ratio}">
-        <SplitContainer
-          node={children[0]}
-          {workspaceId}
-          {panes}
-        />
+        <SplitContainer node={children[0]} {workspaceId} {panes} />
       </div>
 
       <Resizer
@@ -85,11 +71,7 @@
       />
 
       <div class="split-child" style="flex: {1 - node.ratio}">
-        <SplitContainer
-          node={children[1]}
-          {workspaceId}
-          {panes}
-        />
+        <SplitContainer node={children[1]} {workspaceId} {panes} />
       </div>
     </div>
   {/if}

@@ -1,0 +1,11 @@
+node_modules
+.svelte-kit
+build
+dist
+src-tauri/target
+src-tauri/gen
+package-lock.json
+.cursorignore
+tests/e2e/node_modules
+# Docs site has its own build/format tooling — leave it alone from the repo-wide pass.
+website

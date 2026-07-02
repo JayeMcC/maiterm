@@ -57,10 +57,7 @@ export class McpClient {
   }
 
   /** Call a tool. Result is the raw MCP { content, isError? } envelope. */
-  async callTool(
-    name: string,
-    args: Record<string, unknown>,
-  ): Promise<McpToolCallResult> {
+  async callTool(name: string, args: Record<string, unknown>): Promise<McpToolCallResult> {
     return (await this.request('tools/call', {
       name,
       arguments: args,
@@ -73,7 +70,7 @@ export class McpClient {
    * JSON and stuff it in `content[0].text`.
    */
   parseToolResult<T>(result: McpToolCallResult): T {
-    const text = result.content?.find(c => c.type === 'text')?.text;
+    const text = result.content?.find((c) => c.type === 'text')?.text;
     if (!text) {
       throw new Error(`MCP tool result missing text content: ${JSON.stringify(result)}`);
     }
@@ -92,16 +89,13 @@ export class McpClient {
     };
     if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
 
-    const { statusCode, statusMessage, headers: resHeaders, body: resBody } =
-      await this.nodeHttpPost(body, headers);
+    const { statusCode, statusMessage, headers: resHeaders, body: resBody } = await this.nodeHttpPost(body, headers);
 
     const respSessionId = resHeaders['mcp-session-id'] as string | undefined;
     if (respSessionId && !this.sessionId) this.sessionId = respSessionId;
 
     if (statusCode === undefined || statusCode < 200 || statusCode >= 300) {
-      throw new Error(
-        `MCP ${method} → HTTP ${statusCode ?? '?'} ${statusMessage ?? ''}: ${resBody.slice(0, 500)}`,
-      );
+      throw new Error(`MCP ${method} → HTTP ${statusCode ?? '?'} ${statusMessage ?? ''}: ${resBody.slice(0, 500)}`);
     }
 
     const ct = (resHeaders['content-type'] ?? '') as string;
@@ -122,10 +116,7 @@ export class McpClient {
    * fully read. Each call opens a fresh TCP socket (no pooling), reads
    * `Content-Length` bytes, and returns. Avoids undici entirely.
    */
-  private nodeHttpPost(
-    body: string,
-    headers: Record<string, string>,
-  ): Promise<{ statusCode: number | undefined; statusMessage: string | undefined; headers: http.IncomingHttpHeaders; body: string }> {
+  private nodeHttpPost(body: string, headers: Record<string, string>): Promise<{ statusCode: number | undefined; statusMessage: string | undefined; headers: http.IncomingHttpHeaders; body: string }> {
     return new Promise((resolve, reject) => {
       const req = http.request(
         {
@@ -139,9 +130,9 @@ export class McpClient {
           // the timeout is just a safety net in case the server hangs.
           timeout: 90_000,
         },
-        res => {
+        (res) => {
           const chunks: Buffer[] = [];
-          res.on('data', chunk => chunks.push(chunk));
+          res.on('data', (chunk) => chunks.push(chunk));
           res.on('end', () =>
             resolve({
               statusCode: res.statusCode,
@@ -189,24 +180,16 @@ export class McpClient {
         return;
       } catch (err) {
         lastError = err;
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 500));
       }
     }
-    throw new Error(
-      `Frontend did not respond to listWorkspaces within ${timeoutMs}ms (last error: ${String(lastError)})`,
-    );
+    throw new Error(`Frontend did not respond to listWorkspaces within ${timeoutMs}ms (last error: ${String(lastError)})`);
   }
 
-  private async callToolWithDeadline(
-    name: string,
-    args: Record<string, unknown>,
-    deadlineMs: number,
-  ): Promise<McpToolCallResult> {
+  private async callToolWithDeadline(name: string, args: Record<string, unknown>, deadlineMs: number): Promise<McpToolCallResult> {
     return Promise.race([
       this.callTool(name, args),
-      new Promise<McpToolCallResult>((_, reject) =>
-        setTimeout(() => reject(new Error(`tool ${name} did not respond within ${deadlineMs}ms`)), deadlineMs),
-      ),
+      new Promise<McpToolCallResult>((_, reject) => setTimeout(() => reject(new Error(`tool ${name} did not respond within ${deadlineMs}ms`)), deadlineMs)),
     ]);
   }
 

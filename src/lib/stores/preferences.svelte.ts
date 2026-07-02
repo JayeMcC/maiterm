@@ -5,7 +5,9 @@ import * as commands from '$lib/tauri/commands';
 
 function createPreferencesStore() {
   let _resolveReady: () => void;
-  const ready = new Promise<void>(r => { _resolveReady = r; });
+  const ready = new Promise<void>((r) => {
+    _resolveReady = r;
+  });
 
   let uiFontSize = $state(13);
   let fontSize = $state(13);
@@ -78,75 +80,213 @@ function createPreferencesStore() {
 
   return {
     /** Resolves once the initial load() has completed. */
-    get ready() { return ready; },
-    get uiFontSize() { return uiFontSize; },
-    get fontSize() { return fontSize; },
-    get fontFamily() { return fontFamily; },
-    get cursorStyle() { return cursorStyle; },
-    get cursorBlink() { return cursorBlink; },
-    get autoSaveInterval() { return autoSaveInterval; },
-    get scrollbackLimit() { return scrollbackLimit; },
-    get promptPatterns() { return promptPatterns; },
-    get cloneCwd() { return cloneCwd; },
-    get cloneScrollback() { return cloneScrollback; },
-    get cloneSsh() { return cloneSsh; },
-    get cloneHistory() { return cloneHistory; },
-    get cloneNotes() { return cloneNotes; },
-    get cloneAutoResume() { return cloneAutoResume; },
-    get cloneVariables() { return cloneVariables; },
-    get numberDuplicatedTabs() { return numberDuplicatedTabs; },
-    get theme() { return theme; },
-    get shellTitleIntegration() { return shellTitleIntegration; },
-    get shellIntegration() { return shellIntegration; },
-    get customThemes() { return customThemes; },
-    get restoreSession() { return restoreSession; },
-    get sessionRestoreMode() { return sessionRestoreMode; },
-    get notificationMode() { return notificationMode; },
-    get notifyMinDuration() { return notifyMinDuration; },
-    get notesFontSize() { return notesFontSize; },
-    get notesFontFamily() { return notesFontFamily; },
-    get notesWidth() { return notesWidth; },
-    get notesWordWrap() { return notesWordWrap; },
-    get toastFontSize() { return toastFontSize; },
-    get toastWidth() { return toastWidth; },
-    get toastDuration() { return toastDuration; },
-    get notificationSound() { return notificationSound; },
-    get notificationVolume() { return notificationVolume; },
-    get migrateTabNotes() { return migrateTabNotes; },
-    get notesScope() { return notesScope; },
-    get showRecentWorkspaces() { return showRecentWorkspaces; },
-    get workspaceSortOrder() { return workspaceSortOrder; },
-    get showWorkspaceTabCount() { return showWorkspaceTabCount; },
-    get tabButtonStyle() { return tabButtonStyle; },
-    get terminalRenderer() { return terminalRenderer; },
-    get triggers() { return triggers; },
-    get hiddenDefaultTriggers() { return hiddenDefaultTriggers; },
-    get claudeTriggersPrompted() { return claudeTriggersPrompted; },
-    get claudeCodeIde() { return claudeCodeIde; },
-    get claudeCodeIdeSsh() { return claudeCodeIdeSsh; },
-    get claudeCodeHooks() { return claudeCodeHooks; },
-    get claudeCodeAutoResume() { return claudeCodeAutoResume; },
-    get codexIde() { return codexIde; },
-    get codexIdeSsh() { return codexIdeSsh; },
-    get codexHooks() { return codexHooks; },
-    get codexAutoResume() { return codexAutoResume; },
-    get codexHooksBypassTrust() { return codexHooksBypassTrust; },
-    get composerDefaultOpen() { return composerDefaultOpen; },
-    get windowsShell() { return windowsShell; },
-    get fileLinkAction() { return fileLinkAction; },
-    get backupDirectory() { return backupDirectory; },
-    get backupInterval() { return backupInterval; },
-    get backupExcludeScrollback() { return backupExcludeScrollback; },
-    get backupTrimEnabled() { return backupTrimEnabled; },
-    get backupTrimAge() { return backupTrimAge; },
-    get autoSuspendMinutes() { return autoSuspendMinutes; },
-    get groupActiveTabs() { return groupActiveTabs; },
-    get autoCheckUpdates() { return autoCheckUpdates; },
-    get quickOpenShowHidden() { return quickOpenShowHidden; },
-    get quickOpenShowIgnored() { return quickOpenShowIgnored; },
-    get meshSoftCap() { return meshSoftCap; },
-    get meshHardCap() { return meshHardCap; },
-    get meshTopicTtlMinutes() { return meshTopicTtlMinutes; },
+    get ready() {
+      return ready;
+    },
+    get uiFontSize() {
+      return uiFontSize;
+    },
+    get fontSize() {
+      return fontSize;
+    },
+    get fontFamily() {
+      return fontFamily;
+    },
+    get cursorStyle() {
+      return cursorStyle;
+    },
+    get cursorBlink() {
+      return cursorBlink;
+    },
+    get autoSaveInterval() {
+      return autoSaveInterval;
+    },
+    get scrollbackLimit() {
+      return scrollbackLimit;
+    },
+    get promptPatterns() {
+      return promptPatterns;
+    },
+    get cloneCwd() {
+      return cloneCwd;
+    },
+    get cloneScrollback() {
+      return cloneScrollback;
+    },
+    get cloneSsh() {
+      return cloneSsh;
+    },
+    get cloneHistory() {
+      return cloneHistory;
+    },
+    get cloneNotes() {
+      return cloneNotes;
+    },
+    get cloneAutoResume() {
+      return cloneAutoResume;
+    },
+    get cloneVariables() {
+      return cloneVariables;
+    },
+    get numberDuplicatedTabs() {
+      return numberDuplicatedTabs;
+    },
+    get theme() {
+      return theme;
+    },
+    get shellTitleIntegration() {
+      return shellTitleIntegration;
+    },
+    get shellIntegration() {
+      return shellIntegration;
+    },
+    get customThemes() {
+      return customThemes;
+    },
+    get restoreSession() {
+      return restoreSession;
+    },
+    get sessionRestoreMode() {
+      return sessionRestoreMode;
+    },
+    get notificationMode() {
+      return notificationMode;
+    },
+    get notifyMinDuration() {
+      return notifyMinDuration;
+    },
+    get notesFontSize() {
+      return notesFontSize;
+    },
+    get notesFontFamily() {
+      return notesFontFamily;
+    },
+    get notesWidth() {
+      return notesWidth;
+    },
+    get notesWordWrap() {
+      return notesWordWrap;
+    },
+    get toastFontSize() {
+      return toastFontSize;
+    },
+    get toastWidth() {
+      return toastWidth;
+    },
+    get toastDuration() {
+      return toastDuration;
+    },
+    get notificationSound() {
+      return notificationSound;
+    },
+    get notificationVolume() {
+      return notificationVolume;
+    },
+    get migrateTabNotes() {
+      return migrateTabNotes;
+    },
+    get notesScope() {
+      return notesScope;
+    },
+    get showRecentWorkspaces() {
+      return showRecentWorkspaces;
+    },
+    get workspaceSortOrder() {
+      return workspaceSortOrder;
+    },
+    get showWorkspaceTabCount() {
+      return showWorkspaceTabCount;
+    },
+    get tabButtonStyle() {
+      return tabButtonStyle;
+    },
+    get terminalRenderer() {
+      return terminalRenderer;
+    },
+    get triggers() {
+      return triggers;
+    },
+    get hiddenDefaultTriggers() {
+      return hiddenDefaultTriggers;
+    },
+    get claudeTriggersPrompted() {
+      return claudeTriggersPrompted;
+    },
+    get claudeCodeIde() {
+      return claudeCodeIde;
+    },
+    get claudeCodeIdeSsh() {
+      return claudeCodeIdeSsh;
+    },
+    get claudeCodeHooks() {
+      return claudeCodeHooks;
+    },
+    get claudeCodeAutoResume() {
+      return claudeCodeAutoResume;
+    },
+    get codexIde() {
+      return codexIde;
+    },
+    get codexIdeSsh() {
+      return codexIdeSsh;
+    },
+    get codexHooks() {
+      return codexHooks;
+    },
+    get codexAutoResume() {
+      return codexAutoResume;
+    },
+    get codexHooksBypassTrust() {
+      return codexHooksBypassTrust;
+    },
+    get composerDefaultOpen() {
+      return composerDefaultOpen;
+    },
+    get windowsShell() {
+      return windowsShell;
+    },
+    get fileLinkAction() {
+      return fileLinkAction;
+    },
+    get backupDirectory() {
+      return backupDirectory;
+    },
+    get backupInterval() {
+      return backupInterval;
+    },
+    get backupExcludeScrollback() {
+      return backupExcludeScrollback;
+    },
+    get backupTrimEnabled() {
+      return backupTrimEnabled;
+    },
+    get backupTrimAge() {
+      return backupTrimAge;
+    },
+    get autoSuspendMinutes() {
+      return autoSuspendMinutes;
+    },
+    get groupActiveTabs() {
+      return groupActiveTabs;
+    },
+    get autoCheckUpdates() {
+      return autoCheckUpdates;
+    },
+    get quickOpenShowHidden() {
+      return quickOpenShowHidden;
+    },
+    get quickOpenShowIgnored() {
+      return quickOpenShowIgnored;
+    },
+    get meshSoftCap() {
+      return meshSoftCap;
+    },
+    get meshHardCap() {
+      return meshHardCap;
+    },
+    get meshTopicTtlMinutes() {
+      return meshTopicTtlMinutes;
+    },
 
     async load() {
       const prefs = await commands.getPreferences();
@@ -160,7 +300,7 @@ function createPreferencesStore() {
       promptPatterns = prefs.prompt_patterns;
       // Migration: add Windows shell patterns if missing
       const windowsPatterns = ['PS \\d>', '\\d>'];
-      const missingPatterns = windowsPatterns.filter(p => !promptPatterns.includes(p));
+      const missingPatterns = windowsPatterns.filter((p) => !promptPatterns.includes(p));
       if (missingPatterns.length > 0) {
         promptPatterns = [...promptPatterns, ...missingPatterns];
       }
@@ -195,7 +335,7 @@ function createPreferencesStore() {
       notificationSound = prefs.notification_sound ?? 'default';
       notificationVolume = prefs.notification_volume ?? 50;
       migrateTabNotes = prefs.migrate_tab_notes ?? true;
-      notesScope = (prefs.notes_scope === 'workspace' ? 'workspace' : 'tab');
+      notesScope = prefs.notes_scope === 'workspace' ? 'workspace' : 'tab';
       showRecentWorkspaces = prefs.show_recent_workspaces ?? true;
       workspaceSortOrder = prefs.workspace_sort_order || 'default';
       showWorkspaceTabCount = prefs.show_workspace_tab_count ?? false;
@@ -577,7 +717,7 @@ function createPreferencesStore() {
     async deleteCustomTheme(id: string) {
       customThemes = customThemes.filter((t) => t.id !== id);
       if (theme === id) {
-        theme = builtinThemes[0].id;
+        theme = builtinThemes[0]!.id;
       }
       await this.save();
     },
@@ -621,7 +761,7 @@ function createPreferencesStore() {
       notificationSound = prefs.notification_sound ?? 'default';
       notificationVolume = prefs.notification_volume ?? 50;
       migrateTabNotes = prefs.migrate_tab_notes ?? true;
-      notesScope = (prefs.notes_scope === 'workspace' ? 'workspace' : 'tab');
+      notesScope = prefs.notes_scope === 'workspace' ? 'workspace' : 'tab';
       showRecentWorkspaces = prefs.show_recent_workspaces ?? true;
       workspaceSortOrder = prefs.workspace_sort_order || 'default';
       showWorkspaceTabCount = prefs.show_workspace_tab_count ?? false;
@@ -730,7 +870,7 @@ function createPreferencesStore() {
         mesh_topic_ttl_minutes: meshTopicTtlMinutes,
       };
       await commands.setPreferences(prefs);
-    }
+    },
   };
 }
 

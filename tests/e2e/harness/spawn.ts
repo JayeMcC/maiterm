@@ -31,7 +31,7 @@ const LOCK_DIR = join(homedir(), '.claude', 'ide');
 /** Snapshot the set of `.lock` filenames present right now. */
 function snapshotLocks(): Set<string> {
   try {
-    return new Set(readdirSync(LOCK_DIR).filter(n => n.endsWith('.lock')));
+    return new Set(readdirSync(LOCK_DIR).filter((n) => n.endsWith('.lock')));
   } catch {
     return new Set();
   }
@@ -44,11 +44,13 @@ function snapshotLocks(): Set<string> {
  *
  * Times out after `timeoutMs` (default 60s — CI is sometimes slow).
  */
-export async function spawnMaiterm(opts: {
-  binary: string;
-  timeoutMs?: number;
-  env?: Record<string, string>;
-} = { binary: '' }): Promise<MaitermHandle> {
+export async function spawnMaiterm(
+  opts: {
+    binary: string;
+    timeoutMs?: number;
+    env?: Record<string, string>;
+  } = { binary: '' },
+): Promise<MaitermHandle> {
   if (!opts.binary) throw new Error('spawnMaiterm: binary path is required');
   if (!existsSync(opts.binary)) {
     throw new Error(`spawnMaiterm: binary not found at ${opts.binary}`);
@@ -84,10 +86,7 @@ export async function spawnMaiterm(opts: {
 
   while (Date.now() - start < timeoutMs) {
     if (exitState.value) {
-      throw new Error(
-        `maiTerm exited before lockfile was written (code=${exitState.value.code}, signal=${exitState.value.signal}). ` +
-          `Last output:\n${tail.join('\n')}`,
-      );
+      throw new Error(`maiTerm exited before lockfile was written (code=${exitState.value.code}, signal=${exitState.value.signal}). ` + `Last output:\n${tail.join('\n')}`);
     }
     const after = snapshotLocks();
     for (const name of after) {
@@ -112,9 +111,7 @@ export async function spawnMaiterm(opts: {
   }
 
   proc.kill('SIGTERM');
-  throw new Error(
-    `Timed out after ${timeoutMs}ms waiting for maiTerm lockfile (pid=${proc.pid}). Last output:\n${tail.join('\n')}`,
-  );
+  throw new Error(`Timed out after ${timeoutMs}ms waiting for maiTerm lockfile (pid=${proc.pid}). Last output:\n${tail.join('\n')}`);
 }
 
 function makeHandle(proc: ChildProcess, lock: MaitermLock): MaitermHandle {
@@ -124,7 +121,7 @@ function makeHandle(proc: ChildProcess, lock: MaitermLock): MaitermHandle {
     async kill() {
       if (proc.exitCode !== null) return;
       proc.kill('SIGTERM');
-      await new Promise<void>(resolve => {
+      await new Promise<void>((resolve) => {
         const t = setTimeout(() => {
           proc.kill('SIGKILL');
           resolve();
@@ -139,5 +136,5 @@ function makeHandle(proc: ChildProcess, lock: MaitermLock): MaitermHandle {
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(r => setTimeout(r, ms));
+  return new Promise((r) => setTimeout(r, ms));
 }

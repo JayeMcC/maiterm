@@ -19,16 +19,18 @@ export interface GraphNode {
 }
 
 export interface GraphEdge {
-  from: string;       // owner tabId
-  to: string;         // participant tabId
+  from: string; // owner tabId
+  to: string; // participant tabId
   topicId: string;
   topicLabel: string;
   turns: number;
-  hue: number;        // 0..359, stable per topic
-  recent: boolean;    // a delivery on this topic within recentMs
+  hue: number; // 0..359, stable per topic
+  recent: boolean; // a delivery on this topic within recentMs
   paused: boolean;
-  x1: number; y1: number;
-  x2: number; y2: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
 }
 
 export interface GraphLayoutOpts {
@@ -60,7 +62,7 @@ export function computeGraph(
 
   // Nodes on a circle, first node at the top (-90°), clockwise.
   const nodes: GraphNode[] = members.map((m, i) => {
-    const angle = n === 0 ? 0 : (-Math.PI / 2) + (2 * Math.PI * i) / n;
+    const angle = n === 0 ? 0 : -Math.PI / 2 + (2 * Math.PI * i) / n;
     return {
       tabId: m.tabId,
       role: m.role,
@@ -92,9 +94,18 @@ export function computeGraph(
       const node = pos.get(p);
       if (!node) continue;
       out.push({
-        from: owner.tabId, to: node.tabId,
-        topicId: t.id, topicLabel: t.label, turns: t.turn, hue, recent, paused,
-        x1: owner.x, y1: owner.y, x2: node.x, y2: node.y,
+        from: owner.tabId,
+        to: node.tabId,
+        topicId: t.id,
+        topicLabel: t.label,
+        turns: t.turn,
+        hue,
+        recent,
+        paused,
+        x1: owner.x,
+        y1: owner.y,
+        x2: node.x,
+        y2: node.y,
       });
     }
   }

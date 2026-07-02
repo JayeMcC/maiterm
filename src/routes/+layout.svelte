@@ -102,7 +102,9 @@
   onMount(() => {
     // Attach console for dev mode (Rust logs appear in browser devtools)
     let detachConsole: (() => void) | undefined;
-    attachConsole().then(detach => { detachConsole = detach; });
+    attachConsole().then((detach) => {
+      detachConsole = detach;
+    });
 
     // Global webview error capture — these route through tauri-plugin-log
     // so they land in aiterm.log alongside Rust errors. Tagged [WEBVIEW_ERROR]
@@ -116,7 +118,11 @@
       } else if (typeof detail === 'string') {
         message = detail;
       } else {
-        try { message = JSON.stringify(detail); } catch { message = String(detail); }
+        try {
+          message = JSON.stringify(detail);
+        } catch {
+          message = String(detail);
+        }
       }
       const stackLine = stack ? `\n${stack}` : '';
       return `[WEBVIEW_ERROR] ${label}: ${message}${stackLine}`;
@@ -124,14 +130,11 @@
 
     const onWindowError = (e: ErrorEvent) => {
       const where = e.filename ? ` @ ${e.filename}:${e.lineno}:${e.colno}` : '';
-      logError(formatErrorPayload(`onerror${where}`, e.error ?? e.message, e.error?.stack))
-        .catch(() => {});
+      logError(formatErrorPayload(`onerror${where}`, e.error ?? e.message, e.error?.stack)).catch(() => {});
     };
     const onUnhandledRejection = (e: PromiseRejectionEvent) => {
       const reason = e.reason as unknown;
-      const stack = (reason && typeof reason === 'object' && 'stack' in reason)
-        ? String((reason as { stack?: unknown }).stack ?? '')
-        : undefined;
+      const stack = reason && typeof reason === 'object' && 'stack' in reason ? String((reason as { stack?: unknown }).stack ?? '') : undefined;
       logError(formatErrorPayload('unhandledrejection', reason, stack)).catch(() => {});
     };
     window.addEventListener('error', onWindowError);
@@ -140,10 +143,14 @@
     // Disable default browser context menu globally, except in notes panel
     // where native cut/copy/paste is useful.
     // To re-enable in dev for Inspect Element, change to: if (!import.meta.env.DEV)
-    document.addEventListener('contextmenu', (e) => {
-      if ((e.target as Element)?.closest?.('.notes-panel')) return;
-      e.preventDefault();
-    }, true);
+    document.addEventListener(
+      'contextmenu',
+      (e) => {
+        if ((e.target as Element)?.closest?.('.notes-panel')) return;
+        e.preventDefault();
+      },
+      true,
+    );
 
     // Strip macOS smart-quote substitution from all text inputs/textareas
     // app-wide, so straight quotes typed into search/rename/notes/preferences
@@ -151,21 +158,26 @@
     const cleanupSmartQuotes = installGlobalSmartQuoteFix();
 
     // Load preferences and clean up stale default triggers
-    preferencesStore.load().then(() => {
-      const seeded = seedDefaultTriggers(preferencesStore.triggers, preferencesStore.hiddenDefaultTriggers);
-      if (seeded) preferencesStore.setTriggers(seeded);
+    preferencesStore
+      .load()
+      .then(() => {
+        const seeded = seedDefaultTriggers(preferencesStore.triggers, preferencesStore.hiddenDefaultTriggers);
+        if (seeded) preferencesStore.setTriggers(seeded);
 
-      // Auto-check for updates on startup (silent — only shows toast if update found)
-      if (preferencesStore.autoCheckUpdates) {
-        updaterStore.checkForUpdates(true).catch(() => {});
-      }
-    }).catch((e: unknown) => logError(`Failed to load preferences: ${e}`));
+        // Auto-check for updates on startup (silent — only shows toast if update found)
+        if (preferencesStore.autoCheckUpdates) {
+          updaterStore.checkForUpdates(true).catch(() => {});
+        }
+      })
+      .catch((e: unknown) => logError(`Failed to load preferences: ${e}`));
 
     // Listen for cross-window preference changes
     let unlistenPrefs: (() => void) | undefined;
     listen<Preferences>('preferences-changed', (event) => {
       preferencesStore.applyFromBackend(event.payload);
-    }).then(unlisten => { unlistenPrefs = unlisten; });
+    }).then((unlisten) => {
+      unlistenPrefs = unlisten;
+    });
 
     const appWindow = getCurrentWindow();
 
@@ -195,13 +207,19 @@
         logError(`sync_state failed: ${e}`);
       }
       await invoke('exit_app');
-    }).then(unlisten => { unlistenQuit = unlisten; });
+    }).then((unlisten) => {
+      unlistenQuit = unlisten;
+    });
 
     // Pause toast timers when window loses focus, resume on focus
     let unlistenFocus: (() => void) | undefined;
-    appWindow.onFocusChanged(({ payload: focused }) => {
-      toastStore.setWindowFocused(focused);
-    }).then(unlisten => { unlistenFocus = unlisten; });
+    appWindow
+      .onFocusChanged(({ payload: focused }) => {
+        toastStore.setWindowFocused(focused);
+      })
+      .then((unlisten) => {
+        unlistenFocus = unlisten;
+      });
 
     // Save window geometry per monitor count on resize/move (debounced).
     // Polls for monitor changes to auto-reposition windows when docking/undocking.
@@ -210,7 +228,7 @@
     let monitorPollTimer: ReturnType<typeof setInterval> | undefined;
 
     // Initialize monitor count
-    commands.getMonitorCount().then(count => {
+    commands.getMonitorCount().then((count) => {
       currentMonitorCount = count;
 
       // Poll for monitor changes (handles dock/undock)
@@ -236,8 +254,12 @@
     }
     let unlistenResize: (() => void) | undefined;
     let unlistenMove: (() => void) | undefined;
-    appWindow.onResized(saveGeometryDebounced).then(u => { unlistenResize = u; });
-    appWindow.onMoved(saveGeometryDebounced).then(u => { unlistenMove = u; });
+    appWindow.onResized(saveGeometryDebounced).then((u) => {
+      unlistenResize = u;
+    });
+    appWindow.onMoved(saveGeometryDebounced).then((u) => {
+      unlistenMove = u;
+    });
 
     // Listen for reload-tab menu event — duplicate tab with same context, close old
     let unlistenReloadTab: (() => void) | undefined;
@@ -248,7 +270,9 @@
       if (ws && pane && tab) {
         workspacesStore.reloadTab(ws.id, pane.id, tab.id);
       }
-    }).then(unlisten => { unlistenReloadTab = unlisten; });
+    }).then((unlisten) => {
+      unlistenReloadTab = unlisten;
+    });
 
     // File > New Window / Duplicate Window menu items. The Cmd+N / Cmd+Shift+N
     // accelerators fire keydown directly in the focused webview and the
@@ -256,20 +280,44 @@
     // through Rust's app.on_menu_event, which emits these events to us.
     let unlistenNewWindow: (() => void) | undefined;
     listen('new_window', () => {
-      commands.createNewWindow().catch(e => logError(`new_window (menu) failed: ${e}`));
-    }).then(unlisten => { unlistenNewWindow = unlisten; });
+      commands.createNewWindow().catch((e) => logError(`new_window (menu) failed: ${e}`));
+    }).then((unlisten) => {
+      unlistenNewWindow = unlisten;
+    });
 
     let unlistenDuplicateWindow: (() => void) | undefined;
     listen('duplicate_window', () => {
-      workspacesStore.duplicateWindow().catch((e: unknown) =>
-        logError(`duplicate_window (menu) failed: ${e}`));
-    }).then(unlisten => { unlistenDuplicateWindow = unlisten; });
+      workspacesStore.duplicateWindow().catch((e: unknown) => logError(`duplicate_window (menu) failed: ${e}`));
+    }).then((unlisten) => {
+      unlistenDuplicateWindow = unlisten;
+    });
+
+    // Window > Save Current Window as Preset… / Manage Window Presets…
+    // Rebroadcast as window CustomEvents so WorkspaceSidebar (the component
+    // that actually owns the modal state) can open the right modal without
+    // registering its own Tauri listener. Same pattern as `open-mesh-cockpit`
+    // dispatched from the workspace item click handler.
+    let unlistenSavePreset: (() => void) | undefined;
+    listen('save_window_preset', () => {
+      window.dispatchEvent(new CustomEvent('open-window-preset-save-modal'));
+    }).then((unlisten) => {
+      unlistenSavePreset = unlisten;
+    });
+
+    let unlistenManagePresets: (() => void) | undefined;
+    listen('manage_window_presets', () => {
+      window.dispatchEvent(new CustomEvent('open-window-preset-manager-modal'));
+    }).then((unlisten) => {
+      unlistenManagePresets = unlisten;
+    });
 
     // Check for updates menu event
     let unlistenCheckUpdates: (() => void) | undefined;
     listen('check-for-updates', () => {
       updaterStore.checkForUpdates(false);
-    }).then(unlisten => { unlistenCheckUpdates = unlisten; });
+    }).then((unlisten) => {
+      unlistenCheckUpdates = unlisten;
+    });
 
     // Periodic silent update check — the startup check only runs once, so a
     // long-running window would otherwise never notice a new release. Re-reads
@@ -285,7 +333,9 @@
     let unlistenClearNavHistory: (() => void) | undefined;
     listen('clear-nav-history', () => {
       navHistoryStore.clear();
-    }).then(unlisten => { unlistenClearNavHistory = unlisten; });
+    }).then((unlisten) => {
+      unlistenClearNavHistory = unlisten;
+    });
 
     // State backup menu events
     let unlistenExportState: (() => void) | undefined;
@@ -302,7 +352,9 @@
       } catch (e) {
         logError(`Export state failed: ${e}`);
       }
-    }).then(unlisten => { unlistenExportState = unlisten; });
+    }).then((unlisten) => {
+      unlistenExportState = unlisten;
+    });
 
     let unlistenImportState: (() => void) | undefined;
     listen('import_state', async () => {
@@ -320,35 +372,45 @@
       } catch (e) {
         logError(`Import state failed: ${e}`);
       }
-    }).then(unlisten => { unlistenImportState = unlisten; });
+    }).then((unlisten) => {
+      unlistenImportState = unlisten;
+    });
 
     let unlistenStateImported: (() => void) | undefined;
     listen('state-imported', () => {
       window.location.reload();
-    }).then(unlisten => { unlistenStateImported = unlisten; });
+    }).then((unlisten) => {
+      unlistenStateImported = unlisten;
+    });
 
     // Claude Code IDE integration event listeners.
     // Use appWindow.listen() (not global listen) — global listen catches both
     // window-targeted and global events in Tauri 2, causing duplicate callbacks.
     let unlistenClaudeTool: (() => void) | undefined;
-    appWindow.listen<ClaudeCodeToolRequest>('agent-ide-tool', (event) => {
-      claudeCodeStore.handleToolRequest(event.payload);
-    }).then(unlisten => {
-      unlistenClaudeTool = unlisten;
-      // Notify the Rust side that the listener is now attached, so any
-      // tool-call emits the server queued during the boot race get
-      // flushed and delivered. Without this, the first frontend-handled
-      // tool call from an external MCP client (CLI launcher, E2E
-      // harness) connecting in the first few seconds of app boot would
-      // be silently dropped — Tauri's event system doesn't queue emits
-      // for listeners that haven't registered yet.
-      invoke('mark_frontend_ready').catch(e => logError(`mark_frontend_ready failed: ${e}`));
-    });
+    appWindow
+      .listen<ClaudeCodeToolRequest>('agent-ide-tool', (event) => {
+        claudeCodeStore.handleToolRequest(event.payload);
+      })
+      .then((unlisten) => {
+        unlistenClaudeTool = unlisten;
+        // Notify the Rust side that the listener is now attached, so any
+        // tool-call emits the server queued during the boot race get
+        // flushed and delivered. Without this, the first frontend-handled
+        // tool call from an external MCP client (CLI launcher, E2E
+        // harness) connecting in the first few seconds of app boot would
+        // be silently dropped — Tauri's event system doesn't queue emits
+        // for listeners that haven't registered yet.
+        invoke('mark_frontend_ready').catch((e) => logError(`mark_frontend_ready failed: ${e}`));
+      });
 
     let unlistenClaudeConnection: (() => void) | undefined;
-    appWindow.listen<{ connected: boolean }>('agent-ide-connection', (event) => {
-      claudeCodeStore.setConnected(event.payload.connected);
-    }).then(unlisten => { unlistenClaudeConnection = unlisten; });
+    appWindow
+      .listen<{ connected: boolean }>('agent-ide-connection', (event) => {
+        claudeCodeStore.setConnected(event.payload.connected);
+      })
+      .then((unlisten) => {
+        unlistenClaudeConnection = unlisten;
+      });
 
     // Claude Code state tracking (hook events → per-tab Claude state)
     claudeStateStore.init();
@@ -369,7 +431,9 @@
         appWindow.setFocus();
         navigateToTab(tabId);
       }
-    }).then(listener => { unlistenNotificationAction = listener; });
+    }).then((listener) => {
+      unlistenNotificationAction = listener;
+    });
 
     // Handle single-window close (traffic light / Cmd+W on last tab+pane).
     let unlistenClose: (() => void) | undefined;
@@ -419,7 +483,7 @@
 
     function tabCycleList(tabs: Tab[]): Tab[] {
       if (!preferencesStore.groupActiveTabs) return tabs;
-      return tabs.filter(t => !isSuspendedTerminal(t));
+      return tabs.filter((t) => !isSuspendedTerminal(t));
     }
 
     function cycleActiveTab(dir: 1 | -1) {
@@ -428,14 +492,14 @@
       if (!ws || !pane) return;
       const list = tabCycleList(pane.tabs);
       if (list.length < 2) return;
-      const currentIndex = list.findIndex(t => t.id === pane.active_tab_id);
+      const currentIndex = list.findIndex((t) => t.id === pane.active_tab_id);
       let nextIndex: number;
       if (currentIndex === -1) {
         nextIndex = dir === 1 ? 0 : list.length - 1;
       } else {
         nextIndex = (currentIndex + dir + list.length) % list.length;
       }
-      const target = list[nextIndex];
+      const target = list[nextIndex]!;
       if (isSuspendedTerminal(target)) pendingResumePanes.add(pane.id);
       workspacesStore.setActiveTab(ws.id, pane.id, target.id);
       terminalsStore.focusTerminal(target.id);
@@ -457,29 +521,30 @@
           const key = e.key.toLowerCase();
           const isAppShortcut =
             // Tab management
-            (!e.shiftKey && !e.altKey && key === 't') ||             // Cmd+T new tab
-            (e.shiftKey && key === 't') ||                           // Cmd+Shift+T duplicate tab
-            (e.shiftKey && key === 'r') ||                           // Cmd+Shift+R reload tab
-            (key === 'w') ||                                         // Cmd+W close tab
-            (!e.shiftKey && e.key >= '1' && e.key <= '9') ||         // Cmd+1-9 switch tab
-            (e.shiftKey && (e.key === '[' || e.code === 'BracketLeft')) ||  // Cmd+Shift+[ prev tab
+            (!e.shiftKey && !e.altKey && key === 't') || // Cmd+T new tab
+            (e.shiftKey && key === 't') || // Cmd+Shift+T duplicate tab
+            (e.shiftKey && key === 'r') || // Cmd+Shift+R reload tab
+            key === 'w' || // Cmd+W close tab
+            (!e.shiftKey && e.key >= '1' && e.key <= '9') || // Cmd+1-9 switch tab
+            (e.shiftKey && (e.key === '[' || e.code === 'BracketLeft')) || // Cmd+Shift+[ prev tab
             (e.shiftKey && (e.key === ']' || e.code === 'BracketRight')) || // Cmd+Shift+] next tab
-            (!e.shiftKey && (e.key === '[' || e.code === 'BracketLeft')) ||  // Cmd+[ nav back
+            (!e.shiftKey && (e.key === '[' || e.code === 'BracketLeft')) || // Cmd+[ nav back
             (!e.shiftKey && (e.key === ']' || e.code === 'BracketRight')) || // Cmd+] nav forward
             // Window/workspace management
-            (!e.shiftKey && !e.altKey && key === 'n') ||             // Cmd+N new window
-            (e.shiftKey && !e.altKey && key === 'n') ||              // Cmd+Shift+N duplicate window
-            (e.altKey && e.code === 'KeyN') ||                       // Cmd+Opt+N new workspace
+            (!e.shiftKey && !e.altKey && key === 'n') || // Cmd+N new window
+            (e.shiftKey && !e.altKey && key === 'n') || // Cmd+Shift+N duplicate window
+            (e.altKey && e.code === 'KeyN') || // Cmd+Opt+N new workspace
             // Zoom
-            (e.key === '=' || e.key === '+') ||                      // Cmd+= zoom in
-            (e.key === '-') ||                                       // Cmd+- zoom out
-            (e.key === '0') ||                                       // Cmd+0 reset zoom
+            e.key === '=' ||
+            e.key === '+' || // Cmd+= zoom in
+            e.key === '-' || // Cmd+- zoom out
+            e.key === '0' || // Cmd+0 reset zoom
             // Other app-level
-            (e.key === ',') ||                                       // Cmd+, preferences
-            (!e.shiftKey && key === 'o') ||                          // Cmd+O open file
-            (!e.shiftKey && key === 'b') ||                          // Cmd+B toggle sidebar
-            (!e.shiftKey && key === 'e') ||                          // Cmd+E toggle notes
-            (e.shiftKey && key === 'm');                             // Cmd+Shift+M mesh cockpit
+            e.key === ',' || // Cmd+, preferences
+            (!e.shiftKey && key === 'o') || // Cmd+O open file
+            (!e.shiftKey && key === 'b') || // Cmd+B toggle sidebar
+            (!e.shiftKey && key === 'e') || // Cmd+E toggle notes
+            (e.shiftKey && key === 'm'); // Cmd+Shift+M mesh cockpit
           if (!isAppShortcut) return; // Let CodeMirror handle it
         } else if (e.altKey) {
           // Alt+Arrow keys etc — let editor handle
@@ -574,7 +639,7 @@
         e.stopPropagation();
         const ws = workspacesStore.activeWorkspace;
         if (ws) {
-          const idx = workspacesStore.workspaces.findIndex(w => w.id === ws.id);
+          const idx = workspacesStore.workspaces.findIndex((w) => w.id === ws.id);
           workspacesStore.duplicateWorkspace(ws.id, idx + 1);
         }
         return;
@@ -625,36 +690,40 @@
           const activeTab = workspacesStore.activeTab;
           const instance = activeTab && activeTab.tab_type !== 'editor' ? terminalsStore.get(activeTab.id) : null;
           const ptyInfoP = instance ? commands.getPtyInfo(instance.ptyId).catch(() => null) : Promise.resolve(null);
-          ptyInfoP.then(ptyInfo => dialogOpen({
-            multiple: false,
-            directory: false,
-            title: 'Open File',
-            defaultPath: ptyInfo?.cwd ?? undefined,
-          })).then(async (selected) => {
-            if (!selected) return;
-            const filePath = selected;
-            const fileName = filePath.split('/').pop() ?? filePath;
-            const language = detectLanguageFromPath(filePath);
-            // Validate the file can be read before creating the tab
-            // Skip for images and PDFs — they use readFileBase64 in EditorPane
-            if (!isImageFile(filePath) && !isPdfFile(filePath)) {
-              try {
-                await readFile(filePath);
-              } catch (err) {
-                const { dispatch } = await import('$lib/stores/notificationDispatch');
-                dispatch('Cannot open file', String(err), 'error');
-                return;
+          ptyInfoP
+            .then((ptyInfo) =>
+              dialogOpen({
+                multiple: false,
+                directory: false,
+                title: 'Open File',
+                defaultPath: ptyInfo?.cwd ?? undefined,
+              }),
+            )
+            .then(async (selected) => {
+              if (!selected) return;
+              const filePath = selected;
+              const fileName = filePath.split('/').pop() ?? filePath;
+              const language = detectLanguageFromPath(filePath);
+              // Validate the file can be read before creating the tab
+              // Skip for images and PDFs — they use readFileBase64 in EditorPane
+              if (!isImageFile(filePath) && !isPdfFile(filePath)) {
+                try {
+                  await readFile(filePath);
+                } catch (err) {
+                  const { dispatch } = await import('$lib/stores/notificationDispatch');
+                  dispatch('Cannot open file', String(err), 'error');
+                  return;
+                }
               }
-            }
-            const fileInfo: EditorFileInfo = {
-              file_path: filePath,
-              is_remote: false,
-              remote_ssh_command: null,
-              remote_path: null,
-              language,
-            };
-            workspacesStore.createEditorTab(ws.id, pane.id, fileName, fileInfo);
-          });
+              const fileInfo: EditorFileInfo = {
+                file_path: filePath,
+                is_remote: false,
+                remote_ssh_command: null,
+                remote_path: null,
+                language,
+              };
+              workspacesStore.createEditorTab(ws.id, pane.id, fileName, fileInfo);
+            });
         }
         return;
       }
@@ -878,11 +947,15 @@
     window.addEventListener('open-agent-bridge-picker', onOpenAgentBridgePicker);
 
     // Mesh cockpit opened from the workspace sidebar badge / titlebar button.
-    const onOpenMeshCockpit = () => { showMeshCockpit = true; };
+    const onOpenMeshCockpit = () => {
+      showMeshCockpit = true;
+    };
     window.addEventListener('open-mesh-cockpit', onOpenMeshCockpit);
 
     // Mesh pre-flight setup modal, opened from the cockpit's Enable Mesh button.
-    const onOpenMeshSetup = (e: Event) => { meshSetupWorkspaceId = (e as CustomEvent<string>).detail ?? null; };
+    const onOpenMeshSetup = (e: Event) => {
+      meshSetupWorkspaceId = (e as CustomEvent<string>).detail ?? null;
+    };
     window.addEventListener('open-mesh-setup', onOpenMeshSetup);
 
     window.addEventListener('keydown', handleKeydown, true);
@@ -901,6 +974,8 @@
       unlistenReloadTab?.();
       unlistenNewWindow?.();
       unlistenDuplicateWindow?.();
+      unlistenSavePreset?.();
+      unlistenManagePresets?.();
       unlistenExportState?.();
       unlistenImportState?.();
       unlistenStateImported?.();
@@ -934,8 +1009,13 @@
   open={showImportPreview}
   preview={importPreview}
   filePath={importFilePath}
-  onclose={() => { showImportPreview = false; }}
-  onimported={() => { showImportPreview = false; window.location.reload(); }}
+  onclose={() => {
+    showImportPreview = false;
+  }}
+  onimported={() => {
+    showImportPreview = false;
+    window.location.reload();
+  }}
 />
 <QuickOpen
   open={showQuickOpen}
@@ -953,7 +1033,7 @@
       openFileFromTerminal(ws.id, pane.id, tab.id, filePath);
     } else if (ws && pane) {
       // Find a terminal tab in pane for context
-      const termTab = pane.tabs.find(t => t.tab_type === 'terminal');
+      const termTab = pane.tabs.find((t) => t.tab_type === 'terminal');
       if (termTab) {
         openFileFromTerminal(ws.id, pane.id, termTab.id, filePath);
       }
@@ -980,17 +1060,23 @@
 <MeshSetupModal
   open={meshSetupWorkspaceId !== null}
   workspaceId={meshSetupWorkspaceId}
-  onclose={() => { meshSetupWorkspaceId = null; }}
-  onEnabled={() => { showMeshCockpit = true; }}
+  onclose={() => {
+    meshSetupWorkspaceId = null;
+  }}
+  onEnabled={() => {
+    showMeshCockpit = true;
+  }}
 />
 <!-- Right-edge pull-tab: appears when the active workspace is a mesh and the cockpit is closed. -->
 {#if workspacesStore.activeWorkspace?.bridge_all && !showMeshCockpit && meshSetupWorkspaceId === null}
   <button
     class="mesh-lip"
-    onclick={() => { showMeshCockpit = true; }}
+    onclick={() => {
+      showMeshCockpit = true;
+    }}
     title="Open mesh cockpit (⌘⇧M)"
-    aria-label="Open mesh cockpit"
-  >MESH</button>
+    aria-label="Open mesh cockpit">MESH</button
+  >
 {/if}
 
 <Toast />
@@ -1023,9 +1109,14 @@
     letter-spacing: 0.12em;
     opacity: 0.55;
     box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
-    transition: opacity 0.15s ease, padding-right 0.15s ease;
+    transition:
+      opacity 0.15s ease,
+      padding-right 0.15s ease;
   }
-  .mesh-lip:hover { opacity: 1; padding-right: 6px; }
+  .mesh-lip:hover {
+    opacity: 1;
+    padding-right: 6px;
+  }
 
   .close-confirm-backdrop {
     position: fixed;
@@ -1063,11 +1154,21 @@
     margin: 0 2px;
   }
   @keyframes close-confirm-fade {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
   @keyframes close-confirm-pop {
-    from { opacity: 0; transform: scale(0.94); }
-    to { opacity: 1; transform: scale(1); }
+    from {
+      opacity: 0;
+      transform: scale(0.94);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 </style>

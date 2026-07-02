@@ -4,7 +4,12 @@ import { createLoopController, type LoopLimits } from './meshLoopControl';
 function ctl(limits: LoopLimits) {
   let cur = limits;
   const c = createLoopController({ limits: () => cur });
-  return { c, set: (l: LoopLimits) => { cur = l; } };
+  return {
+    c,
+    set: (l: LoopLimits) => {
+      cur = l;
+    },
+  };
 }
 
 describe('soft cap', () => {
@@ -14,14 +19,17 @@ describe('soft cap', () => {
     expect(c.evaluate('t', 3, 0, 0).ok).toBe(true);
     const v = c.evaluate('t', 4, 0, 0);
     expect(v.ok).toBe(false);
-    if (!v.ok) { expect(v.reason).toBe('soft'); expect(v.cap).toBe(3); }
+    if (!v.ok) {
+      expect(v.reason).toBe('soft');
+      expect(v.cap).toBe(3);
+    }
   });
 
   it('a human resume lifts the ceiling by another N', () => {
     const { c } = ctl({ softCap: 3, hardCap: 0, ttlMs: 0 });
     expect(c.evaluate('t', 4, 0, 0).ok).toBe(false); // paused at 3
     c.resume('t', 0);
-    expect(c.evaluate('t', 4, 0, 0).ok).toBe(true);  // now allowed
+    expect(c.evaluate('t', 4, 0, 0).ok).toBe(true); // now allowed
     expect(c.evaluate('t', 6, 0, 0).ok).toBe(true);
     expect(c.evaluate('t', 7, 0, 0).ok).toBe(false); // paused again at 6
     expect(c.lifts('t')).toBe(1);
@@ -41,7 +49,10 @@ describe('hard cap', () => {
     expect(c.evaluate('t', 5, 0, 0).ok).toBe(true);
     const v = c.evaluate('t', 6, 0, 0);
     expect(v.ok).toBe(false);
-    if (!v.ok) { expect(v.reason).toBe('hard'); expect(v.cap).toBe(5); }
+    if (!v.ok) {
+      expect(v.reason).toBe('hard');
+      expect(v.cap).toBe(5);
+    }
   });
 
   it('is checked before the soft cap', () => {
@@ -55,13 +66,13 @@ describe('hard cap', () => {
 describe('ttl', () => {
   it('force-pauses a topic older than the TTL, and resume re-bases the clock', () => {
     const { c } = ctl({ softCap: 100, hardCap: 0, ttlMs: 1000 });
-    expect(c.evaluate('t', 1, 0, 500).ok).toBe(true);       // within ttl
-    const v = c.evaluate('t', 2, 0, 1500);                   // 1500ms old > 1000
+    expect(c.evaluate('t', 1, 0, 500).ok).toBe(true); // within ttl
+    const v = c.evaluate('t', 2, 0, 1500); // 1500ms old > 1000
     expect(v.ok).toBe(false);
     if (!v.ok) expect(v.reason).toBe('ttl');
-    c.resume('t', 1500);                                     // re-base ttl to 1500
-    expect(c.evaluate('t', 3, 0, 2000).ok).toBe(true);       // 500ms since resume
-    expect(c.evaluate('t', 4, 0, 2600).ok).toBe(false);      // 1100ms since resume
+    c.resume('t', 1500); // re-base ttl to 1500
+    expect(c.evaluate('t', 3, 0, 2000).ok).toBe(true); // 500ms since resume
+    expect(c.evaluate('t', 4, 0, 2600).ok).toBe(false); // 1100ms since resume
   });
 
   it('is checked before the soft cap but after the hard cap', () => {

@@ -5,6 +5,7 @@
   import { error as logError } from '@tauri-apps/plugin-log';
   import Button from '$lib/components/ui/Button.svelte';
   import IconButton from '$lib/components/ui/IconButton.svelte';
+  import { SvelteSet } from 'svelte/reactivity';
 
   interface Props {
     open: boolean;
@@ -18,21 +19,21 @@
 
   let mode = $state<'overwrite' | 'merge'>('overwrite');
   let importPreferences = $state(true);
-  let selectedWorkspaces = $state(new Set<string>());
+  // Reactive: `.has()`/`.size` are read in the workspace list template + $derived below.
+  const selectedWorkspaces = new SvelteSet<string>();
   let importing = $state(false);
-  let expandedWorkspaces = $state(new Set<string>());
+  const expandedWorkspaces = new SvelteSet<string>();
 
   // Initialize selections when preview changes
   $effect(() => {
     if (preview) {
-      const allIds = new Set<string>();
+      selectedWorkspaces.clear();
       for (const win of preview.windows) {
         for (const ws of win.workspaces) {
-          allIds.add(ws.id);
+          selectedWorkspaces.add(ws.id);
         }
       }
-      selectedWorkspaces = allIds;
-      expandedWorkspaces = new Set<string>();
+      expandedWorkspaces.clear();
       mode = 'overwrite';
       importPreferences = true;
       importing = false;
@@ -41,38 +42,29 @@
 
   const allWorkspaces = $derived.by(() => {
     if (!preview) return [];
-    return preview.windows.flatMap(w => w.workspaces);
+    return preview.windows.flatMap((w) => w.workspaces);
   });
 
   const selectedCount = $derived(selectedWorkspaces.size);
   const totalCount = $derived(allWorkspaces.length);
 
   function toggleWorkspace(id: string) {
-    const updated = new Set(selectedWorkspaces);
-    if (updated.has(id)) {
-      updated.delete(id);
-    } else {
-      updated.add(id);
-    }
-    selectedWorkspaces = updated;
+    if (selectedWorkspaces.has(id)) selectedWorkspaces.delete(id);
+    else selectedWorkspaces.add(id);
   }
 
   function toggleAll() {
     if (selectedCount === totalCount) {
-      selectedWorkspaces = new Set();
+      selectedWorkspaces.clear();
     } else {
-      selectedWorkspaces = new Set(allWorkspaces.map(ws => ws.id));
+      selectedWorkspaces.clear();
+      for (const ws of allWorkspaces) selectedWorkspaces.add(ws.id);
     }
   }
 
   function toggleExpand(id: string) {
-    const updated = new Set(expandedWorkspaces);
-    if (updated.has(id)) {
-      updated.delete(id);
-    } else {
-      updated.add(id);
-    }
-    expandedWorkspaces = updated;
+    if (expandedWorkspaces.has(id)) expandedWorkspaces.delete(id);
+    else expandedWorkspaces.add(id);
   }
 
   function formatSize(bytes: number): string {
@@ -83,9 +75,12 @@
 
   function tabTypeIcon(type: string): string {
     switch (type) {
-      case 'terminal': return '>';
-      case 'editor': return '#';
-      default: return '?';
+      case 'terminal':
+        return '>';
+      case 'editor':
+        return '#';
+      default:
+        return '?';
     }
   }
 
@@ -118,14 +113,7 @@
 </script>
 
 {#if open && preview}
-  <div
-    class="backdrop"
-    onclick={handleBackdropClick}
-    onkeydown={handleKeydown}
-    role="dialog"
-    aria-modal="true"
-    tabindex="-1"
-  >
+  <div class="backdrop" onclick={handleBackdropClick} onkeydown={handleKeydown} role="dialog" aria-modal="true" tabindex="-1">
     <div class="modal">
       <div class="header">
         <h2>Import Backup</h2>
@@ -139,13 +127,13 @@
         </div>
 
         <div class="options-row">
-          <div class="mode-select">
-            <label class="mode-label">Mode</label>
+          <label class="mode-select">
+            <span class="mode-label">Mode</span>
             <select bind:value={mode}>
               <option value="overwrite">Overwrite</option>
               <option value="merge">Merge</option>
             </select>
-          </div>
+          </label>
 
           <label class="checkbox-option">
             <input type="checkbox" bind:checked={importPreferences} />
@@ -163,32 +151,37 @@
 
         <div class="workspace-header">
           <label class="checkbox-option select-all">
-            <input
-              type="checkbox"
-              checked={selectedCount === totalCount}
-              indeterminate={selectedCount > 0 && selectedCount < totalCount}
-              onchange={toggleAll}
-            />
+            <input type="checkbox" checked={selectedCount === totalCount} indeterminate={selectedCount > 0 && selectedCount < totalCount} onchange={toggleAll} />
             Workspaces ({selectedCount}/{totalCount})
           </label>
         </div>
 
         <div class="workspace-list">
-          {#each preview.windows as win, winIdx}
+          {#each preview.windows as win, winIdx (winIdx)}
             {#if preview.windows.length > 1}
               <div class="window-header">Window: {win.label || `Window ${winIdx + 1}`}</div>
             {/if}
             {#each win.workspaces as ws (ws.id)}
               <div class="workspace-item" class:deselected={!selectedWorkspaces.has(ws.id)}>
                 <!-- svelte-ignore a11y_click_events_have_key_events -->
-                <div class="workspace-row" role="button" tabindex="0" onclick={(e) => { if ((e.target as HTMLElement).closest('.expand-btn')) return; toggleWorkspace(ws.id); }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedWorkspaces.has(ws.id)}
-                    onclick={(e) => e.stopPropagation()}
-                    onchange={() => toggleWorkspace(ws.id)}
-                  />
-                  <button class="expand-btn" onclick={(e) => { e.stopPropagation(); toggleExpand(ws.id); }} class:expanded={expandedWorkspaces.has(ws.id)}>
+                <div
+                  class="workspace-row"
+                  role="button"
+                  tabindex="0"
+                  onclick={(e) => {
+                    if ((e.target as HTMLElement).closest('.expand-btn')) return;
+                    toggleWorkspace(ws.id);
+                  }}
+                >
+                  <input type="checkbox" checked={selectedWorkspaces.has(ws.id)} onclick={(e) => e.stopPropagation()} onchange={() => toggleWorkspace(ws.id)} />
+                  <button
+                    class="expand-btn"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      toggleExpand(ws.id);
+                    }}
+                    class:expanded={expandedWorkspaces.has(ws.id)}
+                  >
                     {expandedWorkspaces.has(ws.id) ? '\u25BE' : '\u25B8'}
                   </button>
                   <span class="ws-name">{ws.name}</span>
@@ -341,7 +334,7 @@
     cursor: pointer;
   }
 
-  .checkbox-option input[type="checkbox"] {
+  .checkbox-option input[type='checkbox'] {
     accent-color: var(--accent);
   }
 
@@ -401,7 +394,7 @@
     background: color-mix(in srgb, var(--bg-light) 50%, transparent);
   }
 
-  .workspace-row input[type="checkbox"] {
+  .workspace-row input[type='checkbox'] {
     accent-color: var(--accent);
   }
 

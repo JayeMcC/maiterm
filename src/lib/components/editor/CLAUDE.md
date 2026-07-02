@@ -5,6 +5,7 @@
 Editor tabs (`tab_type === 'editor'`) render `EditorPane.svelte` instead of `TerminalPane.svelte`. They exist alongside terminal tabs in the same pane.
 
 **Key files**:
+
 - `src/lib/components/editor/EditorPane.svelte` — main component
 - `src/lib/utils/editorTheme.ts` — Tokyo Night CM6 theme (matches terminal colors)
 - `src/lib/utils/languageDetect.ts` — language detection + dynamic CM6 language loader

@@ -49,7 +49,7 @@ if (!BIN) {
 
     it('advertises the createWindow tool', async () => {
       const { tools } = await client.listTools();
-      const names = tools.map(t => t.name);
+      const names = tools.map((t) => t.name);
       expect(names).toContain('createWindow');
     });
 
@@ -57,10 +57,8 @@ if (!BIN) {
       // Snapshot how many windows exist before we spawn one so we can assert
       // the delta rather than a specific count (initial windows depend on
       // whatever state file the runner inherited).
-      const before = client.parseToolResult<{ windows: { windowLabel: string }[] }>(
-        await client.callTool('listWindows', {}),
-      );
-      const beforeLabels = new Set(before.windows.map(w => w.windowLabel));
+      const before = client.parseToolResult<{ windows: { windowLabel: string }[] }>(await client.callTool('listWindows', {}));
+      const beforeLabels = new Set(before.windows.map((w) => w.windowLabel));
 
       const created = client.parseToolResult<{
         windowLabel: string;
@@ -84,7 +82,7 @@ if (!BIN) {
         windows: { windowLabel: string; workspaceCount: number }[];
       }>(await client.callTool('listWindows', {}));
       expect(after.windows.length).toBe(before.windows.length + 1);
-      const added = after.windows.find(w => !beforeLabels.has(w.windowLabel));
+      const added = after.windows.find((w) => !beforeLabels.has(w.windowLabel));
       expect(added).toBeDefined();
       expect(added!.windowLabel).toBe(created.windowLabel);
       // A fresh window ships with one default workspace; if this is 0 the

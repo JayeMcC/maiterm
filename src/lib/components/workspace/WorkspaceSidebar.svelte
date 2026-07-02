@@ -20,10 +20,35 @@
   import { updaterStore } from '$lib/stores/updater.svelte';
   import ChangelogModal from '$lib/components/ChangelogModal.svelte';
   import type { ChangelogEntry } from '$lib/components/ChangelogModal.svelte';
+  import WindowPresetSaveModal from '$lib/components/WindowPresetSaveModal.svelte';
+  import WindowPresetsManagerModal from '$lib/components/WindowPresetsManagerModal.svelte';
   import type { Update } from '@tauri-apps/plugin-updater';
 
   let showWhatsNew = $state(false);
   let whatsNewEntries = $state<ChangelogEntry[]>([]);
+  let showPresetSaveModal = $state(false);
+  let showPresetsManagerModal = $state(false);
+
+  // Menu-driven modal opens. lib.rs's menu handler emits
+  // save_window_preset / manage_window_presets when the user picks
+  // Window → Save Current Window as Preset… / Manage Window Presets…, and
+  // +layout.svelte re-broadcasts those as window CustomEvents so components
+  // that don't own the Tauri listen() live can react — same pattern as
+  // open-mesh-cockpit.
+  $effect(() => {
+    const openSave = () => {
+      showPresetSaveModal = true;
+    };
+    const openManager = () => {
+      showPresetsManagerModal = true;
+    };
+    window.addEventListener('open-window-preset-save-modal', openSave);
+    window.addEventListener('open-window-preset-manager-modal', openManager);
+    return () => {
+      window.removeEventListener('open-window-preset-save-modal', openSave);
+      window.removeEventListener('open-window-preset-manager-modal', openManager);
+    };
+  });
   let newerVersionPrompt = $state<{ version: string; originalVersion: string } | undefined>(undefined);
   let newerUpdate = $state<Update | null>(null);
   let rechecking = $state(false);
@@ -105,10 +130,9 @@
   // the footer dot to this window's tabs so each window's dot is independent and a
   // click can always navigate to its target (navigateToTab only searches here).
   const windowTabIds = $derived.by(() => {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- ephemeral scratchpad rebuilt each $derived pass and consumed by getClaudeStateBreakdown; never mutated after return
     const ids = new Set<string>();
-    for (const ws of workspacesStore.workspaces)
-      for (const pane of ws.panes)
-        for (const t of pane.tabs) ids.add(t.id);
+    for (const ws of workspacesStore.workspaces) for (const pane of ws.panes) for (const t of pane.tabs) ids.add(t.id);
     return ids;
   });
 
@@ -131,16 +155,31 @@
     const cycle = (c: number) => (c > 1 ? ' (click to cycle)' : '');
 
     const working: FooterDot | null = b.active.length
-      ? { color: 'accent', pulse: true, hollow: false, targets: b.active,
-          tooltip: `${b.active.length === 1 ? '1 agent' : `${b.active.length} agents`} working — click to view${cycle(b.active.length)}` }
+      ? {
+          color: 'accent',
+          pulse: true,
+          hollow: false,
+          targets: b.active,
+          tooltip: `${b.active.length === 1 ? '1 agent' : `${b.active.length} agents`} working — click to view${cycle(b.active.length)}`,
+        }
       : null;
     const waiting: FooterDot | null = b.permission.length
-      ? { color: 'red', pulse: true, hollow: false, targets: b.permission,
-          tooltip: `${b.permission.length === 1 ? '1 agent needs' : `${b.permission.length} agents need`} permission — click to open${cycle(b.permission.length)}` }
+      ? {
+          color: 'red',
+          pulse: true,
+          hollow: false,
+          targets: b.permission,
+          tooltip: `${b.permission.length === 1 ? '1 agent needs' : `${b.permission.length} agents need`} permission — click to open${cycle(b.permission.length)}`,
+        }
       : null;
     const finished: FooterDot | null = b.idleUnread.length
-      ? { color: 'green', pulse: false, hollow: false, targets: b.idleUnread,
-          tooltip: `${b.idleUnread.length === 1 ? '1 agent' : `${b.idleUnread.length} agents`} finished — click to review${cycle(b.idleUnread.length)}` }
+      ? {
+          color: 'green',
+          pulse: false,
+          hollow: false,
+          targets: b.idleUnread,
+          tooltip: `${b.idleUnread.length === 1 ? '1 agent' : `${b.idleUnread.length} agents`} finished — click to review${cycle(b.idleUnread.length)}`,
+        }
       : null;
 
     const present = [working, waiting, finished].filter((d): d is FooterDot => d !== null);
@@ -150,7 +189,7 @@
         : { color: 'dim', pulse: false, hollow: false, targets: [], tooltip: 'No active agents' };
       return [null, resting, null];
     }
-    if (present.length === 1) return [null, present[0], null];
+    if (present.length === 1) return [null, present[0]!, null];
     return [working, waiting, finished];
   });
 
@@ -161,30 +200,30 @@
   function cycleToAgent(targets: string[]) {
     if (targets.length === 0) return;
     const currentIdx = targets.indexOf(workspacesStore.activeTab?.id ?? '');
-    const next = currentIdx === -1 ? targets[0] : targets[(currentIdx + 1) % targets.length];
+    const next = currentIdx === -1 ? targets[0]! : targets[(currentIdx + 1) % targets.length]!;
     navigateToTab(next);
   }
 
   function workspaceHasActivity(workspaceId: string): boolean {
     if (workspaceId === workspacesStore.activeWorkspaceId) return false;
-    const ws = workspacesStore.workspaces.find(w => w.id === workspaceId);
+    const ws = workspacesStore.workspaces.find((w) => w.id === workspaceId);
     if (!ws) return false;
-    const tabIds = ws.panes.flatMap(p => p.tabs.map(t => t.id));
+    const tabIds = ws.panes.flatMap((p) => p.tabs.map((t) => t.id));
     return activityStore.hasAnyActivity(tabIds);
   }
 
   function workspaceTabState(workspaceId: string): 'alert' | 'question' | null {
-    const ws = workspacesStore.workspaces.find(w => w.id === workspaceId);
+    const ws = workspacesStore.workspaces.find((w) => w.id === workspaceId);
     if (!ws) return null;
-    const tabIds = ws.panes.flatMap(p => p.tabs.map(t => t.id));
+    const tabIds = ws.panes.flatMap((p) => p.tabs.map((t) => t.id));
     return activityStore.getWorkspaceTabState(tabIds);
   }
 
   function workspaceClaudeState(workspaceId: string): WorkspaceClaudeState | null {
     if (workspaceId === workspacesStore.activeWorkspaceId) return null;
-    const ws = workspacesStore.workspaces.find(w => w.id === workspaceId);
+    const ws = workspacesStore.workspaces.find((w) => w.id === workspaceId);
     if (!ws) return null;
-    const tabIds = ws.panes.flatMap(p => p.tabs.map(t => t.id));
+    const tabIds = ws.panes.flatMap((p) => p.tabs.map((t) => t.id));
     return claudeStateStore.getWorkspaceClaudeState(tabIds);
   }
 
@@ -197,7 +236,7 @@
   // fall back to the persisted flag and keep their existing behavior.
   function workspaceIsLive(workspaceId: string): boolean {
     void terminalsStore.instanceVersion; // re-evaluate on PTY register/unregister
-    const ws = workspacesStore.workspaces.find(w => w.id === workspaceId);
+    const ws = workspacesStore.workspaces.find((w) => w.id === workspaceId);
     if (!ws) return false;
     let hasTerminalTab = false;
     for (const pane of ws.panes) {
@@ -215,7 +254,9 @@
   }
 
   let appVersion = $state('');
-  getVersion().then(v => { appVersion = v; });
+  getVersion().then((v) => {
+    appVersion = v;
+  });
 
   interface Props {
     width: number;
@@ -337,9 +378,8 @@
     const wsEls = workspaceListEl.querySelectorAll<HTMLElement>('.workspace-item');
     let foundTarget = false;
     for (let i = 0; i < wsEls.length; i++) {
-      const rect = wsEls[i].getBoundingClientRect();
-      if (e.clientX >= rect.left && e.clientX <= rect.right &&
-          e.clientY >= rect.top && e.clientY <= rect.bottom) {
+      const rect = wsEls[i]!.getBoundingClientRect();
+      if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
         const midY = rect.top + rect.height / 2;
         dropSide = e.clientY < midY ? 'before' : 'after';
         dropTargetIndex = i;
@@ -350,9 +390,8 @@
     // If cursor is below the last item but within the list, target "after last"
     if (!foundTarget && wsEls.length > 0) {
       const listRect = workspaceListEl.getBoundingClientRect();
-      const lastRect = wsEls[wsEls.length - 1].getBoundingClientRect();
-      if (e.clientX >= listRect.left && e.clientX <= listRect.right &&
-          e.clientY > lastRect.bottom && e.clientY <= listRect.bottom) {
+      const lastRect = wsEls[wsEls.length - 1]!.getBoundingClientRect();
+      if (e.clientX >= listRect.left && e.clientX <= listRect.right && e.clientY > lastRect.bottom && e.clientY <= listRect.bottom) {
         dropTargetIndex = wsEls.length - 1;
         dropSide = 'after';
         foundTarget = true;
@@ -392,7 +431,7 @@
     if (dragWorkspaceId && dropTargetIndex !== null) {
       const sourceId = dragWorkspaceId;
       const allWs = workspacesStore.workspaces;
-      const fromIndex = allWs.findIndex(w => w.id === sourceId);
+      const fromIndex = allWs.findIndex((w) => w.id === sourceId);
       const isCopy = e.altKey;
 
       // Compute the insertion position
@@ -408,9 +447,9 @@
         let toIndex = insertPos;
         if (fromIndex < toIndex) toIndex--;
         if (fromIndex !== toIndex) {
-          const ids = allWs.map(w => w.id);
+          const ids = allWs.map((w) => w.id);
           const [moved] = ids.splice(fromIndex, 1);
-          ids.splice(toIndex, 0, moved);
+          ids.splice(toIndex, 0, moved!);
           workspacesStore.reorderWorkspaces(ids);
         }
       }
@@ -421,9 +460,7 @@
   }
 
   function createGhost(e: PointerEvent) {
-    const sourceEl = workspaceListEl.querySelector<HTMLElement>(
-      `.workspace-item[data-workspace-id="${dragWorkspaceId}"]`
-    );
+    const sourceEl = workspaceListEl.querySelector<HTMLElement>(`.workspace-item[data-workspace-id="${dragWorkspaceId}"]`);
     if (!sourceEl) return;
     ghost = sourceEl.cloneNode(true) as HTMLElement;
     ghost.classList.add('drag-ghost');
@@ -481,17 +518,17 @@
       didDrag = false;
       return;
     }
-    const ws = workspacesStore.workspaces.find(w => w.id === workspaceId);
+    const ws = workspacesStore.workspaces.find((w) => w.id === workspaceId);
     if (ws?.suspended) {
       await workspacesStore.resumeWorkspace(workspaceId);
     } else {
       await workspacesStore.setActiveWorkspace(workspaceId);
     }
     // Push the target tab only if it has a live terminal (was activated this session)
-    const targetWs = workspacesStore.workspaces.find(w => w.id === workspaceId);
-    const targetPane = targetWs?.panes.find(p => p.id === targetWs?.active_pane_id);
+    const targetWs = workspacesStore.workspaces.find((w) => w.id === workspaceId);
+    const targetPane = targetWs?.panes.find((p) => p.id === targetWs?.active_pane_id);
     if (targetWs && targetPane?.active_tab_id) {
-      const tab = targetPane.tabs.find(t => t.id === targetPane.active_tab_id);
+      const tab = targetPane.tabs.find((t) => t.id === targetPane.active_tab_id);
       const isTerminal = tab && (tab.tab_type === 'terminal' || !tab.tab_type);
       if (!isTerminal || terminalsStore.get(targetPane.active_tab_id)) {
         navHistoryStore.push({ workspaceId: targetWs.id, paneId: targetPane.id, tabId: targetPane.active_tab_id });
@@ -514,11 +551,21 @@
         <StatusDot color="green" tooltip="IDE Connected" />
       </span>
     {/if}
-    <span style="margin-left:auto"><IconButton tooltip="Collapse sidebar ({modSymbol}B)" size={20} style="font-size: 1.231rem" onclick={() => workspacesStore.toggleSidebar()}>&#x2039;</IconButton></span>
+    <span style="margin-left:auto"
+      ><IconButton tooltip="Collapse sidebar ({modSymbol}B)" size={20} style="font-size: 1.231rem" onclick={() => workspacesStore.toggleSidebar()}>&#x2039;</IconButton></span
+    >
   </div>
   <div class="sidebar-header">
     <span class="title">WORKSPACES</span>
     <IconButton tooltip="Suspend all other workspaces" size={20} style="font-size: 0.769rem" onclick={handleSuspendAllOthers}><Icon name="pause" size={10} /></IconButton>
+    <IconButton
+      tooltip="Save window as preset…"
+      size={20}
+      style="font-size: 0.769rem"
+      onclick={() => {
+        showPresetSaveModal = true;
+      }}><Icon name="bookmark" size={10} /></IconButton
+    >
     <IconButton tooltip="New workspace ({modSymbol}N)" size={20} style="font-size: 1.231rem" onclick={handleNewWorkspace}>+</IconButton>
   </div>
 
@@ -527,11 +574,7 @@
       <span class="recent-title">RECENT</span>
       <div class="recent-list">
         {#each workspacesStore.recentWorkspaces as workspace (workspace.id)}
-          <button
-            class="recent-item"
-            onclick={() => handleItemClick(workspace.id)}
-            title={workspace.name}
-          >
+          <button class="recent-item" onclick={() => handleItemClick(workspace.id)} title={workspace.name}>
             {workspace.name}
           </button>
         {/each}
@@ -551,8 +594,12 @@
         class:drop-after={dropTargetIndex === index && dropSide === 'after' && dragWorkspaceId !== workspace.id}
         data-workspace-id={workspace.id}
         onclick={() => handleItemClick(workspace.id)}
-        ondblclick={() => { if (!confirmingDeleteId) startEditing(workspace.id, workspace.name); }}
-        onpointerdown={(e) => { if (!confirmingDeleteId) handlePointerDown(e, workspace.id); }}
+        ondblclick={() => {
+          if (!confirmingDeleteId) startEditing(workspace.id, workspace.name);
+        }}
+        onpointerdown={(e) => {
+          if (!confirmingDeleteId) handlePointerDown(e, workspace.id);
+        }}
         onpointermove={handlePointerMove}
         onpointerup={handlePointerUp}
         role="button"
@@ -561,21 +608,22 @@
       >
         {#if editingId === workspace.id}
           <!-- svelte-ignore a11y_autofocus -->
-          <input
-            type="text"
-            bind:value={editingName}
-            bind:this={editInput}
-            onblur={finishEditing}
-            onkeydown={handleKeydown}
-            class="edit-input"
-            autofocus
-          />
+          <input type="text" bind:value={editingName} bind:this={editInput} onblur={finishEditing} onkeydown={handleKeydown} class="edit-input" autofocus />
         {:else}
           {@const wsTabState = workspaceTabState(workspace.id)}
           {@const wsClaude = workspaceClaudeState(workspace.id)}
           {@const wsActivity = workspaceHasActivity(workspace.id)}
           {#if preferencesStore.showWorkspaceTabCount}
-            <span class="tab-count-badge" class:active={workspace.id === workspacesStore.activeWorkspaceId} class:status-alert={wsTabState === 'alert'} class:status-question={wsTabState === 'question'} class:status-claude-active={!wsTabState && wsClaude === 'active'} class:status-claude-idle={!wsTabState && wsClaude === 'idle-unread'} class:status-claude-idle-read={!wsTabState && wsClaude === 'idle-read'} class:status-activity={!wsTabState && !wsClaude && wsActivity}>{workspace.panes.reduce((sum, p) => sum + p.tabs.length, 0)}</span>
+            <span
+              class="tab-count-badge"
+              class:active={workspace.id === workspacesStore.activeWorkspaceId}
+              class:status-alert={wsTabState === 'alert'}
+              class:status-question={wsTabState === 'question'}
+              class:status-claude-active={!wsTabState && wsClaude === 'active'}
+              class:status-claude-idle={!wsTabState && wsClaude === 'idle-unread'}
+              class:status-claude-idle-read={!wsTabState && wsClaude === 'idle-read'}
+              class:status-activity={!wsTabState && !wsClaude && wsActivity}>{workspace.panes.reduce((sum, p) => sum + p.tabs.length, 0)}</span
+            >
           {:else}
             <span class="workspace-indicator">
               {#if wsTabState === 'alert'}
@@ -596,8 +644,20 @@
             </span>
           {/if}
           {#if confirmingDeleteId === workspace.id}
-            <button class="confirm-delete" onclick={(e) => { e.stopPropagation(); doDeleteWorkspace(workspace.id); }}>Delete?</button>
-            <button class="confirm-cancel" onclick={(e) => { e.stopPropagation(); confirmingDeleteId = null; }}>Cancel</button>
+            <button
+              class="confirm-delete"
+              onclick={(e) => {
+                e.stopPropagation();
+                doDeleteWorkspace(workspace.id);
+              }}>Delete?</button
+            >
+            <button
+              class="confirm-cancel"
+              onclick={(e) => {
+                e.stopPropagation();
+                confirmingDeleteId = null;
+              }}>Cancel</button
+            >
           {:else}
             <span class="workspace-name">{workspace.name}</span>
             {#if workspace.bridge_all}
@@ -605,25 +665,17 @@
                 class="mesh-badge"
                 title="Mesh Workspace — open cockpit (⌘⇧M)"
                 aria-label="Open mesh cockpit"
-                onclick={(e) => { e.stopPropagation(); if (workspace.id !== workspacesStore.activeWorkspaceId) handleItemClick(workspace.id); window.dispatchEvent(new CustomEvent('open-mesh-cockpit')); }}
-              >MESH</button>
+                onclick={(e) => {
+                  e.stopPropagation();
+                  if (workspace.id !== workspacesStore.activeWorkspaceId) handleItemClick(workspace.id);
+                  window.dispatchEvent(new CustomEvent('open-mesh-cockpit'));
+                }}>MESH</button
+              >
             {/if}
             {#if workspace.suspended}
-              <IconButton
-                tooltip="Delete workspace"
-                class="workspace-close-btn"
-                style="--icon-btn-hover: var(--bg-dark)"
-                onclick={(e) => handleDeleteWorkspace(workspace.id, e)}
-              >
-                &times;
-              </IconButton>
+              <IconButton tooltip="Delete workspace" class="workspace-close-btn" style="--icon-btn-hover: var(--bg-dark)" onclick={(e) => handleDeleteWorkspace(workspace.id, e)}>&times;</IconButton>
             {:else}
-              <IconButton
-                tooltip="Suspend workspace"
-                class="workspace-close-btn"
-                style="--icon-btn-hover: var(--bg-dark)"
-                onclick={(e) => handleSuspendWorkspace(workspace.id, e)}
-              >
+              <IconButton tooltip="Suspend workspace" class="workspace-close-btn" style="--icon-btn-hover: var(--bg-dark)" onclick={(e) => handleSuspendWorkspace(workspace.id, e)}>
                 <Icon name="pause" size={10} />
               </IconButton>
             {/if}
@@ -653,8 +705,12 @@
 
   <div class="sidebar-footer">
     <div class="footer-side">
-      <IconButton tooltip="Report Bug" size={24} style="border-radius:4px" onclick={() => shellOpen('https://github.com/Flexmark-Intl/maiterm/issues/new?labels=bug&type=bug')}><Icon name="bug" size={14} /></IconButton>
-      <IconButton tooltip="Feature Request" size={24} style="border-radius:4px" onclick={() => shellOpen('https://github.com/Flexmark-Intl/maiterm/issues/new?type=feature')}><Icon name="lightbulb" size={14} /></IconButton>
+      <IconButton tooltip="Report Bug" size={24} style="border-radius:4px" onclick={() => shellOpen('https://github.com/Flexmark-Intl/maiterm/issues/new?labels=bug&type=bug')}
+        ><Icon name="bug" size={14} /></IconButton
+      >
+      <IconButton tooltip="Feature Request" size={24} style="border-radius:4px" onclick={() => shellOpen('https://github.com/Flexmark-Intl/maiterm/issues/new?type=feature')}
+        ><Icon name="lightbulb" size={14} /></IconButton
+      >
     </div>
     <span class="footer-spacer"></span>
     <div class="footer-agent-cluster">
@@ -662,11 +718,7 @@
         <div class="footer-agent-slot">
           {#if dot}
             <Tooltip text={dot.tooltip}>
-              <button
-                class="footer-agent-dot"
-                class:clickable={dot.targets.length > 0}
-                onclick={() => cycleToAgent(dot.targets)}
-              >
+              <button class="footer-agent-dot" class:clickable={dot.targets.length > 0} onclick={() => cycleToAgent(dot.targets)}>
                 <StatusDot color={dot.color} pulse={dot.pulse} hollow={dot.hollow} />
               </button>
             </Tooltip>
@@ -682,9 +734,27 @@
   </div>
 </aside>
 
+<WindowPresetSaveModal
+  open={showPresetSaveModal}
+  onclose={() => {
+    showPresetSaveModal = false;
+  }}
+/>
+
+<WindowPresetsManagerModal
+  open={showPresetsManagerModal}
+  onclose={() => {
+    showPresetsManagerModal = false;
+  }}
+/>
+
 <ChangelogModal
   open={showWhatsNew}
-  onclose={() => { showWhatsNew = false; newerVersionPrompt = undefined; newerUpdate = null; }}
+  onclose={() => {
+    showWhatsNew = false;
+    newerVersionPrompt = undefined;
+    newerUpdate = null;
+  }}
   version={appVersion}
   entries={whatsNewEntries}
   title="What's New"
@@ -751,7 +821,6 @@
     margin-left: 6px;
   }
 
-
   .sidebar-header {
     padding: 12px 16px;
     border-bottom: 1px solid var(--bg-light);
@@ -766,7 +835,6 @@
     letter-spacing: 0.5px;
     color: var(--fg-dim);
   }
-
 
   .recent-section {
     padding: 8px 16px;
@@ -864,7 +932,6 @@
     justify-content: center;
   }
 
-
   .state-emoji {
     font-size: 0.769rem;
     line-height: 1;
@@ -891,7 +958,9 @@
     background: var(--accent);
     opacity: 0.85;
   }
-  .mesh-badge:hover { opacity: 1; }
+  .mesh-badge:hover {
+    opacity: 1;
+  }
 
   .tab-count-badge {
     flex-shrink: 0;
@@ -937,7 +1006,8 @@
     border-color: var(--fg-dim);
   }
 
-  .confirm-delete, .confirm-cancel {
+  .confirm-delete,
+  .confirm-cancel {
     font-size: 0.846rem;
     padding: 2px 8px;
     border: none;
@@ -1104,5 +1174,4 @@
   .footer-agent-dot.clickable:hover {
     background: var(--bg-light);
   }
-
 </style>

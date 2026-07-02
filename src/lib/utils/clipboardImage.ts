@@ -9,20 +9,14 @@
  * Returns the base64 payload plus the matching file extension so the temp file
  * is named correctly (agents infer image type from the extension).
  */
-export async function encodeClipboardImage(
-  rgba: Uint8Array,
-  width: number,
-  height: number,
-): Promise<{ base64: string; ext: 'png' | 'jpg' }> {
+export async function encodeClipboardImage(rgba: Uint8Array, width: number, height: number): Promise<{ base64: string; ext: 'png' | 'jpg' }> {
   const opaque = isFullyOpaque(rgba);
   const canvas = new OffscreenCanvas(width, height);
   canvas.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(rgba), width, height), 0, 0);
-  const blob = opaque
-    ? await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 })
-    : await canvas.convertToBlob({ type: 'image/png' });
+  const blob = opaque ? await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 }) : await canvas.convertToBlob({ type: 'image/png' });
   const bytes = new Uint8Array(await blob.arrayBuffer());
   let binary = '';
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]!);
   return { base64: btoa(binary), ext: opaque ? 'jpg' : 'png' };
 }
 

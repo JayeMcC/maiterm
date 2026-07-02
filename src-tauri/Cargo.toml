@@ -56,3 +56,14 @@ tauri-plugin-process = "2"
 
 [features]
 mcp-bridge = ["dep:tauri-plugin-mcp-bridge"]
+
+# Enforce a small set of "shouldn't ship" markers as hard errors. Everything
+# else (perf/style/complexity clippy suggestions) stays a warning so a noisy
+# suggestion never blocks a build. Loggers are `tauri-plugin-log` — see the
+# Debugging section of CLAUDE.md; direct stdout/stderr bypasses the log file.
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"
+print_stdout = "deny"
+print_stderr = "deny"

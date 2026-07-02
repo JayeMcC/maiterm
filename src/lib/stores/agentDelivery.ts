@@ -92,7 +92,10 @@ export function createDeliveryController(deps: DeliveryDeps, opts: DeliveryContr
     const d = delivery.get(tabId);
     if (!d) return;
     d.busy = false;
-    if (d.busyTimer) { clearTimeout(d.busyTimer); d.busyTimer = undefined; }
+    if (d.busyTimer) {
+      clearTimeout(d.busyTimer);
+      d.busyTimer = undefined;
+    }
   }
 
   function pumpQueues() {
@@ -102,7 +105,10 @@ export function createDeliveryController(deps: DeliveryDeps, opts: DeliveryContr
       anyQueued = true;
       void flush(tabId);
     }
-    if (!anyQueued && drainTimer) { clearInterval(drainTimer); drainTimer = undefined; }
+    if (!anyQueued && drainTimer) {
+      clearInterval(drainTimer);
+      drainTimer = undefined;
+    }
   }
 
   function ensureDrainPump() {
@@ -114,8 +120,11 @@ export function createDeliveryController(deps: DeliveryDeps, opts: DeliveryContr
    *  regardless of what events fire in between. */
   async function injectExclusive(tabId: string, text: string): Promise<boolean> {
     injecting.add(tabId);
-    try { return await deps.inject(tabId, text); }
-    finally { injecting.delete(tabId); }
+    try {
+      return await deps.inject(tabId, text);
+    } finally {
+      injecting.delete(tabId);
+    }
   }
 
   /** Deliver framed text to a tab, or queue it if the tab isn't deliverable. Ordering rule:
@@ -155,14 +164,25 @@ export function createDeliveryController(deps: DeliveryDeps, opts: DeliveryContr
     if (next === undefined) return;
     const ok = await injectExclusive(tabId, next);
     if (ok) armCooldown(tabId);
-    else { d.queue.unshift(next); ensureDrainPump(); }
+    else {
+      d.queue.unshift(next);
+      ensureDrainPump();
+    }
   }
 
   return {
-    has(tabId: string) { return delivery.has(tabId); },
-    size() { return delivery.size; },
-    queueDepth(tabId: string) { return delivery.get(tabId)?.queue.length ?? 0; },
-    isReady(tabId: string) { return delivery.get(tabId)?.ready ?? false; },
+    has(tabId: string) {
+      return delivery.has(tabId);
+    },
+    size() {
+      return delivery.size;
+    },
+    queueDepth(tabId: string) {
+      return delivery.get(tabId)?.queue.length ?? 0;
+    },
+    isReady(tabId: string) {
+      return delivery.get(tabId)?.ready ?? false;
+    },
 
     /** Create (or replace) a fresh delivery entry for a tab. */
     ensure(tabId: string, ready: boolean) {
@@ -180,7 +200,10 @@ export function createDeliveryController(deps: DeliveryDeps, opts: DeliveryContr
     remap(oldId: string, newId: string) {
       const d = delivery.get(oldId) ?? { ready: false, busy: false, queue: [] };
       delivery.delete(oldId);
-      if (d.busyTimer) { clearTimeout(d.busyTimer); d.busyTimer = undefined; }
+      if (d.busyTimer) {
+        clearTimeout(d.busyTimer);
+        d.busyTimer = undefined;
+      }
       d.ready = false;
       d.busy = false;
       delivery.set(newId, d);
@@ -217,7 +240,10 @@ export function createDeliveryController(deps: DeliveryDeps, opts: DeliveryContr
     flush,
 
     destroy() {
-      if (drainTimer) { clearInterval(drainTimer); drainTimer = undefined; }
+      if (drainTimer) {
+        clearInterval(drainTimer);
+        drainTimer = undefined;
+      }
       for (const d of delivery.values()) if (d.busyTimer) clearTimeout(d.busyTimer);
       delivery.clear();
       injecting.clear();

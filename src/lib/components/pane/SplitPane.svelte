@@ -36,9 +36,15 @@
     }
     let cancelled = false;
     getSavedScrollbackText(tabId, 200)
-      .then((text) => { if (!cancelled) suspendedPreview = text; })
-      .catch(() => { if (!cancelled) suspendedPreview = null; });
-    return () => { cancelled = true; };
+      .then((text) => {
+        if (!cancelled) suspendedPreview = text;
+      })
+      .catch(() => {
+        if (!cancelled) suspendedPreview = null;
+      });
+    return () => {
+      cancelled = true;
+    };
   });
 
   // Notify portaled TerminalPanes that their slots are ready
@@ -92,35 +98,14 @@
 
 <div class="split-pane" class:active={isActive} data-pane-id={pane.id}>
   {#if showHeader}
-    <div
-      class="pane-header"
-      onclick={handleClick}
-      ondblclick={startEditing}
-      role="button"
-      tabindex="0"
-      onkeydown={(e) => e.key === 'Enter' && handleClick()}
-    >
+    <div class="pane-header" onclick={handleClick} ondblclick={startEditing} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && handleClick()}>
       {#if editingName}
         <!-- svelte-ignore a11y_autofocus -->
-        <input
-          type="text"
-          bind:value={nameValue}
-          bind:this={editInput}
-          onblur={finishEditing}
-          onkeydown={handleKeydown}
-          class="name-input"
-          autofocus
-        />
+        <input type="text" bind:value={nameValue} bind:this={editInput} onblur={finishEditing} onkeydown={handleKeydown} class="name-input" autofocus />
       {:else}
         <span class="pane-name">{pane.name}</span>
         <div class="pane-actions">
-          <button
-            class="close-btn"
-            onclick={handleClosePane}
-            title="Close pane"
-          >
-            &times;
-          </button>
+          <button class="close-btn" onclick={handleClosePane} title="Close pane"> &times; </button>
         </div>
       {/if}
     </div>
@@ -136,20 +121,13 @@
             <SearchBar tabId={pane.active_tab_id} />
           {/if}
           {#each pane.tabs as tab (tab.id)}
-            <div
-              class="terminal-slot"
-              class:hidden-tab={tab.id !== pane.active_tab_id}
-              data-terminal-slot={tab.id}
-            ></div>
+            <div class="terminal-slot" class:hidden-tab={tab.id !== pane.active_tab_id} data-terminal-slot={tab.id}></div>
           {/each}
           {#if pendingResumePanes.has(pane.id)}
-            {@const activeTab = pane.tabs.find(t => t.id === pane.active_tab_id)}
+            {@const activeTab = pane.tabs.find((t) => t.id === pane.active_tab_id)}
             <div class="resume-overlay">
               {#if suspendedPreview}
-                <pre
-                  class="suspended-preview"
-                  style="font-family: {preferencesStore.fontFamily}; font-size: {preferencesStore.fontSize}px;"
-                >{suspendedPreview}</pre>
+                <pre class="suspended-preview" style="font-family: {preferencesStore.fontFamily}; font-size: {preferencesStore.fontSize}px;">{suspendedPreview}</pre>
                 <div class="preview-glass"></div>
               {/if}
               <div class="resume-controls" class:on-glass={suspendedPreview !== null}>
@@ -163,21 +141,18 @@
           {/if}
         </div>
         {#if pane.active_tab_id}
-          {@const composerTab = pane.tabs.find(t => t.id === pane.active_tab_id)}
+          {@const composerTab = pane.tabs.find((t) => t.id === pane.active_tab_id)}
           {#if composerTab && composerTab.tab_type === 'terminal'}
             {#key composerTab.id}
-              <ComposerDock
-                tabId={composerTab.id}
-                draft={composerTab.composer_draft ?? null}
-              />
+              <ComposerDock tabId={composerTab.id} draft={composerTab.composer_draft ?? null} />
             {/key}
           {/if}
         {/if}
       </div>
 
       {#if pane.active_tab_id && workspacesStore.isNotesVisible(pane.active_tab_id)}
-        {@const activeTab = pane.tabs.find(t => t.id === pane.active_tab_id)}
-        {@const ws = workspacesStore.workspaces.find(w => w.id === workspaceId)}
+        {@const activeTab = pane.tabs.find((t) => t.id === pane.active_tab_id)}
+        {@const ws = workspacesStore.workspaces.find((w) => w.id === workspaceId)}
         {#if activeTab}
           {#key activeTab.id}
             <NotesPanel
@@ -196,9 +171,7 @@
   {:else}
     <div class="empty-pane">
       <div class="empty-logo" role="img" aria-label="maiTerm"></div>
-      <button class="new-terminal-btn" onclick={handleNewTerminal}>
-        New Terminal
-      </button>
+      <button class="new-terminal-btn" onclick={handleNewTerminal}> New Terminal </button>
       <span class="empty-hint"><kbd>{modLabel}</kbd> + <kbd>T</kbd></span>
     </div>
   {/if}
@@ -255,7 +228,9 @@
     color: var(--fg-dim);
     border-radius: 4px;
     font-size: 1.077rem;
-    transition: background 0.1s, color 0.1s;
+    transition:
+      background 0.1s,
+      color 0.1s;
   }
 
   .close-btn:hover {
@@ -421,7 +396,9 @@
     cursor: pointer;
     font-family: inherit;
     font-size: 0.9em;
-    transition: background 0.15s, border-color 0.15s;
+    transition:
+      background 0.15s,
+      border-color 0.15s;
   }
 
   .resume-overlay .resume-btn:hover {

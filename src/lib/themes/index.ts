@@ -509,20 +509,16 @@ export function isBuiltinTheme(id: string): boolean {
 }
 
 export function getTheme(id: string, customThemes: Theme[] = []): Theme {
-  return customThemes.find((t) => t.id === id)
-    ?? builtinThemes.find((t) => t.id === id)
-    ?? builtinThemes[0];
+  return customThemes.find((t) => t.id === id) ?? builtinThemes.find((t) => t.id === id) ?? builtinThemes[0]!;
 }
 
 /** Relative luminance (0 = black, 1 = white) */
 function luminance(hex: string): number {
   const h = hex.replace('#', '');
-  const [r, g, b] = [
-    parseInt(h.substring(0, 2), 16) / 255,
-    parseInt(h.substring(2, 4), 16) / 255,
-    parseInt(h.substring(4, 6), 16) / 255,
-  ].map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const [r, g, b] = [parseInt(h.substring(0, 2), 16) / 255, parseInt(h.substring(2, 4), 16) / 255, parseInt(h.substring(4, 6), 16) / 255].map((c) =>
+    c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4),
+  );
+  return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
 }
 
 export function applyUiTheme(ui: UiColors): void {

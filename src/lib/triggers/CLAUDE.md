@@ -48,6 +48,7 @@ Per-trigger per-tab, prevents rapid re-firing.
 `src/lib/triggers/defaults.ts`: `DEFAULT_TRIGGERS` is currently empty — all Claude-related triggers have been replaced by hooks integration (PreToolUse, PostToolUse, PreCompact, SessionStart, Stop, Notification).
 
 `seedDefaultTriggers()` runs at app startup (`+layout.svelte` onMount) and on Preferences page mount. It:
+
 1. Removes triggers whose `default_id` is not in `DEFAULT_TRIGGERS` (stale cleanup)
 2. Seeds any new defaults that don't exist yet
 3. Auto-updates unmodified defaults to latest template values

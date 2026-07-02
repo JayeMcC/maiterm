@@ -12,11 +12,7 @@ const counts = new Map<string, number>();
 let totalRegistered = 0;
 let totalUnregistered = 0;
 
-export async function countedListen<T>(
-  event: string,
-  handler: EventCallback<T>,
-  options?: Options
-): Promise<UnlistenFn> {
+export async function countedListen<T>(event: string, handler: EventCallback<T>, options?: Options): Promise<UnlistenFn> {
   const unlisten = await rawListen<T>(event, handler, options);
   counts.set(event, (counts.get(event) ?? 0) + 1);
   totalRegistered++;

@@ -12,6 +12,7 @@ import { performMeshSend, type MeshEdge, type MeshSendResult } from '$lib/stores
 import { createLoopController, type LoopReason } from '$lib/stores/meshLoopControl';
 import { statusMarker, buildStatusNoteTemplate, parseNeedsDecision, parseStatusNote } from '$lib/stores/meshStatus';
 import { preferencesStore } from '$lib/stores/preferences.svelte';
+import { SvelteMap } from 'svelte/reactivity';
 import { dispatch as dispatchNotification } from '$lib/stores/notificationDispatch';
 import { error as logError, info as logInfo } from '@tauri-apps/plugin-log';
 
@@ -39,19 +40,32 @@ const EDGE_RING_MAX = 300;
 
 function createAgentMeshStore() {
   // One router per mesh workspace (each scopes its roster + owns its topic registry).
-  const routers = new Map<string, MeshRouter>();
+  // SvelteMap so routerFor / topicsForWorkspace / pausedTopics pick up router lifecycle
+  // (create on setMeshEnabled(true), drop on false); per-topic changes still bump().
+  const routers = new SvelteMap<string, MeshRouter>();
   // Members already primed this session (opener injected) — keyed by tabId, idempotent.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- one-shot priming guard; only read imperatively inside tryPrime
   const primed = new Set<string>();
   // Each member's status-note id (the one workspace note it maintains), keyed by tabId.
-  const statusNoteIds = new Map<string, string>();
+  // SvelteMap: statusBoard (a reactive cockpit getter) reads .get(tabId) per member; SvelteMap
+  // makes ensureStatusNote writes surface immediately without a manual bump.
+  const statusNoteIds = new SvelteMap<string, string>();
   // Last "NEEDS DECISION" text surfaced per status note, to dedupe the decision toast.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative toast dedup cache; touched only inside scanDecision
   const lastDecision = new Map<string, string>();
   // Stage-view UI state per mesh workspace (T7): which two members are on the stage, and
   // whether the stage/filmstrip layout is active (vs normal splits). In-memory UI state.
-  interface StageState { active: boolean; left: string | null; right: string | null; }
-  const stage = new Map<string, StageState>();
+  interface StageState {
+    active: boolean;
+    left: string | null;
+    right: string | null;
+  }
+  // SvelteMap: isStageView / stageSlots / isOnStage / isMeshMemberTab read reactively; in-place
+  // mutations of a StageState value still bump() for reactivity.
+  const stage = new SvelteMap<string, StageState>();
   // Mesh workspaces we've already offered an auto re-check for this session (so switching
   // between workspaces doesn't re-prompt). Cleared on destroy.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- one-shot per-workspace guard; read only in maybeAutoRecheck
   const autoRechecked = new Set<string>();
   // Recipient-keyed FIFO mailbox, shared core with the 1:1 bridge (separate instance).
   const deliveryCtl = createDeliveryController({
@@ -76,7 +90,9 @@ function createAgentMeshStore() {
   let version = $state(0);
   const unlisteners: (() => void)[] = [];
 
-  function bump() { version++; }
+  function bump() {
+    version++;
+  }
 
   // ─── Workspace + roster derivation ──────────────────────────────────────────
 
@@ -167,9 +183,7 @@ function createAgentMeshStore() {
   function persistTopics(wsId: string) {
     const router = routers.get(wsId);
     if (!router) return;
-    commands.setWorkspaceMeshTopics(wsId, router.snapshot()).catch((e) =>
-      logError(`agentMesh: failed to persist topics for ws ${wsId.slice(0, 8)}: ${e}`),
-    );
+    commands.setWorkspaceMeshTopics(wsId, router.snapshot()).catch((e) => logError(`agentMesh: failed to persist topics for ws ${wsId.slice(0, 8)}: ${e}`));
   }
 
   // ─── Injection (shared shape with the 1:1 bridge) ───────────────────────────
@@ -261,7 +275,10 @@ function createAgentMeshStore() {
     if (known && ws.workspace_notes.some((n) => n.id === known)) return { id: known, created: false };
     const marker = statusMarker(member.role);
     const byMarker = ws.workspace_notes.find((n) => n.content.startsWith(marker));
-    if (byMarker) { statusNoteIds.set(member.tabId, byMarker.id); return { id: byMarker.id, created: false }; }
+    if (byMarker) {
+      statusNoteIds.set(member.tabId, byMarker.id);
+      return { id: byMarker.id, created: false };
+    }
     const note = await workspacesStore.addWorkspaceNote(ws.id, buildStatusNoteTemplate(member.role, member.purpose), 'preview');
     if (!note) return null;
     statusNoteIds.set(member.tabId, note.id);
@@ -279,12 +296,18 @@ function createAgentMeshStore() {
     if (!member || !member.live) return; // not a named, live agent yet — re-check on next Stop
     primed.add(tabId); // mark before the await so a racing event can't double-prime
     const note = await ensureStatusNote(ws, member);
-    if (!note) { primed.delete(tabId); return; } // note creation failed — allow a retry
+    if (!note) {
+      primed.delete(tabId);
+      return;
+    } // note creation failed — allow a retry
     ensureMember(tabId);
     if (note.created) {
       const peers = membersOf(ws).filter((m) => m.tabId !== tabId);
       const status = await deliveryCtl.deliver(tabId, buildMeshOpener(member, peers, note.id));
-      if (status === 'failed') { primed.delete(tabId); return; }
+      if (status === 'failed') {
+        primed.delete(tabId);
+        return;
+      }
       logInfo(`agentMesh: primed "${member.role}" (${tabId.slice(0, 8)}) into mesh "${ws.name}"`);
     }
     bump();
@@ -303,7 +326,10 @@ function createAgentMeshStore() {
       break;
     }
     const decision = parseNeedsDecision(content);
-    if (!decision) { lastDecision.delete(noteId); return; }
+    if (!decision) {
+      lastDecision.delete(noteId);
+      return;
+    }
     if (lastDecision.get(noteId) === decision) return; // already surfaced this exact text
     lastDecision.set(noteId, decision);
     void dispatchNotification(`${ownerRole} needs a decision`, decision, 'info', ownerTabId ? { tabId: ownerTabId } : undefined);
@@ -332,7 +358,9 @@ function createAgentMeshStore() {
   // ─── Public API ─────────────────────────────────────────────────────────────
 
   return {
-    get version() { return version; },
+    get version() {
+      return version;
+    },
 
     getInternalSizes() {
       return { routers: routers.size, delivery: deliveryCtl.size(), edges: edges.length };
@@ -375,10 +403,18 @@ function createAgentMeshStore() {
       ws.bridge_all = enabled;
       if (enabled) {
         const router = routerFor(wsId);
-        if (router) for (const m of membersOf(ws)) { ensureMember(m.tabId); void tryPrime(m.tabId); }
+        if (router)
+          for (const m of membersOf(ws)) {
+            ensureMember(m.tabId);
+            void tryPrime(m.tabId);
+          }
       } else {
         // Leaving mesh mode: drop delivery entries for this ws's members (topics persist).
-        for (const m of membersOf(ws)) { removeMember(m.tabId); primed.delete(m.tabId); statusNoteIds.delete(m.tabId); }
+        for (const m of membersOf(ws)) {
+          removeMember(m.tabId);
+          primed.delete(m.tabId);
+          statusNoteIds.delete(m.tabId);
+        }
         routers.delete(wsId);
       }
       bump();
@@ -394,9 +430,7 @@ function createAgentMeshStore() {
           const tab = pane.tabs.find((t) => t.id === tabId);
           if (tab) {
             tab.mesh_purpose = clean;
-            commands.setTabMeshPurpose(ws.id, pane.id, tabId, clean).catch((e) =>
-              logError(`agentMesh: failed to persist purpose for tab ${tabId.slice(0, 8)}: ${e}`),
-            );
+            commands.setTabMeshPurpose(ws.id, pane.id, tabId, clean).catch((e) => logError(`agentMesh: failed to persist purpose for tab ${tabId.slice(0, 8)}: ${e}`));
             bump();
             return;
           }
@@ -436,9 +470,7 @@ function createAgentMeshStore() {
       const ws = getWorkspace(wsId);
       if (!ws || !ws.bridge_all) return [];
       return membersOf(ws).map((m) => {
-        const noteId = statusNoteIds.get(m.tabId)
-          ?? ws.workspace_notes.find((n) => n.content.startsWith(statusMarker(m.role)))?.id
-          ?? null;
+        const noteId = statusNoteIds.get(m.tabId) ?? ws.workspace_notes.find((n) => n.content.startsWith(statusMarker(m.role)))?.id ?? null;
         const note = noteId ? ws.workspace_notes.find((n) => n.id === noteId) : undefined;
         const parsed = note ? parseStatusNote(note.content) : { done: [], needsDecision: [], blocked: [] };
         const cs = claudeStateStore.getState(m.tabId);
@@ -567,7 +599,10 @@ function createAgentMeshStore() {
       if (!router) return { error: 'Mesh router unavailable.' };
       const r = router.startTopic(tabId, label);
       if (!r.ok) return { error: r.error };
-      if (r.created) { persistTopics(ws.id); bump(); }
+      if (r.created) {
+        persistTopics(ws.id);
+        bump();
+      }
       return { success: true, created: r.created, topic: { id: r.topic.id, label: r.topic.label, state: r.topic.state } };
     },
 
@@ -578,7 +613,10 @@ function createAgentMeshStore() {
       for (const ws of workspacesStore.workspaces) {
         if (!ws.bridge_all) continue;
         const router = routerFor(ws.id);
-        if (router?.get(topicId)) { owningWs = ws; break; }
+        if (router?.get(topicId)) {
+          owningWs = ws;
+          break;
+        }
       }
       if (!owningWs) return { error: `Topic not found: ${topicId}` };
       const router = routerFor(owningWs.id)!;
@@ -647,14 +685,16 @@ function createAgentMeshStore() {
           router,
           // Lazily ensure the recipient has a delivery slot (covers a member that joined
           // before this store wired its entry), then hand to the shared FIFO mailbox.
-          deliver: (recipientTabId, text) => { ensureMember(recipientTabId); return deliveryCtl.deliver(recipientTabId, text); },
+          deliver: (recipientTabId, text) => {
+            ensureMember(recipientTabId);
+            return deliveryCtl.deliver(recipientTabId, text);
+          },
           buildEnvelope,
           emitEdge,
           persistTopics: () => persistTopics(ws.id),
           isLive: (tabId) => !!claudeStateStore.getState(tabId),
           now: () => Date.now(),
-          gate: (topic, nextTurn) =>
-            loopCtl.evaluate(topic.id, nextTurn, Date.parse(topic.created_at) || Date.now(), Date.now()),
+          gate: (topic, nextTurn) => loopCtl.evaluate(topic.id, nextTurn, Date.parse(topic.created_at) || Date.now(), Date.now()),
         },
         { senderTabId, recipient: args.recipient, topic: args.topic, message: args.message },
       );
@@ -669,7 +709,10 @@ function createAgentMeshStore() {
       const nid = statusNoteIds.get(tabId);
       statusNoteIds.delete(tabId);
       if (nid) lastDecision.delete(nid);
-      for (const s of stage.values()) { if (s.left === tabId) s.left = null; if (s.right === tabId) s.right = null; }
+      for (const s of stage.values()) {
+        if (s.left === tabId) s.left = null;
+        if (s.right === tabId) s.right = null;
+      }
       bump();
     },
 
@@ -677,10 +720,19 @@ function createAgentMeshStore() {
     remapTab(oldTabId: string, newTabId: string) {
       if (oldTabId === newTabId || !deliveryCtl.has(oldTabId)) return;
       deliveryCtl.remap(oldTabId, newTabId);
-      if (primed.has(oldTabId)) { primed.delete(oldTabId); primed.add(newTabId); }
+      if (primed.has(oldTabId)) {
+        primed.delete(oldTabId);
+        primed.add(newTabId);
+      }
       const nid = statusNoteIds.get(oldTabId);
-      if (nid !== undefined) { statusNoteIds.delete(oldTabId); statusNoteIds.set(newTabId, nid); }
-      for (const s of stage.values()) { if (s.left === oldTabId) s.left = newTabId; if (s.right === oldTabId) s.right = newTabId; }
+      if (nid !== undefined) {
+        statusNoteIds.delete(oldTabId);
+        statusNoteIds.set(newTabId, nid);
+      }
+      for (const s of stage.values()) {
+        if (s.left === oldTabId) s.left = newTabId;
+        if (s.right === oldTabId) s.right = newTabId;
+      }
       bump();
     },
 
@@ -733,7 +785,10 @@ function createAgentMeshStore() {
         for (const m of membersOf(ws)) ensureMember(m.tabId);
         count++;
       }
-      if (count) { bump(); logInfo(`agentMesh: rehydrated ${count} mesh workspace(s)`); }
+      if (count) {
+        bump();
+        logInfo(`agentMesh: rehydrated ${count} mesh workspace(s)`);
+      }
     },
 
     destroy() {

@@ -77,7 +77,7 @@
   }
 
   function setColor(t: Theme, path: string, value: string): Theme {
-    const [section, key] = path.split('.');
+    const [section, key] = path.split('.') as [string, string];
     if (section === 'ui') {
       return { ...t, ui: { ...t.ui, [key]: value } };
     }
@@ -117,7 +117,7 @@
 </script>
 
 <div class="editor">
-  <button class="editor-toggle" onclick={() => expanded = !expanded}>
+  <button class="editor-toggle" onclick={() => (expanded = !expanded)}>
     <span class="toggle-arrow" class:open={expanded}>&#9654;</span>
     Edit Colors
   </button>
@@ -127,13 +127,7 @@
       {#if !isBuiltin}
         <div class="name-row">
           <label for="theme-name">Name</label>
-          <input
-            id="theme-name"
-            type="text"
-            class="name-input"
-            value={theme.name}
-            onchange={(e) => handleNameChange(e.currentTarget.value)}
-          />
+          <input id="theme-name" type="text" class="name-input" value={theme.name} onchange={(e) => handleNameChange(e.currentTarget.value)} />
         </div>
       {/if}
 
@@ -144,17 +138,8 @@
             <div class="color-item">
               <span class="color-label">{c.label}</span>
               <div class="color-inputs">
-                <input
-                  type="color"
-                  value={getColor(theme, c.key)}
-                  oninput={(e) => handleColorChange(c.key, e.currentTarget.value)}
-                />
-                <input
-                  type="text"
-                  class="hex-input"
-                  value={getColor(theme, c.key)}
-                  onchange={(e) => handleColorChange(c.key, e.currentTarget.value)}
-                />
+                <input type="color" value={getColor(theme, c.key)} oninput={(e) => handleColorChange(c.key, e.currentTarget.value)} />
+                <input type="text" class="hex-input" value={getColor(theme, c.key)} onchange={(e) => handleColorChange(c.key, e.currentTarget.value)} />
               </div>
             </div>
           {/each}
@@ -168,17 +153,8 @@
             <div class="color-item">
               <span class="color-label">{c.label}</span>
               <div class="color-inputs">
-                <input
-                  type="color"
-                  value={getColor(theme, c.key)}
-                  oninput={(e) => handleColorChange(c.key, e.currentTarget.value)}
-                />
-                <input
-                  type="text"
-                  class="hex-input"
-                  value={getColor(theme, c.key)}
-                  onchange={(e) => handleColorChange(c.key, e.currentTarget.value)}
-                />
+                <input type="color" value={getColor(theme, c.key)} oninput={(e) => handleColorChange(c.key, e.currentTarget.value)} />
+                <input type="text" class="hex-input" value={getColor(theme, c.key)} onchange={(e) => handleColorChange(c.key, e.currentTarget.value)} />
               </div>
             </div>
           {/each}
@@ -192,17 +168,8 @@
             <div class="color-item">
               <span class="color-label">{c.label}</span>
               <div class="color-inputs">
-                <input
-                  type="color"
-                  value={getColor(theme, c.key)}
-                  oninput={(e) => handleColorChange(c.key, e.currentTarget.value)}
-                />
-                <input
-                  type="text"
-                  class="hex-input"
-                  value={getColor(theme, c.key)}
-                  onchange={(e) => handleColorChange(c.key, e.currentTarget.value)}
-                />
+                <input type="color" value={getColor(theme, c.key)} oninput={(e) => handleColorChange(c.key, e.currentTarget.value)} />
+                <input type="text" class="hex-input" value={getColor(theme, c.key)} onchange={(e) => handleColorChange(c.key, e.currentTarget.value)} />
               </div>
             </div>
           {/each}
@@ -216,17 +183,8 @@
             <div class="color-item">
               <span class="color-label">{c.label}</span>
               <div class="color-inputs">
-                <input
-                  type="color"
-                  value={getColor(theme, c.key)}
-                  oninput={(e) => handleColorChange(c.key, e.currentTarget.value)}
-                />
-                <input
-                  type="text"
-                  class="hex-input"
-                  value={getColor(theme, c.key)}
-                  onchange={(e) => handleColorChange(c.key, e.currentTarget.value)}
-                />
+                <input type="color" value={getColor(theme, c.key)} oninput={(e) => handleColorChange(c.key, e.currentTarget.value)} />
+                <input type="text" class="hex-input" value={getColor(theme, c.key)} onchange={(e) => handleColorChange(c.key, e.currentTarget.value)} />
               </div>
             </div>
           {/each}
@@ -240,17 +198,8 @@
             <div class="color-item">
               <span class="color-label">{c.label}</span>
               <div class="color-inputs">
-                <input
-                  type="color"
-                  value={getColor(theme, c.key)}
-                  oninput={(e) => handleColorChange(c.key, e.currentTarget.value)}
-                />
-                <input
-                  type="text"
-                  class="hex-input"
-                  value={getColor(theme, c.key)}
-                  onchange={(e) => handleColorChange(c.key, e.currentTarget.value)}
-                />
+                <input type="color" value={getColor(theme, c.key)} oninput={(e) => handleColorChange(c.key, e.currentTarget.value)} />
+                <input type="text" class="hex-input" value={getColor(theme, c.key)} onchange={(e) => handleColorChange(c.key, e.currentTarget.value)} />
               </div>
             </div>
           {/each}
@@ -264,17 +213,8 @@
             <div class="color-item">
               <span class="color-label">{c.label}</span>
               <div class="color-inputs">
-                <input
-                  type="color"
-                  value={getColor(theme, c.key)}
-                  oninput={(e) => handleColorChange(c.key, e.currentTarget.value)}
-                />
-                <input
-                  type="text"
-                  class="hex-input"
-                  value={getColor(theme, c.key)}
-                  onchange={(e) => handleColorChange(c.key, e.currentTarget.value)}
-                />
+                <input type="color" value={getColor(theme, c.key)} oninput={(e) => handleColorChange(c.key, e.currentTarget.value)} />
+                <input type="text" class="hex-input" value={getColor(theme, c.key)} onchange={(e) => handleColorChange(c.key, e.currentTarget.value)} />
               </div>
             </div>
           {/each}
@@ -396,7 +336,7 @@
     gap: 4px;
   }
 
-  input[type="color"] {
+  input[type='color'] {
     width: 24px;
     height: 24px;
     padding: 0;
@@ -406,11 +346,11 @@
     background: none;
   }
 
-  input[type="color"]::-webkit-color-swatch-wrapper {
+  input[type='color']::-webkit-color-swatch-wrapper {
     padding: 2px;
   }
 
-  input[type="color"]::-webkit-color-swatch {
+  input[type='color']::-webkit-color-swatch {
     border: none;
     border-radius: 2px;
   }

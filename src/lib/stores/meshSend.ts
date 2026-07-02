@@ -31,8 +31,7 @@ export interface MeshEdge {
 }
 
 export type MeshSendResult =
-  | { ok: true; delivered: boolean; queued: boolean; paused?: boolean; pauseReason?: LoopReason; recipient: string; topic: { id: string; label: string }; note: string }
-  | { ok: false; error: string };
+  { ok: true; delivered: boolean; queued: boolean; paused?: boolean; pauseReason?: LoopReason; recipient: string; topic: { id: string; label: string }; note: string } | { ok: false; error: string };
 
 export interface MeshSendDeps {
   router: MeshRouter;
@@ -53,10 +52,7 @@ export interface MeshSendDeps {
   gate?: (topic: MeshTopic, nextTurn: number) => LoopVerdict;
 }
 
-export async function performMeshSend(
-  deps: MeshSendDeps,
-  args: { senderTabId: string; recipient?: string; topic?: string; message: string },
-): Promise<MeshSendResult> {
+export async function performMeshSend(deps: MeshSendDeps, args: { senderTabId: string; recipient?: string; topic?: string; message: string }): Promise<MeshSendResult> {
   const { router } = deps;
 
   const message = (args.message ?? '').trim();
@@ -113,13 +109,21 @@ export async function performMeshSend(
   const summary = { id: tr.topic.id, label: tr.topic.label };
   if (status === 'delivered') {
     return {
-      ok: true, delivered: true, queued: false, recipient: rr.role, topic: summary,
+      ok: true,
+      delivered: true,
+      queued: false,
+      recipient: rr.role,
+      topic: summary,
       note: `Delivered to ${rr.role} on topic "${tr.topic.label}". Their reply arrives as a new prompt — finish your turn now.`,
     };
   }
   const offline = !deps.isLive(rr.tabId);
   return {
-    ok: true, delivered: false, queued: true, recipient: rr.role, topic: summary,
+    ok: true,
+    delivered: false,
+    queued: true,
+    recipient: rr.role,
+    topic: summary,
     note: offline
       ? `${rr.role} is offline; your message is queued on topic "${tr.topic.label}" and delivers when it resumes.`
       : `${rr.role} is busy; your message is queued on topic "${tr.topic.label}" and delivers when they're free.`,

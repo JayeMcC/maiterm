@@ -4,7 +4,7 @@
   import { preferencesStore } from '$lib/stores/preferences.svelte';
   import { fly, fade } from 'svelte/transition';
 
-  function handleToastClick(toast: typeof toastStore.toasts[0]) {
+  function handleToastClick(toast: (typeof toastStore.toasts)[0]) {
     if (toast.action) {
       toast.action();
       toastStore.removeToast(toast.id);
@@ -18,7 +18,8 @@
 {#if toastStore.toasts.length > 0}
   <div class="toast-container" style:max-width="{preferencesStore.toastWidth}px" style:font-size="{preferencesStore.toastFontSize}px">
     {#each toastStore.toasts as toast (toast.id)}
-      <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -- toast dismiss is decorative, close button provides keyboard access -->
+      <!-- toast dismiss is decorative, close button provides keyboard access -->
+      <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
       <div
         class="toast toast-{toast.type}"
         class:clickable={!!toast.action || !!toast.source?.tabId}
@@ -37,15 +38,21 @@
         {#if toast.onCancel}
           <button
             class="toast-cancel"
-            onclick={(e) => { e.stopPropagation(); toast.onCancel?.(); }}
-            aria-label="Cancel upload"
-          >Cancel</button>
+            onclick={(e) => {
+              e.stopPropagation();
+              toast.onCancel?.();
+            }}
+            aria-label="Cancel upload">Cancel</button
+          >
         {:else}
           <button
             class="toast-close"
-            onclick={(e) => { e.stopPropagation(); toastStore.removeToast(toast.id); }}
-            aria-label="Dismiss notification"
-          >&times;</button>
+            onclick={(e) => {
+              e.stopPropagation();
+              toastStore.removeToast(toast.id);
+            }}
+            aria-label="Dismiss notification">&times;</button
+          >
         {/if}
         {#if toast.sticky}
           {#if toast.indeterminate}
@@ -159,7 +166,10 @@
     border: 1px solid var(--bg-light);
     border-radius: 4px;
     cursor: pointer;
-    transition: background 0.12s, border-color 0.12s, color 0.12s;
+    transition:
+      background 0.12s,
+      border-color 0.12s,
+      color 0.12s;
   }
 
   .toast-cancel:hover {
@@ -194,12 +204,20 @@
   }
 
   @keyframes toast-timer {
-    from { width: 100%; }
-    to { width: 0%; }
+    from {
+      width: 100%;
+    }
+    to {
+      width: 0%;
+    }
   }
 
   @keyframes toast-marquee {
-    0% { left: -35%; }
-    100% { left: 100%; }
+    0% {
+      left: -35%;
+    }
+    100% {
+      left: 100%;
+    }
   }
 </style>

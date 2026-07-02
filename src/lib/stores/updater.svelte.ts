@@ -26,10 +26,11 @@ function isNewerVersion(a: string, b: string): boolean {
 
 /** Parse a GitHub release body into changelog items. */
 function parseReleaseBody(body: string): string[] {
-  return body.split('\n')
-    .map(line => line.match(/^- (.+)/))
+  return body
+    .split('\n')
+    .map((line) => line.match(/^- (.+)/))
     .filter((m): m is RegExpMatchArray => m !== null)
-    .map(m => m[1].replace(/`([^`]+)`/g, '$1'));
+    .map((m) => m[1]!.replace(/`([^`]+)`/g, '$1'));
 }
 
 function createUpdaterStore() {
@@ -52,14 +53,9 @@ function createUpdaterStore() {
         dismissed = false;
         logInfo(`Update available: v${update.version}`);
         if (!silent) {
-          toastStore.addToast(
-            'Update Available',
-            `v${update.version} is ready — click to review`,
-            'info',
-            undefined,
-            undefined,
-            () => { showWhatsNewRequested = true; },
-          );
+          toastStore.addToast('Update Available', `v${update.version} is ready — click to review`, 'info', undefined, undefined, () => {
+            showWhatsNewRequested = true;
+          });
         }
       } else if (!silent) {
         toastStore.addToast('Up to Date', 'You are running the latest version.', 'success');
@@ -86,12 +82,12 @@ function createUpdaterStore() {
       const releases: GitHubRelease[] = await res.json();
 
       const entries: ChangelogEntry[] = releases
-        .filter(r => isNewerVersion(r.tag_name, currentVersion) && r.body)
-        .map(r => ({
+        .filter((r) => isNewerVersion(r.tag_name, currentVersion) && r.body)
+        .map((r) => ({
           version: r.tag_name.replace(/^v/, ''),
           items: parseReleaseBody(r.body!),
         }))
-        .filter(e => e.items.length > 0);
+        .filter((e) => e.items.length > 0);
 
       releaseNotes = entries;
       return entries;
@@ -161,17 +157,35 @@ function createUpdaterStore() {
   }
 
   return {
-    get checking() { return checking; },
-    get downloading() { return downloading; },
-    get installed() { return installed; },
-    get currentUpdate() { return currentUpdate; },
-    get dismissed() { return dismissed; },
-    get releaseNotes() { return releaseNotes; },
-    get loadingNotes() { return loadingNotes; },
+    get checking() {
+      return checking;
+    },
+    get downloading() {
+      return downloading;
+    },
+    get installed() {
+      return installed;
+    },
+    get currentUpdate() {
+      return currentUpdate;
+    },
+    get dismissed() {
+      return dismissed;
+    },
+    get releaseNotes() {
+      return releaseNotes;
+    },
+    get loadingNotes() {
+      return loadingNotes;
+    },
     /** True when the banner should be visible */
-    get showBanner() { return (currentUpdate !== null || installed) && !dismissed; },
+    get showBanner() {
+      return (currentUpdate !== null || installed) && !dismissed;
+    },
     /** True when a toast click requested showing the What's New modal */
-    get showWhatsNewRequested() { return showWhatsNewRequested; },
+    get showWhatsNewRequested() {
+      return showWhatsNewRequested;
+    },
     checkForUpdates,
     recheckForNewer,
     switchToUpdate,
@@ -179,8 +193,12 @@ function createUpdaterStore() {
     fetchReleaseNotes,
     dismiss,
     restart,
-    requestShowWhatsNew() { showWhatsNewRequested = true; },
-    clearShowWhatsNewRequest() { showWhatsNewRequested = false; },
+    requestShowWhatsNew() {
+      showWhatsNewRequested = true;
+    },
+    clearShowWhatsNewRequest() {
+      showWhatsNewRequested = false;
+    },
   };
 }
 

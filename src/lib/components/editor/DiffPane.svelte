@@ -36,7 +36,7 @@
   let mergeView: MergeView | null = null;
   let accepting = $state(false);
   let rejecting = $state(false);
-  const readOnly = !diffContext.request_id;
+  const readOnly = $derived(!diffContext.request_id);
 
   function attachToSlot() {
     const slot = document.querySelector(`[data-terminal-slot="${tabId}"]`) as HTMLElement;
@@ -74,32 +74,17 @@
     mergeView = new MergeView({
       a: {
         doc: diffContext.old_content,
-        extensions: [
-          EditorState.readOnly.of(true),
-          lineNumbers(),
-          highlightSpecialChars(),
-          highlightActiveLine(),
-          ...themeExtension,
-          editorTheme,
-        ],
+        extensions: [EditorState.readOnly.of(true), lineNumbers(), highlightSpecialChars(), highlightActiveLine(), ...themeExtension, editorTheme],
       },
       b: {
         doc: diffContext.new_content,
-        extensions: [
-          ...(readOnly ? [EditorState.readOnly.of(true)] : [contentSmartQuoteFix]),
-          lineNumbers(),
-          highlightSpecialChars(),
-          highlightActiveLine(),
-          ...themeExtension,
-          editorTheme,
-        ],
+        extensions: [...(readOnly ? [EditorState.readOnly.of(true)] : [contentSmartQuoteFix]), lineNumbers(), highlightSpecialChars(), highlightActiveLine(), ...themeExtension, editorTheme],
       },
       parent: diffContentEl,
       gutter: true,
       highlightChanges: true,
       collapseUnchanged: { margin: 3, minSize: 4 },
     });
-
   });
 
   onDestroy(() => {
@@ -137,13 +122,7 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-  class="diff-pane"
-  class:hidden={!visible}
-  bind:this={containerRef}
-  onmousedowncapture={focusPane}
->
+<div class="diff-pane" class:hidden={!visible} bind:this={containerRef} onmousedowncapture={focusPane}>
   <div class="diff-toolbar">
     <span class="diff-file-path">{diffContext.file_path}</span>
     {#if !readOnly}

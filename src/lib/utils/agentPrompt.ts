@@ -33,11 +33,7 @@ export function pasteSettleMs(textLength: number, attachmentCount = 0): number {
  * apart. Assumes the foreground app has bracketed paste on (every target is a
  * Claude/Codex TUI); callers that may face a plain shell handle that themselves.
  */
-export async function bracketedPasteSubmit(
-  ptyId: string,
-  text: string,
-  attachmentCount = 0,
-): Promise<void> {
+export async function bracketedPasteSubmit(ptyId: string, text: string, attachmentCount = 0): Promise<void> {
   await writeTerminal(ptyId, enc(`\x1b[200~${text}\x1b[201~`));
   await sleep(pasteSettleMs(text.length, attachmentCount));
   await writeTerminal(ptyId, enc('\r'));

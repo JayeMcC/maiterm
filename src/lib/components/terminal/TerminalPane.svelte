@@ -9,7 +9,33 @@
   import { CanvasAddon } from '@xterm/addon-canvas';
   import { Unicode11Addon } from '@xterm/addon-unicode11';
   import '@xterm/xterm/css/xterm.css';
-  import { spawnTerminal, writeTerminal, resizeTerminal, killTerminal, setTabScrollback, getPtyInfo, setTabRestoreContext, cleanSshCommand, normalizeSshInput, buildSshCommand, shellEscapePath, readClipboardFilePaths, serializeTerminal, restoreTerminalScrollback, resizeTerminalGrid, scrollTerminal, scrollTerminalTo, saveTerminalScrollback, restoreTerminalFromSaved, hasSavedScrollback, getSavedTerminalSize, getTerminalScrollbackInfo, playBellSound, saveClipboardImage, startSelection, updateSelection, clearSelection, copySelection, selectAll, scrollSelection } from '$lib/tauri/commands';
+  import {
+    spawnTerminal,
+    writeTerminal,
+    resizeTerminal,
+    killTerminal,
+    getPtyInfo,
+    setTabRestoreContext,
+    cleanSshCommand,
+    normalizeSshInput,
+    buildSshCommand,
+    readClipboardFilePaths,
+    scrollTerminal,
+    scrollTerminalTo,
+    saveTerminalScrollback,
+    restoreTerminalFromSaved,
+    hasSavedScrollback,
+    getSavedTerminalSize,
+    getTerminalScrollbackInfo,
+    playBellSound,
+    saveClipboardImage,
+    startSelection,
+    updateSelection,
+    clearSelection,
+    copySelection,
+    selectAll,
+    scrollSelection,
+  } from '$lib/tauri/commands';
   import type { TerminalFrame, OscCwdEvent, OscShellEvent } from '$lib/tauri/types';
   import { uploadWithProgress, AGENT_UPLOAD_DIR } from '$lib/utils/scpUpload';
   import { encodeClipboardImage } from '$lib/utils/clipboardImage';
@@ -59,7 +85,23 @@
     triggerVariables?: Record<string, string>;
   }
 
-  let { workspaceId, paneId, tabId, existingPtyId, visible, restoreCwd, restoreSshCommand, restoreRemoteCwd, autoResumeCwd, autoResumeSshCommand, autoResumeRemoteCwd, autoResumeCommand, autoResumeRememberedCommand, autoResumePinned, autoResumeEnabled, triggerVariables }: Props = $props();
+  let {
+    workspaceId,
+    paneId,
+    tabId,
+    existingPtyId,
+    visible,
+    restoreCwd,
+    restoreSshCommand,
+    restoreRemoteCwd,
+    autoResumeCwd,
+    autoResumeSshCommand,
+    autoResumeRemoteCwd,
+    autoResumeCommand,
+    autoResumeRememberedCommand,
+    autoResumeEnabled,
+    triggerVariables,
+  }: Props = $props();
 
   let containerRef: HTMLDivElement;
   let terminal: Terminal;
@@ -96,11 +138,10 @@
   let lastDropAt = 0;
   // Tail of recent raw output so a disconnect phrase split across chunks still matches.
   let rawTail = '';
-  let isAutoResume = $state(false);
-  // Sync from props so external changes (e.g. triggers) update the local flag
-  $effect(() => {
-    isAutoResume = (autoResumeEnabled ?? true) && !!(autoResumeSshCommand || autoResumeCwd || autoResumeCommand);
-  });
+  // Derived from props so external changes (e.g. triggers) update the flag; still
+  // writable so the accept/dismiss handlers below can override the effective value
+  // until the props change again.
+  let isAutoResume = $derived((autoResumeEnabled ?? true) && !!(autoResumeSshCommand || autoResumeCwd || autoResumeCommand));
   let resizePtyTimeout: ReturnType<typeof setTimeout> | undefined;
   let lastFrameAlternateScreen = false;
   // Scrollback scrollbar state
@@ -109,14 +150,13 @@
   let scrollViewportRows = $state(0);
   // Tracks user's intentional scroll position — prevents TUI redraws from snapping back to bottom
   let userScrollOffset = 0;
-  let scrollbarDragging = false;
+  let scrollbarDragging = $state(false);
   let scrollbarFadeTimeout: ReturnType<typeof setTimeout> | undefined;
   let scrollbarVisible = $state(false);
   // Inline prompt for auto-resume command
   let autoResumePrompt = $state<{ cwd: string | null; sshCmd: string | null; remoteCwd: string | null; pinned: boolean } | null>(null);
   let autoResumePromptValue = $state('');
   let autoResumeTextarea = $state<{ focus: () => void } | undefined>();
-  let autoResumeHeightBeforeMouse = 0;
   let sessionIdCopied = $state(false);
 
   /** Which agent runtime (if any) ran in this tab — drives the auto-resume preset.
@@ -189,20 +229,24 @@
     if (y < 0) {
       if (!autoScrollInterval) {
         autoScrollInterval = setInterval(() => {
-          scrollSelection(ptyId, 1, lastMouseCol).then(frame => {
-            userScrollOffset = frame.display_offset;
-            applyFrame(frame);
-          }).catch(() => {});
+          scrollSelection(ptyId, 1, lastMouseCol)
+            .then((frame) => {
+              userScrollOffset = frame.display_offset;
+              applyFrame(frame);
+            })
+            .catch(() => {});
         }, 50);
       }
       return;
     } else if (y > rect.height) {
       if (!autoScrollInterval) {
         autoScrollInterval = setInterval(() => {
-          scrollSelection(ptyId, -1, lastMouseCol).then(frame => {
-            userScrollOffset = frame.display_offset;
-            applyFrame(frame);
-          }).catch(() => {});
+          scrollSelection(ptyId, -1, lastMouseCol)
+            .then((frame) => {
+              userScrollOffset = frame.display_offset;
+              applyFrame(frame);
+            })
+            .catch(() => {});
         }, 50);
       }
       return;
@@ -210,7 +254,9 @@
       stopAutoScroll();
     }
 
-    updateSelection(ptyId, col, row, side).then(applyFrame).catch(() => {});
+    updateSelection(ptyId, col, row, side)
+      .then(applyFrame)
+      .catch(() => {});
   }
 
   function onSelectionMouseUp() {
@@ -225,11 +271,15 @@
     if (displayOffset > 0) {
       scrollbarVisible = true;
       clearTimeout(scrollbarFadeTimeout);
-      scrollbarFadeTimeout = setTimeout(() => { scrollbarVisible = false; }, 1500);
+      scrollbarFadeTimeout = setTimeout(() => {
+        scrollbarVisible = false;
+      }, 1500);
     } else {
       // At live position — hide after brief delay
       clearTimeout(scrollbarFadeTimeout);
-      scrollbarFadeTimeout = setTimeout(() => { scrollbarVisible = false; }, 500);
+      scrollbarFadeTimeout = setTimeout(() => {
+        scrollbarVisible = false;
+      }, 500);
     }
   }
 
@@ -331,7 +381,7 @@
         requestAnimationFrame(() => {
           fitWithPadding();
           const { cols, rows } = terminal;
-          resizeTerminal(ptyId, cols, rows).catch(e => logError(String(e)));
+          resizeTerminal(ptyId, cols, rows).catch((e) => logError(String(e)));
         });
       }
     }
@@ -374,8 +424,12 @@
             shellOpen(uri);
           }
         },
-        hover: (_event, uri) => { hoveredLinkUri = uri; },
-        leave: () => { hoveredLinkUri = null; },
+        hover: (_event, uri) => {
+          hoveredLinkUri = uri;
+        },
+        leave: () => {
+          hoveredLinkUri = null;
+        },
       },
     });
 
@@ -389,9 +443,11 @@
 
     fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
-    terminal.loadAddon(new WebLinksAddon((_event, uri) => {
-      shellOpen(uri);
-    }));
+    terminal.loadAddon(
+      new WebLinksAddon((_event, uri) => {
+        shellOpen(uri);
+      }),
+    );
 
     terminal.open(containerRef);
 
@@ -415,8 +471,8 @@
     // The initialScrollback value is held and restored below.
 
     // Wait for container to have dimensions
-    await new Promise(resolve => requestAnimationFrame(resolve));
-    await new Promise(resolve => setTimeout(resolve, 100)); // Extra delay for layout
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await new Promise((resolve) => setTimeout(resolve, 100)); // Extra delay for layout
     fitWithPadding();
 
     // Hidden tabs can't be measured (no slot / zero-size container), so fit
@@ -432,7 +488,9 @@
         if (saved && saved[0] >= 10 && saved[1] >= 2) {
           terminal.resize(saved[0], saved[1]);
         }
-      } catch { /* no saved size — keep defaults */ }
+      } catch {
+        /* no saved size — keep defaults */
+      }
     }
 
     let { cols, rows } = terminal;
@@ -461,12 +519,14 @@
       } else if (userScrollOffset > 0 && frame.display_offset === 0) {
         // User is scrolled back but alacritty snapped to bottom — re-request at their offset.
         // Still update total_lines so scrollbar reflects new content.
-        scrollTerminalTo(ptyId, userScrollOffset).then(held => {
-          userScrollOffset = held.display_offset;
-          scrollDisplayOffset = held.display_offset;
-          scrollTotalLines = held.total_lines;
-          terminal.write(new Uint8Array(held.ansi));
-        }).catch(() => {});
+        scrollTerminalTo(ptyId, userScrollOffset)
+          .then((held) => {
+            userScrollOffset = held.display_offset;
+            scrollDisplayOffset = held.display_offset;
+            scrollTotalLines = held.total_lines;
+            terminal.write(new Uint8Array(held.ansi));
+          })
+          .catch(() => {});
         return;
       }
 
@@ -518,8 +578,8 @@
         terminalsStore.updateOsc(tabId, { title });
         if (title !== lastPersistedTitle) {
           lastPersistedTitle = title;
-          const ws = workspacesStore.workspaces.find(w => w.id === workspaceId);
-          const tab = ws?.panes.find(p => p.id === paneId)?.tabs.find(t => t.id === tabId);
+          const ws = workspacesStore.workspaces.find((w) => w.id === workspaceId);
+          const tab = ws?.panes.find((p) => p.id === paneId)?.tabs.find((t) => t.id === tabId);
           if (tab && !tab.custom_name) {
             workspacesStore.renameTab(workspaceId, paneId, tabId, title, false);
           }
@@ -531,26 +591,25 @@
       // commands (`ssh host 'cmd'`) which exit before the tunnel is ready —
       // their env-var injection would land in the local shell.
       if (preferencesStore.claudeCodeIde && preferencesStore.claudeCodeIdeSsh) {
-        getPtyInfo(ptyId).then(info => {
-          const cmd = info.foreground_command;
-          const isInteractiveSsh = cmd
-            && !cmd.includes('git@')
-            && !cmd.includes('BatchMode=yes')
-            && isInteractiveSshSession(cmd);
-          if (isInteractiveSsh) {
-            // Track the live ssh session + its remote title so we can preserve
-            // the title and replay the connection if it drops unexpectedly.
-            sshForeground = { cmd, host: parseSshHost(cmd) };
-            lastRemoteTitle = title;
-            // ssh is back (e.g. user reconnected manually) — clear any stale badge.
-            sshDisconnectStore.clear(tabId);
-          }
-          if (isInteractiveSsh && !hasBridge(tabId)) {
-            enableBridge(tabId, cmd, ptyId).catch(() => {});
-          } else if (!cmd && hasBridge(tabId)) {
-            disableBridge(tabId).catch(() => {});
-          }
-        }).catch(() => {});
+        getPtyInfo(ptyId)
+          .then((info) => {
+            const cmd = info.foreground_command;
+            const isInteractiveSsh = cmd && !cmd.includes('git@') && !cmd.includes('BatchMode=yes') && isInteractiveSshSession(cmd);
+            if (isInteractiveSsh) {
+              // Track the live ssh session + its remote title so we can preserve
+              // the title and replay the connection if it drops unexpectedly.
+              sshForeground = { cmd, host: parseSshHost(cmd) };
+              lastRemoteTitle = title;
+              // ssh is back (e.g. user reconnected manually) — clear any stale badge.
+              sshDisconnectStore.clear(tabId);
+            }
+            if (isInteractiveSsh && !hasBridge(tabId)) {
+              enableBridge(tabId, cmd, ptyId).catch(() => {});
+            } else if (!cmd && hasBridge(tabId)) {
+              disableBridge(tabId).catch(() => {});
+            }
+          })
+          .catch(() => {});
       }
     });
 
@@ -567,34 +626,36 @@
         // Remote shells also emit OSC 133 A, so verify SSH is actually gone
         // before clearing Claude state, tearing down the bridge, or judging a drop.
         if (claudeStateStore.getState(tabId) || hasBridge(tabId) || sshForeground) {
-          getPtyInfo(ptyId).then(info => {
-            if (!info.foreground_command) {
-              // Local shell prompt — Claude/SSH session truly ended.
-              // (Confirming no foreground command also rules out a *remote*
-              // shell's OSC 133 D;255 while ssh is still running.)
-              const wasSsh = !!sshForeground;
-              // Only Claude clears its dot on shell-prompt return. Non-Claude
-              // runtimes (Codex/Gemini) emit their OWN OSC 133 from their TUI, so
-              // prompt-return is ambiguous and would clear a live agent mid-turn —
-              // their dormancy is handled deterministically by the backend reaper.
-              const agentSess = claudeStateStore.getState(tabId);
-              if (agentSess && agentSess.runtime === 'claude') {
-                claudeStateStore.clearSession(tabId);
-              }
-              if (hasBridge(tabId)) {
-                disableBridge(tabId).catch(() => {});
-              }
-              if (wasSsh) {
-                // ssh exits 255 only on a transport failure; a clean logout
-                // forwards the remote shell's own exit code (0, 130, …).
-                if (lastCommandExitCode === 255) {
-                  handleSshDrop('exit-255');
-                } else {
-                  sshForeground = null;
+          getPtyInfo(ptyId)
+            .then((info) => {
+              if (!info.foreground_command) {
+                // Local shell prompt — Claude/SSH session truly ended.
+                // (Confirming no foreground command also rules out a *remote*
+                // shell's OSC 133 D;255 while ssh is still running.)
+                const wasSsh = !!sshForeground;
+                // Only Claude clears its dot on shell-prompt return. Non-Claude
+                // runtimes (Codex/Gemini) emit their OWN OSC 133 from their TUI, so
+                // prompt-return is ambiguous and would clear a live agent mid-turn —
+                // their dormancy is handled deterministically by the backend reaper.
+                const agentSess = claudeStateStore.getState(tabId);
+                if (agentSess && agentSess.runtime === 'claude') {
+                  claudeStateStore.clearSession(tabId);
+                }
+                if (hasBridge(tabId)) {
+                  disableBridge(tabId).catch(() => {});
+                }
+                if (wasSsh) {
+                  // ssh exits 255 only on a transport failure; a clean logout
+                  // forwards the remote shell's own exit code (0, 130, …).
+                  if (lastCommandExitCode === 255) {
+                    handleSshDrop('exit-255');
+                  } else {
+                    sshForeground = null;
+                  }
                 }
               }
-            }
-          }).catch(() => {});
+            })
+            .catch(() => {});
         }
       } else if (cmd === 'D') {
         lastCommandExitCode = exit_code ?? 0;
@@ -618,7 +679,7 @@
 
     unlistenClipboard = await listen<string>(`term-clipboard-${ptyId}`, (event) => {
       if (!trackActivity) return;
-      clipboardWriteText(event.payload).catch(e => logError(String(e)));
+      clipboardWriteText(event.payload).catch((e) => logError(String(e)));
     });
 
     unlistenBell = await listen(`term-bell-${ptyId}`, () => {
@@ -637,8 +698,8 @@
       // suspend button — the tab must remain visible for later resume.
       if (workspacesStore.isTabSuspending(tabId)) return;
 
-      const ws = workspacesStore.workspaces.find(w => w.id === workspaceId);
-      const pane = ws?.panes.find(p => p.id === paneId);
+      const ws = workspacesStore.workspaces.find((w) => w.id === workspaceId);
+      const pane = ws?.panes.find((p) => p.id === paneId);
       if (!ws || !pane) return;
 
       if (pane.tabs.length > 1) {
@@ -655,12 +716,12 @@
     // Fall back to auto-resume context, then persisted restore context from last session.
     // Auto-resume context always wins over restore context (survives SSH disconnects).
     const splitCtx = terminalsStore.consumeSplitContext(tabId);
-    const autoResumeCtx = ((autoResumeEnabled ?? true) && (autoResumeSshCommand || autoResumeCwd))
-      ? { cwd: autoResumeCwd ?? restoreCwd ?? null, sshCommand: autoResumeSshCommand ?? null, remoteCwd: autoResumeRemoteCwd ?? null }
-      : null;
-    const restoreCtx = (restoreCwd || restoreSshCommand)
-      ? { cwd: restoreCwd ?? null, sshCommand: restoreSshCommand ? cleanSshCommand(restoreSshCommand) : null, remoteCwd: restoreRemoteCwd ?? null }
-      : null;
+    const autoResumeCtx =
+      (autoResumeEnabled ?? true) && (autoResumeSshCommand || autoResumeCwd)
+        ? { cwd: autoResumeCwd ?? restoreCwd ?? null, sshCommand: autoResumeSshCommand ?? null, remoteCwd: autoResumeRemoteCwd ?? null }
+        : null;
+    const restoreCtx =
+      restoreCwd || restoreSshCommand ? { cwd: restoreCwd ?? null, sshCommand: restoreSshCommand ? cleanSshCommand(restoreSshCommand) : null, remoteCwd: restoreRemoteCwd ?? null } : null;
     const ctx = splitCtx ?? autoResumeCtx ?? restoreCtx;
 
     // Spawn PTY (or skip if reattaching to an existing one)
@@ -681,11 +742,13 @@
         if (info.viewport_cols >= 10 && info.viewport_rows >= 2) {
           terminal.resize(info.viewport_cols, info.viewport_rows);
         }
-      } catch { /* grid unavailable — the refit below corrects it */ }
+      } catch {
+        /* grid unavailable — the refit below corrects it */
+      }
       setTimeout(() => {
         if (destroyed) return;
         fitWithPadding();
-        resizeTerminal(ptyId, terminal.cols, terminal.rows).catch(e => logError(String(e)));
+        resizeTerminal(ptyId, terminal.cols, terminal.rows).catch((e) => logError(String(e)));
       }, 300);
     }
 
@@ -713,11 +776,13 @@
             const maxAttempts = 30; // 15s max
             for (let i = 0; i < maxAttempts; i++) {
               if (destroyed) return;
-              await new Promise(r => setTimeout(r, 500));
+              await new Promise((r) => setTimeout(r, 500));
               try {
                 const info = await getPtyInfo(ptyId);
                 if (info.foreground_command) break;
-              } catch { return; } // tab gone
+              } catch {
+                return;
+              } // tab gone
               if (i === maxAttempts - 1) return; // timed out
             }
             if (destroyed) return;
@@ -773,25 +838,31 @@
       if (isModKey(e) && e.key === 'c') {
         e.preventDefault();
         if (hasRustSelection) {
-          copySelection(ptyId).then(text => {
-            if (text) clipboardWriteText(text).catch(e => logError(String(e)));
-            clearSelection(ptyId).then(applyFrame).catch(() => {});
-          }).catch(e => logError(String(e)));
+          copySelection(ptyId)
+            .then((text) => {
+              if (text) clipboardWriteText(text).catch((e) => logError(String(e)));
+              clearSelection(ptyId)
+                .then(applyFrame)
+                .catch(() => {});
+            })
+            .catch((e) => logError(String(e)));
         } else {
-          writeTerminal(ptyId, [0x03]).catch(e => logError(String(e)));
+          writeTerminal(ptyId, [0x03]).catch((e) => logError(String(e)));
         }
         return false;
       }
 
       if (isModKey(e) && e.key === 'a' && !lastFrameAlternateScreen) {
         e.preventDefault();
-        selectAll(ptyId).then(applyFrame).catch(() => {});
+        selectAll(ptyId)
+          .then(applyFrame)
+          .catch(() => {});
         return false;
       }
 
       if (isModKey(e) && e.key === 'v') {
         e.preventDefault();
-        pasteFromClipboard().catch(e => logError(String(e)));
+        pasteFromClipboard().catch((e) => logError(String(e)));
         return false;
       }
 
@@ -808,10 +879,12 @@
         if (isAutoResume) {
           workspacesStore.disableAutoResume(workspaceId, paneId, tabId);
         } else {
-          gatherAutoResumeContext().then(ctx => {
-            autoResumePromptValue = autoResumeRememberedCommand ?? '';
-            autoResumePrompt = ctx;
-          }).catch(e => logError(`Auto-resume failed: ${e}`));
+          gatherAutoResumeContext()
+            .then((ctx) => {
+              autoResumePromptValue = autoResumeRememberedCommand ?? '';
+              autoResumePrompt = ctx;
+            })
+            .catch((e) => logError(`Auto-resume failed: ${e}`));
         }
         return false;
       }
@@ -820,38 +893,46 @@
       if (!lastFrameAlternateScreen) {
         if (e.key === 'PageUp') {
           e.preventDefault();
-          scrollTerminal(ptyId, terminal.rows).then(frame => {
-            userScrollOffset = frame.display_offset;
-            terminal.write(new Uint8Array(frame.ansi));
-            updateScrollbar(frame.display_offset, frame.total_lines);
-          }).catch(() => {});
+          scrollTerminal(ptyId, terminal.rows)
+            .then((frame) => {
+              userScrollOffset = frame.display_offset;
+              terminal.write(new Uint8Array(frame.ansi));
+              updateScrollbar(frame.display_offset, frame.total_lines);
+            })
+            .catch(() => {});
           return false;
         }
         if (e.key === 'PageDown') {
           e.preventDefault();
-          scrollTerminal(ptyId, -terminal.rows).then(frame => {
-            userScrollOffset = frame.display_offset;
-            terminal.write(new Uint8Array(frame.ansi));
-            updateScrollbar(frame.display_offset, frame.total_lines);
-          }).catch(() => {});
+          scrollTerminal(ptyId, -terminal.rows)
+            .then((frame) => {
+              userScrollOffset = frame.display_offset;
+              terminal.write(new Uint8Array(frame.ansi));
+              updateScrollbar(frame.display_offset, frame.total_lines);
+            })
+            .catch(() => {});
           return false;
         }
         if (e.shiftKey && e.key === 'ArrowUp') {
           e.preventDefault();
-          scrollTerminal(ptyId, 1).then(frame => {
-            userScrollOffset = frame.display_offset;
-            terminal.write(new Uint8Array(frame.ansi));
-            updateScrollbar(frame.display_offset, frame.total_lines);
-          }).catch(() => {});
+          scrollTerminal(ptyId, 1)
+            .then((frame) => {
+              userScrollOffset = frame.display_offset;
+              terminal.write(new Uint8Array(frame.ansi));
+              updateScrollbar(frame.display_offset, frame.total_lines);
+            })
+            .catch(() => {});
           return false;
         }
         if (e.shiftKey && e.key === 'ArrowDown') {
           e.preventDefault();
-          scrollTerminal(ptyId, -1).then(frame => {
-            userScrollOffset = frame.display_offset;
-            terminal.write(new Uint8Array(frame.ansi));
-            updateScrollbar(frame.display_offset, frame.total_lines);
-          }).catch(() => {});
+          scrollTerminal(ptyId, -1)
+            .then((frame) => {
+              userScrollOffset = frame.display_offset;
+              terminal.write(new Uint8Array(frame.ansi));
+              updateScrollbar(frame.display_offset, frame.total_lines);
+            })
+            .catch(() => {});
           return false;
         }
       }
@@ -862,7 +943,9 @@
     // Handle keyboard input — clear selection on any input
     terminal.onData(async (data) => {
       if (hasRustSelection) {
-        clearSelection(ptyId).then(applyFrame).catch(() => {});
+        clearSelection(ptyId)
+          .then(applyFrame)
+          .catch(() => {});
       }
       const bytes = Array.from(new TextEncoder().encode(data));
       try {
@@ -880,7 +963,7 @@
       clearTimeout(resizePtyTimeout);
       resizePtyTimeout = setTimeout(() => {
         const { cols, rows } = terminal;
-        resizeTerminal(ptyId, cols, rows).catch(e => logError(String(e)));
+        resizeTerminal(ptyId, cols, rows).catch((e) => logError(String(e)));
       }, 150);
     });
     resizeObserver.observe(containerRef);
@@ -890,90 +973,106 @@
     // (sends mouse events or arrow keys to the app, which is the expected behavior).
     // Uses velocity-sensitive scrolling: small movements = 1 line, fast flicks = many lines.
     let scrollAccumulator = 0;
-    containerRef.addEventListener('wheel', (e) => {
-      if (lastFrameAlternateScreen) {
-        // Guard against an xterm.js freeze: its alt-screen wheel→arrow-key path
-        // (taken because we run scrollback:0) divides deltaY by the measured row
-        // height, then builds one arrow-key escape per scrolled line in an
-        // unbounded loop. During a monitor-change refit the terminal can have a
-        // 0 row height, making that division Infinity → an endless string build
-        // that pins the renderer at 100% CPU and OOMs the window. Swallow the
-        // event unless the terminal is actually laid out, so xterm never runs
-        // its wheel handler in that degenerate state.
-        if (!terminal.element?.clientHeight || !containerRef.clientHeight || !terminal.rows) {
-          e.preventDefault();
-          e.stopPropagation();
+    containerRef.addEventListener(
+      'wheel',
+      (e) => {
+        if (lastFrameAlternateScreen) {
+          // Guard against an xterm.js freeze: its alt-screen wheel→arrow-key path
+          // (taken because we run scrollback:0) divides deltaY by the measured row
+          // height, then builds one arrow-key escape per scrolled line in an
+          // unbounded loop. During a monitor-change refit the terminal can have a
+          // 0 row height, making that division Infinity → an endless string build
+          // that pins the renderer at 100% CPU and OOMs the window. Swallow the
+          // event unless the terminal is actually laid out, so xterm never runs
+          // its wheel handler in that degenerate state.
+          if (!terminal.element?.clientHeight || !containerRef.clientHeight || !terminal.rows) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          return;
         }
-        return;
-      }
 
-      e.preventDefault();
-      e.stopPropagation();
+        e.preventDefault();
+        e.stopPropagation();
 
-      // Normalize delta to lines based on deltaMode
-      let delta: number;
-      if (e.deltaMode === 1) {
-        // Line mode (mouse wheel) — use directly
-        delta = -e.deltaY;
-      } else {
-        // Pixel mode (trackpad) — convert to lines, ~20px per line
-        delta = -e.deltaY / 20;
-      }
+        // Normalize delta to lines based on deltaMode
+        let delta: number;
+        if (e.deltaMode === 1) {
+          // Line mode (mouse wheel) — use directly
+          delta = -e.deltaY;
+        } else {
+          // Pixel mode (trackpad) — convert to lines, ~20px per line
+          delta = -e.deltaY / 20;
+        }
 
-      // Accumulate sub-line amounts for smooth trackpad scrolling
-      scrollAccumulator += delta;
-      const lines = Math.trunc(scrollAccumulator);
-      if (lines === 0) return;
-      scrollAccumulator -= lines;
+        // Accumulate sub-line amounts for smooth trackpad scrolling
+        scrollAccumulator += delta;
+        const lines = Math.trunc(scrollAccumulator);
+        if (lines === 0) return;
+        scrollAccumulator -= lines;
 
-      scrollTerminal(ptyId, lines).then((frame) => {
-        userScrollOffset = frame.display_offset;
-        terminal.write(new Uint8Array(frame.ansi));
-        updateScrollbar(frame.display_offset, frame.total_lines);
-      }).catch(() => { /* terminal may have been killed */ });
-    }, { passive: false, capture: true });
+        scrollTerminal(ptyId, lines)
+          .then((frame) => {
+            userScrollOffset = frame.display_offset;
+            terminal.write(new Uint8Array(frame.ansi));
+            updateScrollbar(frame.display_offset, frame.total_lines);
+          })
+          .catch(() => {
+            /* terminal may have been killed */
+          });
+      },
+      { passive: false, capture: true },
+    );
 
     // --- Selection mouse handlers (Rust-managed) ---
     // Capture phase + stopPropagation prevents xterm.js from handling selection.
     // Only intercept plain left-clicks for selection — let everything else
     // (right-click, Cmd+click for links, alt-screen) pass through to xterm.js.
-    containerRef.addEventListener('mousedown', (e) => {
-      // Any click into this terminal focuses its pane, so pane-targeted actions
-      // (Cmd+T, Cmd+D split, etc.) operate on the pane the user is looking at.
-      if (workspacesStore.activeWorkspace?.active_pane_id !== paneId) {
-        workspacesStore.setActivePane(workspaceId, paneId);
-      }
-      // Let xterm.js handle non-selection clicks normally
-      if (e.button !== 0 || lastFrameAlternateScreen) return;
-      if ((e.target as HTMLElement)?.closest('.scrollbar-track, .auto-resume-prompt, .context-menu')) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
+    containerRef.addEventListener(
+      'mousedown',
+      (e) => {
+        // Any click into this terminal focuses its pane, so pane-targeted actions
+        // (Cmd+T, Cmd+D split, etc.) operate on the pane the user is looking at.
+        if (workspacesStore.activeWorkspace?.active_pane_id !== paneId) {
+          workspacesStore.setActivePane(workspaceId, paneId);
+        }
+        // Let xterm.js handle non-selection clicks normally
+        if (e.button !== 0 || lastFrameAlternateScreen) return;
+        if ((e.target as HTMLElement)?.closest('.scrollbar-track, .auto-resume-prompt, .context-menu')) return;
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
 
-      // Block xterm.js from receiving this mousedown (prevents its selection)
-      e.stopPropagation();
+        // Block xterm.js from receiving this mousedown (prevents its selection)
+        e.stopPropagation();
 
-      const { col, row, side } = getCellPosition(e);
-      lastMouseCol = col;
+        const { col, row, side } = getCellPosition(e);
+        lastMouseCol = col;
 
-      // Track click count for double/triple click
-      selectionClickCount++;
-      clearTimeout(selectionClickTimer);
-      selectionClickTimer = setTimeout(() => { selectionClickCount = 0; }, 400);
+        // Track click count for double/triple click
+        selectionClickCount++;
+        clearTimeout(selectionClickTimer);
+        selectionClickTimer = setTimeout(() => {
+          selectionClickCount = 0;
+        }, 400);
 
-      if (e.shiftKey && hasRustSelection) {
-        updateSelection(ptyId, col, row, side).then(applyFrame).catch(() => {});
-      } else {
-        const selType = selectionClickCount >= 3 ? 'lines'
-          : selectionClickCount === 2 ? 'semantic'
-          : 'simple';
+        if (e.shiftKey && hasRustSelection) {
+          updateSelection(ptyId, col, row, side)
+            .then(applyFrame)
+            .catch(() => {});
+        } else {
+          const selType = selectionClickCount >= 3 ? 'lines' : selectionClickCount === 2 ? 'semantic' : 'simple';
 
-        startSelection(ptyId, col, row, side, selType).then(applyFrame).catch(() => {});
-        selectionActive = selType === 'simple';
-      }
+          startSelection(ptyId, col, row, side, selType)
+            .then(applyFrame)
+            .catch(() => {});
+          selectionActive = selType === 'simple';
+        }
 
-      // Restore focus after stopPropagation blocked xterm.js's mousedown handler.
-      // Use requestAnimationFrame so it runs after the browser's default behavior.
-      requestAnimationFrame(() => terminal.focus());
-    }, { capture: true });
+        // Restore focus after stopPropagation blocked xterm.js's mousedown handler.
+        // Use requestAnimationFrame so it runs after the browser's default behavior.
+        requestAnimationFrame(() => terminal.focus());
+      },
+      { capture: true },
+    );
 
     window.addEventListener('mousemove', onSelectionMouseMove);
     window.addEventListener('mouseup', onSelectionMouseUp);
@@ -983,33 +1082,38 @@
       const { type } = event.payload;
 
       if (type === 'over') {
-        if (!visible || !containerRef?.isConnected) { isDragOver = false; return; }
+        if (!visible || !containerRef?.isConnected) {
+          isDragOver = false;
+          return;
+        }
         const { position } = event.payload;
         const rect = containerRef.getBoundingClientRect();
-        const over = (
-          position.x >= rect.left && position.x <= rect.right &&
-          position.y >= rect.top && position.y <= rect.bottom
-        );
+        const over = position.x >= rect.left && position.x <= rect.right && position.y >= rect.top && position.y <= rect.bottom;
         // On first enter, detect SSH session — cache only the SSH command. Keep
         // the promise so a drop that races ahead of this resolving can await it.
         if (over && !isDragOver) {
-          dragInfoPromise = getPtyInfo(ptyId).then(info => {
-            logInfo(`drag-enter: foreground_command=${info.foreground_command}, cwd=${info.cwd}`);
-            dragSshCommand = info.foreground_command ?? null;
-          }).catch((e) => { logError(`drag-enter getPtyInfo failed: ${e}`); dragSshCommand = null; });
+          dragInfoPromise = getPtyInfo(ptyId)
+            .then((info) => {
+              logInfo(`drag-enter: foreground_command=${info.foreground_command}, cwd=${info.cwd}`);
+              dragSshCommand = info.foreground_command ?? null;
+            })
+            .catch((e) => {
+              logError(`drag-enter getPtyInfo failed: ${e}`);
+              dragSshCommand = null;
+            });
         }
         isDragOver = over;
       } else if (type === 'drop') {
         const infoPromise = dragInfoPromise;
         isDragOver = false;
         dragInfoPromise = null;
-        if (!visible || !containerRef?.isConnected) { dragSshCommand = null; return; }
+        if (!visible || !containerRef?.isConnected) {
+          dragSshCommand = null;
+          return;
+        }
         const { paths, position } = event.payload;
         const rect = containerRef.getBoundingClientRect();
-        if (
-          position.x >= rect.left && position.x <= rect.right &&
-          position.y >= rect.top && position.y <= rect.bottom
-        ) {
+        if (position.x >= rect.left && position.x <= rect.right && position.y >= rect.top && position.y <= rect.bottom) {
           terminal.focus();
           void (async () => {
             // Wait for the drag-enter SSH probe to resolve before routing. Without
@@ -1021,7 +1125,9 @@
             try {
               if (infoPromise) await infoPromise;
               else dragSshCommand = (await getPtyInfo(ptyId)).foreground_command ?? null;
-            } catch { /* getPtyInfo failure already logged; treat as local */ }
+            } catch {
+              /* getPtyInfo failure already logged; treat as local */
+            }
             const sshCommand = dragSshCommand;
             dragSshCommand = null;
             if (sshCommand) {
@@ -1041,30 +1147,23 @@
               logInfo(`drag-drop SSH: paths=${JSON.stringify(paths)}`);
               const outcome = await uploadWithProgress(sshCommand, paths, remoteDir);
               if (outcome.status === 'done') {
-                const basenames = paths.map(p => p.split('/').pop() ?? p);
+                const basenames = paths.map((p) => p.split('/').pop() ?? p);
                 if (isClaudeSession) {
                   // Write each path separately so Claude Code detects each as a file reference
                   for (let i = 0; i < basenames.length; i++) {
                     const path = `${AGENT_UPLOAD_DIR}/${basenames[i]}`;
                     const bytes = Array.from(new TextEncoder().encode(path + ' '));
-                    if (i > 0) await new Promise(r => setTimeout(r, 200));
+                    if (i > 0) await new Promise((r) => setTimeout(r, 200));
                     await writeTerminal(ptyId, bytes);
                   }
                   toastStore.addToast('SCP Upload', `${count} file${count > 1 ? 's' : ''} uploaded`, 'success');
                 } else {
                   // Non-Claude: clickable toast to list uploaded files (no echo to prompt)
                   const lCmd = `l ${basenames.map(escapePathForTerminal).join(' ')}\n`;
-                  toastStore.addToast(
-                    'SCP Upload',
-                    `${count} file${count > 1 ? 's' : ''} uploaded — click to list`,
-                    'success',
-                    undefined,
-                    undefined,
-                    () => {
-                      const bytes = Array.from(new TextEncoder().encode(lCmd));
-                      writeTerminal(ptyId, bytes).catch(e => logError(String(e)));
-                    },
-                  );
+                  toastStore.addToast('SCP Upload', `${count} file${count > 1 ? 's' : ''} uploaded — click to list`, 'success', undefined, undefined, () => {
+                    const bytes = Array.from(new TextEncoder().encode(lCmd));
+                    writeTerminal(ptyId, bytes).catch((e) => logError(String(e)));
+                  });
                 }
               } else if (outcome.status === 'error') {
                 logError(`drag-drop SCP upload failed: ${outcome.error}`);
@@ -1076,7 +1175,7 @@
               logInfo(`drag-drop local Claude: sending ${count} file path(s)`);
               for (let i = 0; i < paths.length; i++) {
                 const bytes = Array.from(new TextEncoder().encode(paths[i] + ' '));
-                if (i > 0) await new Promise(r => setTimeout(r, 200));
+                if (i > 0) await new Promise((r) => setTimeout(r, 200));
                 await writeTerminal(ptyId, bytes);
               }
             } else {
@@ -1085,7 +1184,7 @@
               const bytes = Array.from(new TextEncoder().encode(escaped));
               await writeTerminal(ptyId, bytes);
             }
-          })().catch(e => logError(`drag-drop failed: ${e}`));
+          })().catch((e) => logError(`drag-drop failed: ${e}`));
         } else {
           dragSshCommand = null;
         }
@@ -1103,7 +1202,10 @@
     // Auto-resume (especially SSH + Claude) can take much longer to produce
     // output, so use a longer suppression window.
     const suppressMs = autoResumeCommand ? 15000 : 2000;
-    setTimeout(() => { trackActivity = true; unsuppressTab(tabId); }, suppressMs);
+    setTimeout(() => {
+      trackActivity = true;
+      unsuppressTab(tabId);
+    }, suppressMs);
   });
 
   onDestroy(() => {
@@ -1154,7 +1256,7 @@
         saveTerminalScrollback(ptyId, tabId)
           .catch(() => {})
           .finally(() => {
-            killTerminal(ptyId).catch(e => logError(String(e)));
+            killTerminal(ptyId).catch((e) => logError(String(e)));
           });
       }
       if (terminal) terminal.dispose();
@@ -1187,7 +1289,7 @@
         // writing at a different size while the terminal was in the background
         // (e.g. auto-resume reconnecting to Claude Code at default 80x24).
         const { cols, rows } = terminal;
-        resizeTerminal(ptyId, cols, rows).catch(e => logError(String(e)));
+        resizeTerminal(ptyId, cols, rows).catch((e) => logError(String(e)));
         if (!autoResumePrompt) terminal.focus();
       });
       untrack(() => {
@@ -1241,7 +1343,11 @@
         terminalsStore.canvasRendererUnloaded(tabId);
         // Disposing reverts to the DOM renderer — force a full repaint so the
         // switch shows immediately even on an idle tab (no streaming frames).
-        try { terminal.refresh(0, terminal.rows - 1); } catch { /* noop */ }
+        try {
+          terminal.refresh(0, terminal.rows - 1);
+        } catch {
+          /* noop */
+        }
       }
     }
   });
@@ -1267,7 +1373,7 @@
       if (fitAddon && visible) {
         fitWithPadding();
         const { cols, rows } = terminal;
-        resizeTerminal(ptyId, cols, rows).catch(e => logError(String(e)));
+        resizeTerminal(ptyId, cols, rows).catch((e) => logError(String(e)));
       }
     });
   });
@@ -1308,59 +1414,62 @@
       const staggerMs = Math.random() * interval * 1000;
       staggerTimeout = setTimeout(() => {
         localInterval = setInterval(async () => {
-        // Skip auto-save during shutdown — saveAllScrollback handles it
-        if (terminalsStore.shuttingDown) return;
-        // Skip terminals that haven't received output since last save.
-        if (!terminalsStore.isDirty(tabId)) return;
-        terminalsStore.clearDirty(tabId);
-        try {
-          await saveTerminalScrollback(ptyId, tabId);
-        } catch {
-          // Terminal may have been killed or alternate screen active — ignore
-        }
-
-        // Also save restore context (cwd/SSH) if enabled
-        if (preferencesStore.restoreSession) {
+          // Skip auto-save during shutdown — saveAllScrollback handles it
+          if (terminalsStore.shuttingDown) return;
+          // Skip terminals that haven't received output since last save.
+          if (!terminalsStore.isDirty(tabId)) return;
+          terminalsStore.clearDirty(tabId);
           try {
-            const info = await getPtyInfo(ptyId);
-            let cwd = info.cwd;
-            const sshCommand = info.foreground_command;
-            let remoteCwd: string | null = null;
-
-            const oscState = terminalsStore.getOsc(tabId);
-            const osc7Cwd = oscState?.cwd ?? null;
-            const promptCwd = oscState?.promptCwd ?? null;
-            if (sshCommand) {
-              const isOsc7Stale = osc7Cwd === cwd;
-              const osc7RemoteCwd = (osc7Cwd && !isOsc7Stale) ? osc7Cwd : null;
-              remoteCwd = osc7RemoteCwd ?? promptCwd ?? null;
-              if (!remoteCwd) {
-                // Last resort: scan buffer for prompt pattern
-                const patterns = getCompiledPatterns(preferencesStore.promptPatterns);
-                const buffer = terminal.buffer.active;
-                const cursorLine = buffer.baseY + buffer.cursorY;
-                for (let i = cursorLine; i >= Math.max(0, cursorLine - 5); i--) {
-                  const line = buffer.getLine(i);
-                  if (!line) continue;
-                  const text = line.translateToString(true).trim();
-                  if (!text) continue;
-                  for (const re of patterns) {
-                    const match = text.match(re);
-                    if (match?.[1]) { remoteCwd = match[1].trim(); break; }
-                  }
-                  if (remoteCwd) break;
-                }
-              }
-            } else {
-              cwd = cwd ?? osc7Cwd;
-            }
-
-            await setTabRestoreContext(workspaceId, paneId, tabId, cwd, sshCommand, remoteCwd);
+            await saveTerminalScrollback(ptyId, tabId);
           } catch {
-            // PTY may be gone — ignore
+            // Terminal may have been killed or alternate screen active — ignore
           }
-        }
-      }, interval * 1000);
+
+          // Also save restore context (cwd/SSH) if enabled
+          if (preferencesStore.restoreSession) {
+            try {
+              const info = await getPtyInfo(ptyId);
+              let cwd = info.cwd;
+              const sshCommand = info.foreground_command;
+              let remoteCwd: string | null = null;
+
+              const oscState = terminalsStore.getOsc(tabId);
+              const osc7Cwd = oscState?.cwd ?? null;
+              const promptCwd = oscState?.promptCwd ?? null;
+              if (sshCommand) {
+                const isOsc7Stale = osc7Cwd === cwd;
+                const osc7RemoteCwd = osc7Cwd && !isOsc7Stale ? osc7Cwd : null;
+                remoteCwd = osc7RemoteCwd ?? promptCwd ?? null;
+                if (!remoteCwd) {
+                  // Last resort: scan buffer for prompt pattern
+                  const patterns = getCompiledPatterns(preferencesStore.promptPatterns);
+                  const buffer = terminal.buffer.active;
+                  const cursorLine = buffer.baseY + buffer.cursorY;
+                  for (let i = cursorLine; i >= Math.max(0, cursorLine - 5); i--) {
+                    const line = buffer.getLine(i);
+                    if (!line) continue;
+                    const text = line.translateToString(true).trim();
+                    if (!text) continue;
+                    for (const re of patterns) {
+                      const match = text.match(re);
+                      if (match?.[1]) {
+                        remoteCwd = match[1].trim();
+                        break;
+                      }
+                    }
+                    if (remoteCwd) break;
+                  }
+                }
+              } else {
+                cwd = cwd ?? osc7Cwd;
+              }
+
+              await setTabRestoreContext(workspaceId, paneId, tabId, cwd, sshCommand, remoteCwd);
+            } catch {
+              // PTY may be gone — ignore
+            }
+          }
+        }, interval * 1000);
       }, staggerMs);
     }
 
@@ -1372,9 +1481,9 @@
   });
 
   function getCurrentTab(): import('$lib/tauri/types').Tab | undefined {
-    const ws = workspacesStore.workspaces.find(w => w.id === workspaceId);
-    const pane = ws?.panes.find(p => p.id === paneId);
-    return pane?.tabs.find(t => t.id === tabId);
+    const ws = workspacesStore.workspaces.find((w) => w.id === workspaceId);
+    const pane = ws?.panes.find((p) => p.id === paneId);
+    return pane?.tabs.find((t) => t.id === tabId);
   }
 
   // --- SSH drop detection / recovery ---
@@ -1382,14 +1491,18 @@
   // ssh transport-failure stderr (a drop), deliberately NOT matching the bare
   // "Connection to HOST closed." / "Shared connection to HOST closed." lines a
   // clean logout (incl. ControlMaster mux) prints — those are ambiguous.
-  const SSH_DROP_RE = /client_loop: send disconnect|closed by remote host|server \S+ not responding|Timeout, server|Write failed: Broken pipe|packet_write_wait|Connection (?:reset|timed out)|Operation timed out|ssh_dispatch_run_fatal|kex_exchange_identification: (?:read|Connection)/i;
+  const SSH_DROP_RE =
+    /client_loop: send disconnect|closed by remote host|server \S+ not responding|Timeout, server|Write failed: Broken pipe|packet_write_wait|Connection (?:reset|timed out)|Operation timed out|ssh_dispatch_run_fatal|kex_exchange_identification: (?:read|Connection)/i;
 
   /** Best-effort hostname from a cleaned ssh command, for display. */
   function parseSshHost(sshCmd: string): string | null {
-    const tokens = sshCmd.replace(/^ssh\s+/, '').split(/\s+/).filter(Boolean);
-    const withUser = tokens.find(t => t.includes('@'));
+    const tokens = sshCmd
+      .replace(/^ssh\s+/, '')
+      .split(/\s+/)
+      .filter(Boolean);
+    const withUser = tokens.find((t) => t.includes('@'));
     if (withUser) return withUser.split('@')[1] || null;
-    const host = tokens.find(t => !t.startsWith('-'));
+    const host = tokens.find((t) => !t.startsWith('-'));
     return host ?? null;
   }
 
@@ -1410,15 +1523,9 @@
     const tab = getCurrentTab();
     const osc = terminalsStore.getOsc(tabId);
     const remoteTitle = lastRemoteTitle ?? osc?.title ?? null;
-    const sshCommand = sshForeground?.cmd
-      ?? tab?.auto_resume_ssh_command
-      ?? tab?.restore_ssh_command
-      ?? null;
+    const sshCommand = sshForeground?.cmd ?? tab?.auto_resume_ssh_command ?? tab?.restore_ssh_command ?? null;
     const host = sshForeground?.host ?? (sshCommand ? parseSshHost(sshCommand) : null);
-    const remoteCwd = osc?.promptCwd
-      ?? tab?.auto_resume_remote_cwd
-      ?? tab?.restore_remote_cwd
-      ?? null;
+    const remoteCwd = osc?.promptCwd ?? tab?.auto_resume_remote_cwd ?? tab?.restore_remote_cwd ?? null;
 
     sshDisconnectStore.mark(tabId, { host, sshCommand, remoteCwd, title: remoteTitle, at: now });
     // The local prompt may have already clobbered the tab name in the race
@@ -1438,7 +1545,10 @@
     const info = sshDisconnectStore.getInfo(tabId);
     const tab = getCurrentTab();
     const sshCommand = info?.sshCommand ?? tab?.auto_resume_ssh_command ?? tab?.restore_ssh_command ?? null;
-    if (!sshCommand) { logError(`reconnectSsh: no ssh command for tab ${tabId}`); return; }
+    if (!sshCommand) {
+      logError(`reconnectSsh: no ssh command for tab ${tabId}`);
+      return;
+    }
     const remoteCwd = info?.remoteCwd ?? tab?.auto_resume_remote_cwd ?? tab?.restore_remote_cwd ?? null;
 
     // Stop preserving the (now stale) title and drop the badge — a fresh remote
@@ -1464,11 +1574,13 @@
     const maxAttempts = 30; // 15s max
     for (let i = 0; i < maxAttempts; i++) {
       if (destroyed) return;
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 500));
       try {
         const info = await getPtyInfo(ptyId);
         if (info.foreground_command) break;
-      } catch { return; } // tab gone
+      } catch {
+        return;
+      } // tab gone
       if (i === maxAttempts - 1) return; // timed out
     }
     if (destroyed) return;
@@ -1511,7 +1623,7 @@
       const osc7Cwd = oscState?.cwd ?? null;
       const promptCwd = oscState?.promptCwd ?? null;
       const isOsc7Stale = osc7Cwd === localCwd;
-      remoteCwd = (osc7Cwd && !isOsc7Stale) ? osc7Cwd : promptCwd ?? null;
+      remoteCwd = osc7Cwd && !isOsc7Stale ? osc7Cwd : (promptCwd ?? null);
       if (!remoteCwd) {
         // Last resort: scan buffer for prompt pattern
         const patterns = getCompiledPatterns(preferencesStore.promptPatterns);
@@ -1524,7 +1636,10 @@
           if (!text) continue;
           for (const re of patterns) {
             const match = text.match(re);
-            if (match?.[1]) { remoteCwd = match[1].trim(); break; }
+            if (match?.[1]) {
+              remoteCwd = match[1].trim();
+              break;
+            }
           }
           if (remoteCwd) break;
         }
@@ -1551,7 +1666,7 @@
     const cmd = autoResumePromptValue.trim() || null;
     // Normalize SSH input: strip "ssh" prefix and standard flags, store just user@host
     const sshCmd = autoResumePrompt.sshCmd?.trim() ? normalizeSshInput(autoResumePrompt.sshCmd.trim()) : null;
-    const remoteCwd = sshCmd ? (autoResumePrompt.remoteCwd?.trim() || null) : null;
+    const remoteCwd = sshCmd ? autoResumePrompt.remoteCwd?.trim() || null : null;
     const cwd = autoResumePrompt.cwd?.trim() || null;
     const pinned = autoResumePrompt.pinned;
     await workspacesStore.setTabAutoResumeContext(workspaceId, paneId, tabId, cwd, sshCmd, remoteCwd, cmd, pinned);
@@ -1585,14 +1700,18 @@
 
   function getContextMenuItems() {
     // Extract full path from file:// link that was hovered when context menu opened
-    const hoveredFilePath = contextMenuLinkUri?.startsWith('file://')
-      ? decodeURIComponent(new URL(contextMenuLinkUri).pathname)
-      : null;
+    const hoveredFilePath = contextMenuLinkUri?.startsWith('file://') ? decodeURIComponent(new URL(contextMenuLinkUri).pathname) : null;
     return [
-      ...(hoveredFilePath ? [{
-        label: 'Copy Full Path',
-        action: async () => { await clipboardWriteText(hoveredFilePath); },
-      }] : []),
+      ...(hoveredFilePath
+        ? [
+            {
+              label: 'Copy Full Path',
+              action: async () => {
+                await clipboardWriteText(hoveredFilePath);
+              },
+            },
+          ]
+        : []),
       {
         label: 'Copy',
         shortcut: `${modSymbol}C`,
@@ -1600,7 +1719,9 @@
         action: async () => {
           const text = await copySelection(ptyId);
           if (text) await clipboardWriteText(text);
-          clearSelection(ptyId).then(applyFrame).catch(() => {});
+          clearSelection(ptyId)
+            .then(applyFrame)
+            .catch(() => {});
         },
       },
       {
@@ -1623,70 +1744,76 @@
           terminalsStore.clearTerminal(tabId);
         },
       },
-      ...(getVariables(tabId)?.size ? [
-        {
-          label: 'Clear Trigger Variables',
-          action: () => {
-            const vars = getVariables(tabId);
-            if (vars?.size) {
-              const entries = [...vars.entries()].map(([k, v]) => `${k}: ${v}`).join('\n');
-              dispatch('Variables Cleared', entries, 'info');
-            }
-            clearTabVariables(tabId);
-          },
-        },
-      ] : []),
+      ...(getVariables(tabId)?.size
+        ? [
+            {
+              label: 'Clear Trigger Variables',
+              action: () => {
+                const vars = getVariables(tabId);
+                if (vars?.size) {
+                  const entries = [...vars.entries()].map(([k, v]) => `${k}: ${v}`).join('\n');
+                  dispatch('Variables Cleared', entries, 'info');
+                }
+                clearTabVariables(tabId);
+              },
+            },
+          ]
+        : []),
       { label: '', separator: true, action: () => {} },
-      ...(isAutoResume ? [
-        {
-          label: 'Replay Auto-Resume',
-          action: () => replayAutoResume(tabId),
-        },
-        {
-          label: 'Edit Auto-resume\u2026',
-          action: async () => {
-            try {
-              const ctx = await gatherAutoResumeContext();
-              autoResumePromptValue = autoResumeRememberedCommand ?? '';
-              autoResumePrompt = ctx;
-            } catch (e) {
-              logError(`Edit auto-resume failed: ${e}`);
-            }
-          },
-        },
-        {
-          label: 'Disable Auto-resume',
-          action: async () => {
-            await workspacesStore.disableAutoResume(workspaceId, paneId, tabId);
-            isAutoResume = false;
-          },
-        },
-      ] : [
-        {
-          label: 'Auto-resume\u2026',
-          action: async () => {
-            try {
-              const ctx = await gatherAutoResumeContext();
-              autoResumePromptValue = autoResumeRememberedCommand ?? '';
-              autoResumePrompt = ctx;
-            } catch (e) {
-              logError(`Auto-resume failed: ${e}`);
-            }
-          },
-        },
-      ]),
+      ...(isAutoResume
+        ? [
+            {
+              label: 'Replay Auto-Resume',
+              action: () => replayAutoResume(tabId),
+            },
+            {
+              label: 'Edit Auto-resume\u2026',
+              action: async () => {
+                try {
+                  const ctx = await gatherAutoResumeContext();
+                  autoResumePromptValue = autoResumeRememberedCommand ?? '';
+                  autoResumePrompt = ctx;
+                } catch (e) {
+                  logError(`Edit auto-resume failed: ${e}`);
+                }
+              },
+            },
+            {
+              label: 'Disable Auto-resume',
+              action: async () => {
+                await workspacesStore.disableAutoResume(workspaceId, paneId, tabId);
+                isAutoResume = false;
+              },
+            },
+          ]
+        : [
+            {
+              label: 'Auto-resume\u2026',
+              action: async () => {
+                try {
+                  const ctx = await gatherAutoResumeContext();
+                  autoResumePromptValue = autoResumeRememberedCommand ?? '';
+                  autoResumePrompt = ctx;
+                } catch (e) {
+                  logError(`Auto-resume failed: ${e}`);
+                }
+              },
+            },
+          ]),
       { label: '', separator: true, action: () => {} },
-      ...(agentBridgeStore.isBridged(tabId) ? [
-        {
-          label: 'Disconnect Agent Bridge',
-          action: () => agentBridgeStore.disconnect(tabId),
-        },
-      ] : [
-        {
-          label: 'Create Agent Bridge\u2026',
-          action: () => window.dispatchEvent(new CustomEvent('open-agent-bridge-picker', { detail: { tabId } })),
-        },
-      ]),
+      ...(agentBridgeStore.isBridged(tabId)
+        ? [
+            {
+              label: 'Disconnect Agent Bridge',
+              action: () => agentBridgeStore.disconnect(tabId),
+            },
+          ]
+        : [
+            {
+              label: 'Create Agent Bridge\u2026',
+              action: () => window.dispatchEvent(new CustomEvent('open-agent-bridge-picker', { detail: { tabId } })),
+            },
+          ]),
       { label: '', separator: true, action: () => {} },
       {
         label: 'Suspend Other Tabs',
@@ -1701,90 +1828,91 @@
         label: 'Suspend Other Workspaces',
         action: () => workspacesStore.suspendAllOtherWorkspaces(),
       },
-      ...(preferencesStore.shellTitleIntegration || preferencesStore.shellIntegration ? [
-        { label: '', separator: true, action: () => {} },
-        {
-          label: 'Setup Shell Integration',
-          action: async () => {
-            const snippet = buildShellIntegrationSnippet({
-              shellTitle: preferencesStore.shellTitleIntegration,
-              shellIntegration: preferencesStore.shellIntegration,
-            });
-            if (snippet) {
-              const bytes = Array.from(new TextEncoder().encode(snippet + '\n'));
-              await writeTerminal(ptyId, bytes);
-            }
-          },
-        },
-        {
-          label: 'Install Shell Integration',
-          action: async () => {
-            const snippet = buildInstallSnippet();
-            const bytes = Array.from(new TextEncoder().encode(snippet + '\n'));
-            await writeTerminal(ptyId, bytes);
-          },
-        },
-      ] : []),
-      ...(preferencesStore.claudeCodeIde && preferencesStore.claudeCodeIdeSsh ? [
-        { label: '', separator: true, action: () => {} },
-        ...(hasBridge(tabId) ? [
-          {
-            label: 'Inject maiTerm Env Vars',
-            action: async () => {
-              const bridge = getBridgeInfo(tabId);
-              if (bridge?.remotePort) {
-                const envCmd = " export AITERM_TAB_ID=" + tabId + " AITERM_PORT=" + bridge.remotePort + "\n";
-                const bytes = Array.from(new TextEncoder().encode(envCmd));
-                await writeTerminal(ptyId, bytes);
-              }
-            },
-          },
-          {
-            label: 'Install MCP for Current User',
-            action: async () => {
-              const script = await buildUserSetupScript(tabId);
-              if (script) {
-                const cmd = ' ' + script + '\n';
-                const bytes = Array.from(new TextEncoder().encode(cmd));
-                await writeTerminal(ptyId, bytes);
-              }
-            },
-          },
-          {
-            label: 'Disable Remote MCP Bridge',
-            action: async () => {
-              await disableBridge(tabId);
-            },
-          },
-        ] : [
-          {
-            label: 'Enable Remote MCP Bridge',
-            action: async () => {
-              try {
-                const info = await getPtyInfo(ptyId);
-                if (info.foreground_command) {
-                  await enableBridge(tabId, info.foreground_command, ptyId);
-                } else {
-                  dispatch('MCP Bridge', 'No SSH session detected — connect via SSH first', 'info');
+      ...(preferencesStore.shellTitleIntegration || preferencesStore.shellIntegration
+        ? [
+            { label: '', separator: true, action: () => {} },
+            {
+              label: 'Setup Shell Integration',
+              action: async () => {
+                const snippet = buildShellIntegrationSnippet({
+                  shellTitle: preferencesStore.shellTitleIntegration,
+                  shellIntegration: preferencesStore.shellIntegration,
+                });
+                if (snippet) {
+                  const bytes = Array.from(new TextEncoder().encode(snippet + '\n'));
+                  await writeTerminal(ptyId, bytes);
                 }
-              } catch (e) {
-                logError(`MCP bridge failed: ${e}`);
-              }
+              },
             },
-          },
-        ]),
-      ] : []),
+            {
+              label: 'Install Shell Integration',
+              action: async () => {
+                const snippet = buildInstallSnippet();
+                const bytes = Array.from(new TextEncoder().encode(snippet + '\n'));
+                await writeTerminal(ptyId, bytes);
+              },
+            },
+          ]
+        : []),
+      ...(preferencesStore.claudeCodeIde && preferencesStore.claudeCodeIdeSsh
+        ? [
+            { label: '', separator: true, action: () => {} },
+            ...(hasBridge(tabId)
+              ? [
+                  {
+                    label: 'Inject maiTerm Env Vars',
+                    action: async () => {
+                      const bridge = getBridgeInfo(tabId);
+                      if (bridge?.remotePort) {
+                        const envCmd = ' export AITERM_TAB_ID=' + tabId + ' AITERM_PORT=' + bridge.remotePort + '\n';
+                        const bytes = Array.from(new TextEncoder().encode(envCmd));
+                        await writeTerminal(ptyId, bytes);
+                      }
+                    },
+                  },
+                  {
+                    label: 'Install MCP for Current User',
+                    action: async () => {
+                      const script = await buildUserSetupScript(tabId);
+                      if (script) {
+                        const cmd = ' ' + script + '\n';
+                        const bytes = Array.from(new TextEncoder().encode(cmd));
+                        await writeTerminal(ptyId, bytes);
+                      }
+                    },
+                  },
+                  {
+                    label: 'Disable Remote MCP Bridge',
+                    action: async () => {
+                      await disableBridge(tabId);
+                    },
+                  },
+                ]
+              : [
+                  {
+                    label: 'Enable Remote MCP Bridge',
+                    action: async () => {
+                      try {
+                        const info = await getPtyInfo(ptyId);
+                        if (info.foreground_command) {
+                          await enableBridge(tabId, info.foreground_command, ptyId);
+                        } else {
+                          dispatch('MCP Bridge', 'No SSH session detected — connect via SSH first', 'info');
+                        }
+                      } catch (e) {
+                        logError(`MCP bridge failed: ${e}`);
+                      }
+                    },
+                  },
+                ]),
+          ]
+        : []),
     ];
   }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-  class="terminal-container"
-  class:hidden={!visible}
-  bind:this={containerRef}
-  oncontextmenu={handleContextMenu}
->
+<div class="terminal-container" class:hidden={!visible} bind:this={containerRef} oncontextmenu={handleContextMenu}>
   {#if isDragOver}
     <div class="drop-overlay">
       <span>{claudeStateStore.getState(tabId) ? 'Drop to send to Claude' : dragSshCommand ? 'Drop to upload via SCP' : 'Drop to paste path'}</span>
@@ -1795,7 +1923,10 @@
       items={getContextMenuItems()}
       x={contextMenu.x}
       y={contextMenu.y}
-      onclose={() => { contextMenu = null; terminal?.focus(); }}
+      onclose={() => {
+        contextMenu = null;
+        terminal?.focus();
+      }}
     />
   {/if}
   {#if autoResumePrompt}
@@ -1803,70 +1934,124 @@
     {@const arSessionVar = arRuntime ? sessionIdVar(arRuntime) : null}
     {@const arSessionIdValue = arSessionVar ? getVariables(tabId)?.get(arSessionVar) : undefined}
     <div class="auto-resume-prompt-backdrop">
-    <div class="auto-resume-prompt">
-      <div class="auto-resume-context-info">
-        <div class="auto-resume-context-row">
-          <span class="auto-resume-context-label">SSH</span>
-          <input class="auto-resume-context-input" type="text" bind:value={autoResumePrompt.sshCmd}
-            oninput={() => { if (autoResumePrompt) autoResumePrompt.pinned = true; }}
-            onkeydown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitAutoResumePrompt(); if (e.key === 'Escape') cancelAutoResumePrompt(); }}
-            placeholder="user@host or ssh user@host" />
+      <div class="auto-resume-prompt">
+        <div class="auto-resume-context-info">
+          <div class="auto-resume-context-row">
+            <span class="auto-resume-context-label">SSH</span>
+            <input
+              class="auto-resume-context-input"
+              type="text"
+              bind:value={autoResumePrompt.sshCmd}
+              oninput={() => {
+                if (autoResumePrompt) autoResumePrompt.pinned = true;
+              }}
+              onkeydown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitAutoResumePrompt();
+                if (e.key === 'Escape') cancelAutoResumePrompt();
+              }}
+              placeholder="user@host or ssh user@host"
+            />
+          </div>
+          <div class="auto-resume-context-row">
+            <span class="auto-resume-context-label">Remote CWD</span>
+            <input
+              class="auto-resume-context-input"
+              type="text"
+              bind:value={autoResumePrompt.remoteCwd}
+              oninput={() => {
+                if (autoResumePrompt) autoResumePrompt.pinned = true;
+              }}
+              onkeydown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitAutoResumePrompt();
+                if (e.key === 'Escape') cancelAutoResumePrompt();
+              }}
+              placeholder="~/path"
+            />
+          </div>
+          <div class="auto-resume-context-row">
+            <span class="auto-resume-context-label">CWD</span>
+            <input
+              class="auto-resume-context-input"
+              type="text"
+              bind:value={autoResumePrompt.cwd}
+              oninput={() => {
+                if (autoResumePrompt) autoResumePrompt.pinned = true;
+              }}
+              onkeydown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitAutoResumePrompt();
+                if (e.key === 'Escape') cancelAutoResumePrompt();
+              }}
+              placeholder="/path/to/dir"
+            />
+          </div>
+          <label class="auto-resume-pin-label">
+            <input
+              type="checkbox"
+              checked={autoResumePrompt.pinned}
+              onchange={() => {
+                if (autoResumePrompt) autoResumePrompt.pinned = !autoResumePrompt.pinned;
+              }}
+            />
+            Pin these settings <span class="auto-resume-pin-hint">(skip auto-detection when editing)</span>
+          </label>
         </div>
-        <div class="auto-resume-context-row">
-          <span class="auto-resume-context-label">Remote CWD</span>
-          <input class="auto-resume-context-input" type="text" bind:value={autoResumePrompt.remoteCwd}
-            oninput={() => { if (autoResumePrompt) autoResumePrompt.pinned = true; }}
-            onkeydown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitAutoResumePrompt(); if (e.key === 'Escape') cancelAutoResumePrompt(); }}
-            placeholder="~/path" />
+        <!-- label is visual context for custom ResizableTextarea component -->
+        <!-- svelte-ignore a11y_label_has_associated_control -->
+        <label class="auto-resume-prompt-label">Command to run after {autoResumePrompt.sshCmd ? 'connect' : 'start'}</label>
+        <ResizableTextarea
+          bind:this={autoResumeTextarea}
+          value={autoResumePromptValue}
+          placeholder="e.g. claude --continue"
+          autofocus
+          onchange={(v) => {
+            autoResumePromptValue = v;
+          }}
+          onkeydown={(e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitAutoResumePrompt();
+            if (e.key === 'Escape') cancelAutoResumePrompt();
+          }}
+        />
+        <div class="auto-resume-prompt-hint">
+          {autoResumePrompt.sshCmd ? 'Leave empty for SSH + cwd only' : 'Leave empty for cwd only'} &middot; Each line sent as a separate command &middot; {modSymbol}Enter to save
         </div>
-        <div class="auto-resume-context-row">
-          <span class="auto-resume-context-label">CWD</span>
-          <input class="auto-resume-context-input" type="text" bind:value={autoResumePrompt.cwd}
-            oninput={() => { if (autoResumePrompt) autoResumePrompt.pinned = true; }}
-            onkeydown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitAutoResumePrompt(); if (e.key === 'Escape') cancelAutoResumePrompt(); }}
-            placeholder="/path/to/dir" />
-        </div>
-        <!-- svelte-ignore a11y_label_has_associated_control -- checkbox is nested inside label -->
-        <label class="auto-resume-pin-label">
-          <input type="checkbox" checked={autoResumePrompt.pinned} onchange={() => { if (autoResumePrompt) autoResumePrompt.pinned = !autoResumePrompt.pinned; }} />
-          Pin these settings <span class="auto-resume-pin-hint">(skip auto-detection when editing)</span>
-        </label>
-      </div>
-      <!-- svelte-ignore a11y_label_has_associated_control -- label is visual context for custom ResizableTextarea component -->
-      <label class="auto-resume-prompt-label">Command to run after {autoResumePrompt.sshCmd ? 'connect' : 'start'}</label>
-      <ResizableTextarea
-        bind:this={autoResumeTextarea}
-        value={autoResumePromptValue}
-        placeholder="e.g. claude --continue"
-        autofocus
-        onchange={(v) => { autoResumePromptValue = v; }}
-        onkeydown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitAutoResumePrompt(); if (e.key === 'Escape') cancelAutoResumePrompt(); }}
-      />
-      <div class="auto-resume-prompt-hint">{autoResumePrompt.sshCmd ? 'Leave empty for SSH + cwd only' : 'Leave empty for cwd only'} &middot; Each line sent as a separate command &middot; {modSymbol}Enter to save</div>
-      {#if arSessionIdValue && arSessionVar}
-        <div class="auto-resume-session-id-row">
-          <span class="auto-resume-session-id-label">%{arSessionVar}</span>
-          <code class="auto-resume-session-id" title="Current tab's captured {arRuntime ? runtimeLabel(arRuntime) : ''} session ID">{arSessionIdValue}</code>
-          <button type="button" class="auto-resume-session-id-copy" title="Copy session ID" onclick={async () => {
-            await clipboardWriteText(arSessionIdValue);
-            sessionIdCopied = true;
-            setTimeout(() => { sessionIdCopied = false; }, 1200);
-          }}>{sessionIdCopied ? 'Copied' : 'Copy'}</button>
-        </div>
-      {/if}
-      <div class="auto-resume-prompt-actions">
-        {#if arRuntime}
-          <div class="auto-resume-presets">
-            <span class="auto-resume-presets-label">Presets</span>
-            <Button variant="secondary" onclick={() => { autoResumePromptValue = getResumeCommand(arRuntime); }} style="padding:6px 14px;border-radius:4px;font-size: 0.923rem;background:var(--bg-dark);border-color:var(--bg-light)" title="Resumes by %{arSessionVar}">{runtimeLabel(arRuntime)} Resume</Button>
+        {#if arSessionIdValue && arSessionVar}
+          <div class="auto-resume-session-id-row">
+            <span class="auto-resume-session-id-label">%{arSessionVar}</span>
+            <code class="auto-resume-session-id" title="Current tab's captured {arRuntime ? runtimeLabel(arRuntime) : ''} session ID">{arSessionIdValue}</code>
+            <button
+              type="button"
+              class="auto-resume-session-id-copy"
+              title="Copy session ID"
+              onclick={async () => {
+                await clipboardWriteText(arSessionIdValue);
+                sessionIdCopied = true;
+                setTimeout(() => {
+                  sessionIdCopied = false;
+                }, 1200);
+              }}>{sessionIdCopied ? 'Copied' : 'Copy'}</button
+            >
           </div>
         {/if}
-        <span style="flex: 1;"></span>
-        <Button variant="secondary" onclick={cancelAutoResumePrompt} style="padding:6px 14px;border-radius:4px;font-size: 0.923rem">Cancel</Button>
-        <Button variant="primary" onclick={submitAutoResumePrompt} style="padding:6px 14px;border-radius:4px;font-size: 0.923rem">Save</Button>
+        <div class="auto-resume-prompt-actions">
+          {#if arRuntime}
+            <div class="auto-resume-presets">
+              <span class="auto-resume-presets-label">Presets</span>
+              <Button
+                variant="secondary"
+                onclick={() => {
+                  autoResumePromptValue = getResumeCommand(arRuntime);
+                }}
+                style="padding:6px 14px;border-radius:4px;font-size: 0.923rem;background:var(--bg-dark);border-color:var(--bg-light)"
+                title="Resumes by %{arSessionVar}">{runtimeLabel(arRuntime)} Resume</Button
+              >
+            </div>
+          {/if}
+          <span style="flex: 1;"></span>
+          <Button variant="secondary" onclick={cancelAutoResumePrompt} style="padding:6px 14px;border-radius:4px;font-size: 0.923rem">Cancel</Button>
+          <Button variant="primary" onclick={submitAutoResumePrompt} style="padding:6px 14px;border-radius:4px;font-size: 0.923rem">Save</Button>
+        </div>
       </div>
     </div>
-  </div>
   {/if}
   {#if claudeStateStore.getState(tabId)?.toolName}
     {@const cs = claudeStateStore.getState(tabId)!}
@@ -1886,17 +2071,20 @@
         const fraction = (e.clientY - rect.top) / rect.height;
         const maxOffset = scrollTotalLines - scrollViewportRows;
         const targetOffset = Math.round((1 - fraction) * maxOffset);
-        scrollTerminalTo(ptyId, targetOffset).then(frame => {
-          userScrollOffset = frame.display_offset;
-          terminal.write(new Uint8Array(frame.ansi));
-          updateScrollbar(frame.display_offset, frame.total_lines);
-        }).catch(() => {});
+        scrollTerminalTo(ptyId, targetOffset)
+          .then((frame) => {
+            userScrollOffset = frame.display_offset;
+            terminal.write(new Uint8Array(frame.ansi));
+            updateScrollbar(frame.display_offset, frame.total_lines);
+          })
+          .catch(() => {});
       }}
     >
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="scrollbar-thumb"
-        style="height: {Math.max(20, (scrollViewportRows / scrollTotalLines) * 100)}%; top: {((scrollTotalLines - scrollViewportRows - scrollDisplayOffset) / (scrollTotalLines - scrollViewportRows)) * (100 - Math.max(20, (scrollViewportRows / scrollTotalLines) * 100))}%;"
+        style="height: {Math.max(20, (scrollViewportRows / scrollTotalLines) * 100)}%; top: {((scrollTotalLines - scrollViewportRows - scrollDisplayOffset) / (scrollTotalLines - scrollViewportRows)) *
+          (100 - Math.max(20, (scrollViewportRows / scrollTotalLines) * 100))}%;"
         onmousedown={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -1911,11 +2099,13 @@
             const deltaFraction = (me.clientY - startY) / trackRect.height;
             const targetOffset = Math.round(startOffset - deltaFraction * maxOffset);
             const clamped = Math.max(0, Math.min(maxOffset, targetOffset));
-            scrollTerminalTo(ptyId, clamped).then(frame => {
-              userScrollOffset = frame.display_offset;
-              terminal.write(new Uint8Array(frame.ansi));
-              updateScrollbar(frame.display_offset, frame.total_lines);
-            }).catch(() => {});
+            scrollTerminalTo(ptyId, clamped)
+              .then((frame) => {
+                userScrollOffset = frame.display_offset;
+                terminal.write(new Uint8Array(frame.ansi));
+                updateScrollbar(frame.display_offset, frame.total_lines);
+              })
+              .catch(() => {});
           };
           const onUp = () => {
             scrollbarDragging = false;
@@ -2122,7 +2312,7 @@
     margin-bottom: 6px;
   }
 
-  .auto-resume-pin-label input[type="checkbox"] {
+  .auto-resume-pin-label input[type='checkbox'] {
     margin: 0;
     accent-color: var(--accent);
   }
@@ -2213,5 +2403,4 @@
     font-size: 0.846rem;
     color: var(--fg-dim);
   }
-
 </style>

@@ -27,14 +27,18 @@
 
   onMount(() => {
     let detachConsole: (() => void) | undefined;
-    attachConsole().then(detach => { detachConsole = detach; });
+    attachConsole().then((detach) => {
+      detachConsole = detach;
+    });
 
     preferencesStore.load().catch((e: unknown) => logError(`Failed to load preferences: ${e}`));
 
     let unlistenPrefs: (() => void) | undefined;
     listen<Preferences>('preferences-changed', (event) => {
       preferencesStore.applyFromBackend(event.payload);
-    }).then(unlisten => { unlistenPrefs = unlisten; });
+    }).then((unlisten) => {
+      unlistenPrefs = unlisten;
+    });
 
     return () => {
       unlistenPrefs?.();

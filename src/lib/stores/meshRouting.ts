@@ -43,17 +43,11 @@ export interface MeshRouterDeps {
   mintId(): string;
 }
 
-export type RecipientResolution =
-  | { ok: true; tabId: string; role: string }
-  | { ok: false; error: string };
+export type RecipientResolution = { ok: true; tabId: string; role: string } | { ok: false; error: string };
 
-export type TopicResolution =
-  | { ok: true; topic: MeshTopic; created: boolean }
-  | { ok: false; error: string };
+export type TopicResolution = { ok: true; topic: MeshTopic; created: boolean } | { ok: false; error: string };
 
-export type CompleteResolution =
-  | { ok: true; topic: MeshTopic; participants: string[]; alreadyComplete: boolean }
-  | { ok: false; error: string };
+export type CompleteResolution = { ok: true; topic: MeshTopic; participants: string[]; alreadyComplete: boolean } | { ok: false; error: string };
 
 /**
  * Mirror of Rust `MeshTopic::normalize_label`: trim, lowercase, split on any run of
@@ -74,7 +68,10 @@ export function createMeshRouter(deps: MeshRouterDeps) {
   let topics: MeshTopic[] = [];
 
   function rosterHint(): string {
-    const names = deps.members().map((m) => `"${m.role}"`).join(', ');
+    const names = deps
+      .members()
+      .map((m) => `"${m.role}"`)
+      .join(', ');
     return names ? ` Known peers: ${names}.` : ' There are no other agents in this mesh yet.';
   }
 
@@ -88,7 +85,7 @@ export function createMeshRouter(deps: MeshRouterDeps) {
     if (!arg) {
       // Convenience: in a 2-agent mesh the recipient is unambiguous, so allow omission.
       // With 0 or 2+ peers it must be explicit (never guess across multiple peers).
-      if (others.length === 1) return { ok: true, tabId: others[0].tabId, role: others[0].role };
+      if (others.length === 1) return { ok: true, tabId: others[0]!.tabId, role: others[0]!.role };
       return { ok: false, error: `recipient is required in a mesh workspace.${rosterHint()}` };
     }
 
@@ -103,8 +100,8 @@ export function createMeshRouter(deps: MeshRouterDeps) {
     const lc = arg.toLowerCase();
     const byRole = members.filter((m) => m.role.trim().toLowerCase() === lc);
     if (byRole.length === 1) {
-      if (byRole[0].tabId === senderTabId) return { ok: false, error: 'Cannot send to yourself.' };
-      return { ok: true, tabId: byRole[0].tabId, role: byRole[0].role };
+      if (byRole[0]!.tabId === senderTabId) return { ok: false, error: 'Cannot send to yourself.' };
+      return { ok: true, tabId: byRole[0]!.tabId, role: byRole[0]!.role };
     }
     if (byRole.length > 1) {
       return {

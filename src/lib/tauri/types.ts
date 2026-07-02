@@ -264,8 +264,20 @@ export interface DuplicateWorkspaceResult {
   tab_id_map: Record<string, string>;
 }
 
+/** Named window snapshot restorable from the Window menu.
+ *  Stored on AppData (sibling of `windows`), NOT inside Preferences, so the
+ *  preferences roundtrip in preferences.svelte.ts can't clobber them. */
+export interface WindowPreset {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  window: WindowData;
+}
+
 export interface AppData {
   windows: WindowData[];
+  window_presets?: WindowPreset[];
   preferences: Preferences;
 }
 
@@ -307,8 +319,14 @@ export interface SearchResult {
 }
 
 // OSC events from Rust
-export interface OscCwdEvent { cwd: string; host: string | null; }
-export interface OscShellEvent { cmd: string; exit_code: number | null; }
+export interface OscCwdEvent {
+  cwd: string;
+  host: string | null;
+}
+export interface OscShellEvent {
+  cmd: string;
+  exit_code: number | null;
+}
 
 export interface ClaudeCodeToolRequest {
   request_id: string;

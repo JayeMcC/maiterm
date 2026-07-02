@@ -27,11 +27,11 @@ function createNavHistoryStore() {
   // the entry still occupies a MAX_HISTORY slot, so back/forward can feel
   // like it silently skips. Observed, not fixed.
   function findTab(entry: NavEntry): boolean {
-    const ws = workspacesStore.workspaces.find(w => w.id === entry.workspaceId);
+    const ws = workspacesStore.workspaces.find((w) => w.id === entry.workspaceId);
     if (!ws) return false;
-    const pane = ws.panes.find(p => p.id === entry.paneId);
+    const pane = ws.panes.find((p) => p.id === entry.paneId);
     if (!pane) return false;
-    const tab = pane.tabs.find(t => t.id === entry.tabId);
+    const tab = pane.tabs.find((t) => t.id === entry.tabId);
     if (!tab) return false;
     const isTerminal = tab.tab_type === 'terminal' || !tab.tab_type;
     if (isTerminal && !terminalsStore.get(entry.tabId)) return false;
@@ -39,7 +39,7 @@ function createNavHistoryStore() {
   }
 
   async function navigateToEntry(entry: NavEntry) {
-    const ws = workspacesStore.workspaces.find(w => w.id === entry.workspaceId);
+    const ws = workspacesStore.workspaces.find((w) => w.id === entry.workspaceId);
     if (!ws) return;
 
     if (ws.suspended) {
@@ -57,8 +57,12 @@ function createNavHistoryStore() {
   }
 
   return {
-    get canGoBack() { return walkIndex < history.length - 1; },
-    get canGoForward() { return walkIndex > 0; },
+    get canGoBack() {
+      return walkIndex < history.length - 1;
+    },
+    get canGoForward() {
+      return walkIndex > 0;
+    },
 
     // Callers invoke push() after `await import('navHistory')` + `await
     // commands.*` — under rapid tab switching, IPC and dynamic-import
@@ -75,7 +79,7 @@ function createNavHistoryStore() {
       // because Cmd+[ would then go back from an unexpected anchor.
       if (walkIndex > 0 && walkIndex < history.length) {
         const next = history.slice();
-        const existing = next.findIndex(e => e.tabId === entry.tabId);
+        const existing = next.findIndex((e) => e.tabId === entry.tabId);
         if (existing >= 0) {
           next.splice(existing, 1);
           if (existing < walkIndex) walkIndex = walkIndex - 1;
@@ -87,7 +91,7 @@ function createNavHistoryStore() {
       }
 
       // Not mid-walk: standard MRU dedup + unshift.
-      const filtered = history.filter(e => e.tabId !== entry.tabId);
+      const filtered = history.filter((e) => e.tabId !== entry.tabId);
       filtered.unshift(entry);
       if (filtered.length > MAX_HISTORY) filtered.length = MAX_HISTORY;
       history = filtered;
@@ -95,16 +99,19 @@ function createNavHistoryStore() {
     },
 
     async goBack() {
-      if (walkIndex >= history.length - 1) { playBellSound(); return; }
+      if (walkIndex >= history.length - 1) {
+        playBellSound();
+        return;
+      }
       navigating = true;
       try {
         let target = walkIndex + 1;
-        while (target < history.length && !findTab(history[target])) {
+        while (target < history.length && !findTab(history[target]!)) {
           target++;
         }
         if (target < history.length) {
           walkIndex = target;
-          await navigateToEntry(history[walkIndex]);
+          await navigateToEntry(history[walkIndex]!);
         } else {
           playBellSound();
         }
@@ -114,15 +121,18 @@ function createNavHistoryStore() {
     },
 
     async goForward() {
-      if (walkIndex <= 0) { playBellSound(); return; }
+      if (walkIndex <= 0) {
+        playBellSound();
+        return;
+      }
       navigating = true;
       try {
         let target = walkIndex - 1;
-        while (target > 0 && !findTab(history[target])) {
+        while (target > 0 && !findTab(history[target]!)) {
           target--;
         }
         walkIndex = target;
-        await navigateToEntry(history[walkIndex]);
+        await navigateToEntry(history[walkIndex]!);
       } finally {
         navigating = false;
       }
@@ -138,14 +148,17 @@ function createNavHistoryStore() {
       const matches = (e: NavEntry) => e.tabId !== tabId && (!isValid || isValid(e));
       if (walkIndex > 0 && history[walkIndex]?.tabId === tabId) {
         for (let i = walkIndex + 1; i < history.length; i++) {
-          if (matches(history[i])) return history[i];
+          const e = history[i]!;
+          if (matches(e)) return e;
         }
         for (let i = walkIndex - 1; i >= 0; i--) {
-          if (matches(history[i])) return history[i];
+          const e = history[i]!;
+          if (matches(e)) return e;
         }
       }
       for (let i = 0; i < history.length; i++) {
-        if (matches(history[i])) return history[i];
+        const e = history[i]!;
+        if (matches(e)) return e;
       }
       return null;
     },
@@ -153,7 +166,7 @@ function createNavHistoryStore() {
     /** Return the most recent MRU entry pointing at a live tab, or null. */
     peekMostRecent(isValid?: (entry: NavEntry) => boolean): NavEntry | null {
       for (let i = 0; i < history.length; i++) {
-        const entry = history[i];
+        const entry = history[i]!;
         if (isValid && !isValid(entry)) continue;
         if (!findTab(entry)) continue;
         return entry;
@@ -168,9 +181,9 @@ function createNavHistoryStore() {
      */
     removeTab(tabId: string, anchorTabId?: string) {
       const currentId = anchorTabId ?? history[walkIndex]?.tabId ?? null;
-      history = history.filter(e => e.tabId !== tabId);
+      history = history.filter((e) => e.tabId !== tabId);
       if (currentId && currentId !== tabId) {
-        const newIdx = history.findIndex(e => e.tabId === currentId);
+        const newIdx = history.findIndex((e) => e.tabId === currentId);
         walkIndex = newIdx >= 0 ? newIdx : 0;
       } else {
         walkIndex = 0;
@@ -197,9 +210,9 @@ function createNavHistoryStore() {
     removeWorkspace(workspaceId: string) {
       const currentId = history[walkIndex]?.tabId ?? null;
       const currentWs = history[walkIndex]?.workspaceId ?? null;
-      history = history.filter(e => e.workspaceId !== workspaceId);
+      history = history.filter((e) => e.workspaceId !== workspaceId);
       if (currentId && currentWs !== workspaceId) {
-        const newIdx = history.findIndex(e => e.tabId === currentId);
+        const newIdx = history.findIndex((e) => e.tabId === currentId);
         walkIndex = newIdx >= 0 ? newIdx : 0;
       } else {
         walkIndex = 0;

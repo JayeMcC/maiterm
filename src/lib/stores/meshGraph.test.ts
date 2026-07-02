@@ -6,8 +6,15 @@ import type { MeshEdge } from './meshSend';
 
 const member = (tabId: string, role: string, live = true): MeshMember => ({ tabId, role, cwd: null, purpose: null, live });
 const topic = (id: string, owner: string, participants: string[], turn = 1, state: 'open' | 'complete' = 'open'): MeshTopic => ({
-  id, label: id, normalized_label: id, owner_tab_id: owner, state, participants, turn,
-  created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-01T00:00:00.000Z',
+  id,
+  label: id,
+  normalized_label: id,
+  owner_tab_id: owner,
+  state,
+  participants,
+  turn,
+  created_at: '2026-01-01T00:00:00.000Z',
+  updated_at: '2026-01-01T00:00:00.000Z',
 });
 const opts = { cx: 100, cy: 100, radius: 50 };
 
@@ -24,8 +31,8 @@ describe('computeGraph', () => {
     const { nodes } = computeGraph([member('a', 'A'), member('b', 'B'), member('c', 'C')], [], [], new Set(), 0, opts);
     expect(nodes).toHaveLength(3);
     // first node at top: (cx, cy - radius)
-    expect(nodes[0].x).toBeCloseTo(100);
-    expect(nodes[0].y).toBeCloseTo(50);
+    expect(nodes[0]!.x).toBeCloseTo(100);
+    expect(nodes[0]!.y).toBeCloseTo(50);
     // all nodes on the circle
     for (const nd of nodes) {
       const d = Math.hypot(nd.x - opts.cx, nd.y - opts.cy);
@@ -65,14 +72,14 @@ describe('computeGraph', () => {
     const members = [member('a', 'A'), member('b', 'B')];
     const ring: MeshEdge[] = [{ sender: 'a', recipient: 'b', topicId: 't1', topicLabel: 't1', turn: 1, ts: 9000 }];
     const recent = computeGraph(members, [topic('t1', 'a', ['a', 'b'])], ring, new Set(), 10000, { ...opts, recentMs: 4000 });
-    expect(recent.edges[0].recent).toBe(true);
+    expect(recent.edges[0]!.recent).toBe(true);
     const stale = computeGraph(members, [topic('t1', 'a', ['a', 'b'])], ring, new Set(), 20000, { ...opts, recentMs: 4000 });
-    expect(stale.edges[0].recent).toBe(false);
+    expect(stale.edges[0]!.recent).toBe(false);
   });
 
   it('marks paused topics', () => {
     const members = [member('a', 'A'), member('b', 'B')];
     const g = computeGraph(members, [topic('t1', 'a', ['a', 'b'])], [], new Set(), 0, opts, new Set(['t1']));
-    expect(g.edges[0].paused).toBe(true);
+    expect(g.edges[0]!.paused).toBe(true);
   });
 });

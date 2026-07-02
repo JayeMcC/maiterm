@@ -7,6 +7,8 @@
  * ssh stderr-phrase fallback). This store only holds the resulting state +
  * the context needed to reconnect.
  */
+import { SvelteMap } from 'svelte/reactivity';
+
 export interface DisconnectInfo {
   /** Hostname for display (parsed from the ssh command), if known. */
   host: string | null;
@@ -21,11 +23,14 @@ export interface DisconnectInfo {
 }
 
 function createSshDisconnectStore() {
-  let disconnected = $state<Map<string, DisconnectInfo>>(new Map());
+  // Reactive: read via `.has()`/`.get()` in tab-list templates through isDisconnected/getInfo.
+  const disconnected = new SvelteMap<string, DisconnectInfo>();
 
   return {
     /** Reactive accessor — reading this in a template/`$derived` tracks changes. */
-    get map() { return disconnected; },
+    get map() {
+      return disconnected;
+    },
 
     isDisconnected(tabId: string): boolean {
       return disconnected.has(tabId);
@@ -36,13 +41,10 @@ function createSshDisconnectStore() {
     },
 
     mark(tabId: string, info: DisconnectInfo) {
-      disconnected = new Map(disconnected);
       disconnected.set(tabId, info);
     },
 
     clear(tabId: string) {
-      if (!disconnected.has(tabId)) return;
-      disconnected = new Map(disconnected);
       disconnected.delete(tabId);
     },
   };

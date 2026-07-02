@@ -23,30 +23,14 @@ describe('parseNeedsDecision', () => {
   });
 
   it('extracts a single decision item under the heading', () => {
-    const note = [
-      '<!-- mesh:status:Backend API -->',
-      '### Backend API',
-      '**Done:**',
-      '- wired auth',
-      '',
-      '**NEEDS DECISION:**',
-      '- pick a token TTL: 15m or 60m?',
-      '',
-      '**Blocked:**',
-      '- ',
-    ].join('\n');
+    const note = ['<!-- mesh:status:Backend API -->', '### Backend API', '**Done:**', '- wired auth', '', '**NEEDS DECISION:**', '- pick a token TTL: 15m or 60m?', '', '**Blocked:**', '- '].join(
+      '\n',
+    );
     expect(parseNeedsDecision(note)).toBe('pick a token TTL: 15m or 60m?');
   });
 
   it('joins multiple decision items and stops at the next heading', () => {
-    const note = [
-      '**NEEDS DECISION:**',
-      '- approve the schema migration',
-      '- confirm the prod rollout window',
-      '',
-      '**Blocked:**',
-      '- waiting on infra',
-    ].join('\n');
+    const note = ['**NEEDS DECISION:**', '- approve the schema migration', '- confirm the prod rollout window', '', '**Blocked:**', '- waiting on infra'].join('\n');
     expect(parseNeedsDecision(note)).toBe('approve the schema migration; confirm the prod rollout window');
   });
 

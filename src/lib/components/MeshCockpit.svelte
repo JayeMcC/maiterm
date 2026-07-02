@@ -20,7 +20,9 @@
   let tick = $state(0);
   $effect(() => {
     if (!open) return;
-    const id = setInterval(() => { tick++; }, 1000);
+    const id = setInterval(() => {
+      tick++;
+    }, 1000);
     return () => clearInterval(id);
   });
 
@@ -28,24 +30,29 @@
 
   // ── Derived cockpit data (re-reads on mesh changes + the tick) ──────────────
   const board = $derived.by(() => {
-    void agentMeshStore.version; void tick;
+    void agentMeshStore.version;
+    void tick;
     return ws ? agentMeshStore.statusBoard(ws.id) : [];
   });
   const topics = $derived.by(() => {
-    void agentMeshStore.version; void tick;
+    void agentMeshStore.version;
+    void tick;
     return ws ? agentMeshStore.topicsForWorkspace(ws.id) : [];
   });
   const paused = $derived.by(() => {
-    void agentMeshStore.version; void tick;
+    void agentMeshStore.version;
+    void tick;
     return ws ? agentMeshStore.pausedTopics(ws.id) : [];
   });
   const pausedIds = $derived(new Set(paused.map((p) => p.id)));
   const roleOf = $derived((tabId: string) => board.find((b) => b.tabId === tabId)?.role ?? tabId.slice(0, 6));
 
   // ── Conversation graph geometry ─────────────────────────────────────────────
-  const GW = 260, GH = 210;
+  const GW = 260,
+    GH = 210;
   const graph = $derived.by(() => {
-    void agentMeshStore.version; void tick;
+    void agentMeshStore.version;
+    void tick;
     if (!ws || !isMesh) return { nodes: [], edges: [] };
     const members: MeshMember[] = board.map((b) => ({ tabId: b.tabId, role: b.role, cwd: b.cwd, purpose: b.purpose, live: b.live }));
     const active = new Set(board.filter((b) => b.claudeState === 'active').map((b) => b.tabId));
@@ -65,7 +72,11 @@
   async function disableMesh() {
     if (!ws) return;
     busy = true;
-    try { await agentMeshStore.setMeshEnabled(ws.id, false); } finally { busy = false; }
+    try {
+      await agentMeshStore.setMeshEnabled(ws.id, false);
+    } finally {
+      busy = false;
+    }
   }
   function setPurpose(tabId: string, e: Event) {
     agentMeshStore.setPurpose(tabId, (e.currentTarget as HTMLInputElement).value);
@@ -80,7 +91,10 @@
     await navigateToTab(tabId);
     onclose();
   }
-  const stageActive = $derived.by(() => { void agentMeshStore.version; return ws ? agentMeshStore.isStageView(ws.id) : false; });
+  const stageActive = $derived.by(() => {
+    void agentMeshStore.version;
+    return ws ? agentMeshStore.isStageView(ws.id) : false;
+  });
   function toggleStage() {
     if (!ws) return;
     agentMeshStore.toggleStageView(ws.id);
@@ -95,7 +109,10 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') { e.stopPropagation(); onclose(); }
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      onclose();
+    }
   }
   function handleBackdrop(e: MouseEvent) {
     if (e.target === e.currentTarget) onclose();
@@ -103,7 +120,6 @@
 </script>
 
 {#if open}
-  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <div class="mesh-backdrop" onclick={handleBackdrop} onkeydown={handleKeydown} role="dialog" aria-modal="true" tabindex="-1">
     <aside class="cockpit">
       <header class="cockpit-header">
@@ -119,9 +135,8 @@
         <div class="enable-cta">
           <p class="lead">Turn <strong>{ws.name}</strong> into a <strong>Mesh Workspace</strong>.</p>
           <p class="hint">
-            Every agent tab here becomes reachable by every other over topic-scoped threads —
-            a moderated roundtable you steer from this cockpit. Name each agent tab descriptively
-            (that name is its address) and give it a one-line purpose below once enabled.
+            Every agent tab here becomes reachable by every other over topic-scoped threads — a moderated roundtable you steer from this cockpit. Name each agent tab descriptively (that name is its
+            address) and give it a one-line purpose below once enabled.
           </p>
           <button class="primary" disabled={busy} onclick={enableMesh}>Enable Mesh</button>
         </div>
@@ -150,8 +165,13 @@
             <svg viewBox="0 0 {GW} {GH}" class="graph" role="img" aria-label="Conversation graph">
               {#each graph.edges as e (e.topicId + e.from + e.to)}
                 <line
-                  x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
-                  class="edge" class:recent={e.recent} class:paused={e.paused}
+                  x1={e.x1}
+                  y1={e.y1}
+                  x2={e.x2}
+                  y2={e.y2}
+                  class="edge"
+                  class:recent={e.recent}
+                  class:paused={e.paused}
                   stroke="hsl({e.hue} 70% 62%)"
                   stroke-width={Math.min(5, 1 + e.turns * 0.45)}
                   stroke-dasharray={e.paused ? '3 3' : undefined}
@@ -164,7 +184,17 @@
                 {/if}
               {/each}
               {#each graph.nodes as n (n.tabId)}
-                <g class="node" class:active={n.active} class:offline={!n.live} onclick={() => openTab(n.tabId)} onkeydown={(e) => { if (e.key === 'Enter') openTab(n.tabId); }} role="button" tabindex="-1">
+                <g
+                  class="node"
+                  class:active={n.active}
+                  class:offline={!n.live}
+                  onclick={() => openTab(n.tabId)}
+                  onkeydown={(e) => {
+                    if (e.key === 'Enter') openTab(n.tabId);
+                  }}
+                  role="button"
+                  tabindex="-1"
+                >
                   <circle cx={n.x} cy={n.y} r="9" />
                   {#if n.active}<circle class="halo" cx={n.x} cy={n.y} r="9" />{/if}
                   <text x={n.x} y={n.y < GH / 2 ? n.y - 13 : n.y + 19} text-anchor="middle">{n.role}</text>
@@ -219,14 +249,26 @@
               {#if a.needsDecision.length > 0}
                 <div class="card-row decision">
                   <span class="tag">NEEDS DECISION</span>
-                  <ul>{#each a.needsDecision as d}<li>{d}</li>{/each}</ul>
+                  <ul>
+                    {#each a.needsDecision as d (d)}<li>{d}</li>{/each}
+                  </ul>
                 </div>
               {/if}
               {#if a.blocked.length > 0}
-                <div class="card-row blocked"><span class="tag">Blocked</span> <ul>{#each a.blocked as b}<li>{b}</li>{/each}</ul></div>
+                <div class="card-row blocked">
+                  <span class="tag">Blocked</span>
+                  <ul>
+                    {#each a.blocked as b (b)}<li>{b}</li>{/each}
+                  </ul>
+                </div>
               {/if}
               {#if a.done.length > 0}
-                <div class="card-row done"><span class="tag">Done</span> <ul>{#each a.done as d}<li>{d}</li>{/each}</ul></div>
+                <div class="card-row done">
+                  <span class="tag">Done</span>
+                  <ul>
+                    {#each a.done as d (d)}<li>{d}</li>{/each}
+                  </ul>
+                </div>
               {/if}
             </div>
           {/each}
@@ -263,7 +305,16 @@
     overflow-y: auto;
     animation: slide-in 0.16s ease-out;
   }
-  @keyframes slide-in { from { transform: translateX(28px); opacity: 0.6; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes slide-in {
+    from {
+      transform: translateX(28px);
+      opacity: 0.6;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
 
   .cockpit-header {
     display: flex;
@@ -276,30 +327,88 @@
     background: var(--bg-medium);
     z-index: 2;
   }
-  .cockpit-header h2 { font-size: 14px; margin: 0; font-weight: 600; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .mesh-badge {
-    font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
-    color: var(--bg-dark); background: var(--accent);
-    padding: 2px 5px; border-radius: 3px;
+  .cockpit-header h2 {
+    font-size: 14px;
+    margin: 0;
+    font-weight: 600;
+    color: var(--fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .count { font-size: 11px; color: var(--fg-dim); margin-left: auto; }
-  .close-btn { background: none; border: none; color: var(--fg-dim); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 2px; }
-  .close-btn:hover { color: var(--fg); }
+  .mesh-badge {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--bg-dark);
+    background: var(--accent);
+    padding: 2px 5px;
+    border-radius: 3px;
+  }
+  .count {
+    font-size: 11px;
+    color: var(--fg-dim);
+    margin-left: auto;
+  }
+  .close-btn {
+    background: none;
+    border: none;
+    color: var(--fg-dim);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+  }
+  .close-btn:hover {
+    color: var(--fg);
+  }
 
-  .empty { padding: 24px 16px; color: var(--fg-dim); font-size: 12px; text-align: center; }
-  .empty.small { padding: 12px; font-size: 11px; }
+  .empty {
+    padding: 24px 16px;
+    color: var(--fg-dim);
+    font-size: 12px;
+    text-align: center;
+  }
+  .empty.small {
+    padding: 12px;
+    font-size: 11px;
+  }
 
-  .enable-cta { padding: 20px 16px; display: flex; flex-direction: column; gap: 12px; }
-  .enable-cta .lead { font-size: 14px; color: var(--fg); margin: 0; }
-  .enable-cta .hint { font-size: 12px; color: var(--fg-dim); line-height: 1.5; margin: 0; }
+  .enable-cta {
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .enable-cta .lead {
+    font-size: 14px;
+    color: var(--fg);
+    margin: 0;
+  }
+  .enable-cta .hint {
+    font-size: 12px;
+    color: var(--fg-dim);
+    line-height: 1.5;
+    margin: 0;
+  }
   .primary {
     align-self: flex-start;
-    background: var(--accent); color: var(--bg-dark);
-    border: none; border-radius: 5px; padding: 7px 16px;
-    font-size: 12px; font-weight: 600; cursor: pointer;
+    background: var(--accent);
+    color: var(--bg-dark);
+    border: none;
+    border-radius: 5px;
+    padding: 7px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
   }
-  .primary:hover { background: var(--accent-hover); }
-  .primary:disabled { opacity: 0.5; cursor: default; }
+  .primary:hover {
+    background: var(--accent-hover);
+  }
+  .primary:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
 
   .paused-banner {
     margin: 10px 12px 0;
@@ -307,68 +416,249 @@
     border: 1px solid color-mix(in srgb, var(--yellow) 40%, transparent);
     border-radius: 6px;
     padding: 6px 8px;
-    display: flex; flex-direction: column; gap: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
-  .paused-row { display: flex; align-items: center; gap: 6px; font-size: 11px; }
-  .pause-icon { color: var(--yellow); }
-  .pause-label { font-weight: 600; color: var(--fg); }
-  .pause-meta { color: var(--fg-dim); margin-right: auto; }
+  .paused-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+  }
+  .pause-icon {
+    color: var(--yellow);
+  }
+  .pause-label {
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .pause-meta {
+    color: var(--fg-dim);
+    margin-right: auto;
+  }
 
-  .graph-section { padding: 8px 12px 4px; }
-  .graph { width: 100%; height: auto; display: block; }
-  .edge { opacity: 0.5; transition: opacity 0.3s; }
-  .edge.recent { opacity: 0.95; }
-  .edge.paused { opacity: 0.35; }
-  .flow { opacity: 0.9; }
-  .node circle { fill: var(--bg-light); stroke: var(--fg-dim); stroke-width: 1.5; cursor: pointer; transition: fill 0.2s; }
-  .node.active circle { fill: var(--accent); stroke: var(--accent); }
-  .node.offline circle { fill: var(--bg-dark); stroke: var(--bg-light); }
-  .node .halo { fill: none; stroke: var(--accent); stroke-width: 1.5; opacity: 0.5; animation: halo 1.4s ease-out infinite; }
-  @keyframes halo { from { r: 9px; opacity: 0.55; } to { r: 18px; opacity: 0; } }
-  .node text { fill: var(--fg); font-size: 9px; pointer-events: none; }
+  .graph-section {
+    padding: 8px 12px 4px;
+  }
+  .graph {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .edge {
+    opacity: 0.5;
+    transition: opacity 0.3s;
+  }
+  .edge.recent {
+    opacity: 0.95;
+  }
+  .edge.paused {
+    opacity: 0.35;
+  }
+  .flow {
+    opacity: 0.9;
+  }
+  .node circle {
+    fill: var(--bg-light);
+    stroke: var(--fg-dim);
+    stroke-width: 1.5;
+    cursor: pointer;
+    transition: fill 0.2s;
+  }
+  .node.active circle {
+    fill: var(--accent);
+    stroke: var(--accent);
+  }
+  .node.offline circle {
+    fill: var(--bg-dark);
+    stroke: var(--bg-light);
+  }
+  .node .halo {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    opacity: 0.5;
+    animation: halo 1.4s ease-out infinite;
+  }
+  @keyframes halo {
+    from {
+      r: 9px;
+      opacity: 0.55;
+    }
+    to {
+      r: 18px;
+      opacity: 0;
+    }
+  }
+  .node text {
+    fill: var(--fg);
+    font-size: 9px;
+    pointer-events: none;
+  }
 
-  .panel { padding: 10px 12px; border-top: 1px solid var(--bg-light); }
-  .panel h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-dim); margin: 0 0 8px; }
+  .panel {
+    padding: 10px 12px;
+    border-top: 1px solid var(--bg-light);
+  }
+  .panel h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fg-dim);
+    margin: 0 0 8px;
+  }
 
-  .topic { display: flex; align-items: center; gap: 7px; padding: 4px 0; font-size: 12px; }
-  .topic.complete { opacity: 0.5; }
-  .topic.paused .t-label { color: var(--yellow); }
-  .swatch { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
-  .t-label { color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
-  .t-meta { color: var(--fg-dim); font-size: 11px; margin-left: auto; white-space: nowrap; }
-  .t-state.done { color: var(--green); font-size: 10px; text-transform: uppercase; }
+  .topic {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 0;
+    font-size: 12px;
+  }
+  .topic.complete {
+    opacity: 0.5;
+  }
+  .topic.paused .t-label {
+    color: var(--yellow);
+  }
+  .swatch {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .t-label {
+    color: var(--fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 130px;
+  }
+  .t-meta {
+    color: var(--fg-dim);
+    font-size: 11px;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+  .t-state.done {
+    color: var(--green);
+    font-size: 10px;
+    text-transform: uppercase;
+  }
 
-  .agent-card { padding: 8px; margin-bottom: 8px; background: var(--bg-dark); border-radius: 6px; border: 1px solid transparent; }
-  .agent-card.needs { border-color: color-mix(in srgb, var(--yellow) 45%, transparent); }
-  .agent-head { display: flex; align-items: center; gap: 6px; }
-  .role-link { background: none; border: none; color: var(--fg); font-size: 12px; font-weight: 600; cursor: pointer; padding: 0; }
-  .role-link:hover { color: var(--accent); }
-  .spacer { flex: 1; }
-  .cwd { font-size: 10px; color: var(--fg-dim); font-family: monospace; }
+  .agent-card {
+    padding: 8px;
+    margin-bottom: 8px;
+    background: var(--bg-dark);
+    border-radius: 6px;
+    border: 1px solid transparent;
+  }
+  .agent-card.needs {
+    border-color: color-mix(in srgb, var(--yellow) 45%, transparent);
+  }
+  .agent-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .role-link {
+    background: none;
+    border: none;
+    color: var(--fg);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+  }
+  .role-link:hover {
+    color: var(--accent);
+  }
+  .spacer {
+    flex: 1;
+  }
+  .cwd {
+    font-size: 10px;
+    color: var(--fg-dim);
+    font-family: monospace;
+  }
   .purpose-input {
-    width: 100%; margin-top: 6px; box-sizing: border-box;
-    background: var(--bg-medium); border: 1px solid var(--bg-light); border-radius: 4px;
-    color: var(--fg); font-size: 11px; padding: 4px 6px;
+    width: 100%;
+    margin-top: 6px;
+    box-sizing: border-box;
+    background: var(--bg-medium);
+    border: 1px solid var(--bg-light);
+    border-radius: 4px;
+    color: var(--fg);
+    font-size: 11px;
+    padding: 4px 6px;
   }
-  .purpose-input:focus { outline: none; border-color: var(--accent); }
-  .card-row { margin-top: 6px; font-size: 11px; }
-  .card-row ul { margin: 2px 0 0; padding-left: 16px; color: var(--fg); }
-  .card-row li { line-height: 1.4; }
-  .tag { font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--fg-dim); }
-  .card-row.decision .tag { color: var(--yellow); }
-  .card-row.decision ul { color: var(--fg); }
-  .card-row.blocked .tag { color: var(--red); }
-  .card-row.done .tag { color: var(--green); }
+  .purpose-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .card-row {
+    margin-top: 6px;
+    font-size: 11px;
+  }
+  .card-row ul {
+    margin: 2px 0 0;
+    padding-left: 16px;
+    color: var(--fg);
+  }
+  .card-row li {
+    line-height: 1.4;
+  }
+  .tag {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+  }
+  .card-row.decision .tag {
+    color: var(--yellow);
+  }
+  .card-row.decision ul {
+    color: var(--fg);
+  }
+  .card-row.blocked .tag {
+    color: var(--red);
+  }
+  .card-row.done .tag {
+    color: var(--green);
+  }
 
-  .cockpit-footer { margin-top: auto; padding: 10px 12px; border-top: 1px solid var(--bg-light); }
+  .cockpit-footer {
+    margin-top: auto;
+    padding: 10px 12px;
+    border-top: 1px solid var(--bg-light);
+  }
 
   .mini {
-    background: var(--accent); color: var(--bg-dark);
-    border: none; border-radius: 4px; padding: 3px 9px;
-    font-size: 11px; font-weight: 600; cursor: pointer;
+    background: var(--accent);
+    color: var(--bg-dark);
+    border: none;
+    border-radius: 4px;
+    padding: 3px 9px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
   }
-  .mini:hover { background: var(--accent-hover); }
-  .mini.ghost { background: none; color: var(--fg-dim); border: 1px solid var(--bg-light); }
-  .mini.ghost:hover { color: var(--fg); border-color: var(--fg-dim); }
-  .mini.ghost.danger:hover { color: var(--red); border-color: var(--red); }
+  .mini:hover {
+    background: var(--accent-hover);
+  }
+  .mini.ghost {
+    background: none;
+    color: var(--fg-dim);
+    border: 1px solid var(--bg-light);
+  }
+  .mini.ghost:hover {
+    color: var(--fg);
+    border-color: var(--fg-dim);
+  }
+  .mini.ghost.danger:hover {
+    color: var(--red);
+    border-color: var(--red);
+  }
 </style>

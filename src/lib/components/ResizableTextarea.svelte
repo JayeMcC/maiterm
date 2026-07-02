@@ -11,17 +11,7 @@
     onkeydown?: (e: KeyboardEvent) => void;
   }
 
-  let {
-    value,
-    placeholder = '',
-    rows = 1,
-    maxHeight = 560,
-    mono = false,
-    invalid = false,
-    autofocus = false,
-    onchange,
-    onkeydown,
-  }: Props = $props();
+  let { value, placeholder = '', rows = 1, maxHeight = 560, mono = false, invalid = false, autofocus = false, onchange, onkeydown }: Props = $props();
 
   let textareaEl = $state<HTMLTextAreaElement | null>(null);
   let manualResize = false;
@@ -32,9 +22,12 @@
     textareaEl.style.height = Math.min(textareaEl.scrollHeight, maxHeight) + 'px';
   }
 
-  // Auto-grow on mount and when value changes externally
+  // Auto-grow on mount and when value changes externally.
+  // Explicit `void value` marks the dependency: autoGrow() reads the DOM
+  // (scrollHeight), not the prop, so without this the effect wouldn't re-run
+  // when the parent updates `value`.
   $effect(() => {
-    value;
+    void value;
     autoGrow();
   });
 
@@ -50,7 +43,7 @@
     {value}
     {placeholder}
     {rows}
-    autofocus={autofocus}
+    {autofocus}
     autocapitalize="off"
     spellcheck="false"
     oninput={(e) => {
@@ -58,27 +51,29 @@
       autoGrow();
     }}
     onkeydown={(e) => onkeydown?.(e)}
-    style:max-height="{maxHeight}px"
-  ></textarea>
+    style:max-height="{maxHeight}px"></textarea>
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="resize-handle" onmousedown={(e) => {
-    e.preventDefault();
-    if (!textareaEl) return;
-    const startY = e.clientY;
-    const startH = textareaEl.offsetHeight;
-    function onMove(ev: MouseEvent) {
+  <div
+    class="resize-handle"
+    onmousedown={(e) => {
+      e.preventDefault();
       if (!textareaEl) return;
-      const h = Math.max(32, Math.min(maxHeight, startH + ev.clientY - startY));
-      textareaEl.style.height = h + 'px';
-    }
-    function onUp() {
-      manualResize = true;
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-    }
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-  }}>
+      const startY = e.clientY;
+      const startH = textareaEl.offsetHeight;
+      function onMove(ev: MouseEvent) {
+        if (!textareaEl) return;
+        const h = Math.max(32, Math.min(maxHeight, startH + ev.clientY - startY));
+        textareaEl.style.height = h + 'px';
+      }
+      function onUp() {
+        manualResize = true;
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      }
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    }}
+  >
     <svg class="resize-icon" width="16" height="4" viewBox="0 0 16 4" style="pointer-events: none">
       <line x1="1" y1="1" x2="15" y2="1" stroke="currentColor" stroke-width="1" stroke-linecap="round" />
       <line x1="1" y1="3" x2="15" y2="3" stroke="currentColor" stroke-width="1" stroke-linecap="round" />

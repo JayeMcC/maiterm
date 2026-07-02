@@ -45,7 +45,7 @@ if (!BIN) {
 
     it('advertises the new openTab and sendKeysToTab tools', async () => {
       const { tools } = await client.listTools();
-      const names = tools.map(t => t.name);
+      const names = tools.map((t) => t.name);
       expect(names).toContain('openTab');
       expect(names).toContain('sendKeysToTab');
     });
@@ -65,9 +65,7 @@ if (!BIN) {
 
     it('openTab with reuseExisting focuses the existing tab', async () => {
       // First call: create
-      const first = client.parseToolResult<{ tabId: string; action: string }>(
-        await client.callTool('openTab', { name: 'e2e-reuse-test' }),
-      );
+      const first = client.parseToolResult<{ tabId: string; action: string }>(await client.callTool('openTab', { name: 'e2e-reuse-test' }));
       expect(first.action).toBe('created');
       // Second call with reuseExisting: should focus the same tab.
       const second = client.parseToolResult<{ tabId: string; action: string }>(
@@ -81,13 +79,11 @@ if (!BIN) {
     });
 
     it('sendKeysToTab writes into a tab created via openTab', async () => {
-      const opened = client.parseToolResult<{ tabId: string; ptyId: string | null }>(
-        await client.callTool('openTab', { name: 'e2e-sendkeys-test' }),
-      );
+      const opened = client.parseToolResult<{ tabId: string; ptyId: string | null }>(await client.callTool('openTab', { name: 'e2e-sendkeys-test' }));
       expect(opened.tabId).toBeTruthy();
       // The Terminal component spawns the PTY shortly after the tab is
       // created; give it a moment to settle before writing.
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 500));
       const sent = client.parseToolResult<{ success: boolean; bytes: number }>(
         await client.callTool('sendKeysToTab', {
           tabId: opened.tabId,

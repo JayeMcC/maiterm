@@ -13,19 +13,11 @@
 
   let { tooltip, size, active = false, danger = false, children, style, class: extraClass, ...rest }: Props = $props();
 
-  const mergedStyle = $derived(
-    [size ? `--icon-btn-size:${size}px` : '', style ?? ''].filter(Boolean).join(';') || undefined
-  );
+  const mergedStyle = $derived([size ? `--icon-btn-size:${size}px` : '', style ?? ''].filter(Boolean).join(';') || undefined);
 </script>
 
 <Tooltip text={tooltip}>
-  <button
-    class="icon-btn {extraClass ?? ''}"
-    class:active
-    class:danger
-    style={mergedStyle}
-    {...rest}
-  >
+  <button class="icon-btn {extraClass ?? ''}" class:active class:danger style={mergedStyle} {...rest}>
     {@render children()}
   </button>
 </Tooltip>
@@ -46,7 +38,9 @@
     font-size: 1rem;
     line-height: 1;
     cursor: pointer;
-    transition: background 0.1s, color 0.1s;
+    transition:
+      background 0.1s,
+      color 0.1s;
   }
 
   .icon-btn:hover {

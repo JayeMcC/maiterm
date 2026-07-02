@@ -211,6 +211,8 @@ pub fn run() {
             let reload_all_item = MenuItem::with_id(app, "reload_all", "Reload All Windows", true, None::<&str>)?;
             let new_window_item = MenuItem::with_id(app, "new_window", "New Window", true, Some("CmdOrCtrl+N"))?;
             let duplicate_window_item = MenuItem::with_id(app, "duplicate_window", "Duplicate Window", true, Some("CmdOrCtrl+Shift+N"))?;
+            let save_window_preset_item = MenuItem::with_id(app, "save_window_preset", "Save Current Window as Preset…", true, None::<&str>)?;
+            let manage_window_presets_item = MenuItem::with_id(app, "manage_window_presets", "Manage Window Presets…", true, None::<&str>)?;
             let reload_tab_item = MenuItem::with_id(app, "reload_tab", "Reload Current Tab", true, None::<&str>)?;
             let reload_window_item = MenuItem::with_id(app, "reload_window", "Reload Current Window", true, None::<&str>)?;
             let clear_nav_history_item = MenuItem::with_id(app, "clear_nav_history", "Clear Back/Forward History", true, None::<&str>)?;
@@ -269,6 +271,9 @@ pub fn run() {
             let window_menu = SubmenuBuilder::new(app, "Window")
                 .minimize()
                 .close_window()
+                .separator()
+                .item(&save_window_preset_item)
+                .item(&manage_window_presets_item)
                 .separator()
                 .item(&reload_window_item)
                 .item(&clear_nav_history_item)
@@ -361,6 +366,24 @@ pub fn run() {
                                 let _ = win.emit(event_name, ());
                                 break;
                             }
+                        }
+                    }
+                    "save_window_preset" | "manage_window_presets" => {
+                        // Emit to the focused window so its layout handler can
+                        // open the corresponding modal. Same fallback dance as
+                        // new_window / duplicate_window below — if nothing has
+                        // OS focus (menu-only state on macOS), broadcast.
+                        let event_name = event.id().as_ref();
+                        let mut dispatched = false;
+                        for (_, win) in app_handle.webview_windows() {
+                            if win.is_focused().unwrap_or(false) {
+                                let _ = win.emit(event_name, ());
+                                dispatched = true;
+                                break;
+                            }
+                        }
+                        if !dispatched {
+                            let _ = app_handle.emit(event_name, ());
                         }
                     }
                     "new_window" | "duplicate_window" => {
@@ -516,6 +539,11 @@ pub fn run() {
             commands::window::get_window_count,
             commands::window::open_preferences_window,
             commands::window::open_help_window,
+            commands::window_presets::list_window_presets,
+            commands::window_presets::save_window_preset,
+            commands::window_presets::open_window_preset,
+            commands::window_presets::delete_window_preset,
+            commands::window_presets::rename_window_preset,
             commands::editor::read_file,
             commands::editor::read_file_base64,
             commands::editor::write_file,

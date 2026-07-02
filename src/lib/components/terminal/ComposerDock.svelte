@@ -1,5 +1,6 @@
 <script module lang="ts">
   /** Per-tab attachment lists, surviving keyed remounts on tab switch. */
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- module-level cache read/written only from setAttachments/init; the reactive copy lives in per-instance `attachments` $state
   const attachmentsByTab = new Map<string, { path: string; name: string; thumb?: string }[]>();
 </script>
 
@@ -59,8 +60,8 @@
 
   function addAttachments(items: ComposerAttachment[]) {
     // Dedupe by path — re-pasting the same Finder selection shouldn't stack chips.
-    const existing = new Set(attachments.map(a => a.path));
-    setAttachments([...attachments, ...items.filter(a => !existing.has(a.path))]);
+    const existing = new Set(attachments.map((a) => a.path));
+    setAttachments([...attachments, ...items.filter((a) => !existing.has(a.path))]);
   }
 
   function removeAttachment(index: number) {
@@ -178,7 +179,7 @@
     const blob = await dst.convertToBlob({ type: 'image/png' });
     const bytes = new Uint8Array(await blob.arrayBuffer());
     let binary = '';
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]!);
     return `data:image/png;base64,${btoa(binary)}`;
   }
 
@@ -200,7 +201,7 @@
     try {
       const paths = await readClipboardFilePaths();
       if (paths.length > 0) {
-        addAttachments(paths.map(p => ({ path: p, name: basename(p) })));
+        addAttachments(paths.map((p) => ({ path: p, name: basename(p) })));
         return;
       }
       try {
@@ -229,7 +230,7 @@
     // Only divert when the clipboard carries files/images — plain text keeps
     // the default textarea paste (preserves undo stack).
     const cd = e.clipboardData;
-    const hasFile = !!cd && (cd.files.length > 0 || [...cd.items].some(i => i.kind === 'file'));
+    const hasFile = !!cd && (cd.files.length > 0 || [...cd.items].some((i) => i.kind === 'file'));
     if (hasFile) {
       e.preventDefault();
       void pasteIntoComposer();
@@ -246,7 +247,7 @@
     const info = await getPtyInfo(ptyId).catch(() => null);
     const sshCommand = info?.foreground_command;
     if (sshCommand) {
-      const localPaths = attachments.map(a => a.path);
+      const localPaths = attachments.map((a) => a.path);
       const outcome = await uploadWithProgress(sshCommand, localPaths, AGENT_UPLOAD_DIR, { titlePrefix: 'Attachment' });
       if (outcome.status !== 'done') {
         if (outcome.status === 'error') {
@@ -254,7 +255,7 @@
         }
         return null; // abort send, keep draft + chips
       }
-      return attachments.map(a => `${AGENT_UPLOAD_DIR}/${a.name}`).join(' ');
+      return attachments.map((a) => `${AGENT_UPLOAD_DIR}/${a.name}`).join(' ');
     }
     // Send raw, unescaped paths. Composer attachments are file references for
     // the foreground agent (Claude Code et al.), which wants the literal path —
@@ -264,7 +265,7 @@
     // session maiTerm hadn't recognized as Claude (no hooks → backslashes Claude
     // won't un-escape, so a path with spaces never resolves). Raw is correct for
     // the agent case and a no-op for screenshot temp paths (no special chars).
-    return attachments.map(a => a.path).join(' ');
+    return attachments.map((a) => a.path).join(' ');
   }
 
   async function send() {
@@ -348,18 +349,20 @@
     void (async () => {
       unlistenDragDrop = await getCurrentWebview().onDragDropEvent((event) => {
         const { type } = event.payload;
-        if (!open || !shellEl?.isConnected) { isDragOver = false; return; }
+        if (!open || !shellEl?.isConnected) {
+          isDragOver = false;
+          return;
+        }
         if (type === 'over') {
           const { position } = event.payload;
           const rect = shellEl.getBoundingClientRect();
-          isDragOver = position.x >= rect.left && position.x <= rect.right &&
-                       position.y >= rect.top && position.y <= rect.bottom;
+          isDragOver = position.x >= rect.left && position.x <= rect.right && position.y >= rect.top && position.y <= rect.bottom;
         } else if (type === 'drop') {
           const wasOver = isDragOver;
           isDragOver = false;
           if (!wasOver) return;
           const { paths } = event.payload;
-          addAttachments(paths.map(p => ({ path: p, name: basename(p) })));
+          addAttachments(paths.map((p) => ({ path: p, name: basename(p) })));
           textareaEl?.focus();
         } else {
           isDragOver = false;
@@ -386,8 +389,8 @@
               <img class="chip-thumb" src={att.thumb} alt={att.name} />
             {:else}
               <svg class="chip-icon" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round">
-                <path d="M4 1.5h5.5L13 5v9.5H4z"/>
-                <path d="M9.5 1.5V5H13"/>
+                <path d="M4 1.5h5.5L13 5v9.5H4z" />
+                <path d="M9.5 1.5V5H13" />
               </svg>
             {/if}
             <span class="chip-name">{att.name}</span>
@@ -408,18 +411,23 @@
         spellcheck="false"
         oninput={onInput}
         onkeydown={onKeydown}
-        onpaste={onPaste}
-      ></textarea>
+        onpaste={onPaste}></textarea>
       <div class="composer-actions">
         <IconButton tooltip="Collapse composer ({modLabel}+Shift+C)" size={26} onclick={toggle} aria-label="Collapse composer">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-            <path d="M4 6.5 8 10.5 12 6.5"/>
+            <path d="M4 6.5 8 10.5 12 6.5" />
           </svg>
         </IconButton>
         <IconButton tooltip="Send ({modLabel}+Enter)" size={26} onclick={send} disabled={sending} aria-label="Send">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M1.7 8 1 2.4c-.1-.6.5-1 1-.8l12.6 5.7c.5.2.5 1 0 1.2L2 14.4c-.5.2-1.1-.2-1-.8L1.7 8Zm0 0h6.6"
-              fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/>
+            <path
+              d="M1.7 8 1 2.4c-.1-.6.5-1 1-.8l12.6 5.7c.5.2.5 1 0 1.2L2 14.4c-.5.2-1.1-.2-1-.8L1.7 8Zm0 0h6.6"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.3"
+              stroke-linejoin="round"
+              stroke-linecap="round"
+            />
           </svg>
         </IconButton>
       </div>
@@ -431,8 +439,8 @@
     <Tooltip text="Open composer ({modLabel}+Shift+C)">
       <button class="composer-handle" onclick={toggle} aria-label="Open composer">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="1.5" y="3.5" width="13" height="9" rx="1.5"/>
-          <path d="M4.5 9.5h7"/>
+          <rect x="1.5" y="3.5" width="13" height="9" rx="1.5" />
+          <path d="M4.5 9.5h7" />
         </svg>
       </button>
     </Tooltip>
@@ -514,7 +522,9 @@
     border-radius: 4px;
     font-size: 1rem;
     line-height: 1;
-    transition: background 0.1s, color 0.1s;
+    transition:
+      background 0.1s,
+      color 0.1s;
   }
 
   .chip-remove:hover {
@@ -573,7 +583,10 @@
     border: 1px solid var(--bg-light);
     border-radius: 6px;
     opacity: 0.45;
-    transition: opacity 0.15s, color 0.15s, background 0.15s;
+    transition:
+      opacity 0.15s,
+      color 0.15s,
+      background 0.15s;
   }
 
   .composer-handle:hover {

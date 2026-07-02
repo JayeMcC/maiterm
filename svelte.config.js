@@ -6,12 +6,12 @@ const config = {
   preprocess: vitePreprocess(),
   kit: {
     adapter: adapter({
-      fallback: 'index.html'
+      fallback: 'index.html',
     }),
     paths: {
-      relative: false
-    }
-  }
+      relative: false,
+    },
+  },
 };
 
 export default config;

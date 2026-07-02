@@ -27,12 +27,7 @@ export type UploadOutcome = { status: 'done' | 'cancelled' | 'error'; error?: st
  * handles success (e.g. writing the uploaded paths to the terminal) and decides
  * how to surface errors. Cancellation is surfaced by the helper itself.
  */
-export async function uploadWithProgress(
-  sshCommand: string,
-  paths: string[],
-  remoteDir: string,
-  opts?: { titlePrefix?: string },
-): Promise<UploadOutcome> {
+export async function uploadWithProgress(sshCommand: string, paths: string[], remoteDir: string, opts?: { titlePrefix?: string }): Promise<UploadOutcome> {
   const uploadId = crypto.randomUUID();
   const count = paths.length;
   const label = opts?.titlePrefix ?? 'SCP Upload';

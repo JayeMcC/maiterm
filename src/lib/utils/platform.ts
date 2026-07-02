@@ -5,8 +5,7 @@
  * On Linux / Windows it is Ctrl (ctrlKey).
  */
 
-const _isMac =
-  typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+const _isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
 /** True when running on macOS (or iOS, unlikely for Tauri). */
 export function isMac(): boolean {

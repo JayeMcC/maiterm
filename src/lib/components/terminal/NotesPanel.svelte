@@ -23,7 +23,8 @@
 
   // Scope is persisted in preferences so it survives app restarts
   const scope = $derived(preferencesStore.notesScope);
-  // svelte-ignore state_referenced_locally -- props used as initial values; local state is source of truth after mount
+  // Props used as initial values; local state is source of truth after mount.
+  // svelte-ignore state_referenced_locally
   let value = $state(notes ?? '');
   // svelte-ignore state_referenced_locally
   let mode = $state<'source' | 'render'>((notesMode ?? 'source') as 'source' | 'render');
@@ -39,10 +40,10 @@
   let confirmingTabClear = $state(false);
 
   const textareaStyle = $derived(
-    `font-family: '${preferencesStore.fontFamily}', monospace; font-size: ${preferencesStore.fontSize}px; white-space: ${preferencesStore.notesWordWrap ? 'pre-wrap' : 'pre'}; overflow-x: ${preferencesStore.notesWordWrap ? 'hidden' : 'auto'};`
+    `font-family: '${preferencesStore.fontFamily}', monospace; font-size: ${preferencesStore.fontSize}px; white-space: ${preferencesStore.notesWordWrap ? 'pre-wrap' : 'pre'}; overflow-x: ${preferencesStore.notesWordWrap ? 'hidden' : 'auto'};`,
   );
   const renderStyle = $derived(
-    `font-family: '${preferencesStore.notesFontFamily}', monospace; font-size: ${preferencesStore.notesFontSize}px; word-wrap: ${preferencesStore.notesWordWrap ? 'break-word' : 'normal'};`
+    `font-family: '${preferencesStore.notesFontFamily}', monospace; font-size: ${preferencesStore.notesFontSize}px; word-wrap: ${preferencesStore.notesWordWrap ? 'break-word' : 'normal'};`,
   );
 
   // Notes-local marked instance — the custom renderer must not leak into
@@ -50,14 +51,14 @@
   const md = new Marked();
   const renderer = new Renderer();
   let checkboxIndex = 0;
-  renderer.checkbox = function({ checked }) {
+  renderer.checkbox = function ({ checked }) {
     const i = checkboxIndex++;
     return `<input type="checkbox" data-index="${i}"${checked ? ' checked=""' : ''}>`;
   };
   // Tag table cells with table/row/col indices so they can be edited in place
   // (mapped back to source byte ranges by scanTables). Row 0 is the header.
   let tableIndex = 0;
-  renderer.table = function(token: Tokens.Table) {
+  renderer.table = function (token: Tokens.Table) {
     const t = tableIndex++;
     const cellHtml = (cell: Tokens.TableCell, r: number, c: number) => {
       const content = this.parser.parseInline(cell.tokens);
@@ -66,12 +67,16 @@
       return `<${type}${align} data-mdt="${t}" data-mdr="${r}" data-mdc="${c}">${content}</${type}>\n`;
     };
     let header = '<tr>\n';
-    token.header.forEach((cell, c) => { header += cellHtml(cell, 0, c); });
+    token.header.forEach((cell, c) => {
+      header += cellHtml(cell, 0, c);
+    });
     header += '</tr>\n';
     let body = '';
     token.rows.forEach((row, r) => {
       body += '<tr>\n';
-      row.forEach((cell, c) => { body += cellHtml(cell, r + 1, c); });
+      row.forEach((cell, c) => {
+        body += cellHtml(cell, r + 1, c);
+      });
       body += '</tr>\n';
     });
     if (body) body = `<tbody>${body}</tbody>`;
@@ -235,9 +240,7 @@
   function handleRenderClick(e: MouseEvent) {
     const target = e.target as HTMLElement;
 
-    const checkbox = target instanceof HTMLInputElement && target.type === 'checkbox'
-      ? target
-      : target.closest('li')?.querySelector('input[type="checkbox"]') as HTMLInputElement | null;
+    const checkbox = target instanceof HTMLInputElement && target.type === 'checkbox' ? target : (target.closest('li')?.querySelector('input[type="checkbox"]') as HTMLInputElement | null);
     if (checkbox?.dataset.index != null) {
       e.preventDefault();
       const idx = parseInt(checkbox.dataset.index, 10);
@@ -290,9 +293,7 @@
     // A pending commit (from focusout or above) may re-render the table —
     // re-resolve the clicked cell in the fresh DOM before editing it
     await tick();
-    const el = renderEl?.querySelector<HTMLElement>(
-      `td[data-mdt="${mdt}"][data-mdr="${mdr}"][data-mdc="${mdc}"], th[data-mdt="${mdt}"][data-mdr="${mdr}"][data-mdc="${mdc}"]`
-    );
+    const el = renderEl?.querySelector<HTMLElement>(`td[data-mdt="${mdt}"][data-mdr="${mdr}"][data-mdc="${mdc}"], th[data-mdt="${mdt}"][data-mdr="${mdr}"][data-mdc="${mdc}"]`);
     if (el) startCellEdit(el);
   }
 
@@ -311,10 +312,7 @@
     // wrong cell being rewritten.
     const tableDom = el.closest('table');
     if (!tableDom) return;
-    if (
-      tableDom.querySelectorAll('thead th').length !== table.rows[0].length ||
-      tableDom.querySelectorAll('tbody tr').length !== table.rows.length - 1
-    ) return;
+    if (tableDom.querySelectorAll('thead th').length !== table.rows[0]!.length || tableDom.querySelectorAll('tbody tr').length !== table.rows.length - 1) return;
 
     const prevHtml = el.innerHTML;
     el.classList.add('cell-editing');
@@ -364,9 +362,7 @@
     const target = adjacentCell(tables[ec.t], ec.r, ec.c, move);
     if (!target) return;
     await tick();
-    const el = renderEl?.querySelector<HTMLElement>(
-      `[data-mdt="${ec.t}"][data-mdr="${target.r}"][data-mdc="${target.c}"]`
-    );
+    const el = renderEl?.querySelector<HTMLElement>(`[data-mdt="${ec.t}"][data-mdr="${target.r}"][data-mdc="${target.c}"]`);
     if (el) startCellEdit(el);
   }
 
@@ -374,14 +370,14 @@
     if (!table) return null;
     const rows = table.rows;
     if (dir === 'next') {
-      if (c + 1 < rows[r].length) return { r, c: c + 1 };
+      if (c + 1 < rows[r]!.length) return { r, c: c + 1 };
       for (let nr = r + 1; nr < rows.length; nr++) {
-        if (rows[nr].length) return { r: nr, c: 0 };
+        if (rows[nr]!.length) return { r: nr, c: 0 };
       }
     } else {
       if (c > 0) return { r, c: c - 1 };
       for (let nr = r - 1; nr >= 0; nr--) {
-        if (rows[nr].length) return { r: nr, c: rows[nr].length - 1 };
+        if (rows[nr]!.length) return { r: nr, c: rows[nr]!.length - 1 };
       }
     }
     return null;
@@ -484,7 +480,7 @@
   $effect(() => {
     if (scope === 'workspace') {
       // If editing a note that was deleted, go back to list
-      if (editingNoteId && !workspaceNotes.find(n => n.id === editingNoteId)) {
+      if (editingNoteId && !workspaceNotes.find((n) => n.id === editingNoteId)) {
         editingNoteId = null;
         wsView = 'list';
       }
@@ -493,38 +489,20 @@
 
   // Sort workspace notes by most recent first
   const sortedWorkspaceNotes = $derived.by(() => {
-    return [...workspaceNotes].sort((a, b) =>
-      new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-    );
+    return [...workspaceNotes].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   });
 
   const showWsList = $derived(scope === 'workspace' && wsView === 'list');
   const showWsEditor = $derived(scope === 'workspace' && wsView === 'editor');
-
 </script>
 
 <div class="notes-panel" bind:this={panelEl} style:width="{preferencesStore.notesWidth}px" style:min-width="{preferencesStore.notesWidth}px">
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="resize-handle"
-    onpointerdown={handleResizePointerDown}
-    onpointermove={handleResizePointerMove}
-    onpointerup={handleResizePointerUp}
-  ></div>
+  <div class="resize-handle" onpointerdown={handleResizePointerDown} onpointermove={handleResizePointerMove} onpointerup={handleResizePointerUp}></div>
   <div class="notes-header">
     <div class="scope-toggle">
-      <button
-        class="scope-btn"
-        class:active={scope === 'tab'}
-        onclick={() => preferencesStore.setNotesScope('tab')}
-        title="Tab notes"
-      >Tab</button>
-      <button
-        class="scope-btn"
-        class:active={scope === 'workspace'}
-        onclick={() => preferencesStore.setNotesScope('workspace')}
-        title="Workspace notes"
-      >Workspace</button>
+      <button class="scope-btn" class:active={scope === 'tab'} onclick={() => preferencesStore.setNotesScope('tab')} title="Tab notes">Tab</button>
+      <button class="scope-btn" class:active={scope === 'workspace'} onclick={() => preferencesStore.setNotesScope('workspace')} title="Workspace notes">Workspace</button>
     </div>
     <div class="header-actions">
       {#if showWsEditor}
@@ -542,11 +520,7 @@
       {#if showWsList}
         <!-- No mode toggle in list view -->
       {:else}
-        <IconButton
-          tooltip={currentMode() === 'source' ? 'Preview' : 'Edit'}
-          active={currentMode() === 'render'}
-          onclick={toggleMode}
-        >
+        <IconButton tooltip={currentMode() === 'source' ? 'Preview' : 'Edit'} active={currentMode() === 'render'} onclick={toggleMode}>
           {#if currentMode() === 'source'}
             <Icon name="eye" />
           {:else}
@@ -555,24 +529,17 @@
         </IconButton>
       {/if}
       {#if scope === 'tab' && value.trim()}
-        <IconButton
-          tooltip="Move to workspace notes"
-          onclick={moveTabNoteToWorkspace}
-        >
+        <IconButton tooltip="Move to workspace notes" onclick={moveTabNoteToWorkspace}>
           <Icon name="arrow-right" size={14} />
         </IconButton>
         {#if confirmingTabClear}
           <span class="delete-confirm">
             Clear?
             <button class="confirm-yes" onclick={clearTabNotes}>Yes</button>
-            <button class="confirm-no" onclick={() => confirmingTabClear = false}>No</button>
+            <button class="confirm-no" onclick={() => (confirmingTabClear = false)}>No</button>
           </span>
         {:else}
-          <IconButton
-            tooltip="Clear notes"
-            danger
-            onclick={() => confirmingTabClear = true}
-          >
+          <IconButton tooltip="Clear notes" danger onclick={() => (confirmingTabClear = true)}>
             <Icon name="trash" />
           </IconButton>
         {/if}
@@ -586,8 +553,8 @@
           if (scope === 'tab') save();
           else if (editingNoteId) saveWorkspaceNote();
           onclose();
-        }}
-      >&times;</IconButton>
+        }}>&times;</IconButton
+      >
     </div>
   </div>
 
@@ -595,24 +562,19 @@
     {#if mode === 'source'}
       <textarea
         class="notes-textarea"
-        bind:value={value}
+        bind:value
         bind:this={textareaEl}
         onkeydown={handleKeydown}
         placeholder="Jot down commands, notes, connection details..."
         spellcheck="false"
-        style={textareaStyle}
-      ></textarea>
+        style={textareaStyle}></textarea>
     {:else}
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div
-        class="notes-render"
-        bind:this={renderEl}
-        onclick={handleRenderClick}
-        onkeydown={handleRenderKeydown}
-        onfocusout={handleRenderFocusOut}
-        style={renderStyle}
-      >{@html renderedHtml}</div>
+      <div class="notes-render" bind:this={renderEl} onclick={handleRenderClick} onkeydown={handleRenderKeydown} onfocusout={handleRenderFocusOut} style={renderStyle}>
+        <!-- renderedHtml is the user's own local notes rendered through markdown-it; no external HTML enters -->
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+        {@html renderedHtml}
+      </div>
     {/if}
   {:else if showWsList}
     <div class="ws-notes-list">
@@ -628,10 +590,10 @@
               <span class="delete-confirm">
                 Delete?
                 <button class="confirm-yes" onclick={() => confirmDeleteNote(note.id)}>Yes</button>
-                <button class="confirm-no" onclick={() => deletingNoteId = null}>No</button>
+                <button class="confirm-no" onclick={() => (deletingNoteId = null)}>No</button>
               </span>
             {:else}
-              <IconButton tooltip="Delete note" danger onclick={() => deletingNoteId = note.id} style="font-size: 1.077rem">&times;</IconButton>
+              <IconButton tooltip="Delete note" danger onclick={() => (deletingNoteId = note.id)} style="font-size: 1.077rem">&times;</IconButton>
             {/if}
           </div>
         </div>
@@ -639,25 +601,14 @@
     </div>
   {:else if showWsEditor}
     {#if wsMode === 'source'}
-      <textarea
-        class="notes-textarea"
-        bind:value={wsValue}
-        onkeydown={handleKeydown}
-        placeholder="Write workspace notes..."
-        spellcheck="false"
-        style={textareaStyle}
-      ></textarea>
+      <textarea class="notes-textarea" bind:value={wsValue} onkeydown={handleKeydown} placeholder="Write workspace notes..." spellcheck="false" style={textareaStyle}></textarea>
     {:else}
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div
-        class="notes-render"
-        bind:this={renderEl}
-        onclick={handleRenderClick}
-        onkeydown={handleRenderKeydown}
-        onfocusout={handleRenderFocusOut}
-        style={renderStyle}
-      >{@html renderedHtml}</div>
+      <div class="notes-render" bind:this={renderEl} onclick={handleRenderClick} onkeydown={handleRenderKeydown} onfocusout={handleRenderFocusOut} style={renderStyle}>
+        <!-- renderedHtml is the user's own local notes rendered through markdown-it; no external HTML enters -->
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+        {@html renderedHtml}
+      </div>
     {/if}
   {/if}
 </div>
@@ -710,7 +661,9 @@
     border-radius: 3px;
     color: var(--fg-dim);
     background: transparent;
-    transition: background 0.1s, color 0.1s;
+    transition:
+      background 0.1s,
+      color 0.1s;
     cursor: pointer;
     border: none;
   }
@@ -729,7 +682,6 @@
     align-items: center;
     gap: 4px;
   }
-
 
   .notes-textarea {
     flex: 1;
@@ -772,12 +724,20 @@
     line-height: 1.3;
   }
 
-  .notes-render :global(h1) { font-size: 1.3em; }
-  .notes-render :global(h2) { font-size: 1.15em; }
-  .notes-render :global(h3) { font-size: 1.05em; }
+  .notes-render :global(h1) {
+    font-size: 1.3em;
+  }
+  .notes-render :global(h2) {
+    font-size: 1.15em;
+  }
+  .notes-render :global(h3) {
+    font-size: 1.05em;
+  }
   .notes-render :global(h4),
   .notes-render :global(h5),
-  .notes-render :global(h6) { font-size: 1em; }
+  .notes-render :global(h6) {
+    font-size: 1em;
+  }
 
   .notes-render :global(p) {
     margin: 0 0 0.6em;
@@ -814,13 +774,13 @@
     margin-bottom: 0.2em;
   }
 
-  .notes-render :global(li:has(> input[type="checkbox"])) {
+  .notes-render :global(li:has(> input[type='checkbox'])) {
     list-style: none;
     margin-left: -1.5em;
     cursor: pointer;
   }
 
-  .notes-render :global(input[type="checkbox"]) {
+  .notes-render :global(input[type='checkbox']) {
     appearance: none;
     width: 1em;
     height: 1em;
@@ -834,12 +794,12 @@
     cursor: pointer;
   }
 
-  .notes-render :global(input[type="checkbox"]:checked) {
+  .notes-render :global(input[type='checkbox']:checked) {
     background: var(--accent);
     border-color: var(--accent);
   }
 
-  .notes-render :global(input[type="checkbox"]:checked::after) {
+  .notes-render :global(input[type='checkbox']:checked::after) {
     content: '';
     position: absolute;
     left: 50%;
@@ -974,7 +934,6 @@
     flex-shrink: 0;
   }
 
-
   .delete-confirm {
     font-size: 0.846rem;
     color: var(--fg-dim);
@@ -983,7 +942,8 @@
     gap: 4px;
   }
 
-  .confirm-yes, .confirm-no {
+  .confirm-yes,
+  .confirm-no {
     font-size: 0.846rem;
     padding: 1px 6px;
     border-radius: 3px;
@@ -1000,5 +960,4 @@
     background: var(--bg-light);
     color: var(--fg);
   }
-
 </style>

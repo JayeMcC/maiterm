@@ -1,6 +1,7 @@
 import type { Terminal } from '@xterm/xterm';
-import type { SplitDirection, SplitNode, Tab, Pane, Workspace, WorkspaceNote, EditorFileInfo, DiffContext } from '$lib/tauri/types';
+import type { SplitDirection, SplitNode, Tab, Workspace, WorkspaceNote, EditorFileInfo, DiffContext } from '$lib/tauri/types';
 import type { AgentRuntime } from '$lib/agents/types';
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import * as commands from '$lib/tauri/commands';
 import { terminalsStore } from '$lib/stores/terminals.svelte';
 import { preferencesStore } from '$lib/stores/preferences.svelte';
@@ -50,10 +51,7 @@ function updateRatioInTree(node: SplitNode, splitId: string, ratio: number): Spl
   if (node.id === splitId) return { ...node, ratio };
   return {
     ...node,
-    children: [
-      updateRatioInTree(node.children[0], splitId, ratio),
-      updateRatioInTree(node.children[1], splitId, ratio),
-    ],
+    children: [updateRatioInTree(node.children[0], splitId, ratio), updateRatioInTree(node.children[1], splitId, ratio)],
   };
 }
 
@@ -73,7 +71,7 @@ function nextDuplicateName(sourceName: string, existingNames: string[]): string 
     } else {
       const m = name.match(/^(\d+)\s+(.+)$/);
       if (m && m[2] === baseName) {
-        maxIndex = Math.max(maxIndex, parseInt(m[1], 10));
+        maxIndex = Math.max(maxIndex, parseInt(m[1]!, 10));
       }
     }
   }
@@ -84,7 +82,7 @@ function nextDuplicateName(sourceName: string, existingNames: string[]): string 
 
 /** Collect all tab names across all panes in a workspace. */
 function allTabNames(ws: Workspace): string[] {
-  return ws.panes.flatMap(p => p.tabs.map(t => t.name));
+  return ws.panes.flatMap((p) => p.tabs.map((t) => t.name));
 }
 
 /**
@@ -96,18 +94,21 @@ function pickNextActiveTab(tabs: Tab[], closedIndex: number): string | null {
   if (tabs.length === 0) return null;
   if (preferencesStore.groupActiveTabs) {
     // Prefer live (non-suspended) terminal tabs, searching outward from closedIndex
-    const liveTabs = tabs.filter(t => {
+    const liveTabs = tabs.filter((t) => {
       const isTerminal = t.tab_type === 'terminal' || !t.tab_type;
       return !isTerminal || terminalsStore.get(t.id);
     });
     if (liveTabs.length > 0) {
       // Pick the live tab closest to the closed position
-      let best = liveTabs[0];
+      let best = liveTabs[0]!;
       let bestDist = Infinity;
       for (const t of liveTabs) {
         const idx = tabs.indexOf(t);
         const dist = Math.abs(idx - closedIndex);
-        if (dist < bestDist) { bestDist = dist; best = t; }
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = t;
+        }
       }
       return best.id;
     }
@@ -119,7 +120,6 @@ function pickNextActiveTab(tabs: Tab[], closedIndex: number): string | null {
 
 const RECENT_WINDOW_MS = 30 * 60 * 1000; // 30 minutes
 
-
 function createWorkspacesStore() {
   let windowId = $state<string>('');
   let windowLabel = $state<string>('');
@@ -127,12 +127,17 @@ function createWorkspacesStore() {
   let activeWorkspaceId = $state<string | null>(null);
   let sidebarWidth = $state(SIDEBAR_DEFAULT_WIDTH);
   let sidebarCollapsed = $state(false);
-  let lastSwitchedAt = $state<Map<string, number>>(new Map());
-  // Frontend-only: set of tab IDs with notes panel visible
-  let notesVisible = $state<Set<string>>(new Set());
+  // Reactive: recentWorkspaces derived and template reads (WorkspaceSidebar, +page)
+  // depend on `.get()`/`.has()` re-running on mutation.
+  const lastSwitchedAt = new SvelteMap<string, number>();
+  // Frontend-only: set of tab IDs with notes panel visible. Reactive: SplitPane
+  // template reads `isNotesVisible(tabId)` which calls `.has()`.
+  const notesVisible = new SvelteSet<string>();
   // Workspace IDs currently being suspended — guards pty-close from deleting tabs
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative guard, read only from event handlers (TerminalPane pty-close)
   const suspendingWorkspaceIds = new Set<string>();
   // Tab IDs currently being suspended — guards pty-close from deleting the tab
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative guard, read only from event handlers
   const suspendingTabIds = new Set<string>();
   // Tick counter to force re-evaluation of recentWorkspaces when entries expire
   let _recentTick = $state(0);
@@ -140,56 +145,77 @@ function createWorkspacesStore() {
 
   /** Find a tab by workspace/pane/tab IDs (helper for direct mutations). */
   function findTab(workspaceId: string, paneId: string, tabId: string) {
-    const ws = workspaces.find(w => w.id === workspaceId);
-    const pane = ws?.panes.find(p => p.id === paneId);
-    const tab = pane?.tabs.find(t => t.id === tabId);
+    const ws = workspaces.find((w) => w.id === workspaceId);
+    const pane = ws?.panes.find((p) => p.id === paneId);
+    const tab = pane?.tabs.find((t) => t.id === tabId);
     return { ws, pane, tab };
   }
 
   const recentWorkspaces = $derived.by(() => {
     void _recentTick; // subscribe to tick for expiry re-evaluation
     const now = Date.now();
-    return workspaces.filter(w => {
+    return workspaces.filter((w) => {
       if (w.id === activeWorkspaceId) return false;
       if (w.suspended) return false;
       const ts = lastSwitchedAt.get(w.id);
-      return ts != null && (now - ts) < RECENT_WINDOW_MS;
+      return ts != null && now - ts < RECENT_WINDOW_MS;
     });
   });
 
-  const activeWorkspace = $derived(
-    workspaces.find(w => w.id === activeWorkspaceId && !w.suspended) ?? null
-  );
+  const activeWorkspace = $derived(workspaces.find((w) => w.id === activeWorkspaceId && !w.suspended) ?? null);
 
   const activePane = $derived.by(() => {
     if (!activeWorkspace) return null;
-    return activeWorkspace.panes.find(p => p.id === activeWorkspace.active_pane_id) ?? null;
+    return activeWorkspace.panes.find((p) => p.id === activeWorkspace.active_pane_id) ?? null;
   });
 
   const activeTab = $derived.by(() => {
     if (!activePane) return null;
-    return activePane.tabs.find(t => t.id === activePane.active_tab_id) ?? null;
+    return activePane.tabs.find((t) => t.id === activePane.active_tab_id) ?? null;
   });
 
   return {
-    get windowId() { return windowId; },
-    get windowLabel() { return windowLabel; },
-    get workspaces() { return workspaces; },
-    get activeWorkspaceId() { return activeWorkspaceId; },
-    get activeWorkspace() { return activeWorkspace; },
-    get activePane() { return activePane; },
-    get activeTab() { return activeTab; },
-    get sidebarWidth() { return sidebarWidth; },
-    get sidebarCollapsed() { return sidebarCollapsed; },
-    get recentWorkspaces() { return recentWorkspaces; },
-    get lastSwitchedAt() { return lastSwitchedAt; },
+    get windowId() {
+      return windowId;
+    },
+    get windowLabel() {
+      return windowLabel;
+    },
+    get workspaces() {
+      return workspaces;
+    },
+    get activeWorkspaceId() {
+      return activeWorkspaceId;
+    },
+    get activeWorkspace() {
+      return activeWorkspace;
+    },
+    get activePane() {
+      return activePane;
+    },
+    get activeTab() {
+      return activeTab;
+    },
+    get sidebarWidth() {
+      return sidebarWidth;
+    },
+    get sidebarCollapsed() {
+      return sidebarCollapsed;
+    },
+    get recentWorkspaces() {
+      return recentWorkspaces;
+    },
+    get lastSwitchedAt() {
+      return lastSwitchedAt;
+    },
 
     /** Detected agent runtime for a tab, defaulting to 'claude' when none is set. */
     getTabRuntime(tabId: string): AgentRuntime {
-      for (const ws of workspaces) for (const pane of ws.panes) {
-        const t = pane.tabs.find(x => x.id === tabId);
-        if (t) return t.runtime ?? 'claude';
-      }
+      for (const ws of workspaces)
+        for (const pane of ws.panes) {
+          const t = pane.tabs.find((x) => x.id === tabId);
+          if (t) return t.runtime ?? 'claude';
+        }
       return 'claude';
     },
 
@@ -199,20 +225,25 @@ function createWorkspacesStore() {
      * getTabRuntime reflects the change live, without a reload.
      */
     setTabRuntimeLocal(tabId: string, runtime: AgentRuntime) {
-      for (const ws of workspaces) for (const pane of ws.panes) {
-        const t = pane.tabs.find(x => x.id === tabId);
-        if (t) {
-          if (t.runtime !== runtime) t.runtime = runtime;
-          return;
+      for (const ws of workspaces)
+        for (const pane of ws.panes) {
+          const t = pane.tabs.find((x) => x.id === tabId);
+          if (t) {
+            if (t.runtime !== runtime) t.runtime = runtime;
+            return;
+          }
         }
-      }
     },
 
     /** True while a workspace is being suspended (PTYs being killed). */
-    isWorkspaceSuspending(workspaceId: string) { return suspendingWorkspaceIds.has(workspaceId); },
+    isWorkspaceSuspending(workspaceId: string) {
+      return suspendingWorkspaceIds.has(workspaceId);
+    },
 
     /** True while a tab is being suspended (PTY being killed intentionally). */
-    isTabSuspending(tabId: string) { return suspendingTabIds.has(tabId); },
+    isTabSuspending(tabId: string) {
+      return suspendingTabIds.has(tabId);
+    },
 
     reset() {
       workspaces = [];
@@ -229,15 +260,14 @@ function createWorkspacesStore() {
       sidebarCollapsed = data.sidebar_collapsed ?? false;
 
       // Seed notesVisible from persisted notes_open state
-      const seeded = new Set<string>();
+      notesVisible.clear();
       for (const ws of data.workspaces) {
         for (const pane of ws.panes) {
           for (const tab of pane.tabs) {
-            if (tab.notes_open) seeded.add(tab.id);
+            if (tab.notes_open) notesVisible.add(tab.id);
           }
         }
       }
-      notesVisible = seeded;
 
       // Migration: update old auto-resume commands and backfill missing context
       const OLD_RESUME_COMMANDS = [
@@ -247,10 +277,7 @@ function createWorkspacesStore() {
       ];
       // Skeletons of old templates that may have had %variables interpolated
       // to literal values before being saved (older versions had this bug).
-      const OLD_RESUME_REGEXES = [
-        /^if \[ -n ['"].*['"] \]; then claude --resume .*; elif \[ -n ['"].*['"] \]; then (eval )?.*; else claude --continue; fi$/,
-        /^claude --resume \S+ "\/aiterm init"$/,
-      ];
+      const OLD_RESUME_REGEXES = [/^if \[ -n ['"].*['"] \]; then claude --resume .*; elif \[ -n ['"].*['"] \]; then (eval )?.*; else claude --continue; fi$/, /^claude --resume \S+ "\/aiterm init"$/];
       for (const ws of workspaces) {
         for (const pane of ws.panes) {
           for (const tab of pane.tabs) {
@@ -259,8 +286,7 @@ function createWorkspacesStore() {
             // Update old auto-resume command templates (including legacy
             // interpolated forms) to the current version.
             const cmd = tab.auto_resume_command;
-            if (cmd && cmd !== CLAUDE_RESUME_COMMAND
-              && (OLD_RESUME_COMMANDS.includes(cmd) || OLD_RESUME_REGEXES.some(re => re.test(cmd)))) {
+            if (cmd && cmd !== CLAUDE_RESUME_COMMAND && (OLD_RESUME_COMMANDS.includes(cmd) || OLD_RESUME_REGEXES.some((re) => re.test(cmd)))) {
               tab.auto_resume_command = CLAUDE_RESUME_COMMAND;
               tab.auto_resume_remembered_command = CLAUDE_RESUME_COMMAND;
               migrated = true;
@@ -278,11 +304,7 @@ function createWorkspacesStore() {
             }
 
             if (migrated) {
-              await commands.setTabAutoResumeContext(
-                ws.id, pane.id, tab.id,
-                tab.auto_resume_cwd, tab.auto_resume_ssh_command,
-                tab.auto_resume_remote_cwd, tab.auto_resume_command,
-              );
+              await commands.setTabAutoResumeContext(ws.id, pane.id, tab.id, tab.auto_resume_cwd, tab.auto_resume_ssh_command, tab.auto_resume_remote_cwd, tab.auto_resume_command);
             }
           }
         }
@@ -304,8 +326,7 @@ function createWorkspacesStore() {
         if (ws.id === activeWorkspaceId) continue;
         // Window reload: this workspace still has a live PTY — its tab will
         // reattach. Never leave a workspace that's actually running dimmed.
-        const hasLivePty = ws.panes.some(p => p.tabs.some(t =>
-          (t.tab_type === 'terminal' || !t.tab_type) && t.pty_id && livePtySet.has(t.pty_id)));
+        const hasLivePty = ws.panes.some((p) => p.tabs.some((t) => (t.tab_type === 'terminal' || !t.tab_type) && t.pty_id && livePtySet.has(t.pty_id)));
         if (restoreMode === 'all' || hasLivePty) {
           // Full restore (or a still-running reload): clear any persisted
           // suspension so it's not dimmed — its active tab is respawned (or
@@ -332,7 +353,9 @@ function createWorkspacesStore() {
 
       // Start periodic tick to expire recent workspaces
       if (!_recentTimer) {
-        _recentTimer = setInterval(() => { _recentTick++; }, 60_000);
+        _recentTimer = setInterval(() => {
+          _recentTick++;
+        }, 60_000);
       }
 
       // Keep local tab.last_cwd in sync with live OSC state and persist to backend
@@ -341,7 +364,7 @@ function createWorkspacesStore() {
         if (!resolvedCwd) return;
         for (const ws of workspaces) {
           for (const p of ws.panes) {
-            const tab = p.tabs.find(t => t.id === tabId);
+            const tab = p.tabs.find((t) => t.id === tabId);
             if (tab && tab.last_cwd !== resolvedCwd) {
               tab.last_cwd = resolvedCwd;
               commands.setTabLastCwd(ws.id, p.id, tabId, resolvedCwd).catch(() => {});
@@ -368,32 +391,28 @@ function createWorkspacesStore() {
     async createWorkspace(name: string) {
       const workspace = await commands.createWorkspace(name);
       // Insert after the currently active workspace, or append if none active
-      const activeIdx = workspaces.findIndex(w => w.id === activeWorkspaceId);
+      const activeIdx = workspaces.findIndex((w) => w.id === activeWorkspaceId);
       workspaces.splice(activeIdx + 1, 0, workspace);
       activeWorkspaceId = workspace.id;
-      await commands.reorderWorkspaces(workspaces.map(w => w.id));
+      await commands.reorderWorkspaces(workspaces.map((w) => w.id));
       return workspace;
     },
 
     async deleteWorkspace(workspaceId: string) {
-      const oldIndex = workspaces.findIndex(w => w.id === workspaceId);
+      const oldIndex = workspaces.findIndex((w) => w.id === workspaceId);
       await commands.deleteWorkspace(workspaceId);
       workspaces.splice(oldIndex, 1);
-      if (lastSwitchedAt.has(workspaceId)) {
-        const updated = new Map(lastSwitchedAt);
-        updated.delete(workspaceId);
-        lastSwitchedAt = updated;
-      }
+      lastSwitchedAt.delete(workspaceId);
       if (activeWorkspaceId === workspaceId) {
         // Activate adjacent: prefer previous, fall back to next
         const adjacentIndex = Math.min(oldIndex, workspaces.length - 1);
         activeWorkspaceId = workspaces[adjacentIndex]?.id ?? null;
       }
-      import('$lib/stores/navHistory.svelte').then(m => m.navHistoryStore.removeWorkspace(workspaceId));
+      import('$lib/stores/navHistory.svelte').then((m) => m.navHistoryStore.removeWorkspace(workspaceId));
     },
 
     async suspendWorkspace(workspaceId: string) {
-      const ws = workspaces.find(w => w.id === workspaceId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
       if (!ws || ws.suspended) return;
 
       // Mark as suspending so pty-close handlers don't delete tabs
@@ -418,7 +437,9 @@ function createWorkspacesStore() {
             try {
               const info = await commands.getPtyInfo(tab.pty_id);
               await commands.setTabRestoreContext(
-                ws.id, pane.id, tab.id,
+                ws.id,
+                pane.id,
+                tab.id,
                 info.cwd ?? null,
                 info.foreground_command ?? null,
                 null, // remote_cwd — extracted on resume from prompt patterns
@@ -436,7 +457,11 @@ function createWorkspacesStore() {
           if (tab.tab_type !== 'terminal') continue;
           const instance = terminalsStore.get(tab.id);
           if (instance) {
-            try { await commands.killTerminal(instance.ptyId); } catch { /* already dead */ }
+            try {
+              await commands.killTerminal(instance.ptyId);
+            } catch {
+              /* already dead */
+            }
             terminalsStore.unregister(tab.id);
           }
         }
@@ -445,15 +470,15 @@ function createWorkspacesStore() {
       // 3. Set suspended flag (persisted to backend)
       await commands.suspendWorkspace(workspaceId);
       suspendingWorkspaceIds.delete(workspaceId);
-      const wsToSuspend = workspaces.find(w => w.id === workspaceId);
+      const wsToSuspend = workspaces.find((w) => w.id === workspaceId);
       if (wsToSuspend) wsToSuspend.suspended = true;
       const { navHistoryStore } = await import('$lib/stores/navHistory.svelte');
       navHistoryStore.removeWorkspace(workspaceId);
 
       // 4. If this was the active workspace, prefer back-history; fall back to first non-suspended
       if (activeWorkspaceId === workspaceId) {
-        const backEntry = navHistoryStore.peekMostRecent(e => {
-          const w = workspaces.find(ww => ww.id === e.workspaceId);
+        const backEntry = navHistoryStore.peekMostRecent((e) => {
+          const w = workspaces.find((ww) => ww.id === e.workspaceId);
           return !!w && !w.suspended;
         });
         if (backEntry) {
@@ -462,7 +487,7 @@ function createWorkspacesStore() {
           await this.setActiveTab(backEntry.workspaceId, backEntry.paneId, backEntry.tabId);
           terminalsStore.focusTerminal(backEntry.tabId);
         } else {
-          const next = workspaces.find(w => !w.suspended && w.id !== workspaceId);
+          const next = workspaces.find((w) => !w.suspended && w.id !== workspaceId);
           if (next) {
             await this.setActiveWorkspace(next.id);
           } else {
@@ -473,12 +498,12 @@ function createWorkspacesStore() {
     },
 
     async resumeWorkspace(workspaceId: string) {
-      const ws = workspaces.find(w => w.id === workspaceId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
       if (!ws || !ws.suspended) return;
 
       // Clear suspended flag
       await commands.resumeWorkspace(workspaceId);
-      const wsToResume = workspaces.find(w => w.id === workspaceId);
+      const wsToResume = workspaces.find((w) => w.id === workspaceId);
       if (wsToResume) wsToResume.suspended = false;
 
       // Switch to this workspace — lazy init handles PTY spawning
@@ -492,13 +517,13 @@ function createWorkspacesStore() {
      * from activatedTabIds.
      */
     async suspendOtherTabs(): Promise<string[]> {
-      const ws = workspaces.find(w => w.id === activeWorkspaceId);
+      const ws = workspaces.find((w) => w.id === activeWorkspaceId);
       if (!ws) return [];
 
       // Guard pty-close handlers from deleting tabs while we kill PTYs
       suspendingWorkspaceIds.add(ws.id);
 
-      const activeTabId = ws.panes.find(p => p.id === ws.active_pane_id)?.active_tab_id;
+      const activeTabId = ws.panes.find((p) => p.id === ws.active_pane_id)?.active_tab_id;
       const tornDown: string[] = [];
 
       for (const pane of ws.panes) {
@@ -520,17 +545,18 @@ function createWorkspacesStore() {
           if (tab.pty_id) {
             try {
               const info = await commands.getPtyInfo(tab.pty_id);
-              await commands.setTabRestoreContext(
-                ws.id, pane.id, tab.id,
-                info.cwd ?? null,
-                info.foreground_command ?? null,
-                null,
-              );
-            } catch { /* PTY may already be dead */ }
+              await commands.setTabRestoreContext(ws.id, pane.id, tab.id, info.cwd ?? null, info.foreground_command ?? null, null);
+            } catch {
+              /* PTY may already be dead */
+            }
           }
 
           // Kill PTY
-          try { await commands.killTerminal(instance.ptyId); } catch { /* already dead */ }
+          try {
+            await commands.killTerminal(instance.ptyId);
+          } catch {
+            /* already dead */
+          }
           terminalsStore.unregister(tab.id);
           tornDown.push(tab.id);
         }
@@ -538,7 +564,7 @@ function createWorkspacesStore() {
 
       suspendingWorkspaceIds.delete(ws.id);
       if (tornDown.length > 0) {
-        import('$lib/stores/navHistory.svelte').then(m => {
+        import('$lib/stores/navHistory.svelte').then((m) => {
           for (const tabId of tornDown) {
             m.navHistoryStore.removeTab(tabId);
           }
@@ -548,7 +574,7 @@ function createWorkspacesStore() {
     },
 
     async suspendAllOtherWorkspaces() {
-      const others = workspaces.filter(w => w.id !== activeWorkspaceId && !w.suspended);
+      const others = workspaces.filter((w) => w.id !== activeWorkspaceId && !w.suspended);
       for (const ws of others) {
         await this.suspendWorkspace(ws.id);
       }
@@ -556,27 +582,25 @@ function createWorkspacesStore() {
 
     async renameWorkspace(workspaceId: string, name: string) {
       await commands.renameWorkspace(workspaceId, name);
-      const ws = workspaces.find(w => w.id === workspaceId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
       if (ws) ws.name = name;
     },
 
     async setActiveWorkspace(workspaceId: string) {
       // Record the workspace we're leaving as recently active
       if (activeWorkspaceId && activeWorkspaceId !== workspaceId) {
-        const updated = new Map(lastSwitchedAt);
-        updated.set(activeWorkspaceId, Date.now());
-        lastSwitchedAt = updated;
+        lastSwitchedAt.set(activeWorkspaceId, Date.now());
       }
       await commands.setActiveWorkspace(workspaceId);
       activeWorkspaceId = workspaceId;
       // Clear import highlight on activation
-      const ws = workspaces.find(w => w.id === workspaceId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
       if (ws?.import_highlight) {
         ws.import_highlight = false;
       }
       // Record the now-visible active tab. push() dedups by tabId, so the
       // sidebar's manual push that runs after this call is a safe no-op.
-      const activePane = ws?.active_pane_id ? ws.panes.find(p => p.id === ws.active_pane_id) : undefined;
+      const activePane = ws?.active_pane_id ? ws.panes.find((p) => p.id === ws.active_pane_id) : undefined;
       if (activePane?.active_tab_id) {
         const { navHistoryStore } = await import('$lib/stores/navHistory.svelte');
         navHistoryStore.push({ workspaceId, paneId: activePane.id, tabId: activePane.active_tab_id });
@@ -587,9 +611,9 @@ function createWorkspacesStore() {
       const pane = await commands.splitPane(workspaceId, targetPaneId, direction);
       // Reload workspace to get updated split_root from backend
       const data = await commands.getWindowData();
-      const freshWs = data.workspaces.find(w => w.id === workspaceId);
+      const freshWs = data.workspaces.find((w) => w.id === workspaceId);
       if (freshWs) {
-        const idx = workspaces.findIndex(w => w.id === workspaceId);
+        const idx = workspaces.findIndex((w) => w.id === workspaceId);
         if (idx >= 0) workspaces[idx] = freshWs;
       }
       return pane;
@@ -622,11 +646,7 @@ function createWorkspacesStore() {
       await commands.renameTab(workspaceId, newPane.id, newTabId, tabName, true);
 
       const forkCommand = `claude --resume ${target.sessionId} --fork-session`;
-      await commands.setTabAutoResumeContext(
-        workspaceId, newPane.id, newTabId,
-        target.cwd, target.sshCommand, target.remoteCwd,
-        forkCommand, false,
-      );
+      await commands.setTabAutoResumeContext(workspaceId, newPane.id, newTabId, target.cwd, target.sshCommand, target.remoteCwd, forkCommand, false);
       // setTabAutoResumeContext stores the command but may not flip the enabled
       // flag; do it explicitly so TerminalPane fires the fork command on mount.
       await commands.setTabAutoResumeEnabled(workspaceId, newPane.id, newTabId, true);
@@ -642,9 +662,9 @@ function createWorkspacesStore() {
 
       // Refresh store LAST → mounts the new pane with context already in place.
       const data = await commands.getWindowData();
-      const freshWs = data.workspaces.find(w => w.id === workspaceId);
+      const freshWs = data.workspaces.find((w) => w.id === workspaceId);
       if (freshWs) {
-        const idx = workspaces.findIndex(w => w.id === workspaceId);
+        const idx = workspaces.findIndex((w) => w.id === workspaceId);
         if (idx >= 0) workspaces[idx] = freshWs;
       }
       return { newPaneId: newPane.id, newTabId };
@@ -652,9 +672,9 @@ function createWorkspacesStore() {
 
     async splitPaneWithContext(workspaceId: string, sourcePaneId: string, sourceTabId: string, direction: SplitDirection) {
       // Look up source tab to determine its type
-      const ws_current = workspaces.find(w => w.id === workspaceId);
-      const sourcePane = ws_current?.panes.find(p => p.id === sourcePaneId);
-      const sourceTab = sourcePane?.tabs.find(t => t.id === sourceTabId);
+      const ws_current = workspaces.find((w) => w.id === workspaceId);
+      const sourcePane = ws_current?.panes.find((p) => p.id === sourcePaneId);
+      const sourceTab = sourcePane?.tabs.find((t) => t.id === sourceTabId);
 
       // Editor tab: create a duplicate editor pane (no terminal context needed)
       if (sourceTab?.tab_type === 'editor' && sourceTab.editor_file) {
@@ -673,9 +693,9 @@ function createWorkspacesStore() {
 
         // Reload workspace to get updated split_root
         const data = await commands.getWindowData();
-        const freshWsEditor = data.workspaces.find(w => w.id === workspaceId);
+        const freshWsEditor = data.workspaces.find((w) => w.id === workspaceId);
         if (freshWsEditor) {
-          const idx = workspaces.findIndex(w => w.id === workspaceId);
+          const idx = workspaces.findIndex((w) => w.id === workspaceId);
           if (idx >= 0) workspaces[idx] = freshWsEditor;
         }
         return newPane;
@@ -704,7 +724,7 @@ function createWorkspacesStore() {
             const info = await commands.getPtyInfo(instance.ptyId);
             cwd = preferencesStore.cloneCwd ? info.cwd : null;
             sshCommand = preferencesStore.cloneSsh ? info.foreground_command : null;
-          } catch (e) {
+          } catch {
             // PTY may already be gone — fall through with null
           }
         }
@@ -719,9 +739,7 @@ function createWorkspacesStore() {
 
       const newTabId = newPane.tabs[0]?.id;
       if (sourceTab && newTabId) {
-        const tabName = sourceTab.custom_name && ws_current && preferencesStore.numberDuplicatedTabs
-          ? nextDuplicateName(sourceTab.name, allTabNames(ws_current))
-          : sourceTab.name;
+        const tabName = sourceTab.custom_name && ws_current && preferencesStore.numberDuplicatedTabs ? nextDuplicateName(sourceTab.name, allTabNames(ws_current)) : sourceTab.name;
         await commands.renameTab(workspaceId, newPane.id, newTabId, tabName, sourceTab.custom_name);
 
         // Copy notes
@@ -738,16 +756,16 @@ function createWorkspacesStore() {
           if (srcVars && srcVars.size > 0) {
             const plain: Record<string, string> = {};
             for (const [k, v] of srcVars) plain[k] = v;
-            await commands.setTabTriggerVariables(workspaceId, newPane.id, newTabId, plain).catch(e =>
-              logError(`Failed to copy trigger variables: ${e}`)
-            );
+            await commands.setTabTriggerVariables(workspaceId, newPane.id, newTabId, plain).catch((e) => logError(`Failed to copy trigger variables: ${e}`));
           }
         }
 
         // Copy auto-resume settings
         if (preferencesStore.cloneAutoResume && (sourceTab.auto_resume_cwd || sourceTab.auto_resume_ssh_command || sourceTab.auto_resume_command)) {
           await this.setTabAutoResumeContext(
-            workspaceId, newPane.id, newTabId,
+            workspaceId,
+            newPane.id,
+            newTabId,
             sourceTab.auto_resume_cwd,
             sourceTab.auto_resume_ssh_command,
             sourceTab.auto_resume_remote_cwd,
@@ -778,7 +796,7 @@ function createWorkspacesStore() {
             // or updated by the remote shell. Compare with the lsof-reported local cwd:
             // if they match, OSC 7 is stale → fall back to promptCwd then buffer scan.
             const isOsc7Stale = osc7Cwd === cwd;
-            const osc7RemoteCwd = (osc7Cwd && !isOsc7Stale) ? osc7Cwd : null;
+            const osc7RemoteCwd = osc7Cwd && !isOsc7Stale ? osc7Cwd : null;
             remoteCwd = osc7RemoteCwd ?? promptCwd ?? (instance ? extractRemoteCwd(instance.terminal) : null);
           } else if (preferencesStore.cloneCwd) {
             // No SSH: OSC 7 reports local cwd, can supplement lsof
@@ -793,9 +811,9 @@ function createWorkspacesStore() {
 
       // 5. Reload workspace to get updated split_root
       const data = await commands.getWindowData();
-      const freshWsSplit = data.workspaces.find(w => w.id === workspaceId);
+      const freshWsSplit = data.workspaces.find((w) => w.id === workspaceId);
       if (freshWsSplit) {
-        const idx = workspaces.findIndex(w => w.id === workspaceId);
+        const idx = workspaces.findIndex((w) => w.id === workspaceId);
         if (idx >= 0) workspaces[idx] = freshWsSplit;
       }
       return newPane;
@@ -805,27 +823,27 @@ function createWorkspacesStore() {
       await commands.deletePane(workspaceId, paneId);
       // Reload workspace to get updated split_root from backend
       const data = await commands.getWindowData();
-      const freshWsPane = data.workspaces.find(w => w.id === workspaceId);
+      const freshWsPane = data.workspaces.find((w) => w.id === workspaceId);
       if (freshWsPane) {
-        const idx = workspaces.findIndex(w => w.id === workspaceId);
+        const idx = workspaces.findIndex((w) => w.id === workspaceId);
         if (idx >= 0) workspaces[idx] = freshWsPane;
       }
     },
 
     async renamePane(workspaceId: string, paneId: string, name: string) {
       await commands.renamePane(workspaceId, paneId, name);
-      const ws = workspaces.find(w => w.id === workspaceId);
-      const pane = ws?.panes.find(p => p.id === paneId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      const pane = ws?.panes.find((p) => p.id === paneId);
       if (pane) pane.name = name;
     },
 
     async setActivePane(workspaceId: string, paneId: string) {
       await commands.setActivePane(workspaceId, paneId);
-      const ws = workspaces.find(w => w.id === workspaceId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
       if (ws) ws.active_pane_id = paneId;
       // The visible active tab changes when the pane changes — record it
       // so Cmd+[/] can step back through pane switches.
-      const pane = ws?.panes.find(p => p.id === paneId);
+      const pane = ws?.panes.find((p) => p.id === paneId);
       if (pane?.active_tab_id) {
         const { navHistoryStore } = await import('$lib/stores/navHistory.svelte');
         navHistoryStore.push({ workspaceId, paneId, tabId: pane.active_tab_id });
@@ -833,9 +851,7 @@ function createWorkspacesStore() {
     },
 
     async createTab(workspaceId: string, paneId: string, name: string, options?: { append?: boolean }) {
-      const afterTabId = options?.append
-        ? undefined
-        : workspaces.flatMap(w => w.panes).find(p => p.id === paneId)?.active_tab_id ?? undefined;
+      const afterTabId = options?.append ? undefined : (workspaces.flatMap((w) => w.panes).find((p) => p.id === paneId)?.active_tab_id ?? undefined);
       const tab = await commands.createTab(workspaceId, paneId, name, afterTabId);
 
       // Open new tab at the most common CWD (and SSH setup) among sibling
@@ -844,9 +860,9 @@ function createWorkspacesStore() {
       // workspace that has accumulated many suspended tabs, would dominate the
       // tally and pin every new tab to that majority directory regardless of
       // which tab the user is actually on.
-      const ws = workspaces.find(w => w.id === workspaceId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
       if (ws) {
-        const activePane = ws.panes.find(p => p.id === paneId);
+        const activePane = ws.panes.find((p) => p.id === paneId);
         const activeTabId = activePane?.active_tab_id;
 
         // Query live PTY info for the active terminal — persisted fields
@@ -861,11 +877,14 @@ function createWorkspacesStore() {
               const info = await commands.getPtyInfo(instance.ptyId);
               liveSsh = info.foreground_command;
               liveCwd = info.cwd;
-            } catch { /* ignore */ }
+            } catch {
+              /* ignore */
+            }
           }
         }
 
         // Build a composite key: "ssh\0command\0remoteCwd" for SSH tabs, or "local\0cwd" for local tabs
+        // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local tally rebuilt each call, no reactive reads
         const setupCounts = new Map<string, { count: number; cwd: string | null; sshCommand: string | null; remoteCwd: string | null }>();
         for (const p of ws.panes) {
           for (const t of p.tabs) {
@@ -896,9 +915,7 @@ function createWorkspacesStore() {
               // For live SSH tabs the real remote cwd lives in OSC promptCwd
               // (the PTY only reports the local cwd); fall back to persisted.
               const oscState = ssh ? terminalsStore.getOsc(t.id) : null;
-              remoteCwd = ssh
-                ? (oscState?.promptCwd ?? t.auto_resume_remote_cwd ?? t.restore_remote_cwd ?? null)
-                : null;
+              remoteCwd = ssh ? (oscState?.promptCwd ?? t.auto_resume_remote_cwd ?? t.restore_remote_cwd ?? null) : null;
               localCwd = t.last_cwd;
             }
             if (!ssh && !localCwd) continue;
@@ -912,7 +929,7 @@ function createWorkspacesStore() {
           }
         }
         // Find the active tab's setup key to use as tiebreaker
-        const activeTab = activePane?.tabs.find(t => t.id === activeTabId);
+        const activeTab = activePane?.tabs.find((t) => t.id === activeTabId);
         let activeKey: string | null = null;
         if (activeTab?.tab_type === 'terminal') {
           if (activeTab.auto_resume_enabled && activeTab.auto_resume_ssh_command) {
@@ -930,7 +947,8 @@ function createWorkspacesStore() {
         let bestCount = 0;
         for (const [key, entry] of setupCounts) {
           if (entry.count > bestCount || (entry.count === bestCount && key === activeKey)) {
-            best = entry; bestCount = entry.count;
+            best = entry;
+            bestCount = entry.count;
           }
         }
         // Fall back to live PTY info if no tab had any data
@@ -942,12 +960,10 @@ function createWorkspacesStore() {
         }
       }
 
-      const wsForTab = workspaces.find(w => w.id === workspaceId);
-      const paneForTab = wsForTab?.panes.find(p => p.id === paneId);
+      const wsForTab = workspaces.find((w) => w.id === workspaceId);
+      const paneForTab = wsForTab?.panes.find((p) => p.id === paneId);
       if (paneForTab) {
-        const insertIdx = afterTabId
-          ? paneForTab.tabs.findIndex(t => t.id === afterTabId) + 1
-          : paneForTab.tabs.length;
+        const insertIdx = afterTabId ? paneForTab.tabs.findIndex((t) => t.id === afterTabId) + 1 : paneForTab.tabs.length;
         paneForTab.tabs.splice(insertIdx >= 0 ? insertIdx : paneForTab.tabs.length, 0, tab);
         const { navHistoryStore } = await import('$lib/stores/navHistory.svelte');
         paneForTab.active_tab_id = tab.id;
@@ -959,13 +975,13 @@ function createWorkspacesStore() {
 
     async createEditorTab(workspaceId: string, paneId: string, name: string, fileInfo: EditorFileInfo, insertAfterTabId?: string) {
       // Insert after specified tab, or after the currently active tab
-      const pane = workspaces.flatMap(w => w.panes).find(p => p.id === paneId);
+      const pane = workspaces.flatMap((w) => w.panes).find((p) => p.id === paneId);
       const afterTabId = insertAfterTabId ?? pane?.active_tab_id ?? undefined;
       const tab = await commands.createEditorTab(workspaceId, paneId, name, fileInfo, afterTabId);
-      const wsForEditor = workspaces.find(w => w.id === workspaceId);
-      const paneForEditor = wsForEditor?.panes.find(p => p.id === paneId);
+      const wsForEditor = workspaces.find((w) => w.id === workspaceId);
+      const paneForEditor = wsForEditor?.panes.find((p) => p.id === paneId);
       if (paneForEditor) {
-        const targetIdx = afterTabId ? paneForEditor.tabs.findIndex(t => t.id === afterTabId) : paneForEditor.tabs.findIndex(t => t.id === paneForEditor.active_tab_id);
+        const targetIdx = afterTabId ? paneForEditor.tabs.findIndex((t) => t.id === afterTabId) : paneForEditor.tabs.findIndex((t) => t.id === paneForEditor.active_tab_id);
         const insertIdx = targetIdx === -1 ? paneForEditor.tabs.length : targetIdx + 1;
         paneForEditor.tabs.splice(insertIdx, 0, tab);
         const { navHistoryStore } = await import('$lib/stores/navHistory.svelte');
@@ -977,10 +993,10 @@ function createWorkspacesStore() {
 
     async createDiffTab(workspaceId: string, paneId: string, name: string, diffContext: DiffContext, afterTabId?: string | null) {
       const tab = await commands.createDiffTab(workspaceId, paneId, name, diffContext, afterTabId);
-      const wsForDiffTab = workspaces.find(w => w.id === workspaceId);
-      const paneForDiffTab = wsForDiffTab?.panes.find(p => p.id === paneId);
+      const wsForDiffTab = workspaces.find((w) => w.id === workspaceId);
+      const paneForDiffTab = wsForDiffTab?.panes.find((p) => p.id === paneId);
       if (paneForDiffTab) {
-        const activeIdx = paneForDiffTab.tabs.findIndex(t => t.id === (afterTabId ?? paneForDiffTab.active_tab_id));
+        const activeIdx = paneForDiffTab.tabs.findIndex((t) => t.id === (afterTabId ?? paneForDiffTab.active_tab_id));
         const insertIdx = activeIdx === -1 ? paneForDiffTab.tabs.length : activeIdx + 1;
         paneForDiffTab.tabs.splice(insertIdx, 0, tab);
         const { navHistoryStore: navHistory } = await import('$lib/stores/navHistory.svelte');
@@ -1008,23 +1024,23 @@ function createWorkspacesStore() {
       // the durable pairing here precisely because the tab is gone for good.
       //
       // Dynamic import avoids a static cycle (agentBridge imports this store).
-      import('$lib/stores/agentBridge.svelte').then(m => m.agentBridgeStore.handleTabClosed(tabId)).catch(() => {});
-      import('$lib/stores/agentMesh.svelte').then(m => m.agentMeshStore.handleTabClosed(tabId)).catch(() => {});
+      import('$lib/stores/agentBridge.svelte').then((m) => m.agentBridgeStore.handleTabClosed(tabId)).catch(() => {});
+      import('$lib/stores/agentMesh.svelte').then((m) => m.agentMeshStore.handleTabClosed(tabId)).catch(() => {});
 
       // If closing a diff tab with a pending Claude request, respond with rejection
       // so Claude Code doesn't hang waiting for accept/reject.
-      const wsForDiff = workspaces.find(w => w.id === workspaceId);
-      const paneForDiff = wsForDiff?.panes.find(p => p.id === paneId);
-      const diffTab = paneForDiff?.tabs.find(t => t.id === tabId);
+      const wsForDiff = workspaces.find((w) => w.id === workspaceId);
+      const paneForDiff = wsForDiff?.panes.find((p) => p.id === paneId);
+      const diffTab = paneForDiff?.tabs.find((t) => t.id === tabId);
       if (diffTab?.tab_type === 'diff' && diffTab.diff_context?.request_id) {
         commands.claudeCodeRespond(diffTab.diff_context.request_id, { result: 'DIFF_REJECTED' }).catch(() => {});
       }
 
       // Migrate tab notes to workspace if enabled
       if (preferencesStore.migrateTabNotes) {
-        const ws = workspaces.find(w => w.id === workspaceId);
-        const pane = ws?.panes.find(p => p.id === paneId);
-        const tab = pane?.tabs.find(t => t.id === tabId);
+        const ws = workspaces.find((w) => w.id === workspaceId);
+        const pane = ws?.panes.find((p) => p.id === paneId);
+        const tab = pane?.tabs.find((t) => t.id === tabId);
         if (tab?.notes?.trim()) {
           try {
             const note = await commands.addWorkspaceNote(workspaceId, tab.notes, tab.notes_mode ?? null);
@@ -1037,19 +1053,19 @@ function createWorkspacesStore() {
         }
       }
       await commands.deleteTab(workspaceId, paneId, tabId);
-      const wsForDelete = workspaces.find(w => w.id === workspaceId);
-      const paneForDelete = wsForDelete?.panes.find(p => p.id === paneId);
+      const wsForDelete = workspaces.find((w) => w.id === workspaceId);
+      const paneForDelete = wsForDelete?.panes.find((p) => p.id === paneId);
       if (paneForDelete) {
-        const oldIndex = paneForDelete.tabs.findIndex(t => t.id === tabId);
+        const oldIndex = paneForDelete.tabs.findIndex((t) => t.id === tabId);
         paneForDelete.tabs.splice(oldIndex, 1);
         if (paneForDelete.active_tab_id === tabId) {
           // Prefer nav history: go back to the tab you came from
           const { navHistoryStore } = await import('$lib/stores/navHistory.svelte');
-          const prev = navHistoryStore.peekBackForClose(tabId, e => !!paneForDelete.tabs.find(t => t.id === e.tabId));
+          const prev = navHistoryStore.peekBackForClose(tabId, (e) => !!paneForDelete.tabs.find((t) => t.id === e.tabId));
           const newActiveId = prev ? prev.tabId : pickNextActiveTab(paneForDelete.tabs, oldIndex);
           // If the next active tab is a suspended terminal, gate it behind resume prompt
           if (newActiveId && newActiveId !== paneForDelete.active_tab_id) {
-            const nextTab = paneForDelete.tabs.find(t => t.id === newActiveId);
+            const nextTab = paneForDelete.tabs.find((t) => t.id === newActiveId);
             const isNextTerminal = nextTab && (nextTab.tab_type === 'terminal' || !nextTab.tab_type);
             if (isNextTerminal && !terminalsStore.get(newActiveId)) {
               pendingResumePanes.add(paneForDelete.id);
@@ -1070,13 +1086,13 @@ function createWorkspacesStore() {
           return;
         }
       }
-      import('$lib/stores/navHistory.svelte').then(m => m.navHistoryStore.removeTab(tabId));
+      import('$lib/stores/navHistory.svelte').then((m) => m.navHistoryStore.removeTab(tabId));
     },
 
     async suspendTab(workspaceId: string, paneId: string, tabId: string) {
-      const ws = workspaces.find(w => w.id === workspaceId);
-      const pane = ws?.panes.find(p => p.id === paneId);
-      const tab = pane?.tabs.find(t => t.id === tabId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      const pane = ws?.panes.find((p) => p.id === paneId);
+      const tab = pane?.tabs.find((t) => t.id === tabId);
       if (!tab) return;
 
       const instance = terminalsStore.get(tabId);
@@ -1091,21 +1107,25 @@ function createWorkspacesStore() {
         const info = await commands.getPtyInfo(instance.ptyId);
         cwd = info.cwd;
         sshCommand = info.foreground_command;
-      } catch { /* PTY may already be gone */ }
+      } catch {
+        /* PTY may already be gone */
+      }
 
       if (sshCommand) {
         const oscState = terminalsStore.getOsc(tabId);
         const osc7Cwd = oscState?.cwd ?? null;
         const promptCwd = oscState?.promptCwd ?? null;
         const isOsc7Stale = osc7Cwd === cwd;
-        const osc7RemoteCwd = (osc7Cwd && !isOsc7Stale) ? osc7Cwd : null;
+        const osc7RemoteCwd = osc7Cwd && !isOsc7Stale ? osc7Cwd : null;
         remoteCwd = osc7RemoteCwd ?? promptCwd ?? null;
       }
 
       // Save scrollback, then kill PTY
       try {
         await commands.saveTerminalScrollback(instance.ptyId, tabId);
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
 
       // Detach SSH MCP bridge — refcounted on the Rust side, so other tabs
       // sharing the tunnel keep it alive; suspended tab is removed from tab_ids.
@@ -1138,9 +1158,9 @@ function createWorkspacesStore() {
     },
 
     async archiveTab(workspaceId: string, paneId: string, tabId: string, displayName: string) {
-      const ws = workspaces.find(w => w.id === workspaceId);
-      const pane = ws?.panes.find(p => p.id === paneId);
-      const tab = pane?.tabs.find(t => t.id === tabId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      const pane = ws?.panes.find((p) => p.id === paneId);
+      const tab = pane?.tabs.find((t) => t.id === tabId);
       if (!tab) return;
 
       // Gather context (terminal-specific for terminal tabs, null for editor/diff)
@@ -1161,7 +1181,7 @@ function createWorkspacesStore() {
           const osc7Cwd = oscState?.cwd ?? null;
           const promptCwd = oscState?.promptCwd ?? null;
           const isOsc7Stale = osc7Cwd === cwd;
-          const osc7RemoteCwd = (osc7Cwd && !isOsc7Stale) ? osc7Cwd : null;
+          const osc7RemoteCwd = osc7Cwd && !isOsc7Stale ? osc7Cwd : null;
           remoteCwd = osc7RemoteCwd ?? promptCwd ?? null;
         }
       }
@@ -1169,7 +1189,7 @@ function createWorkspacesStore() {
       // Skip note migration — archived tabs preserve their notes and restore them intact
 
       await commands.archiveTab(workspaceId, paneId, tabId, displayName, scrollback, cwd, sshCommand, remoteCwd);
-      import('$lib/stores/navHistory.svelte').then(m => m.navHistoryStore.removeTab(tabId));
+      import('$lib/stores/navHistory.svelte').then((m) => m.navHistoryStore.removeTab(tabId));
 
       // Build the archived tab object for local state
       const archivedTab: Tab = {
@@ -1186,13 +1206,13 @@ function createWorkspacesStore() {
       // Update local state
       if (!ws) return;
       ws.archived_tabs.push(archivedTab);
-      const archivePane = ws.panes.find(p => p.id === paneId);
+      const archivePane = ws.panes.find((p) => p.id === paneId);
       if (archivePane) {
-        const oldIndex = archivePane.tabs.findIndex(t => t.id === tabId);
+        const oldIndex = archivePane.tabs.findIndex((t) => t.id === tabId);
         archivePane.tabs.splice(oldIndex, 1);
         if (archivePane.active_tab_id === tabId) {
           const { navHistoryStore } = await import('$lib/stores/navHistory.svelte');
-          const prev = navHistoryStore.peekBackForClose(tabId, e => !!archivePane.tabs.find(t => t.id === e.tabId));
+          const prev = navHistoryStore.peekBackForClose(tabId, (e) => !!archivePane.tabs.find((t) => t.id === e.tabId));
           const newActiveId = prev ? prev.tabId : pickNextActiveTab(archivePane.tabs, oldIndex);
           archivePane.active_tab_id = newActiveId;
           if (prev && newActiveId) {
@@ -1208,11 +1228,11 @@ function createWorkspacesStore() {
     },
 
     async restoreArchivedTab(workspaceId: string, tabId: string) {
-      const ws = workspaces.find(w => w.id === workspaceId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
       if (!ws) return;
 
       // Find active pane
-      const pane = ws.panes.find(p => p.id === ws.active_pane_id) ?? ws.panes[0];
+      const pane = ws.panes.find((p) => p.id === ws.active_pane_id) ?? ws.panes[0];
       if (!pane) return;
 
       const tab = await commands.restoreArchivedTab(workspaceId, pane.id, tabId);
@@ -1223,30 +1243,27 @@ function createWorkspacesStore() {
         "if [ -n '%claudeSessionId' ]; then claude --resume %claudeSessionId; elif [ -n '%claudeResumeCommand' ]; then eval %claudeResumeCommand; else claude --continue; fi",
         'claude --resume %claudeSessionId "/aiterm init"',
       ];
-      const OLD_PATTERN_REGEXES = [
-        /^if \[ -n ['"].*['"] \]; then claude --resume .*; elif \[ -n ['"].*['"] \]; then (eval )?.*; else claude --continue; fi$/,
-        /^claude --resume \S+ "\/aiterm init"$/,
-      ];
+      const OLD_PATTERN_REGEXES = [/^if \[ -n ['"].*['"] \]; then claude --resume .*; elif \[ -n ['"].*['"] \]; then (eval )?.*; else claude --continue; fi$/, /^claude --resume \S+ "\/aiterm init"$/];
       const arCmd = tab.auto_resume_command;
-      if (arCmd && arCmd !== CLAUDE_RESUME_COMMAND && (
-        OLD_PATTERNS.includes(arCmd) || OLD_PATTERN_REGEXES.some(re => re.test(arCmd))
-      )) {
+      if (arCmd && arCmd !== CLAUDE_RESUME_COMMAND && (OLD_PATTERNS.includes(arCmd) || OLD_PATTERN_REGEXES.some((re) => re.test(arCmd)))) {
         tab.auto_resume_command = CLAUDE_RESUME_COMMAND;
         tab.auto_resume_remembered_command = CLAUDE_RESUME_COMMAND;
         await commands.setTabAutoResumeContext(
-          workspaceId, pane.id, tab.id,
-          tab.auto_resume_cwd, tab.auto_resume_ssh_command,
-          tab.auto_resume_remote_cwd, tab.auto_resume_command,
+          workspaceId,
+          pane.id,
+          tab.id,
+          tab.auto_resume_cwd,
+          tab.auto_resume_ssh_command,
+          tab.auto_resume_remote_cwd,
+          tab.auto_resume_command,
           tab.auto_resume_pinned,
         );
       }
 
       // Update local state
-      const archIdx = ws.archived_tabs.findIndex(t => t.id === tabId);
+      const archIdx = ws.archived_tabs.findIndex((t) => t.id === tabId);
       if (archIdx >= 0) ws.archived_tabs.splice(archIdx, 1);
-      const activeIdx = pane.active_tab_id
-        ? pane.tabs.findIndex(t => t.id === pane.active_tab_id)
-        : -1;
+      const activeIdx = pane.active_tab_id ? pane.tabs.findIndex((t) => t.id === pane.active_tab_id) : -1;
       const insertIdx = activeIdx >= 0 ? activeIdx + 1 : 0;
       pane.tabs.splice(insertIdx, 0, tab);
       pane.active_tab_id = tab.id;
@@ -1255,27 +1272,25 @@ function createWorkspacesStore() {
       // mark it so the active-group promotion effect leaves it there instead of
       // treating it like a resumed-from-suspend tab and moving it to the end.
       terminalsStore.markRestoredFromArchive(tab.id);
-      import('$lib/stores/navHistory.svelte').then(m => {
+      import('$lib/stores/navHistory.svelte').then((m) => {
         m.navHistoryStore.push({ workspaceId, paneId: pane.id, tabId });
       });
     },
 
     async deleteArchivedTab(workspaceId: string, tabId: string) {
       await commands.deleteArchivedTab(workspaceId, tabId);
-      const ws = workspaces.find(w => w.id === workspaceId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
       if (ws) {
-        const idx = ws.archived_tabs.findIndex(t => t.id === tabId);
+        const idx = ws.archived_tabs.findIndex((t) => t.id === tabId);
         if (idx >= 0) ws.archived_tabs.splice(idx, 1);
       }
     },
 
     async reorderTabs(workspaceId: string, paneId: string, tabIds: string[]) {
-      const ws = workspaces.find(w => w.id === workspaceId);
-      const pane = ws?.panes.find(p => p.id === paneId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      const pane = ws?.panes.find((p) => p.id === paneId);
       if (pane) {
-        const reordered = tabIds
-          .map(id => pane.tabs.find(t => t.id === id))
-          .filter((t): t is Tab => t !== undefined);
+        const reordered = tabIds.map((id) => pane.tabs.find((t) => t.id === id)).filter((t): t is Tab => t !== undefined);
         pane.tabs.splice(0, pane.tabs.length, ...reordered);
       }
       await commands.reorderTabs(workspaceId, paneId, tabIds);
@@ -1288,9 +1303,9 @@ function createWorkspacesStore() {
      * derived in TerminalTabs; this just persists the flag and updates it locally.
      */
     async setTabPinned(workspaceId: string, paneId: string, tabId: string, pinned: boolean) {
-      const ws = workspaces.find(w => w.id === workspaceId);
-      const pane = ws?.panes.find(p => p.id === paneId);
-      const tab = pane?.tabs.find(t => t.id === tabId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      const pane = ws?.panes.find((p) => p.id === paneId);
+      const tab = pane?.tabs.find((t) => t.id === tabId);
       if (!tab || (tab.pinned ?? false) === pinned) return;
       tab.pinned = pinned;
       await commands.setTabPinned(workspaceId, paneId, tabId, pinned);
@@ -1312,25 +1327,23 @@ function createWorkspacesStore() {
      */
     promoteResumedTab(workspaceId: string, paneId: string, tabId: string, anchorTabId: string | null = null) {
       if (!preferencesStore.groupActiveTabs) return;
-      const ws = workspaces.find(w => w.id === workspaceId);
-      const pane = ws?.panes.find(p => p.id === paneId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      const pane = ws?.panes.find((p) => p.id === paneId);
       if (!pane) return;
-      const tab = pane.tabs.find(t => t.id === tabId);
+      const tab = pane.tabs.find((t) => t.id === tabId);
       const isTerminal = (t: Tab) => t.tab_type === 'terminal' || !t.tab_type;
       // Pinned tabs are display-pinned to the front; never promote them in storage.
       if (!tab || !isTerminal(tab) || tab.pinned) return;
 
       // First still-suspended terminal tab marks the active/suspended boundary.
       // (The resumed tab itself is excluded — it has just left the suspended group.)
-      const isSuspendedTerminal = (t: Tab) =>
-        isTerminal(t) && t.id !== tabId &&
-        !terminalsStore.get(t.id) && !terminalsStore.isSpawning(t.id);
+      const isSuspendedTerminal = (t: Tab) => isTerminal(t) && t.id !== tabId && !terminalsStore.get(t.id) && !terminalsStore.isSpawning(t.id);
 
-      const without = pane.tabs.filter(t => t.id !== tabId);
+      const without = pane.tabs.filter((t) => t.id !== tabId);
       let insertAt = -1;
       if (anchorTabId && anchorTabId !== tabId) {
-        const anchorIdx = without.findIndex(t => t.id === anchorTabId);
-        if (anchorIdx !== -1 && !isSuspendedTerminal(without[anchorIdx])) {
+        const anchorIdx = without.findIndex((t) => t.id === anchorTabId);
+        if (anchorIdx !== -1 && !isSuspendedTerminal(without[anchorIdx]!)) {
           insertAt = anchorIdx + 1;
         }
       }
@@ -1340,8 +1353,8 @@ function createWorkspacesStore() {
       }
       const reordered = [...without.slice(0, insertAt), tab, ...without.slice(insertAt)];
 
-      const curIds = pane.tabs.map(t => t.id);
-      const newIds = reordered.map(t => t.id);
+      const curIds = pane.tabs.map((t) => t.id);
+      const newIds = reordered.map((t) => t.id);
       if (newIds.every((id, i) => id === curIds[i])) return; // already in place
       this.reorderTabs(workspaceId, paneId, newIds);
     },
@@ -1359,7 +1372,7 @@ function createWorkspacesStore() {
       await commands.updateEditorTabFile(tabId, name, fileInfo);
       for (const ws of workspaces) {
         for (const pane of ws.panes) {
-          const tab = pane.tabs.find(t => t.id === tabId);
+          const tab = pane.tabs.find((t) => t.id === tabId);
           if (tab) {
             tab.name = name;
             tab.editor_file = fileInfo;
@@ -1389,7 +1402,16 @@ function createWorkspacesStore() {
       }
     },
 
-    async setTabAutoResumeContext(workspaceId: string, paneId: string, tabId: string, cwd: string | null, sshCommand: string | null, remoteCwd: string | null, command: string | null = null, pinned?: boolean) {
+    async setTabAutoResumeContext(
+      workspaceId: string,
+      paneId: string,
+      tabId: string,
+      cwd: string | null,
+      sshCommand: string | null,
+      remoteCwd: string | null,
+      command: string | null = null,
+      pinned?: boolean,
+    ) {
       await commands.setTabAutoResumeContext(workspaceId, paneId, tabId, cwd, sshCommand, remoteCwd, command, pinned);
       const { tab } = findTab(workspaceId, paneId, tabId);
       if (tab) {
@@ -1410,7 +1432,7 @@ function createWorkspacesStore() {
     },
 
     setSplitRatioLocal(workspaceId: string, splitId: string, ratio: number) {
-      const ws = workspaces.find(w => w.id === workspaceId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
       if (ws?.split_root) ws.split_root = updateRatioInTree(ws.split_root, splitId, ratio);
     },
 
@@ -1443,7 +1465,7 @@ function createWorkspacesStore() {
             const info = await commands.getPtyInfo(instance.ptyId);
             cwd = preferencesStore.cloneCwd ? info.cwd : null;
             sshCommand = preferencesStore.cloneSsh ? info.foreground_command : null;
-          } catch (e) {
+          } catch {
             // PTY may already be gone
           }
         }
@@ -1466,7 +1488,7 @@ function createWorkspacesStore() {
       let remoteCwd: string | null = null;
       if (sshCommand) {
         const isOsc7Stale = osc7Cwd === cwd;
-        const osc7RemoteCwd = (osc7Cwd && !isOsc7Stale) ? osc7Cwd : null;
+        const osc7RemoteCwd = osc7Cwd && !isOsc7Stale ? osc7Cwd : null;
         remoteCwd = osc7RemoteCwd ?? promptCwd ?? (instance ? extractRemoteCwd(instance.terminal) : null);
       } else if (preferencesStore.cloneCwd) {
         cwd = cwd ?? osc7Cwd;
@@ -1481,23 +1503,21 @@ function createWorkspacesStore() {
      * Copy a tab to another workspace (clone with context, keep source).
      */
     async copyTabToWorkspace(sourceWsId: string, sourcePaneId: string, sourceTabId: string, targetWsId: string) {
-      const sourceWs = workspaces.find(w => w.id === sourceWsId);
-      const sourcePane = sourceWs?.panes.find(p => p.id === sourcePaneId);
-      const sourceTab = sourcePane?.tabs.find(t => t.id === sourceTabId);
+      const sourceWs = workspaces.find((w) => w.id === sourceWsId);
+      const sourcePane = sourceWs?.panes.find((p) => p.id === sourcePaneId);
+      const sourceTab = sourcePane?.tabs.find((t) => t.id === sourceTabId);
       if (!sourceTab) return;
 
       // Gather context from source
       const { instance, scrollback, cwd, sshCommand } = await this._gatherTabContext(sourceTabId);
 
       // Create tab in target workspace's first pane, preserving original active tab
-      const targetWs = workspaces.find(w => w.id === targetWsId);
+      const targetWs = workspaces.find((w) => w.id === targetWsId);
       if (!targetWs || targetWs.panes.length === 0) return;
-      const targetPane = targetWs.panes[0];
+      const targetPane = targetWs.panes[0]!;
       const previousActiveTabId = targetPane.active_tab_id;
 
-      const tabName = sourceTab.custom_name && preferencesStore.numberDuplicatedTabs
-        ? nextDuplicateName(sourceTab.name, allTabNames(targetWs))
-        : sourceTab.name;
+      const tabName = sourceTab.custom_name && preferencesStore.numberDuplicatedTabs ? nextDuplicateName(sourceTab.name, allTabNames(targetWs)) : sourceTab.name;
       const newTab = await commands.createTab(targetWsId, targetPane.id, tabName);
 
       // Restore the previously active tab (createTab sets the new one as active)
@@ -1538,16 +1558,16 @@ function createWorkspacesStore() {
         if (srcVars && srcVars.size > 0) {
           const plain: Record<string, string> = {};
           for (const [k, v] of srcVars) plain[k] = v;
-          await commands.setTabTriggerVariables(targetWsId, targetPane.id, newTab.id, plain).catch(e =>
-            logError(`Failed to copy trigger variables: ${e}`)
-          );
+          await commands.setTabTriggerVariables(targetWsId, targetPane.id, newTab.id, plain).catch((e) => logError(`Failed to copy trigger variables: ${e}`));
         }
       }
 
       // Copy auto-resume settings
       if (preferencesStore.cloneAutoResume && (sourceTab.auto_resume_cwd || sourceTab.auto_resume_ssh_command || sourceTab.auto_resume_command)) {
         await this.setTabAutoResumeContext(
-          targetWsId, targetPane.id, newTab.id,
+          targetWsId,
+          targetPane.id,
+          newTab.id,
           sourceTab.auto_resume_cwd,
           sourceTab.auto_resume_ssh_command,
           sourceTab.auto_resume_remote_cwd,
@@ -1571,14 +1591,14 @@ function createWorkspacesStore() {
      * Move a tab to another workspace (delete source, create in target).
      */
     async moveTabToWorkspace(sourceWsId: string, sourcePaneId: string, sourceTabId: string, targetWsId: string) {
-      const sourceWs = workspaces.find(w => w.id === sourceWsId);
-      const sourcePane = sourceWs?.panes.find(p => p.id === sourcePaneId);
+      const sourceWs = workspaces.find((w) => w.id === sourceWsId);
+      const sourcePane = sourceWs?.panes.find((p) => p.id === sourcePaneId);
       if (!sourceWs || !sourcePane) return;
 
       // Snapshot pre-move state so we can re-run the active-tab fallback with
       // groupActiveTabs awareness (backend's tab_pos - 1 pick ignores suspension).
       const movedTabWasActive = sourcePane.active_tab_id === sourceTabId;
-      const movedTabIndex = sourcePane.tabs.findIndex(t => t.id === sourceTabId);
+      const movedTabIndex = sourcePane.tabs.findIndex((t) => t.id === sourceTabId);
 
       // Mark the PTY as preserved so the old TerminalPane's onDestroy
       // doesn't kill it when Svelte removes it from the source workspace's keyed each block
@@ -1595,9 +1615,9 @@ function createWorkspacesStore() {
 
       // Ensure source pane's active_tab_id points to an existing tab
       // (backend handles this, but guard against stale binary during dev)
-      const updatedSourceWs = data.workspaces.find(w => w.id === sourceWsId);
-      const updatedSourcePane = updatedSourceWs?.panes.find(p => p.id === sourcePaneId);
-      if (updatedSourcePane && updatedSourcePane.active_tab_id && !updatedSourcePane.tabs.some(t => t.id === updatedSourcePane.active_tab_id)) {
+      const updatedSourceWs = data.workspaces.find((w) => w.id === sourceWsId);
+      const updatedSourcePane = updatedSourceWs?.panes.find((p) => p.id === sourcePaneId);
+      if (updatedSourcePane && updatedSourcePane.active_tab_id && !updatedSourcePane.tabs.some((t) => t.id === updatedSourcePane.active_tab_id)) {
         const fallback = updatedSourcePane.tabs[updatedSourcePane.tabs.length - 1]?.id ?? null;
         updatedSourcePane.active_tab_id = fallback;
         if (fallback) {
@@ -1632,8 +1652,8 @@ function createWorkspacesStore() {
       }
 
       // Update the terminal store's workspace/pane references for the moved tab
-      const finalTargetWs = workspaces.find(w => w.id === targetWsId);
-      const finalTargetPane = finalTargetWs?.panes.find(p => p.tabs.some(t => t.id === sourceTabId));
+      const finalTargetWs = workspaces.find((w) => w.id === targetWsId);
+      const finalTargetPane = finalTargetWs?.panes.find((p) => p.tabs.some((t) => t.id === sourceTabId));
       if (finalTargetPane) {
         terminalsStore.updateTabLocation(sourceTabId, targetWsId, finalTargetPane.id);
       }
@@ -1647,12 +1667,12 @@ function createWorkspacesStore() {
      */
     async moveTabToPane(workspaceId: string, sourcePaneId: string, tabId: string, targetPaneId: string, insertBeforeTabId?: string | null) {
       if (sourcePaneId === targetPaneId) return;
-      const ws = workspaces.find(w => w.id === workspaceId);
-      const sourcePane = ws?.panes.find(p => p.id === sourcePaneId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      const sourcePane = ws?.panes.find((p) => p.id === sourcePaneId);
       if (!ws || !sourcePane) return;
 
       const movedTabWasActive = sourcePane.active_tab_id === tabId;
-      const movedTabIndex = sourcePane.tabs.findIndex(t => t.id === tabId);
+      const movedTabIndex = sourcePane.tabs.findIndex((t) => t.id === tabId);
 
       // The tab's component moves between per-pane keyed each blocks in
       // +page.svelte, so Svelte destroys and recreates it — preserve the PTY
@@ -1668,8 +1688,8 @@ function createWorkspacesStore() {
 
       // Backend's active-tab fallback for the source pane ignores
       // groupActiveTabs — redo the pick with grouping awareness.
-      const updatedWs = data.workspaces.find(w => w.id === workspaceId);
-      const updatedSourcePane = updatedWs?.panes.find(p => p.id === sourcePaneId);
+      const updatedWs = data.workspaces.find((w) => w.id === workspaceId);
+      const updatedSourcePane = updatedWs?.panes.find((p) => p.id === sourcePaneId);
       if (movedTabWasActive && updatedSourcePane && updatedSourcePane.tabs.length > 0 && movedTabIndex >= 0) {
         const preferred = pickNextActiveTab(updatedSourcePane.tabs, movedTabIndex);
         if (preferred && preferred !== updatedSourcePane.active_tab_id) {
@@ -1690,14 +1710,14 @@ function createWorkspacesStore() {
      * on the left/top side.
      */
     async moveTabToSplit(workspaceId: string, sourcePaneId: string, tabId: string, targetPaneId: string, direction: SplitDirection, before = false) {
-      const ws = workspaces.find(w => w.id === workspaceId);
-      const sourcePane = ws?.panes.find(p => p.id === sourcePaneId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      const sourcePane = ws?.panes.find((p) => p.id === sourcePaneId);
       if (!ws || !sourcePane) return;
       // Splitting a pane off with its only tab just churns pane IDs
       if (sourcePaneId === targetPaneId && sourcePane.tabs.length === 1) return;
 
       const movedTabWasActive = sourcePane.active_tab_id === tabId;
-      const movedTabIndex = sourcePane.tabs.findIndex(t => t.id === tabId);
+      const movedTabIndex = sourcePane.tabs.findIndex((t) => t.id === tabId);
 
       const termInstance = terminalsStore.get(tabId);
       if (termInstance) {
@@ -1708,8 +1728,8 @@ function createWorkspacesStore() {
 
       const data = await commands.getWindowData();
 
-      const updatedWs = data.workspaces.find(w => w.id === workspaceId);
-      const updatedSourcePane = updatedWs?.panes.find(p => p.id === sourcePaneId);
+      const updatedWs = data.workspaces.find((w) => w.id === workspaceId);
+      const updatedSourcePane = updatedWs?.panes.find((p) => p.id === sourcePaneId);
       if (movedTabWasActive && updatedSourcePane && updatedSourcePane.tabs.length > 0 && movedTabIndex >= 0) {
         const preferred = pickNextActiveTab(updatedSourcePane.tabs, movedTabIndex);
         if (preferred && preferred !== updatedSourcePane.active_tab_id) {
@@ -1723,15 +1743,13 @@ function createWorkspacesStore() {
     },
 
     async reorderWorkspaces(workspaceIds: string[]) {
-      const reordered = workspaceIds
-        .map(id => workspaces.find(w => w.id === id))
-        .filter((w): w is Workspace => w !== undefined);
+      const reordered = workspaceIds.map((id) => workspaces.find((w) => w.id === id)).filter((w): w is Workspace => w !== undefined);
       workspaces = reordered;
       await commands.reorderWorkspaces(workspaceIds);
     },
 
     async duplicateWorkspace(sourceWorkspaceId: string, insertIndex: number) {
-      const ws = workspaces.find(w => w.id === sourceWorkspaceId);
+      const ws = workspaces.find((w) => w.id === sourceWorkspaceId);
       if (!ws) return;
 
       // 1. Gather context for all tabs in source workspace
@@ -1746,7 +1764,7 @@ function createWorkspacesStore() {
             const osc7Cwd = oscState?.cwd ?? null;
             const promptCwd = oscState?.promptCwd ?? null;
             const isOsc7Stale = osc7Cwd === ctx.cwd;
-            const osc7RemoteCwd = (osc7Cwd && !isOsc7Stale) ? osc7Cwd : null;
+            const osc7RemoteCwd = osc7Cwd && !isOsc7Stale ? osc7Cwd : null;
             remoteCwd = osc7RemoteCwd ?? promptCwd ?? extractRemoteCwd(ctx.instance.terminal);
           }
 
@@ -1768,14 +1786,17 @@ function createWorkspacesStore() {
         for (const [oldTabId, newTabId] of Object.entries(result.tab_id_map)) {
           try {
             await commands.copyTabHistory(oldTabId, newTabId);
-          } catch (e) {
+          } catch {
             // ignore — history may not exist
           }
         }
       }
 
       // 4. Rename duplicate workspace
-      const dupName = nextDuplicateName(ws.name, workspaces.map(w => w.name));
+      const dupName = nextDuplicateName(
+        ws.name,
+        workspaces.map((w) => w.name),
+      );
       await commands.renameWorkspace(result.workspace.id, dupName);
 
       // 5. Reload all workspaces to get consistent state
@@ -1784,9 +1805,9 @@ function createWorkspacesStore() {
     },
 
     async duplicateTab(workspaceId: string, paneId: string, tabId: string, opts?: { shallow?: boolean }) {
-      const ws = workspaces.find(w => w.id === workspaceId);
-      const pane = ws?.panes.find(p => p.id === paneId);
-      const sourceTab = pane?.tabs.find(t => t.id === tabId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      const pane = ws?.panes.find((p) => p.id === paneId);
+      const sourceTab = pane?.tabs.find((t) => t.id === tabId);
       if (!sourceTab) return;
 
       const shallow = opts?.shallow ?? false;
@@ -1795,9 +1816,7 @@ function createWorkspacesStore() {
       const { instance, scrollback, cwd, sshCommand } = await this._gatherTabContext(tabId);
 
       // 2. Compute duplicate name with incrementing index for custom names
-      const dupName = sourceTab.custom_name && preferencesStore.numberDuplicatedTabs
-        ? nextDuplicateName(sourceTab.name, allTabNames(ws!))
-        : sourceTab.name;
+      const dupName = sourceTab.custom_name && preferencesStore.numberDuplicatedTabs ? nextDuplicateName(sourceTab.name, allTabNames(ws!)) : sourceTab.name;
 
       // 3. Create new tab (appended at end)
       const newTab = await commands.createTab(workspaceId, paneId, dupName);
@@ -1835,16 +1854,16 @@ function createWorkspacesStore() {
         if (srcVars && srcVars.size > 0) {
           const plain: Record<string, string> = {};
           for (const [k, v] of srcVars) plain[k] = v;
-          await commands.setTabTriggerVariables(workspaceId, paneId, newTab.id, plain).catch(e =>
-            logError(`Failed to copy trigger variables: ${e}`)
-          );
+          await commands.setTabTriggerVariables(workspaceId, paneId, newTab.id, plain).catch((e) => logError(`Failed to copy trigger variables: ${e}`));
         }
       }
 
       // 7d. Copy auto-resume settings (skip in shallow mode)
       if (!shallow && preferencesStore.cloneAutoResume && (sourceTab.auto_resume_cwd || sourceTab.auto_resume_ssh_command || sourceTab.auto_resume_command)) {
         await this.setTabAutoResumeContext(
-          workspaceId, paneId, newTab.id,
+          workspaceId,
+          paneId,
+          newTab.id,
           sourceTab.auto_resume_cwd,
           sourceTab.auto_resume_ssh_command,
           sourceTab.auto_resume_remote_cwd,
@@ -1858,10 +1877,10 @@ function createWorkspacesStore() {
       this._storeSplitContext(tabId, newTab.id, cwd, sshCommand, instance);
 
       // 9. Reorder to place new tab right after source
-      const currentIds = pane!.tabs.map(t => t.id);
+      const currentIds = pane!.tabs.map((t) => t.id);
       const sourceIndex = currentIds.indexOf(tabId);
       // newTab.id was appended at end by createTab; move it after source
-      const reordered = currentIds.filter(id => id !== newTab.id);
+      const reordered = currentIds.filter((id) => id !== newTab.id);
       reordered.splice(sourceIndex + 1, 0, newTab.id);
       await commands.reorderTabs(workspaceId, paneId, reordered);
 
@@ -1872,17 +1891,17 @@ function createWorkspacesStore() {
 
       // 11. Reload workspace state
       const data = await commands.getWindowData();
-      const updatedWs = data.workspaces.find(w => w.id === workspaceId);
+      const updatedWs = data.workspaces.find((w) => w.id === workspaceId);
       if (updatedWs) {
-        const idx = workspaces.findIndex(w => w.id === workspaceId);
+        const idx = workspaces.findIndex((w) => w.id === workspaceId);
         if (idx >= 0) workspaces[idx] = updatedWs;
       }
     },
 
     async reloadTab(workspaceId: string, paneId: string, tabId: string) {
-      const ws = workspaces.find(w => w.id === workspaceId);
-      const pane = ws?.panes.find(p => p.id === paneId);
-      const sourceTab = pane?.tabs.find(t => t.id === tabId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      const pane = ws?.panes.find((p) => p.id === paneId);
+      const sourceTab = pane?.tabs.find((t) => t.id === tabId);
       if (!ws || !pane || !sourceTab) return;
 
       // Editor tabs: re-read file from disk
@@ -1898,15 +1917,15 @@ function createWorkspacesStore() {
       // Remember exact name and position before duplication
       const tabName = sourceTab.name;
       const isCustom = sourceTab.custom_name;
-      const sourceIndex = pane.tabs.findIndex(t => t.id === tabId);
+      const sourceIndex = pane.tabs.findIndex((t) => t.id === tabId);
 
       // Deep duplicate: clones scrollback, CWD, SSH, notes, history, auto-resume, variables
       await this.duplicateTab(workspaceId, paneId, tabId);
 
       // Reload state to get the new tab
       const freshData = await commands.getWindowData();
-      const freshWs = freshData.workspaces.find(w => w.id === workspaceId);
-      const freshPane = freshWs?.panes.find(p => p.id === paneId);
+      const freshWs = freshData.workspaces.find((w) => w.id === workspaceId);
+      const freshPane = freshWs?.panes.find((p) => p.id === paneId);
       if (!freshWs || !freshPane) return;
 
       // Find the new tab (duplicateTab places it right after source)
@@ -1936,8 +1955,8 @@ function createWorkspacesStore() {
       }
 
       // Move new tab into the old tab's position and delete the old one
-      const currentIds = freshPane.tabs.map(t => t.id);
-      const reordered = currentIds.filter(id => id !== newTab.id);
+      const currentIds = freshPane.tabs.map((t) => t.id);
+      const reordered = currentIds.filter((id) => id !== newTab.id);
       reordered.splice(sourceIndex, 0, newTab.id);
       reordered.splice(reordered.indexOf(tabId), 1);
       await commands.reorderTabs(workspaceId, paneId, reordered);
@@ -1947,9 +1966,9 @@ function createWorkspacesStore() {
 
       // Final state reload
       const data = await commands.getWindowData();
-      const updatedWs = data.workspaces.find(w => w.id === workspaceId);
+      const updatedWs = data.workspaces.find((w) => w.id === workspaceId);
       if (updatedWs) {
-        const idx = workspaces.findIndex(w => w.id === workspaceId);
+        const idx = workspaces.findIndex((w) => w.id === workspaceId);
         if (idx >= 0) workspaces[idx] = updatedWs;
       }
 
@@ -1958,33 +1977,34 @@ function createWorkspacesStore() {
       // after the state reload so the new tab resolves for persistence. NB: reload uses
       // commands.deleteTab directly (above), bypassing the store deleteTab + its bridge
       // teardown, so the transfer must be done explicitly here.
-      import('$lib/stores/agentBridge.svelte').then(m => m.agentBridgeStore.remapTab(tabId, newTab.id)).catch(() => {});
-      import('$lib/stores/agentMesh.svelte').then(m => m.agentMeshStore.remapTab(tabId, newTab.id)).catch(() => {});
+      import('$lib/stores/agentBridge.svelte').then((m) => m.agentBridgeStore.remapTab(tabId, newTab.id)).catch(() => {});
+      import('$lib/stores/agentMesh.svelte').then((m) => m.agentMeshStore.remapTab(tabId, newTab.id)).catch(() => {});
     },
 
-    async duplicateWindow() {
-      // Gather context for ALL terminals in current window
+    /** Snapshot cwd / ssh / remote_cwd (and optionally scrollback) for every
+     *  tab in the current window. Shared by duplicateWindow and
+     *  saveCurrentWindowAsPreset — both need the same "where are these
+     *  terminals pointed right now" data, just with different downstream use. */
+    async _gatherCurrentWindowTabContexts(includeScrollback: boolean = true): Promise<commands.TabContext[]> {
       const tabContexts: commands.TabContext[] = [];
-
       for (const ws of workspaces) {
         for (const pane of ws.panes) {
           for (const tab of pane.tabs) {
             const ctx = await this._gatherTabContext(tab.id);
 
-            // Also detect remote cwd
             let remoteCwd: string | null = null;
             if (ctx.sshCommand && ctx.instance) {
               const oscState = terminalsStore.getOsc(tab.id);
               const osc7Cwd = oscState?.cwd ?? null;
               const promptCwd = oscState?.promptCwd ?? null;
               const isOsc7Stale = osc7Cwd === ctx.cwd;
-              const osc7RemoteCwd = (osc7Cwd && !isOsc7Stale) ? osc7Cwd : null;
+              const osc7RemoteCwd = osc7Cwd && !isOsc7Stale ? osc7Cwd : null;
               remoteCwd = osc7RemoteCwd ?? promptCwd ?? extractRemoteCwd(ctx.instance.terminal);
             }
 
             tabContexts.push({
               tab_id: tab.id,
-              scrollback: ctx.scrollback,
+              scrollback: includeScrollback ? ctx.scrollback : null,
               cwd: ctx.cwd,
               ssh_command: ctx.sshCommand,
               remote_cwd: remoteCwd,
@@ -1992,24 +2012,35 @@ function createWorkspacesStore() {
           }
         }
       }
+      return tabContexts;
+    },
 
+    async duplicateWindow() {
+      const tabContexts = await this._gatherCurrentWindowTabContexts(true);
       await commands.duplicateWindow(tabContexts);
     },
 
+    /** Capture the current window as a named preset. Scrollback is deliberately
+     *  excluded: the preset is a memory-cheap template, not a full snapshot.
+     *  Set `overwrite` when the caller has confirmed replacing an existing
+     *  preset with the same name. */
+    async saveCurrentWindowAsPreset(name: string, overwrite: boolean) {
+      const tabContexts = await this._gatherCurrentWindowTabContexts(false);
+      return commands.saveWindowPreset(name, tabContexts, overwrite);
+    },
+
     toggleNotes(tabId: string) {
-      const updated = new Set(notesVisible);
-      const isOpen = !updated.has(tabId);
+      const isOpen = !notesVisible.has(tabId);
       if (isOpen) {
-        updated.add(tabId);
+        notesVisible.add(tabId);
       } else {
-        updated.delete(tabId);
+        notesVisible.delete(tabId);
       }
-      notesVisible = updated;
 
       // Persist notes_open to backend
       for (const ws of workspaces) {
         for (const pane of ws.panes) {
-          const tab = pane.tabs.find(t => t.id === tabId);
+          const tab = pane.tabs.find((t) => t.id === tabId);
           if (tab) {
             tab.notes_open = isOpen;
             commands.setTabNotesOpen(ws.id, pane.id, tabId, isOpen);
@@ -2027,7 +2058,7 @@ function createWorkspacesStore() {
     isComposerOpen(tabId: string): boolean {
       for (const ws of workspaces) {
         for (const pane of ws.panes) {
-          const tab = pane.tabs.find(t => t.id === tabId);
+          const tab = pane.tabs.find((t) => t.id === tabId);
           if (tab) return tab.composer_open ?? preferencesStore.composerDefaultOpen;
         }
       }
@@ -2037,7 +2068,7 @@ function createWorkspacesStore() {
     toggleComposer(tabId: string) {
       for (const ws of workspaces) {
         for (const pane of ws.panes) {
-          const tab = pane.tabs.find(t => t.id === tabId);
+          const tab = pane.tabs.find((t) => t.id === tabId);
           if (tab) {
             const isOpen = !(tab.composer_open ?? preferencesStore.composerDefaultOpen);
             tab.composer_open = isOpen;
@@ -2051,7 +2082,7 @@ function createWorkspacesStore() {
     setComposerDraft(tabId: string, draft: string | null) {
       for (const ws of workspaces) {
         for (const pane of ws.panes) {
-          const tab = pane.tabs.find(t => t.id === tabId);
+          const tab = pane.tabs.find((t) => t.id === tabId);
           if (tab) {
             tab.composer_draft = draft;
             commands.setTabComposerDraft(ws.id, pane.id, tabId, draft);
@@ -2060,7 +2091,6 @@ function createWorkspacesStore() {
         }
       }
     },
-
 
     async setTabNotes(workspaceId: string, paneId: string, tabId: string, notes: string | null) {
       await commands.setTabNotes(workspaceId, paneId, tabId, notes);
@@ -2071,7 +2101,7 @@ function createWorkspacesStore() {
     async addWorkspaceNote(workspaceId: string, content: string, mode: string | null): Promise<WorkspaceNote | null> {
       try {
         const note = await commands.addWorkspaceNote(workspaceId, content, mode);
-        const ws = workspaces.find(w => w.id === workspaceId);
+        const ws = workspaces.find((w) => w.id === workspaceId);
         if (ws) ws.workspace_notes.push(note);
         return note;
       } catch (e) {
@@ -2082,8 +2112,8 @@ function createWorkspacesStore() {
 
     async updateWorkspaceNote(workspaceId: string, noteId: string, content: string, mode: string | null) {
       await commands.updateWorkspaceNote(workspaceId, noteId, content, mode);
-      const ws = workspaces.find(w => w.id === workspaceId);
-      const note = ws?.workspace_notes.find(n => n.id === noteId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      const note = ws?.workspace_notes.find((n) => n.id === noteId);
       if (note) {
         note.content = content;
         note.mode = mode;
@@ -2093,9 +2123,9 @@ function createWorkspacesStore() {
 
     async deleteWorkspaceNote(workspaceId: string, noteId: string) {
       await commands.deleteWorkspaceNote(workspaceId, noteId);
-      const ws = workspaces.find(w => w.id === workspaceId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
       if (ws) {
-        const idx = ws.workspace_notes.findIndex(n => n.id === noteId);
+        const idx = ws.workspace_notes.findIndex((n) => n.id === noteId);
         if (idx >= 0) ws.workspace_notes.splice(idx, 1);
       }
     },
@@ -2117,7 +2147,7 @@ export const workspacesStore = createWorkspacesStore();
 export async function navigateToTab(tabId: string): Promise<void> {
   for (const ws of workspacesStore.workspaces) {
     for (const pane of ws.panes) {
-      const tab = pane.tabs.find(t => t.id === tabId);
+      const tab = pane.tabs.find((t) => t.id === tabId);
       if (tab) {
         if (ws.id !== workspacesStore.activeWorkspaceId) {
           await workspacesStore.setActiveWorkspace(ws.id);

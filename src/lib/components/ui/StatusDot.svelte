@@ -28,26 +28,57 @@
     box-sizing: border-box;
   }
 
-  .accent { background: var(--accent); }
-  .green { background: var(--green); }
-  .red { background: var(--red); }
-  .yellow { background: var(--yellow); }
-  .dim { background: var(--fg-dim); }
+  .accent {
+    background: var(--accent);
+  }
+  .green {
+    background: var(--green);
+  }
+  .red {
+    background: var(--red);
+  }
+  .yellow {
+    background: var(--yellow);
+  }
+  .dim {
+    background: var(--fg-dim);
+  }
 
   /* Hollow: ring instead of filled dot (e.g. a "done & seen" agent). */
-  .hollow { background: transparent; border-width: 1.5px; border-style: solid; }
-  .hollow.accent { border-color: var(--accent); }
-  .hollow.green { border-color: var(--green); }
-  .hollow.red { border-color: var(--red); }
-  .hollow.yellow { border-color: var(--yellow); }
-  .hollow.dim { border-color: var(--fg-dim); }
+  .hollow {
+    background: transparent;
+    border-width: 1.5px;
+    border-style: solid;
+  }
+  .hollow.accent {
+    border-color: var(--accent);
+  }
+  .hollow.green {
+    border-color: var(--green);
+  }
+  .hollow.red {
+    border-color: var(--red);
+  }
+  .hollow.yellow {
+    border-color: var(--yellow);
+  }
+  .hollow.dim {
+    border-color: var(--fg-dim);
+  }
 
   .pulse {
     animation: status-dot-pulse 1.5s ease-in-out infinite;
   }
 
   @keyframes status-dot-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.3; transform: scale(0.7); }
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.3;
+      transform: scale(0.7);
+    }
   }
 </style>

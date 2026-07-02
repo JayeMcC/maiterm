@@ -82,7 +82,7 @@
 ## v1.13.1
 
 - **Install the recommended Claude Code status line with `/maiterm statusline`.** One command sets up a compact status line showing host · current directory · git branch · model · reasoning effort · context-used %, so you get the same at-a-glance Claude Code context line we use. It's idempotent (safe to re-run) and works both locally and on SSH-bridged hosts. `/maiterm init` is also faster now — it uses a targeted tool lookup instead of scanning every connected MCP server
-- The "What's New" changelog modal now renders Markdown, so **bold**, *italic*, `code`, and links in release notes display formatted instead of showing their literal markup
+- The "What's New" changelog modal now renders Markdown, so **bold**, _italic_, `code`, and links in release notes display formatted instead of showing their literal markup
 - Fix Windows release downloads being published with an empty version in their filename (a double-dash `maiterm--windows-…`) — the version-detection step ran under PowerShell instead of bash, so it produced no version
 
 ## v1.13.0
@@ -99,7 +99,7 @@
 
 ## v1.12.8
 
-- Fix a new terminal tab almost always opening in the wrong directory in workspaces that have accumulated many suspended tabs. A new tab inherits the most common working directory (and SSH setup) among its sibling tabs, but the tally counted *suspended* tabs too — and a suspended tab carries the stale directory it was last in. In a long-lived workspace where most suspended tabs sat in the same place, that majority always won, so every new tab opened there regardless of which tab you were actually on. The tally now counts only live tabs, so a new tab follows the tab you opened it from. Live SSH tabs also now contribute their real remote directory (from the shell prompt) instead of a stale or local-only path
+- Fix a new terminal tab almost always opening in the wrong directory in workspaces that have accumulated many suspended tabs. A new tab inherits the most common working directory (and SSH setup) among its sibling tabs, but the tally counted _suspended_ tabs too — and a suspended tab carries the stale directory it was last in. In a long-lived workspace where most suspended tabs sat in the same place, that majority always won, so every new tab opened there regardless of which tab you were actually on. The tally now counts only live tabs, so a new tab follows the tab you opened it from. Live SSH tabs also now contribute their real remote directory (from the shell prompt) instead of a stale or local-only path
 - When "group active tabs" is enabled, resuming a suspended tab now moves it into the active group's order, not just visually. Previously a resumed tab jumped to the front of the tab bar on screen but kept its old stored position, so the visible order and the real order disagreed (and a drag would snap it back). The resumed tab now settles at the end of the active group — where it already appears — so dragging within your active tabs behaves predictably and the tabs you've most recently used stay together at the front, even after everything is suspended again
 
 ## v1.12.7
@@ -113,7 +113,7 @@
 
 ## v1.12.5
 
-- Fix the global "X agents working" footer dot doing nothing when clicked if the dominant agent lived in a *different* window. The dot rolled up Claude sessions globally, but Claude-hook events broadcast to every window — so each window's session map held agents from all windows, while click-to-cycle only searches the current window's tabs and silently fell through when the target lived elsewhere. Every window also showed the same global count instead of its own agents. The rollup is now scoped to the current window's tabs, so each window's dot is independent and every cycle target is reachable
+- Fix the global "X agents working" footer dot doing nothing when clicked if the dominant agent lived in a _different_ window. The dot rolled up Claude sessions globally, but Claude-hook events broadcast to every window — so each window's session map held agents from all windows, while click-to-cycle only searches the current window's tabs and silently fell through when the target lived elsewhere. Every window also showed the same global count instead of its own agents. The rollup is now scoped to the current window's tabs, so each window's dot is independent and every cycle target is reachable
 
 ## v1.12.4
 
@@ -128,8 +128,8 @@
 
 ## v1.12.2
 
-- Fix terminal glyph ghosting — stale, overlapping glyphs that showed up on Claude Code spinners, diffs, and bold text. The cause was the xterm.js WebGL renderer compositing redrawn cells *over* the previous frame (its backbuffer is alpha-blended even though the terminal is opaque) instead of opaquely replacing them, so only redrawn cells ghosted and a refit cleared it. Switched the renderer from WebGL to Canvas, which clears each cell opaquely before drawing and so can't ghost — WebGL's scroll-perf advantage never applied here since aiTerm renders a single bounded viewport (scrollback:0). Falls back to xterm's built-in DOM renderer if the Canvas addon throws
-- Replace the sidebar footer's renderer status dot with a global Claude-agent indicator that rolls up agent state across *all* workspaces: red pulse = needs permission, accent pulse = working, green = finished & unread, hollow ring = all seen, dim = no agents. Click it to jump to a representative agent tab
+- Fix terminal glyph ghosting — stale, overlapping glyphs that showed up on Claude Code spinners, diffs, and bold text. The cause was the xterm.js WebGL renderer compositing redrawn cells _over_ the previous frame (its backbuffer is alpha-blended even though the terminal is opaque) instead of opaquely replacing them, so only redrawn cells ghosted and a refit cleared it. Switched the renderer from WebGL to Canvas, which clears each cell opaquely before drawing and so can't ghost — WebGL's scroll-perf advantage never applied here since aiTerm renders a single bounded viewport (scrollback:0). Falls back to xterm's built-in DOM renderer if the Canvas addon throws
+- Replace the sidebar footer's renderer status dot with a global Claude-agent indicator that rolls up agent state across _all_ workspaces: red pulse = needs permission, accent pulse = working, green = finished & unread, hollow ring = all seen, dim = no agents. Click it to jump to a representative agent tab
 - Fix editor scroll-jump: a long file scrolled to the bottom via the scrollbar would jump back ~a screenful and drop the cursor on the wrong line when clicked. The browser's native "scroll the caret into view on focus" was yanking the viewport back to the old caret before CodeMirror mapped the click. Clicks now pre-focus the content with scrolling suppressed so the click maps to the correct line, and releasing the scrollbar without clicking restores the user's scroll position
 
 ## v1.12.1
@@ -139,7 +139,7 @@
 
 ## v1.12.0
 
-- Add a read/unread state to the Claude agent-done indicators. When an agent finishes, its tab shows a filled green dot (unread); once you view the tab it becomes a hollow green ring (seen). This is rolled up to the workspace sidebar too — the workspace dot stays a filled green dot until *every* finished agent in it has been seen, then goes hollow. Lets you tell at a glance which completed agents you still need to look at
+- Add a read/unread state to the Claude agent-done indicators. When an agent finishes, its tab shows a filled green dot (unread); once you view the tab it becomes a hollow green ring (seen). This is rolled up to the workspace sidebar too — the workspace dot stays a filled green dot until _every_ finished agent in it has been seen, then goes hollow. Lets you tell at a glance which completed agents you still need to look at
 - Add an hourly background check for app updates so a long-running window notices new releases without a restart. The check is silent (only surfaces the update banner/toast if one is found) and respects the "automatically check for updates" preference
 
 ## v1.11.0
@@ -155,7 +155,7 @@
 
 ## v1.10.7
 
-- Fix QuickOpen (double-Alt) trying to list files over SSH on a local terminal that had merely *used* ssh earlier in the session (e.g. Claude Code running ssh via its Bash tool). SSH-vs-local detection now reads the controlling tty's foreground process group (tpgid) and only reports ssh when the pgid leader at that pid is itself an ssh/mosh/autossh process — subprocesses inherit the foreground app's pgid but aren't what the user is interacting with. Side note: `sudo ssh host` and `bash -c "ssh host"` are no longer auto-detected (leader is sudo/bash, not ssh)
+- Fix QuickOpen (double-Alt) trying to list files over SSH on a local terminal that had merely _used_ ssh earlier in the session (e.g. Claude Code running ssh via its Bash tool). SSH-vs-local detection now reads the controlling tty's foreground process group (tpgid) and only reports ssh when the pgid leader at that pid is itself an ssh/mosh/autossh process — subprocesses inherit the foreground app's pgid but aren't what the user is interacting with. Side note: `sudo ssh host` and `bash -c "ssh host"` are no longer auto-detected (leader is sudo/bash, not ssh)
 - Fix SSH MCP bridge slot leak when a tab is suspended: suspend kills the PTY but doesn't unmount TerminalPane, so `onDestroy` never fired and `disableBridge()` was being skipped — the shared `ssh -L` tunnel kept the suspended tab in its refcount
 
 ## v1.10.6

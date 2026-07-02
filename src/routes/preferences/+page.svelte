@@ -1,21 +1,33 @@
 <script lang="ts">
   import { preferencesStore } from '$lib/stores/preferences.svelte';
   import { updaterStore } from '$lib/stores/updater.svelte';
-  import type { CursorStyle, Trigger, TriggerActionType, TriggerActionEntry, VariableMapping, TabStateName } from '$lib/tauri/types';
+  import type { CursorStyle, Trigger, TriggerActionType, VariableMapping, TabStateName } from '$lib/tauri/types';
   import { builtinThemes, getTheme, isBuiltinTheme } from '$lib/themes';
   import ThemeEditor from '$lib/components/ThemeEditor.svelte';
   import ResizableTextarea from '$lib/components/ResizableTextarea.svelte';
   import Tooltip from '$lib/components/Tooltip.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import { modLabel, altLabel, isModKey, isMac } from '$lib/utils/platform';
-  import { getAllWorkspaces, getAllTabs, listSystemSounds, playSystemSound, detectWindowsShells, exportState, importState, pickBackupDirectory, backupFilename, previewImport, checkFullDiskAccess, openFullDiskAccessSettings } from '$lib/tauri/commands';
+  import {
+    getAllWorkspaces,
+    getAllTabs,
+    listSystemSounds,
+    detectWindowsShells,
+    exportState,
+    pickBackupDirectory,
+    backupFilename,
+    previewImport,
+    checkFullDiskAccess,
+    openFullDiskAccessSettings,
+  } from '$lib/tauri/commands';
   import type { ImportPreview } from '$lib/tauri/commands';
   import ImportPreviewModal from '$lib/components/ImportPreviewModal.svelte';
   import { open as dialogOpen, save as dialogSave } from '@tauri-apps/plugin-dialog';
 
-  import { error as logError, info as logInfo } from '@tauri-apps/plugin-log';
+  import { error as logError } from '@tauri-apps/plugin-log';
   import type { ShellInfo } from '$lib/tauri/types';
   import { tick, onMount } from 'svelte';
+  import { SvelteMap } from 'svelte/reactivity';
   import { slide } from 'svelte/transition';
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { getVersion } from '@tauri-apps/api/app';
@@ -56,15 +68,21 @@
       allWorkspaces = pairs.map(([id, name]) => ({ id, name }));
       const tabRows = await getAllTabs();
       allTabs = tabRows.map(([id, name, workspaceId, workspaceName, isActive]) => ({ id, name, workspaceId, workspaceName, isActive }));
-    } catch { /* preferences may open before main window */ }
+    } catch {
+      /* preferences may open before main window */
+    }
 
     try {
       systemSounds = await listSystemSounds();
-    } catch { /* sound listing may fail on some platforms */ }
+    } catch {
+      /* sound listing may fail on some platforms */
+    }
 
     try {
       windowsShells = await detectWindowsShells();
-    } catch { /* shell detection may fail */ }
+    } catch {
+      /* shell detection may fail */
+    }
 
     // Wait for preferences to finish loading before seeding defaults
     await preferencesStore.ready;
@@ -72,20 +90,17 @@
   });
 
   function seedDefaultTriggers() {
-    const result = seedDefaults(
-      preferencesStore.triggers,
-      preferencesStore.hiddenDefaultTriggers,
-    );
+    const result = seedDefaults(preferencesStore.triggers, preferencesStore.hiddenDefaultTriggers);
     if (result) preferencesStore.setTriggers(result);
   }
 
   const sectionIds = ['appearance', 'terminal', 'ui', 'tabs', 'workspace', 'notes', 'notifications', 'triggers', 'claude_code', 'backup', 'updates', 'permissions'] as const;
-  type SectionId = typeof sectionIds[number];
+  type SectionId = (typeof sectionIds)[number];
   const saved = localStorage.getItem('prefs-section');
-  let activeSection = $state<SectionId>(
-    saved && sectionIds.includes(saved as SectionId) ? saved as SectionId : 'appearance'
-  );
-  $effect(() => { localStorage.setItem('prefs-section', activeSection); });
+  let activeSection = $state<SectionId>(saved && sectionIds.includes(saved as SectionId) ? (saved as SectionId) : 'appearance');
+  $effect(() => {
+    localStorage.setItem('prefs-section', activeSection);
+  });
 
   const sections = [
     { id: 'appearance' as const, label: 'Appearance' },
@@ -99,15 +114,19 @@
     { id: 'claude_code' as const, label: 'AI Agents' },
     { id: 'backup' as const, label: 'Backup' },
     { id: 'updates' as const, label: 'Updates' },
-    ...isMac() ? [{ id: 'permissions' as const, label: 'Permissions' }] : [],
+    ...(isMac() ? [{ id: 'permissions' as const, label: 'Permissions' }] : []),
   ];
 
   let appVersion = $state('');
-  getVersion().then(v => { appVersion = v; });
+  getVersion().then((v) => {
+    appVersion = v;
+  });
 
   let fdaGranted = $state<boolean | null>(null);
   if (isMac()) {
-    checkFullDiskAccess().then(v => { fdaGranted = v; });
+    checkFullDiskAccess().then((v) => {
+      fdaGranted = v;
+    });
   }
 
   let backupStatus = $state<string | null>(null);
@@ -125,7 +144,9 @@
       if (path) {
         await exportState(path, excludeScrollback);
         backupStatus = 'State exported successfully.';
-        setTimeout(() => { backupStatus = null; }, 3000);
+        setTimeout(() => {
+          backupStatus = null;
+        }, 3000);
       }
     } catch (e) {
       backupStatus = `Export failed: ${e}`;
@@ -163,10 +184,11 @@
   }
 
   let expandedTriggerId = $state<string | null>(null);
-  let wsSearchQueries = $state(new Map<string, string>());
-  let wsShowSelected = $state(new Map<string, boolean>());
-  let tabSearchQueries = $state(new Map<string, string>());
-  let tabShowSelected = $state(new Map<string, boolean>());
+  // Reactive maps: read via .get() inside {@const}/templates on every keystroke.
+  const wsSearchQueries = new SvelteMap<string, string>();
+  const wsShowSelected = new SvelteMap<string, boolean>();
+  const tabSearchQueries = new SvelteMap<string, string>();
+  const tabShowSelected = new SvelteMap<string, boolean>();
 
   function addTrigger() {
     const trigger: Trigger = {
@@ -195,12 +217,12 @@
     if (patch.variables) {
       patch.variables = [...patch.variables].sort((a, b) => a.group - b.group);
     }
-    const updated = preferencesStore.triggers.map(t => {
+    const updated = preferencesStore.triggers.map((t) => {
       if (t.id !== id) return t;
       const merged = { ...t, ...patch };
       // Mark default triggers as user-modified when content changes (not just enabled toggle)
       if (merged.default_id && !('user_modified' in patch)) {
-        const isContentChange = Object.keys(patch).some(k => k !== 'enabled');
+        const isContentChange = Object.keys(patch).some((k) => k !== 'enabled');
         if (isContentChange) {
           merged.user_modified = true;
         }
@@ -213,7 +235,7 @@
   let confirmDeleteId = $state<string | null>(null);
 
   function deleteTrigger(id: string) {
-    const trigger = preferencesStore.triggers.find(t => t.id === id);
+    const trigger = preferencesStore.triggers.find((t) => t.id === id);
     if (trigger && (trigger.name || trigger.pattern)) {
       confirmDeleteId = id;
       return;
@@ -228,23 +250,33 @@
 
   function doDeleteTrigger(id: string) {
     confirmDeleteId = null;
-    const trigger = preferencesStore.triggers.find(t => t.id === id);
+    const trigger = preferencesStore.triggers.find((t) => t.id === id);
     // Track deleted defaults so they don't get re-seeded
     if (trigger?.default_id) {
       preferencesStore.setHiddenDefaultTriggers([...preferencesStore.hiddenDefaultTriggers, trigger.default_id]);
     }
-    preferencesStore.setTriggers(preferencesStore.triggers.filter(t => t.id !== id));
+    preferencesStore.setTriggers(preferencesStore.triggers.filter((t) => t.id !== id));
     if (expandedTriggerId === id) expandedTriggerId = null;
   }
 
   function isValidRegex(pattern: string): boolean {
     if (!pattern) return true;
-    try { new RegExp(pattern); return true; } catch { return false; }
+    try {
+      new RegExp(pattern);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   function isValidCondition(pattern: string): boolean {
     if (!pattern) return true;
-    try { parseCondition(pattern); return true; } catch { return false; }
+    try {
+      parseCondition(pattern);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** Count capture groups in a regex pattern (0 if invalid). */
@@ -255,7 +287,9 @@
       const re = new RegExp(pattern + '|');
       const m = ''.match(re);
       return m ? m.length - 1 : 0;
-    } catch { return 0; }
+    } catch {
+      return 0;
+    }
   }
 
   /** Validate variable name. Returns error message or empty string if valid. */
@@ -266,14 +300,7 @@
     return '';
   }
 
-  const fontFamilies = [
-    'Menlo',
-    'Monaco',
-    'SF Mono',
-    'JetBrains Mono',
-    'Fira Code',
-    'Consolas',
-  ];
+  const fontFamilies = ['Menlo', 'Monaco', 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas'];
 
   const autoSaveOptions = [
     { value: 0, label: 'Disabled' },
@@ -283,13 +310,15 @@
     { value: 60, label: '60 seconds' },
   ];
 
-  const defaultPromptPatterns = [
-    '\\u@\\h:\\d\\p',
-    '\\h \\u[\\d]\\p',
-    '[\\u@\\h \\d]\\p',
-    'PS \\d>',
-    '\\d>',
-  ];
+  const defaultPromptPatterns = ['\\u@\\h:\\d\\p', '\\h \\u[\\d]\\p', '[\\u@\\h \\d]\\p', 'PS \\d>', '\\d>'];
+
+  // `\u` in Svelte template attribute text is parsed as a unicode escape, so keep
+  // the placeholder as an expression rather than inlining it as a plain string.
+  const promptPatternPlaceholder = 'e.g. \\h \\u[\\d]\\p';
+
+  // Newlines inside an attribute-text literal wouldn't survive the parse, so route
+  // the notify-action tooltip help through an expression.
+  const notifyHelpTooltip = '%title — OSC title (set by program)\n%tab — tab name from workspace\n%tabtitle — full tab display name\n%varName — trigger capture variables';
 
   const scrollbackOptions = [
     { value: 1000, label: '1,000 lines' },
@@ -300,9 +329,7 @@
 
   const allThemes = $derived([...builtinThemes, ...preferencesStore.customThemes]);
 
-  const selectedTheme = $derived(
-    getTheme(preferencesStore.theme, preferencesStore.customThemes)
-  );
+  const selectedTheme = $derived(getTheme(preferencesStore.theme, preferencesStore.customThemes));
 
   function createNewTheme() {
     const source = selectedTheme;
@@ -337,11 +364,7 @@
   <div class="body">
     <nav class="sidebar">
       {#each sections as section (section.id)}
-        <button
-          class="sidebar-item"
-          class:active={activeSection === section.id}
-          onclick={() => activeSection = section.id}
-        >
+        <button class="sidebar-item" class:active={activeSection === section.id} onclick={() => (activeSection = section.id)}>
           {section.label}
         </button>
       {/each}
@@ -375,7 +398,9 @@
               class="theme-swatch"
               class:active={preferencesStore.theme === t.id}
               onclick={() => preferencesStore.setTheme(t.id)}
-              onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') preferencesStore.setTheme(t.id); }}
+              onkeydown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') preferencesStore.setTheme(t.id);
+              }}
               role="button"
               tabindex="0"
               title={t.name}
@@ -393,9 +418,12 @@
               {#if !isBuiltinTheme(t.id)}
                 <button
                   class="swatch-delete"
-                  onclick={(e) => { e.stopPropagation(); preferencesStore.deleteCustomTheme(t.id); }}
-                  title="Delete custom theme"
-                >&times;</button>
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    preferencesStore.deleteCustomTheme(t.id);
+                  }}
+                  title="Delete custom theme">&times;</button
+                >
               {/if}
             </div>
           {/each}
@@ -410,9 +438,7 @@
         <div class="setting" style="align-items: flex-start;">
           <div>
             <label for="restore-session">Restore on Relaunch</label>
-            <p class="setting-hint">
-              Restore working directory and SSH sessions when the app restarts.
-            </p>
+            <p class="setting-hint">Restore working directory and SSH sessions when the app restarts.</p>
           </div>
           <button
             id="restore-session"
@@ -431,14 +457,11 @@
             <div>
               <label for="session-restore-mode">Restore Scope</label>
               <p class="setting-hint">
-                <strong>All workspaces</strong> respawns and auto-resumes every workspace's active tab on launch, so a crash, update, or quit/relaunch comes back exactly as it was. <strong>Last active only</strong> restores just the last-active workspace and leaves the rest suspended until you open them. (A window reload always reattaches to still-running terminals.)
+                <strong>All workspaces</strong> respawns and auto-resumes every workspace's active tab on launch, so a crash, update, or quit/relaunch comes back exactly as it was.
+                <strong>Last active only</strong> restores just the last-active workspace and leaves the rest suspended until you open them. (A window reload always reattaches to still-running terminals.)
               </p>
             </div>
-            <select
-              id="session-restore-mode"
-              value={preferencesStore.sessionRestoreMode}
-              onchange={(e) => preferencesStore.setSessionRestoreMode(e.currentTarget.value)}
-            >
+            <select id="session-restore-mode" value={preferencesStore.sessionRestoreMode} onchange={(e) => preferencesStore.setSessionRestoreMode(e.currentTarget.value)}>
               <option value="all">All workspaces</option>
               <option value="last_active">Last active only</option>
             </select>
@@ -464,12 +487,8 @@
 
         <div class="setting">
           <label for="font-family">Font Family</label>
-          <select
-            id="font-family"
-            value={preferencesStore.fontFamily}
-            onchange={(e) => preferencesStore.setFontFamily(e.currentTarget.value)}
-          >
-            {#each fontFamilies as font}
+          <select id="font-family" value={preferencesStore.fontFamily} onchange={(e) => preferencesStore.setFontFamily(e.currentTarget.value)}>
+            {#each fontFamilies as font (font)}
               <option value={font}>{font}</option>
             {/each}
           </select>
@@ -478,15 +497,9 @@
         <div class="setting">
           <span class="label-text">Cursor Style</span>
           <div class="radio-group">
-            {#each ['block', 'underline', 'bar'] as style}
+            {#each ['block', 'underline', 'bar'] as style (style)}
               <label class="radio-label">
-                <input
-                  type="radio"
-                  name="cursor-style"
-                  value={style}
-                  checked={preferencesStore.cursorStyle === style}
-                  onchange={() => preferencesStore.setCursorStyle(style as CursorStyle)}
-                />
+                <input type="radio" name="cursor-style" value={style} checked={preferencesStore.cursorStyle === style} onchange={() => preferencesStore.setCursorStyle(style as CursorStyle)} />
                 {style.charAt(0).toUpperCase() + style.slice(1)}
               </label>
             {/each}
@@ -510,10 +523,7 @@
         <div class="setting" style="align-items: flex-start;">
           <div>
             <label for="composer-default-open">Open Composer by Default</label>
-            <p class="setting-hint">
-              Shows the multi-line input dock at the bottom of terminal tabs.
-              Tabs where you've toggled the composer keep their own state.
-            </p>
+            <p class="setting-hint">Shows the multi-line input dock at the bottom of terminal tabs. Tabs where you've toggled the composer keep their own state.</p>
           </div>
           <button
             id="composer-default-open"
@@ -533,18 +543,11 @@
           <div>
             <label for="terminal-renderer">Renderer</label>
             <p class="setting-hint">
-              <strong>DOM</strong> is the default and avoids the rendering artifacts
-              (red diff-stripes, smeared input while typing during heavy output) that
-              the GPU-accelerated <strong>Canvas</strong> renderer leaves on this
-              terminal. Canvas is kept for side-by-side comparison. Applies immediately
-              to visible terminals.
+              <strong>DOM</strong> is the default and avoids the rendering artifacts (red diff-stripes, smeared input while typing during heavy output) that the GPU-accelerated <strong>Canvas</strong> renderer
+              leaves on this terminal. Canvas is kept for side-by-side comparison. Applies immediately to visible terminals.
             </p>
           </div>
-          <select
-            id="terminal-renderer"
-            value={preferencesStore.terminalRenderer}
-            onchange={(e) => preferencesStore.setTerminalRenderer(e.currentTarget.value)}
-          >
+          <select id="terminal-renderer" value={preferencesStore.terminalRenderer} onchange={(e) => preferencesStore.setTerminalRenderer(e.currentTarget.value)}>
             <option value="dom">DOM (default)</option>
             <option value="canvas">Canvas (GPU)</option>
           </select>
@@ -552,24 +555,18 @@
 
         {#if windowsShells.length > 0}
           <h3 class="section-heading" style="margin-top: 20px;">Default Shell</h3>
-          <p class="section-desc">
-            Shell used when opening new terminal tabs. Changes apply to new terminals only.
-          </p>
+          <p class="section-desc">Shell used when opening new terminal tabs. Changes apply to new terminals only.</p>
           <div class="setting">
             <label for="windows-shell">Shell</label>
-            <select
-              id="windows-shell"
-              value={preferencesStore.windowsShell}
-              onchange={(e) => preferencesStore.setWindowsShell(e.currentTarget.value)}
-            >
-              {#each windowsShells as shell}
+            <select id="windows-shell" value={preferencesStore.windowsShell} onchange={(e) => preferencesStore.setWindowsShell(e.currentTarget.value)}>
+              {#each windowsShells as shell (shell.id)}
                 <option value={shell.id}>{shell.name}</option>
               {/each}
             </select>
           </div>
-          {#if windowsShells.find(s => s.id === preferencesStore.windowsShell)}
+          {#if windowsShells.find((s) => s.id === preferencesStore.windowsShell)}
             <p class="setting-hint" style="margin-top: -8px; margin-bottom: 8px;">
-              {windowsShells.find(s => s.id === preferencesStore.windowsShell)?.path}
+              {windowsShells.find((s) => s.id === preferencesStore.windowsShell)?.path}
             </p>
           {/if}
         {/if}
@@ -579,10 +576,7 @@
         <div class="setting" style="align-items: flex-start;">
           <div>
             <label for="shell-title">Auto-set Tab Title</label>
-            <p class="setting-hint">
-              Updates tab title with user@host:path on each prompt.
-              Applies to new terminals only.
-            </p>
+            <p class="setting-hint">Updates tab title with user@host:path on each prompt. Applies to new terminals only.</p>
           </div>
           <button
             id="shell-title"
@@ -600,9 +594,7 @@
           <div>
             <label for="shell-integration">Command Tracking</label>
             <p class="setting-hint">
-              Detect when commands start, finish, and their exit status. Powers completion
-              indicators on inactive tabs and detection of dropped SSH sessions.
-              Applies to new terminals only.
+              Detect when commands start, finish, and their exit status. Powers completion indicators on inactive tabs and detection of dropped SSH sessions. Applies to new terminals only.
             </p>
           </div>
           <button
@@ -628,11 +620,7 @@
               {preferencesStore.fileLinkAction === 'alt_click' ? `Hold ${altLabel}+Click to open.` : ''}
             </p>
           </div>
-          <select
-            id="file-link-action"
-            value={preferencesStore.fileLinkAction}
-            onchange={(e) => preferencesStore.setFileLinkAction(e.currentTarget.value)}
-          >
+          <select id="file-link-action" value={preferencesStore.fileLinkAction} onchange={(e) => preferencesStore.setFileLinkAction(e.currentTarget.value)}>
             <option value="click">Click opens file</option>
             <option value="modifier_click">{modLabel}+Click opens file</option>
             <option value="alt_click">{altLabel}+Click opens file</option>
@@ -642,18 +630,17 @@
 
         <h3 class="section-heading" style="margin-top: 20px;">Prompt Patterns</h3>
         <p class="section-desc">
-          Patterns for detecting the remote directory when splitting SSH panes.
-          This lets cloned terminals automatically <code>cd</code> to the source directory on the remote host.
-          Use <code>\h</code> hostname, <code>\u</code> username, <code>\d</code> directory, <code>\p</code> prompt char (<code>$ # % &gt;</code>).
+          Patterns for detecting the remote directory when splitting SSH panes. This lets cloned terminals automatically <code>cd</code> to the source directory on the remote host. Use <code>\h</code>
+          hostname, <code>\u</code> username, <code>\d</code> directory, <code>\p</code> prompt char (<code>$ # % &gt;</code>).
         </p>
 
-        {#each preferencesStore.promptPatterns as pattern, idx}
+        {#each preferencesStore.promptPatterns as pattern, idx (idx)}
           <div class="pattern-row">
             <input
               type="text"
               class="pattern-input"
               value={pattern}
-              placeholder={'e.g. \\h \\u[\\d]\\p'}
+              placeholder={promptPatternPlaceholder}
               onchange={(e) => {
                 const updated = [...preferencesStore.promptPatterns];
                 updated[idx] = e.currentTarget.value;
@@ -666,30 +653,20 @@
                 const updated = preferencesStore.promptPatterns.filter((_, i) => i !== idx);
                 preferencesStore.setPromptPatterns(updated);
               }}
-              title="Remove pattern"
-            >&times;</button>
+              title="Remove pattern">&times;</button
+            >
           </div>
         {/each}
 
         <div class="pattern-actions">
-          <button
-            class="add-pattern-btn"
-            onclick={() => preferencesStore.setPromptPatterns([...preferencesStore.promptPatterns, ''])}
-          >+ Add Pattern</button>
-          <button
-            class="add-pattern-btn"
-            onclick={() => preferencesStore.setPromptPatterns([...defaultPromptPatterns])}
-          >Reset to Defaults</button>
+          <button class="add-pattern-btn" onclick={() => preferencesStore.setPromptPatterns([...preferencesStore.promptPatterns, ''])}>+ Add Pattern</button>
+          <button class="add-pattern-btn" onclick={() => preferencesStore.setPromptPatterns([...defaultPromptPatterns])}>Reset to Defaults</button>
         </div>
       {:else if activeSection === 'ui'}
         <div class="setting">
           <label for="auto-save">Auto-save Interval</label>
-          <select
-            id="auto-save"
-            value={preferencesStore.autoSaveInterval}
-            onchange={(e) => preferencesStore.setAutoSaveInterval(parseInt(e.currentTarget.value))}
-          >
-            {#each autoSaveOptions as opt}
+          <select id="auto-save" value={preferencesStore.autoSaveInterval} onchange={(e) => preferencesStore.setAutoSaveInterval(parseInt(e.currentTarget.value))}>
+            {#each autoSaveOptions as opt (opt.value)}
               <option value={opt.value}>{opt.label}</option>
             {/each}
           </select>
@@ -697,12 +674,8 @@
 
         <div class="setting">
           <label for="scrollback">Scrollback Limit</label>
-          <select
-            id="scrollback"
-            value={preferencesStore.scrollbackLimit}
-            onchange={(e) => preferencesStore.setScrollbackLimit(parseInt(e.currentTarget.value))}
-          >
-            {#each scrollbackOptions as opt}
+          <select id="scrollback" value={preferencesStore.scrollbackLimit} onchange={(e) => preferencesStore.setScrollbackLimit(parseInt(e.currentTarget.value))}>
+            {#each scrollbackOptions as opt (opt.value)}
               <option value={opt.value}>{opt.label}</option>
             {/each}
           </select>
@@ -827,7 +800,6 @@
             <span class="toggle-knob"></span>
           </button>
         </div>
-
       {:else if activeSection === 'workspace'}
         <h3 class="section-heading">Sidebar</h3>
 
@@ -870,11 +842,7 @@
             <label for="tab-button-style">Tab Buttons</label>
             <p class="setting-hint">When to show close, archive, and duplicate buttons on tabs.</p>
           </div>
-          <select
-            id="tab-button-style"
-            value={preferencesStore.tabButtonStyle}
-            onchange={(e) => preferencesStore.setTabButtonStyle(e.currentTarget.value)}
-          >
+          <select id="tab-button-style" value={preferencesStore.tabButtonStyle} onchange={(e) => preferencesStore.setTabButtonStyle(e.currentTarget.value)}>
             <option value="hover">On Hover</option>
             <option value="always">Always</option>
             <option value="modifier">While Holding {modLabel}</option>
@@ -887,11 +855,7 @@
 
         <div class="setting">
           <label for="workspace-sort">Order</label>
-          <select
-            id="workspace-sort"
-            value={preferencesStore.workspaceSortOrder}
-            onchange={(e) => preferencesStore.setWorkspaceSortOrder(e.currentTarget.value)}
-          >
+          <select id="workspace-sort" value={preferencesStore.workspaceSortOrder} onchange={(e) => preferencesStore.setWorkspaceSortOrder(e.currentTarget.value)}>
             <option value="default">Default (drag & drop)</option>
             <option value="alphabetical">Alphabetical</option>
             <option value="recent_activity">Most Recent Activity</option>
@@ -923,18 +887,13 @@
             <label for="auto-suspend">Auto-suspend inactive workspaces</label>
             <p class="setting-hint">Automatically suspend workspaces that haven't been visited within the selected time. The active workspace is never auto-suspended.</p>
           </div>
-          <select
-            id="auto-suspend"
-            value={preferencesStore.autoSuspendMinutes}
-            onchange={(e) => preferencesStore.setAutoSuspendMinutes(Number(e.currentTarget.value))}
-          >
+          <select id="auto-suspend" value={preferencesStore.autoSuspendMinutes} onchange={(e) => preferencesStore.setAutoSuspendMinutes(Number(e.currentTarget.value))}>
             <option value={0}>Disabled</option>
             <option value={15}>15 minutes</option>
             <option value={30}>30 minutes</option>
             <option value={60}>1 hour</option>
           </select>
         </div>
-
       {:else if activeSection === 'notes'}
         <h3 class="section-heading">Preview</h3>
 
@@ -957,12 +916,8 @@
 
         <div class="setting">
           <label for="notes-font-family">Font Family</label>
-          <select
-            id="notes-font-family"
-            value={preferencesStore.notesFontFamily}
-            onchange={(e) => preferencesStore.setNotesFontFamily(e.currentTarget.value)}
-          >
-            {#each fontFamilies as font}
+          <select id="notes-font-family" value={preferencesStore.notesFontFamily} onchange={(e) => preferencesStore.setNotesFontFamily(e.currentTarget.value)}>
+            {#each fontFamilies as font (font)}
               <option value={font}>{font}</option>
             {/each}
           </select>
@@ -1000,7 +955,6 @@
             <span class="toggle-knob"></span>
           </button>
         </div>
-
       {:else if activeSection === 'notifications'}
         <div class="setting" style="align-items: flex-start;">
           <div>
@@ -1017,11 +971,7 @@
               {/if}
             </p>
           </div>
-          <select
-            id="notification-mode"
-            value={preferencesStore.notificationMode}
-            onchange={(e) => preferencesStore.setNotificationMode(e.currentTarget.value)}
-          >
+          <select id="notification-mode" value={preferencesStore.notificationMode} onchange={(e) => preferencesStore.setNotificationMode(e.currentTarget.value)}>
             <option value="auto">Auto</option>
             <option value="in_app">In-App Only</option>
             <option value="native">Native Only</option>
@@ -1040,13 +990,13 @@
                   const val = e.currentTarget.value;
                   preferencesStore.setNotificationSound(val);
                   if (val !== 'none') {
-                    import('$lib/stores/notificationDispatch').then(m => m.playNotificationSoundPreview());
+                    import('$lib/stores/notificationDispatch').then((m) => m.playNotificationSoundPreview());
                   }
                 }}
               >
                 <option value="none">None</option>
                 <option value="default">Default (Built-in)</option>
-                {#each systemSounds as sound}
+                {#each systemSounds as sound (sound)}
                   <option value={sound}>{sound}</option>
                 {/each}
               </select>
@@ -1054,10 +1004,10 @@
                 <button
                   class="preview-sound-btn"
                   onclick={() => {
-                    import('$lib/stores/notificationDispatch').then(m => m.playNotificationSoundPreview());
+                    import('$lib/stores/notificationDispatch').then((m) => m.playNotificationSoundPreview());
                   }}
-                  title="Preview sound"
-                >&#9654;</button>
+                  title="Preview sound">&#9654;</button
+                >
               {/if}
             </div>
           </div>
@@ -1083,15 +1033,9 @@
           <div class="setting" style="align-items: flex-start;">
             <div>
               <label for="notify-duration">Command Threshold</label>
-              <p class="setting-hint">
-                Only notify on command completion if it ran longer than this.
-              </p>
+              <p class="setting-hint">Only notify on command completion if it ran longer than this.</p>
             </div>
-            <select
-              id="notify-duration"
-              value={preferencesStore.notifyMinDuration}
-              onchange={(e) => preferencesStore.setNotifyMinDuration(parseInt(e.currentTarget.value))}
-            >
+            <select id="notify-duration" value={preferencesStore.notifyMinDuration} onchange={(e) => preferencesStore.setNotifyMinDuration(parseInt(e.currentTarget.value))}>
               <option value={0}>Always</option>
               <option value={3}>3 seconds</option>
               <option value={5}>5 seconds</option>
@@ -1108,11 +1052,7 @@
 
           <div class="setting">
             <label for="toast-duration">Display Duration</label>
-            <select
-              id="toast-duration"
-              value={preferencesStore.toastDuration}
-              onchange={(e) => preferencesStore.setToastDuration(parseInt(e.currentTarget.value))}
-            >
+            <select id="toast-duration" value={preferencesStore.toastDuration} onchange={(e) => preferencesStore.setToastDuration(parseInt(e.currentTarget.value))}>
               <option value={3}>3 seconds</option>
               <option value={5}>5 seconds</option>
               <option value={8}>8 seconds</option>
@@ -1156,12 +1096,8 @@
             </div>
           </div>
         {/if}
-
       {:else if activeSection === 'triggers'}
-        <p class="section-desc">
-          Triggers watch terminal output for regex patterns and react with actions.
-          Each trigger has a cooldown to prevent firing in rapid loops.
-        </p>
+        <p class="section-desc">Triggers watch terminal output for regex patterns and react with actions. Each trigger has a cooldown to prevent firing in rapid loops.</p>
 
         <div style="display: flex; gap: 8px; margin-bottom: 12px;">
           <button class="add-pattern-btn" onclick={addTrigger}>+ Add Trigger</button>
@@ -1182,33 +1118,26 @@
               >
                 <span class="toggle-knob"></span>
               </button>
-              <button
-                class="trigger-name-btn"
-                onclick={() => expandedTriggerId = expandedTriggerId === trigger.id ? null : trigger.id}
-              >
-                <svg class="trigger-chevron" class:expanded={expandedTriggerId === trigger.id} width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M6 3l5 5-5 5z"/></svg>
+              <button class="trigger-name-btn" onclick={() => (expandedTriggerId = expandedTriggerId === trigger.id ? null : trigger.id)}>
+                <svg class="trigger-chevron" class:expanded={expandedTriggerId === trigger.id} width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M6 3l5 5-5 5z" /></svg>
                 {trigger.name || 'Unnamed'}
               </button>
               {#if trigger.default_id}
-                <button
-                  class="restore-default-btn"
-                  disabled={!trigger.user_modified}
-                  onclick={() => restoreDefault(trigger)}
-                  title="Restore to default"
-                >Reset</button>
+                <button class="restore-default-btn" disabled={!trigger.user_modified} onclick={() => restoreDefault(trigger)} title="Restore to default">Reset</button>
               {/if}
               {#if confirmDeleteId === trigger.id}
                 <span class="confirm-delete">
                   <span class="confirm-delete-label">Delete?</span>
                   <button class="confirm-delete-btn confirm-yes" onclick={() => doDeleteTrigger(trigger.id)}>Yes</button>
-                  <button class="confirm-delete-btn confirm-no" onclick={() => { confirmDeleteId = null; }}>No</button>
+                  <button
+                    class="confirm-delete-btn confirm-no"
+                    onclick={() => {
+                      confirmDeleteId = null;
+                    }}>No</button
+                  >
                 </span>
               {:else}
-                <button
-                  class="pattern-delete trigger-delete"
-                  onclick={() => deleteTrigger(trigger.id)}
-                  title="Delete trigger"
-                ><Icon name="trash" /></button>
+                <button class="pattern-delete trigger-delete" onclick={() => deleteTrigger(trigger.id)} title="Delete trigger"><Icon name="trash" /></button>
               {/if}
             </div>
 
@@ -1216,7 +1145,8 @@
               {@const mode = resolveMatchMode(trigger)}
               <div class="trigger-body" transition:slide={{ duration: 150 }}>
                 <div class="trigger-field">
-                  <!-- svelte-ignore a11y_label_has_associated_control -- label is visual context; input is dynamically rendered per-trigger -->
+                  <!-- label is visual context; input is dynamically rendered per-trigger -->
+                  <!-- svelte-ignore a11y_label_has_associated_control -->
                   <label>Name</label>
                   <input
                     type="text"
@@ -1229,7 +1159,8 @@
                 </div>
 
                 <div class="trigger-field">
-                  <!-- svelte-ignore a11y_label_has_associated_control -- label is visual context for custom ResizableTextarea component -->
+                  <!-- label is visual context for custom ResizableTextarea component -->
+                  <!-- svelte-ignore a11y_label_has_associated_control -->
                   <label>Description</label>
                   <ResizableTextarea
                     value={trigger.description ?? ''}
@@ -1245,7 +1176,8 @@
 
                   <div class="trigger-field">
                     <div class="pattern-label-row">
-                      <!-- svelte-ignore a11y_label_has_associated_control -- label is visual context for custom ResizableTextarea below -->
+                      <!-- label is visual context for custom ResizableTextarea below -->
+                      <!-- svelte-ignore a11y_label_has_associated_control -->
                       <label>
                         Pattern
                         {#if mode === 'plain_text'}
@@ -1275,10 +1207,10 @@
                     <ResizableTextarea
                       value={trigger.pattern}
                       placeholder={mode === 'plain_text'
-                        ? "e.g. Would you like to proceed?"
+                        ? 'e.g. Would you like to proceed?'
                         : mode === 'variable'
-                          ? "e.g. claudeSessionId || claudeResumeCommand"
-                          : "e.g. error|fail\nor multiline: Resume.*?--resume ([a-z0-9\\-]*)"}
+                          ? 'e.g. claudeSessionId || claudeResumeCommand'
+                          : 'e.g. error|fail\nor multiline: Resume.*?--resume ([a-z0-9\\-]*)'}
                       rows={2}
                       maxHeight={200}
                       mono
@@ -1289,7 +1221,8 @@
 
                   <div class="trigger-inline-fields">
                     <div class="trigger-field" style="flex: none;">
-                      <!-- svelte-ignore a11y_label_has_associated_control -- label is visual context; input is dynamically rendered per-trigger -->
+                      <!-- label is visual context; input is dynamically rendered per-trigger -->
+                      <!-- svelte-ignore a11y_label_has_associated_control -->
                       <label>Cooldown <span class="field-hint">(seconds)</span></label>
                       <input
                         type="text"
@@ -1301,238 +1234,222 @@
                       />
                     </div>
                     <div class="trigger-field" style="flex: 1; min-width: 0;">
-                      <!-- svelte-ignore a11y_label_has_associated_control -- label is visual context for checkbox list below -->
+                      <!-- label is visual context for checkbox list below -->
+                      <!-- svelte-ignore a11y_label_has_associated_control -->
                       <label>Workspaces <span class="field-hint">({trigger.workspaces.length || 'all'})</span></label>
                       {#if true}
-                      {@const wsQuery = (wsSearchQueries.get(trigger.id) ?? '').toLowerCase()}
-                      {@const wsShowSel = wsShowSelected.get(trigger.id) ?? false}
-                      {@const visibleWs = allWorkspaces.filter(ws => {
-                        if (wsShowSel && !trigger.workspaces.includes(ws.id)) return false;
-                        if (!wsQuery) return true;
-                        return ws.name.toLowerCase().includes(wsQuery);
-                      })}
-                      <div class="tab-selector">
-                        <div class="tab-selector-bar">
-                          <input
-                            type="text"
-                            class="tab-search-input"
-                            placeholder="Search workspaces…"
-                            value={wsSearchQueries.get(trigger.id) ?? ''}
-                            oninput={(e) => {
-                              wsSearchQueries.set(trigger.id, e.currentTarget.value);
-                              wsSearchQueries = new Map(wsSearchQueries);
-                            }}
-                          />
-                          <Tooltip text="Show selected only">
-                            <!-- svelte-ignore a11y_consider_explicit_label -->
+                        {@const wsQuery = (wsSearchQueries.get(trigger.id) ?? '').toLowerCase()}
+                        {@const wsShowSel = wsShowSelected.get(trigger.id) ?? false}
+                        {@const visibleWs = allWorkspaces.filter((ws) => {
+                          if (wsShowSel && !trigger.workspaces.includes(ws.id)) return false;
+                          if (!wsQuery) return true;
+                          return ws.name.toLowerCase().includes(wsQuery);
+                        })}
+                        <div class="tab-selector">
+                          <div class="tab-selector-bar">
                             <input
-                              type="checkbox"
-                              class="tab-show-selected-cb"
-                              checked={wsShowSelected.get(trigger.id) ?? false}
-                              onchange={() => {
-                                wsShowSelected.set(trigger.id, !(wsShowSelected.get(trigger.id) ?? false));
-                                wsShowSelected = new Map(wsShowSelected);
+                              type="text"
+                              class="tab-search-input"
+                              placeholder="Search workspaces…"
+                              value={wsSearchQueries.get(trigger.id) ?? ''}
+                              oninput={(e) => {
+                                wsSearchQueries.set(trigger.id, e.currentTarget.value);
                               }}
                             />
-                          </Tooltip>
-                        </div>
-                        <div class="tab-selector-list">
-                          {#each visibleWs as ws (ws.id)}
-                            <label class="tab-selector-item" class:selected={trigger.workspaces.includes(ws.id)}>
+                            <Tooltip text="Show selected only">
                               <input
                                 type="checkbox"
-                                checked={trigger.workspaces.includes(ws.id)}
+                                class="tab-show-selected-cb"
+                                checked={wsShowSelected.get(trigger.id) ?? false}
                                 onchange={() => {
-                                  const cur = trigger.workspaces;
-                                  const next = cur.includes(ws.id)
-                                    ? cur.filter(id => id !== ws.id)
-                                    : [...cur, ws.id];
-                                  updateTrigger(trigger.id, { workspaces: next });
+                                  wsShowSelected.set(trigger.id, !(wsShowSelected.get(trigger.id) ?? false));
                                 }}
                               />
-                              <span class="tab-selector-label">{ws.name}</span>
-                            </label>
-                          {:else}
-                            <span class="field-hint" style="padding: 4px 8px;">
-                              {wsShowSel ? 'No workspaces selected' : wsQuery ? 'No matching workspaces' : 'No workspaces found'}
-                            </span>
-                          {/each}
+                            </Tooltip>
+                          </div>
+                          <div class="tab-selector-list">
+                            {#each visibleWs as ws (ws.id)}
+                              <label class="tab-selector-item" class:selected={trigger.workspaces.includes(ws.id)}>
+                                <input
+                                  type="checkbox"
+                                  checked={trigger.workspaces.includes(ws.id)}
+                                  onchange={() => {
+                                    const cur = trigger.workspaces;
+                                    const next = cur.includes(ws.id) ? cur.filter((id) => id !== ws.id) : [...cur, ws.id];
+                                    updateTrigger(trigger.id, { workspaces: next });
+                                  }}
+                                />
+                                <span class="tab-selector-label">{ws.name}</span>
+                              </label>
+                            {:else}
+                              <span class="field-hint" style="padding: 4px 8px;">
+                                {wsShowSel ? 'No workspaces selected' : wsQuery ? 'No matching workspaces' : 'No workspaces found'}
+                              </span>
+                            {/each}
+                          </div>
+                          {#if trigger.workspaces.length > 0}
+                            <button class="deselect-all-btn" onclick={() => updateTrigger(trigger.id, { workspaces: [] })}>Deselect all</button>
+                          {/if}
                         </div>
-                        {#if trigger.workspaces.length > 0}
-                          <button class="deselect-all-btn" onclick={() => updateTrigger(trigger.id, { workspaces: [] })}>Deselect all</button>
-                        {/if}
-                      </div>
                       {/if}
                     </div>
                     <div class="trigger-field" style="flex: 1; min-width: 0;">
-                      <!-- svelte-ignore a11y_label_has_associated_control -- label is visual context for checkbox list below -->
+                      <!-- label is visual context for checkbox list below -->
+                      <!-- svelte-ignore a11y_label_has_associated_control -->
                       <label>Tabs <span class="field-hint">({(trigger.tabs ?? []).length || 'all'})</span></label>
                       {#if true}
-                      {@const scopedTabs = trigger.workspaces.length > 0
-                        ? allTabs.filter(t => trigger.workspaces.includes(t.workspaceId))
-                        : allTabs}
-                      {@const tQuery = (tabSearchQueries.get(trigger.id) ?? '').toLowerCase()}
-                      {@const tShowSelected = tabShowSelected.get(trigger.id) ?? false}
-                      {@const visibleTabs = scopedTabs.filter(t => {
-                        if (tShowSelected && !(trigger.tabs ?? []).includes(t.id)) return false;
-                        if (!tQuery) return true;
-                        const label = allWorkspaces.length > 1 ? `${t.workspaceName} / ${t.name}` : t.name;
-                        return label.toLowerCase().includes(tQuery);
-                      })}
-                      <div class="tab-selector">
-                        <div class="tab-selector-bar">
-                          {#if scopedTabs.some(t => t.isActive) && !(trigger.tabs ?? []).includes(scopedTabs.find(t => t.isActive)!.id)}
-                            <button
-                              class="tab-active-btn"
-                              title="Add the currently active tab"
-                              onclick={() => {
-                                const active = scopedTabs.find(t => t.isActive);
-                                if (active) {
-                                  const cur = trigger.tabs ?? [];
-                                  if (!cur.includes(active.id)) {
-                                    updateTrigger(trigger.id, { tabs: [...cur, active.id] });
+                        {@const scopedTabs = trigger.workspaces.length > 0 ? allTabs.filter((t) => trigger.workspaces.includes(t.workspaceId)) : allTabs}
+                        {@const tQuery = (tabSearchQueries.get(trigger.id) ?? '').toLowerCase()}
+                        {@const tShowSelected = tabShowSelected.get(trigger.id) ?? false}
+                        {@const visibleTabs = scopedTabs.filter((t) => {
+                          if (tShowSelected && !(trigger.tabs ?? []).includes(t.id)) return false;
+                          if (!tQuery) return true;
+                          const label = allWorkspaces.length > 1 ? `${t.workspaceName} / ${t.name}` : t.name;
+                          return label.toLowerCase().includes(tQuery);
+                        })}
+                        <div class="tab-selector">
+                          <div class="tab-selector-bar">
+                            {#if scopedTabs.some((t) => t.isActive) && !(trigger.tabs ?? []).includes(scopedTabs.find((t) => t.isActive)!.id)}
+                              <button
+                                class="tab-active-btn"
+                                title="Add the currently active tab"
+                                onclick={() => {
+                                  const active = scopedTabs.find((t) => t.isActive);
+                                  if (active) {
+                                    const cur = trigger.tabs ?? [];
+                                    if (!cur.includes(active.id)) {
+                                      updateTrigger(trigger.id, { tabs: [...cur, active.id] });
+                                    }
                                   }
-                                }
-                              }}
-                            >+ Active</button>
-                          {/if}
-                          <input
-                            type="text"
-                            class="tab-search-input"
-                            placeholder="Search tabs…"
-                            value={tabSearchQueries.get(trigger.id) ?? ''}
-                            oninput={(e) => {
-                              tabSearchQueries.set(trigger.id, e.currentTarget.value);
-                              tabSearchQueries = new Map(tabSearchQueries);
-                            }}
-                          />
-                          <Tooltip text="Show selected only">
-                            <!-- svelte-ignore a11y_consider_explicit_label -->
+                                }}>+ Active</button
+                              >
+                            {/if}
                             <input
-                              type="checkbox"
-                              class="tab-show-selected-cb"
-                              checked={tabShowSelected.get(trigger.id) ?? false}
-                              onchange={() => {
-                                tabShowSelected.set(trigger.id, !(tabShowSelected.get(trigger.id) ?? false));
-                                tabShowSelected = new Map(tabShowSelected);
+                              type="text"
+                              class="tab-search-input"
+                              placeholder="Search tabs…"
+                              value={tabSearchQueries.get(trigger.id) ?? ''}
+                              oninput={(e) => {
+                                tabSearchQueries.set(trigger.id, e.currentTarget.value);
                               }}
                             />
-                          </Tooltip>
-                        </div>
-                        <div class="tab-selector-list">
-                          {#each visibleTabs as tab (tab.id)}
-                            <label class="tab-selector-item" class:selected={(trigger.tabs ?? []).includes(tab.id)}>
+                            <Tooltip text="Show selected only">
                               <input
                                 type="checkbox"
-                                checked={(trigger.tabs ?? []).includes(tab.id)}
+                                class="tab-show-selected-cb"
+                                checked={tabShowSelected.get(trigger.id) ?? false}
                                 onchange={() => {
-                                  const cur = trigger.tabs ?? [];
-                                  const next = cur.includes(tab.id)
-                                    ? cur.filter(id => id !== tab.id)
-                                    : [...cur, tab.id];
-                                  updateTrigger(trigger.id, { tabs: next });
+                                  tabShowSelected.set(trigger.id, !(tabShowSelected.get(trigger.id) ?? false));
                                 }}
                               />
-                              <span class="tab-selector-label">{allWorkspaces.length > 1 ? `${tab.workspaceName} / ${tab.name}` : tab.name}</span>
-                              {#if tab.isActive}<span class="tab-active-badge">active</span>{/if}
-                            </label>
-                          {:else}
-                            <span class="field-hint" style="padding: 4px 8px;">
-                              {tShowSelected ? 'No tabs selected' : tQuery ? 'No matching tabs' : 'No tabs found'}
-                            </span>
-                          {/each}
+                            </Tooltip>
+                          </div>
+                          <div class="tab-selector-list">
+                            {#each visibleTabs as tab (tab.id)}
+                              <label class="tab-selector-item" class:selected={(trigger.tabs ?? []).includes(tab.id)}>
+                                <input
+                                  type="checkbox"
+                                  checked={(trigger.tabs ?? []).includes(tab.id)}
+                                  onchange={() => {
+                                    const cur = trigger.tabs ?? [];
+                                    const next = cur.includes(tab.id) ? cur.filter((id) => id !== tab.id) : [...cur, tab.id];
+                                    updateTrigger(trigger.id, { tabs: next });
+                                  }}
+                                />
+                                <span class="tab-selector-label">{allWorkspaces.length > 1 ? `${tab.workspaceName} / ${tab.name}` : tab.name}</span>
+                                {#if tab.isActive}<span class="tab-active-badge">active</span>{/if}
+                              </label>
+                            {:else}
+                              <span class="field-hint" style="padding: 4px 8px;">
+                                {tShowSelected ? 'No tabs selected' : tQuery ? 'No matching tabs' : 'No tabs found'}
+                              </span>
+                            {/each}
+                          </div>
+                          {#if (trigger.tabs ?? []).length > 0}
+                            <button class="deselect-all-btn" onclick={() => updateTrigger(trigger.id, { tabs: [] })}>Deselect all</button>
+                          {/if}
                         </div>
-                        {#if (trigger.tabs ?? []).length > 0}
-                          <button class="deselect-all-btn" onclick={() => updateTrigger(trigger.id, { tabs: [] })}>Deselect all</button>
-                        {/if}
-                      </div>
                       {/if}
                     </div>
                   </div>
                 </div>
 
                 {#if resolveMatchMode(trigger) !== 'variable'}
-                <div class="trigger-section">
-                  <h4 class="trigger-section-heading">Capture <span class="field-hint">use %varName in tab titles and auto-resume commands</span></h4>
+                  <div class="trigger-section">
+                    <h4 class="trigger-section-heading">Capture <span class="field-hint">use %varName in tab titles and auto-resume commands</span></h4>
 
-                  {#each trigger.variables as vm, vi}
-                    {@const groupCount = countCaptureGroups(trigger.pattern)}
-                    {@const nameErr = varNameError(vm.name)}
-                    {@const groupErr = groupCount > 0 && vm.group > groupCount ? `Pattern has ${groupCount} group${groupCount === 1 ? '' : 's'}` : ''}
-                    <div class="var-row-wrap">
-                    <div class="var-row">
-                      <input
-                        type="text"
-                        class="pattern-input var-name-input"
-                        class:var-field-invalid={!!nameErr}
-                        value={vm.name}
-                        placeholder="varName"
-                        onchange={(e) => {
-                          const newName = e.currentTarget.value.trim();
-                          const vars = trigger.variables.map((v, i) =>
-                            i === vi ? { ...v, name: newName } : v
-                          );
-                          updateTrigger(trigger.id, { variables: vars });
-                        }}
-                      />
-                      <span class="var-arrow">&larr; group</span>
-                      <input
-                        type="text"
-                        inputmode="numeric"
-                        class="pattern-input var-idx-input"
-                        class:var-field-invalid={!!groupErr}
-                        value={vm.group}
-                        onchange={(e) => {
-                          const num = parseInt(e.currentTarget.value) || 1;
-                          const clamped = Math.max(1, num);
-                          const vars = trigger.variables.map((v, i) =>
-                            i === vi ? { ...v, group: clamped } : v
-                          );
-                          updateTrigger(trigger.id, { variables: vars });
-                        }}
-                      />
-                      <span class="var-arrow">template</span>
-                      <input
-                        type="text"
-                        class="pattern-input var-template-input"
-                        value={vm.template ?? ''}
-                        placeholder="% (raw value)"
-                        onchange={(e) => {
-                          const val = e.currentTarget.value;
-                          const vars = trigger.variables.map((v, i) =>
-                            i === vi ? { ...v, template: val || undefined } : v
-                          );
-                          updateTrigger(trigger.id, { variables: vars });
-                        }}
-                      />
-                      <button
-                        class="pattern-delete"
-                        onclick={() => {
-                          const vars = trigger.variables.filter((_, i) => i !== vi);
-                          updateTrigger(trigger.id, { variables: vars });
-                        }}
-                        title="Remove variable"
-                      >&times;</button>
-                    </div>
-                    {#if nameErr || groupErr}
-                      <div class="var-error">{nameErr || groupErr}</div>
-                    {/if}
-                    </div>
-                  {/each}
-                  <button
-                    class="add-pattern-btn"
-                    onclick={() => {
-                      const vars: VariableMapping[] = [...trigger.variables, { name: `var${trigger.variables.length + 1}`, group: 1 }];
-                      updateTrigger(trigger.id, { variables: vars });
-                    }}
-                  >+ Add Variable</button>
-                </div>
+                    {#each trigger.variables as vm, vi (vi)}
+                      {@const groupCount = countCaptureGroups(trigger.pattern)}
+                      {@const nameErr = varNameError(vm.name)}
+                      {@const groupErr = groupCount > 0 && vm.group > groupCount ? `Pattern has ${groupCount} group${groupCount === 1 ? '' : 's'}` : ''}
+                      <div class="var-row-wrap">
+                        <div class="var-row">
+                          <input
+                            type="text"
+                            class="pattern-input var-name-input"
+                            class:var-field-invalid={!!nameErr}
+                            value={vm.name}
+                            placeholder="varName"
+                            onchange={(e) => {
+                              const newName = e.currentTarget.value.trim();
+                              const vars = trigger.variables.map((v, i) => (i === vi ? { ...v, name: newName } : v));
+                              updateTrigger(trigger.id, { variables: vars });
+                            }}
+                          />
+                          <span class="var-arrow">&larr; group</span>
+                          <input
+                            type="text"
+                            inputmode="numeric"
+                            class="pattern-input var-idx-input"
+                            class:var-field-invalid={!!groupErr}
+                            value={vm.group}
+                            onchange={(e) => {
+                              const num = parseInt(e.currentTarget.value) || 1;
+                              const clamped = Math.max(1, num);
+                              const vars = trigger.variables.map((v, i) => (i === vi ? { ...v, group: clamped } : v));
+                              updateTrigger(trigger.id, { variables: vars });
+                            }}
+                          />
+                          <span class="var-arrow">template</span>
+                          <input
+                            type="text"
+                            class="pattern-input var-template-input"
+                            value={vm.template ?? ''}
+                            placeholder="% (raw value)"
+                            onchange={(e) => {
+                              const val = e.currentTarget.value;
+                              const vars = trigger.variables.map((v, i) => (i === vi ? { ...v, template: val || undefined } : v));
+                              updateTrigger(trigger.id, { variables: vars });
+                            }}
+                          />
+                          <button
+                            class="pattern-delete"
+                            onclick={() => {
+                              const vars = trigger.variables.filter((_, i) => i !== vi);
+                              updateTrigger(trigger.id, { variables: vars });
+                            }}
+                            title="Remove variable">&times;</button
+                          >
+                        </div>
+                        {#if nameErr || groupErr}
+                          <div class="var-error">{nameErr || groupErr}</div>
+                        {/if}
+                      </div>
+                    {/each}
+                    <button
+                      class="add-pattern-btn"
+                      onclick={() => {
+                        const vars: VariableMapping[] = [...trigger.variables, { name: `var${trigger.variables.length + 1}`, group: 1 }];
+                        updateTrigger(trigger.id, { variables: vars });
+                      }}>+ Add Variable</button
+                    >
+                  </div>
                 {/if}
 
                 <div class="trigger-section">
                   <h4 class="trigger-section-heading">Then</h4>
 
-                  {#each trigger.actions as entry, ai}
+                  {#each trigger.actions as entry, ai (ai)}
                     <div class="action-row">
                       <select
                         class="pattern-input action-type-select"
@@ -1540,12 +1457,14 @@
                         onchange={(e) => {
                           const newType = e.currentTarget.value as TriggerActionType;
                           const actions = trigger.actions.map((a, i) =>
-                            i === ai ? {
-                              ...a,
-                              action_type: newType,
-                              // Default tab_state when switching to set_tab_state
-                              tab_state: newType === 'set_tab_state' ? (a.tab_state ?? 'alert') : a.tab_state,
-                            } : a
+                            i === ai
+                              ? {
+                                  ...a,
+                                  action_type: newType,
+                                  // Default tab_state when switching to set_tab_state
+                                  tab_state: newType === 'set_tab_state' ? (a.tab_state ?? 'alert') : a.tab_state,
+                                }
+                              : a,
                           );
                           updateTrigger(trigger.id, { actions });
                         }}
@@ -1563,9 +1482,7 @@
                           value={entry.command ?? ''}
                           placeholder="e.g. echo triggered"
                           onchange={(e) => {
-                            const actions = trigger.actions.map((a, i) =>
-                              i === ai ? { ...a, command: e.currentTarget.value || null } : a
-                            );
+                            const actions = trigger.actions.map((a, i) => (i === ai ? { ...a, command: e.currentTarget.value || null } : a));
                             updateTrigger(trigger.id, { actions });
                           }}
                         />
@@ -1577,9 +1494,7 @@
                             value={entry.title ?? ''}
                             placeholder="title (default: %tabtitle)"
                             onchange={(e) => {
-                              const actions = trigger.actions.map((a, i) =>
-                                i === ai ? { ...a, title: e.currentTarget.value || null } : a
-                              );
+                              const actions = trigger.actions.map((a, i) => (i === ai ? { ...a, title: e.currentTarget.value || null } : a));
                               updateTrigger(trigger.id, { actions });
                             }}
                           />
@@ -1589,14 +1504,12 @@
                             value={entry.message ?? ''}
                             placeholder="body"
                             onchange={(e) => {
-                              const actions = trigger.actions.map((a, i) =>
-                                i === ai ? { ...a, message: e.currentTarget.value || null } : a
-                              );
+                              const actions = trigger.actions.map((a, i) => (i === ai ? { ...a, message: e.currentTarget.value || null } : a));
                               updateTrigger(trigger.id, { actions });
                             }}
                           />
                         </div>
-                        <Tooltip text={"%title — OSC title (set by program)\n%tab — tab name from workspace\n%tabtitle — full tab display name\n%varName — trigger capture variables"}>
+                        <Tooltip text={notifyHelpTooltip}>
                           <span class="notify-help">?</span>
                         </Tooltip>
                       {:else if entry.action_type === 'enable_auto_resume'}
@@ -1606,9 +1519,7 @@
                           value={entry.command ?? ''}
                           placeholder="auto-resume command (%vars supported)"
                           onchange={(e) => {
-                            const actions = trigger.actions.map((a, i) =>
-                              i === ai ? { ...a, command: e.currentTarget.value || null } : a
-                            );
+                            const actions = trigger.actions.map((a, i) => (i === ai ? { ...a, command: e.currentTarget.value || null } : a));
                             updateTrigger(trigger.id, { actions });
                           }}
                         />
@@ -1617,9 +1528,7 @@
                           class="pattern-input action-type-select"
                           value={entry.tab_state ?? 'alert'}
                           onchange={(e) => {
-                            const actions = trigger.actions.map((a, i) =>
-                              i === ai ? { ...a, tab_state: e.currentTarget.value as TabStateName } : a
-                            );
+                            const actions = trigger.actions.map((a, i) => (i === ai ? { ...a, tab_state: e.currentTarget.value as TabStateName } : a));
                             updateTrigger(trigger.id, { actions });
                           }}
                         >
@@ -1633,8 +1542,8 @@
                           const actions = trigger.actions.filter((_, i) => i !== ai);
                           updateTrigger(trigger.id, { actions });
                         }}
-                        title="Remove action"
-                      >&times;</button>
+                        title="Remove action">&times;</button
+                      >
                     </div>
                   {/each}
                   <button
@@ -1642,8 +1551,8 @@
                     onclick={() => {
                       const actions = [...trigger.actions, { action_type: 'notify' as TriggerActionType, command: null, title: null, message: null, tab_state: null }];
                       updateTrigger(trigger.id, { actions });
-                    }}
-                  >+ Add Action</button>
+                    }}>+ Add Action</button
+                  >
                 </div>
               </div>
             {/if}
@@ -1656,9 +1565,8 @@
       {:else if activeSection === 'claude_code'}
         <h3 class="section-heading">AI Agent Integration</h3>
         <p class="section-desc">
-          Connect AI coding agents to maiTerm. When enabled, maiTerm starts a local server
-          so an agent's CLI can open files, show diffs, and access editor state. Each runtime
-          is configured independently below. Requires restart to take effect.
+          Connect AI coding agents to maiTerm. When enabled, maiTerm starts a local server so an agent's CLI can open files, show diffs, and access editor state. Each runtime is configured
+          independently below. Requires restart to take effect.
         </p>
 
         <h3 class="section-heading">Claude Code</h3>
@@ -1666,9 +1574,7 @@
         <div class="setting" style="align-items: flex-start;">
           <div>
             <label for="claude-code-ide">Enable IDE Integration</label>
-            <p class="setting-hint">
-              Starts a local WebSocket server for Claude Code to communicate with maiTerm.
-            </p>
+            <p class="setting-hint">Starts a local WebSocket server for Claude Code to communicate with maiTerm.</p>
           </div>
           <button
             id="claude-code-ide"
@@ -1686,10 +1592,7 @@
           <div class="setting" style="align-items: flex-start;">
             <div>
               <label for="claude-code-hooks">Enable Hooks Integration</label>
-              <p class="setting-hint">
-                Registers lifecycle hooks so Claude Code reports session state to maiTerm
-                (active/idle/permission tab indicators). Requires restart.
-              </p>
+              <p class="setting-hint">Registers lifecycle hooks so Claude Code reports session state to maiTerm (active/idle/permission tab indicators). Requires restart.</p>
             </div>
             <button
               id="claude-code-hooks"
@@ -1707,10 +1610,7 @@
             <div class="setting" style="align-items: flex-start;">
               <div>
                 <label for="claude-code-auto-resume">Enable Auto-Resume via Hooks</label>
-                <p class="setting-hint">
-                  Automatically captures session IDs and configures auto-resume when Claude initializes its maiTerm session.
-                  No screen-scraping triggers needed.
-                </p>
+                <p class="setting-hint">Automatically captures session IDs and configures auto-resume when Claude initializes its maiTerm session. No screen-scraping triggers needed.</p>
               </div>
               <button
                 id="claude-code-auto-resume"
@@ -1729,15 +1629,13 @@
             <div>
               <label for="claude-code-ide-ssh">Enable IDE Integration over SSH</label>
               <p class="setting-hint">
-                Automatically creates a secure reverse SSH tunnel when you connect to a remote server,
-                so Claude Code running remotely can access your local maiTerm MCP tools (workspace navigation,
+                Automatically creates a secure reverse SSH tunnel when you connect to a remote server, so Claude Code running remotely can access your local maiTerm MCP tools (workspace navigation,
                 notes, tab context, auto-resume, etc.).
               </p>
               <p class="setting-hint" style="margin-top: 6px; opacity: 0.7;">
                 This writes a small discovery file (<code>~/.claude/ide/*.lock</code>) and registers in
-                <code>~/.claude.json</code> on the remote server. No other software is installed.
-                All traffic is encrypted through your existing SSH connection. The discovery file is
-                automatically cleaned up when the session ends.
+                <code>~/.claude.json</code> on the remote server. No other software is installed. All traffic is encrypted through your existing SSH connection. The discovery file is automatically cleaned
+                up when the session ends.
               </p>
             </div>
             <button
@@ -1759,8 +1657,7 @@
           <div>
             <label for="codex-ide">Enable Codex IDE integration</label>
             <p class="setting-hint">
-              Starts the local server for OpenAI Codex to communicate with maiTerm. Codex is
-              opt-in and disabled by default. This writes Codex's MCP config to
+              Starts the local server for OpenAI Codex to communicate with maiTerm. Codex is opt-in and disabled by default. This writes Codex's MCP config to
               <code>~/.codex/config.toml</code> (Claude uses <code>~/.claude.json</code>).
             </p>
           </div>
@@ -1780,10 +1677,7 @@
           <div class="setting" style="align-items: flex-start;">
             <div>
               <label for="codex-hooks">Codex lifecycle hooks</label>
-              <p class="setting-hint">
-                Registers lifecycle hooks so Codex reports session state to maiTerm
-                (active/idle/permission tab indicators). Requires restart.
-              </p>
+              <p class="setting-hint">Registers lifecycle hooks so Codex reports session state to maiTerm (active/idle/permission tab indicators). Requires restart.</p>
             </div>
             <button
               id="codex-hooks"
@@ -1801,10 +1695,7 @@
             <div class="setting" style="align-items: flex-start;">
               <div>
                 <label for="codex-auto-resume">Codex auto-resume</label>
-                <p class="setting-hint">
-                  Automatically captures session IDs and configures auto-resume when Codex
-                  initializes its maiTerm session. No screen-scraping triggers needed.
-                </p>
+                <p class="setting-hint">Automatically captures session IDs and configures auto-resume when Codex initializes its maiTerm session. No screen-scraping triggers needed.</p>
               </div>
               <button
                 id="codex-auto-resume"
@@ -1822,8 +1713,7 @@
               <div>
                 <label for="codex-hooks-bypass-trust">Skip the one-time Codex hook-trust prompt (advanced)</label>
                 <p class="setting-hint">
-                  Codex normally requires a one-time <code>/hooks</code> trust confirmation in
-                  its CLI before lifecycle hooks run. Enabling this suppresses that friction.
+                  Codex normally requires a one-time <code>/hooks</code> trust confirmation in its CLI before lifecycle hooks run. Enabling this suppresses that friction.
                 </p>
               </div>
               <button
@@ -1843,14 +1733,11 @@
             <div>
               <label for="codex-ide-ssh">Codex MCP bridge over SSH</label>
               <p class="setting-hint">
-                Automatically creates a secure reverse SSH tunnel when you connect to a remote
-                server, so Codex running remotely can access your local maiTerm MCP tools
-                (workspace navigation, notes, tab context, auto-resume, etc.).
+                Automatically creates a secure reverse SSH tunnel when you connect to a remote server, so Codex running remotely can access your local maiTerm MCP tools (workspace navigation, notes,
+                tab context, auto-resume, etc.).
               </p>
               <p class="setting-hint" style="margin-top: 6px; opacity: 0.7;">
-                This registers maiTerm's MCP server in <code>~/.codex/config.toml</code> on the
-                remote server. No other software is installed. All traffic is encrypted through
-                your existing SSH connection.
+                This registers maiTerm's MCP server in <code>~/.codex/config.toml</code> on the remote server. No other software is installed. All traffic is encrypted through your existing SSH connection.
               </p>
             </div>
             <button
@@ -1868,10 +1755,8 @@
 
         <h3 class="section-heading" style="margin-top: 20px;">Mesh Workspace</h3>
         <p class="section-desc">
-          Loop control for Mesh Workspaces, where every agent talks to every other over
-          topic threads. A topic pauses at the soft cap (resume or complete it from the
-          cockpit, ⌘⇧M); the hard ceiling and time limit are backstops so an unwatched
-          ping-pong can't run unbounded.
+          Loop control for Mesh Workspaces, where every agent talks to every other over topic threads. A topic pauses at the soft cap (resume or complete it from the cockpit, ⌘⇧M); the hard ceiling
+          and time limit are backstops so an unwatched ping-pong can't run unbounded.
         </p>
         <div class="setting">
           <label for="mesh-soft-cap">Soft turn cap (per topic)</label>
@@ -1923,9 +1808,7 @@
         </div>
       {:else if activeSection === 'backup'}
         <h3 class="section-heading">Backup Options</h3>
-        <p class="section-desc">
-          These settings apply to both manual exports and scheduled backups.
-        </p>
+        <p class="section-desc">These settings apply to both manual exports and scheduled backups.</p>
 
         <div class="setting">
           <div>
@@ -1944,10 +1827,7 @@
         </div>
 
         <h3 class="section-heading">Manual Export / Import</h3>
-        <p class="section-desc">
-          Export your entire maiTerm configuration — all workspaces, tabs, preferences, triggers,
-          and notes — to a JSON file. Import to restore from a backup.
-        </p>
+        <p class="section-desc">Export your entire maiTerm configuration — all workspaces, tabs, preferences, triggers, and notes — to a JSON file. Import to restore from a backup.</p>
 
         <div class="setting" style="flex-direction: column; align-items: flex-start; gap: 12px;">
           <div style="display: flex; gap: 10px; align-items: center;">
@@ -1982,12 +1862,7 @@
 
         <div class="setting">
           <label for="backup-interval">Interval</label>
-          <select
-            id="backup-interval"
-            value={preferencesStore.backupInterval}
-            onchange={(e) => preferencesStore.setBackupInterval(e.currentTarget.value)}
-            disabled={!preferencesStore.backupDirectory}
-          >
+          <select id="backup-interval" value={preferencesStore.backupInterval} onchange={(e) => preferencesStore.setBackupInterval(e.currentTarget.value)} disabled={!preferencesStore.backupDirectory}>
             <option value="off">Off</option>
             <option value="hourly">Hourly</option>
             <option value="daily">Daily</option>
@@ -2033,14 +1908,10 @@
 
         <div class="setting">
           <div>
-            <label>Current Version</label>
+            <span class="label-text">Current Version</span>
             <p class="setting-hint">v{appVersion}</p>
           </div>
-          <button
-            class="backup-btn"
-            onclick={() => updaterStore.checkForUpdates(false)}
-            disabled={updaterStore.checking || updaterStore.downloading}
-          >
+          <button class="backup-btn" onclick={() => updaterStore.checkForUpdates(false)} disabled={updaterStore.checking || updaterStore.downloading}>
             {updaterStore.checking ? 'Checking…' : updaterStore.downloading ? 'Installing…' : 'Check Now'}
           </button>
         </div>
@@ -2066,7 +1937,7 @@
 
         <div class="setting" style="align-items: flex-start;">
           <div>
-            <label>Status</label>
+            <span class="label-text">Status</span>
             <p class="setting-hint">
               {#if fdaGranted === null}
                 Checking…
@@ -2081,7 +1952,9 @@
             class="backup-btn"
             onclick={async () => {
               await openFullDiskAccessSettings();
-              setTimeout(async () => { fdaGranted = await checkFullDiskAccess(); }, 2000);
+              setTimeout(async () => {
+                fdaGranted = await checkFullDiskAccess();
+              }, 2000);
             }}
           >
             Open System Settings
@@ -2091,8 +1964,8 @@
         <div class="setting" style="align-items: flex-start;">
           <div>
             <p class="setting-hint">
-              As a terminal emulator, maiTerm and its child processes (shells, CLI tools, Claude Code) need to read and write files across your system.
-              Without Full Disk Access, macOS will repeatedly prompt you to allow access to individual folders.
+              As a terminal emulator, maiTerm and its child processes (shells, CLI tools, Claude Code) need to read and write files across your system. Without Full Disk Access, macOS will repeatedly
+              prompt you to allow access to individual folders.
             </p>
           </div>
         </div>
@@ -2117,8 +1990,13 @@
   open={showImportPreview}
   preview={importPreview}
   filePath={importFilePath}
-  onclose={() => { showImportPreview = false; }}
-  onimported={() => { showImportPreview = false; window.location.reload(); }}
+  onclose={() => {
+    showImportPreview = false;
+  }}
+  onimported={() => {
+    showImportPreview = false;
+    window.location.reload();
+  }}
 />
 
 <style>
@@ -2171,7 +2049,9 @@
     color: var(--fg-dim);
     text-align: left;
     cursor: pointer;
-    transition: background 0.1s, color 0.1s;
+    transition:
+      background 0.1s,
+      color 0.1s;
     -webkit-app-region: no-drag;
   }
 
@@ -2294,7 +2174,7 @@
     cursor: pointer;
   }
 
-  input[type="radio"] {
+  input[type='radio'] {
     cursor: pointer;
   }
 
@@ -2799,7 +2679,7 @@
     color: var(--fg);
   }
 
-  .tab-selector-item input[type="checkbox"] {
+  .tab-selector-item input[type='checkbox'] {
     flex: none;
     accent-color: var(--accent);
   }
@@ -2931,21 +2811,6 @@
   .var-template-input {
     flex: 1;
     min-width: 0;
-  }
-
-  .checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.923rem;
-    color: var(--fg-dim);
-    cursor: pointer;
-    user-select: none;
-  }
-
-  .checkbox-label input[type="checkbox"] {
-    accent-color: var(--accent);
-    cursor: pointer;
   }
 
   .backup-btn {

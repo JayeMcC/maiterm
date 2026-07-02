@@ -5,7 +5,7 @@
   import { onMount } from 'svelte';
 
   const sectionIds = ['shortcuts', 'editor', 'claude', 'tips'] as const;
-  type SectionId = typeof sectionIds[number];
+  type SectionId = (typeof sectionIds)[number];
 
   function getInitialSection(): SectionId {
     // Query param takes priority (set when opening window with a specific section)
@@ -19,7 +19,9 @@
   }
 
   let activeSection = $state<SectionId>(getInitialSection());
-  $effect(() => { localStorage.setItem('help-section', activeSection); });
+  $effect(() => {
+    localStorage.setItem('help-section', activeSection);
+  });
 
   // Listen for section changes when window is already open (dispatched from Rust eval)
   onMount(() => {
@@ -59,7 +61,9 @@
     navigator.clipboard.writeText('remember at user level: always use subagent haiku for MCP tool calls (maiterm tools like notes, tabs, workspaces, editor)');
     copied = true;
     if (copyTimer) clearTimeout(copyTimer);
-    copyTimer = setTimeout(() => { copied = false; }, 2000);
+    copyTimer = setTimeout(() => {
+      copied = false;
+    }, 2000);
   }
 </script>
 
@@ -71,11 +75,7 @@
   <div class="body">
     <nav class="sidebar">
       {#each sections as section (section.id)}
-        <button
-          class="sidebar-item"
-          class:active={activeSection === section.id}
-          onclick={() => activeSection = section.id}
-        >
+        <button class="sidebar-item" class:active={activeSection === section.id} onclick={() => (activeSection = section.id)}>
           {section.label}
         </button>
       {/each}
@@ -130,11 +130,8 @@
           <div class="shortcut"><kbd>{modLabel}</kbd> + <kbd>/</kbd> <span>Show this help</span></div>
           <div class="shortcut"><kbd>{modLabel}</kbd> + <kbd>Q</kbd> <span>Quit</span></div>
         </div>
-
       {:else if activeSection === 'editor'}
-        <p class="description">
-          When an editor tab is active, these shortcuts override terminal shortcuts.
-        </p>
+        <p class="description">When an editor tab is active, these shortcuts override terminal shortcuts.</p>
 
         <h3 class="section-heading">Selection</h3>
         <div class="shortcut-group">
@@ -196,18 +193,16 @@
         <div class="shortcut-group">
           <div class="shortcut"><kbd>{modLabel}</kbd> + <kbd>S</kbd> <span>Save</span></div>
         </div>
-
       {:else if activeSection === 'claude'}
         <button class="accordion" class:open={openAccordions['c-hooks']} onclick={() => toggleAccordion('c-hooks')}>
           <span class="chevron">&#x203A;</span> Hooks & Session Tracking
         </button>
         {#if openAccordions['c-hooks']}
           <div class="accordion-body" transition:slide={{ duration: 150 }}>
-            <p class="description">
-              maiTerm integrates with Claude Code's hook system for real-time session awareness. Hooks fire on lifecycle events and report state back to maiTerm automatically.
-            </p>
+            <p class="description">maiTerm integrates with Claude Code's hook system for real-time session awareness. Hooks fire on lifecycle events and report state back to maiTerm automatically.</p>
             <div class="tip-box">
-              <strong>Note:</strong> Integration activates automatically — the SessionStart hook tells Claude to call <code>initSession</code> on every new, resumed, forked, or compacted session. If Claude ever misses it, run <code>/maiterm init</code> manually to re-register the tab.
+              <strong>Note:</strong> Integration activates automatically — the SessionStart hook tells Claude to call <code>initSession</code> on every new, resumed, forked, or compacted session. If
+              Claude ever misses it, run <code>/maiterm init</code> manually to re-register the tab.
             </div>
             <div class="trigger-list">
               <div class="trigger-item">
@@ -239,9 +234,7 @@
         </button>
         {#if openAccordions['c-auto-resume']}
           <div class="accordion-body" transition:slide={{ duration: 150 }}>
-            <p class="description">
-              Auto-resume lets you reconnect to a Claude Code session after it exits, disconnects, or the tab is reloaded.
-            </p>
+            <p class="description">Auto-resume lets you reconnect to a Claude Code session after it exits, disconnects, or the tab is reloaded.</p>
             <h4>How it works</h4>
             <ol class="steps">
               <li>When Claude Code starts, maiTerm's SessionStart hook captures the session ID automatically and configures auto-resume.</li>
@@ -254,7 +247,8 @@
             </p>
             <h4>Replay</h4>
             <p class="description">
-              Use <kbd>{modLabel}</kbd> + <kbd>{altLabel}</kbd> + <kbd>R</kbd> to replay the auto-resume command without restarting the terminal. This handles SSH reconnection and CWD navigation before running the resume command.
+              Use <kbd>{modLabel}</kbd> + <kbd>{altLabel}</kbd> + <kbd>R</kbd> to replay the auto-resume command without restarting the terminal. This handles SSH reconnection and CWD navigation before
+              running the resume command.
             </p>
           </div>
         {/if}
@@ -265,7 +259,9 @@
         {#if openAccordions['c-ide']}
           <div class="accordion-body" transition:slide={{ duration: 150 }}>
             <p class="description">
-              maiTerm runs a built-in MCP server that Claude Code discovers automatically. This gives Claude 30+ tools for working with your editor, workspaces, notes, and more. Enable or disable in <strong>Preferences &rsaquo; Claude Code</strong>.
+              maiTerm runs a built-in MCP server that Claude Code discovers automatically. This gives Claude 30+ tools for working with your editor, workspaces, notes, and more. Enable or disable in <strong
+                >Preferences &rsaquo; Claude Code</strong
+              >.
             </p>
             <h4>Editor tools</h4>
             <div class="tool-list">
@@ -305,9 +301,7 @@
         </button>
         {#if openAccordions['c-ssh']}
           <div class="accordion-body" transition:slide={{ duration: 150 }}>
-            <p class="description">
-              When you're SSH'd into a remote server, maiTerm can bridge the MCP connection so Claude Code running remotely still has access to all IDE tools.
-            </p>
+            <p class="description">When you're SSH'd into a remote server, maiTerm can bridge the MCP connection so Claude Code running remotely still has access to all IDE tools.</p>
             <h4>How it works</h4>
             <ol class="steps">
               <li>maiTerm detects an SSH session and sets up a reverse tunnel automatically in the background.</li>
@@ -329,7 +323,8 @@
               Claude Code can manage your notes and navigate between workspaces and tabs directly. Just ask in natural language &mdash; Claude uses the MCP tools automatically.
             </p>
             <div class="tip-box">
-              <strong>Tip:</strong> These tools are simple operations that don't need a large model. Paste this into Claude Code once to permanently use the faster, cheaper Haiku model for all MCP tool calls:
+              <strong>Tip:</strong> These tools are simple operations that don't need a large model. Paste this into Claude Code once to permanently use the faster, cheaper Haiku model for all MCP
+              tool calls:
               <div class="tip-command-wrap">
                 <code class="tip-command">remember at user level: always use subagent haiku for MCP tool calls (maiterm tools like notes, tabs, workspaces, editor)</code>
                 <button class="copy-btn" onclick={copyTipCommand} title="Copy to clipboard">
@@ -363,7 +358,6 @@
             </div>
           </div>
         {/if}
-
       {:else if activeSection === 'tips'}
         <button class="accordion" class:open={openAccordions['t-tabs']} onclick={() => toggleAccordion('t-tabs')}>
           <span class="chevron">&#x203A;</span> Tabs
@@ -432,12 +426,11 @@
         {#if openAccordions['t-backup']}
           <div class="accordion-body" transition:slide={{ duration: 150 }}>
             <p class="description">
-              Export your entire state (workspaces, tabs, notes, preferences) as a backup file via <strong>File &rsaquo; Export State</strong>. Import from <strong>File &rsaquo; Import State</strong> or <strong>Preferences &rsaquo; Backup</strong>.
+              Export your entire state (workspaces, tabs, notes, preferences) as a backup file via <strong>File &rsaquo; Export State</strong>. Import from <strong>File &rsaquo; Import State</strong>
+              or <strong>Preferences &rsaquo; Backup</strong>.
             </p>
             <h4>Import modes</h4>
-            <p class="description">
-              When importing, you get a preview of the backup contents and can select which workspaces to import.
-            </p>
+            <p class="description">When importing, you get a preview of the backup contents and can select which workspaces to import.</p>
             <div class="trigger-list">
               <div class="trigger-item">
                 <strong>Overwrite</strong>
@@ -445,7 +438,10 @@
               </div>
               <div class="trigger-item">
                 <strong>Merge</strong>
-                <span>&mdash; Deep-merges into existing workspaces. Missing tabs are added, tab notes are restored only if currently empty, and missing workspace notes are added. Workspaces that don't exist locally are added as new.</span>
+                <span
+                  >&mdash; Deep-merges into existing workspaces. Missing tabs are added, tab notes are restored only if currently empty, and missing workspace notes are added. Workspaces that don't
+                  exist locally are added as new.</span
+                >
               </div>
             </div>
             <h4>Tips</h4>
@@ -512,7 +508,9 @@
     color: var(--fg-dim);
     text-align: left;
     cursor: pointer;
-    transition: background 0.1s, color 0.1s;
+    transition:
+      background 0.1s,
+      color 0.1s;
     -webkit-app-region: no-drag;
   }
 

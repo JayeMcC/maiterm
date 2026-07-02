@@ -27,9 +27,7 @@ export interface LoopLimits {
 
 export type LoopReason = 'soft' | 'hard' | 'ttl';
 
-export type LoopVerdict =
-  | { ok: true }
-  | { ok: false; reason: LoopReason; turn: number; cap: number };
+export type LoopVerdict = { ok: true } | { ok: false; reason: LoopReason; turn: number; cap: number };
 
 interface LoopState {
   /** How many times a human has lifted the soft cap on this topic. */
@@ -43,7 +41,10 @@ export function createLoopController(deps: { limits: () => LoopLimits }) {
 
   function stateOf(topicId: string): LoopState {
     let s = states.get(topicId);
-    if (!s) { s = { lifts: 0, ttlBaseMs: null }; states.set(topicId, s); }
+    if (!s) {
+      s = { lifts: 0, ttlBaseMs: null };
+      states.set(topicId, s);
+    }
     return s;
   }
 
@@ -84,9 +85,15 @@ export function createLoopController(deps: { limits: () => LoopLimits }) {
   return {
     evaluate,
     resume,
-    lifts(topicId: string): number { return states.get(topicId)?.lifts ?? 0; },
-    clear(topicId: string) { states.delete(topicId); },
-    reset() { states.clear(); },
+    lifts(topicId: string): number {
+      return states.get(topicId)?.lifts ?? 0;
+    },
+    clear(topicId: string) {
+      states.delete(topicId);
+    },
+    reset() {
+      states.clear();
+    },
   };
 }
 

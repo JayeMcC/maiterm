@@ -14,11 +14,11 @@
   import DiffPane from '$lib/components/editor/DiffPane.svelte';
   import ChangelogModal from '$lib/components/ChangelogModal.svelte';
   import { navHistoryStore } from '$lib/stores/navHistory.svelte';
-  import { pendingResumePanes, resumePane } from '$lib/stores/resumeGate.svelte';
+  import { pendingResumePanes } from '$lib/stores/resumeGate.svelte';
   import Resizer from '$lib/components/Resizer.svelte';
   import { getVersion } from '@tauri-apps/api/app';
   import { getCurrentWindow } from '@tauri-apps/api/window';
-  import { modLabel, modSymbol, altLabel } from '$lib/utils/platform';
+  import { modLabel, modSymbol } from '$lib/utils/platform';
   import * as commands from '$lib/tauri/commands';
   import { error as logError } from '@tauri-apps/plugin-log';
 
@@ -30,7 +30,9 @@
   let loadError = $state<string | null>(null);
   let showChangelog = $state(false);
   let appVersion = $state('');
-  getVersion().then(v => { appVersion = v; });
+  getVersion().then((v) => {
+    appVersion = v;
+  });
 
   // Track which workspaces have been visited so we lazily mount terminals
   // on first activation but keep them alive across workspace switches.
@@ -52,12 +54,13 @@
     // panes, tabs, or active_tab_id change via fine-grained Svelte 5 reactivity.
     // Only SvelteSet mutations (activatedTabIds, activatedWorkspaceIds, pendingResumePanes)
     // stay inside untrack() to avoid effect_update_depth_exceeded.
-    const ws = workspacesStore.workspaces.find(w => w.id === id);
-    const paneSnapshots = ws?.panes.map(p => ({
-      id: p.id,
-      active_tab_id: p.active_tab_id,
-      tabs: p.tabs,
-    })) ?? [];
+    const ws = workspacesStore.workspaces.find((w) => w.id === id);
+    const paneSnapshots =
+      ws?.panes.map((p) => ({
+        id: p.id,
+        active_tab_id: p.active_tab_id,
+        tabs: p.tabs,
+      })) ?? [];
 
     // Snapshot suspended workspaces for cleanup
     const suspendedSnapshots: { id: string; panes: { id: string; tabIds: string[] }[] }[] = [];
@@ -65,7 +68,7 @@
       if (w.suspended) {
         suspendedSnapshots.push({
           id: w.id,
-          panes: w.panes.map(p => ({ id: p.id, tabIds: p.tabs.map(t => t.id) })),
+          panes: w.panes.map((p) => ({ id: p.id, tabIds: p.tabs.map((t) => t.id) })),
         });
       }
     }
@@ -87,7 +90,7 @@
       for (const paneSnap of paneSnapshots) {
         const tabId = paneSnap.active_tab_id;
         if (!tabId) continue;
-        const tab = paneSnap.tabs.find(t => t.id === tabId);
+        const tab = paneSnap.tabs.find((t) => t.id === tabId);
         const isTerminal = tab && (tab.tab_type === 'terminal' || !tab.tab_type);
         // Only treat as suspended if the tab previously had a PTY (pty_id set but no live instance).
         // Brand-new tabs have pty_id === null and should activate immediately.
@@ -133,8 +136,8 @@
     void pendingResumePanes.size;
 
     // Read pane data outside untrack() for fine-grained reactivity
-    const ws = workspacesStore.workspaces.find(w => w.id === id);
-    const paneData = ws?.panes.map(p => ({ id: p.id, active_tab_id: p.active_tab_id })) ?? [];
+    const ws = workspacesStore.workspaces.find((w) => w.id === id);
+    const paneData = ws?.panes.map((p) => ({ id: p.id, active_tab_id: p.active_tab_id })) ?? [];
 
     untrack(() => {
       for (const p of paneData) {
@@ -177,7 +180,9 @@
     loading = true;
     try {
       await getCurrentWindow().emit('workspace-load-retry');
-    } catch { /* ignore — the reload below is the real recovery */ }
+    } catch {
+      /* ignore — the reload below is the real recovery */
+    }
     // A retry from a "Window not found" state means our backend WindowData
     // entry vanished (usually because another process clobbered state).
     // Reloading forces the Rust side to re-read state fresh and
@@ -186,61 +191,64 @@
   }
 
   onMount(() => {
-    workspacesStore.load().then(() => {
-      loading = false;
+    workspacesStore
+      .load()
+      .then(() => {
+        loading = false;
 
-      // Session restore. Two independent reasons to bring a background tab live:
-      //  1. Reload reattach: its PTY is still alive in the backend (any mode).
-      //  2. Full-session restore ('all' mode): respawn + auto-resume every
-      //     non-suspended workspace's active tab so a crash / update / relaunch
-      //     comes back exactly as it was — not just the last-active workspace.
-      // The active workspace is already handled by the activation $effect above;
-      // this only adds the background workspaces. Mounting a TerminalPane for a
-      // workspace that isn't visible spawns its PTY detached (no slot) at its
-      // saved size and attaches later via 'terminal-slot-ready' when first shown.
-      const fullRestore = preferencesStore.restoreSession && preferencesStore.sessionRestoreMode === 'all';
-      for (const ws of workspacesStore.workspaces) {
-        let touched = false;
-        for (const pane of ws.panes) {
-          for (const tab of pane.tabs) {
-            const isTerminal = tab.tab_type === 'terminal' || !tab.tab_type;
-            // Reattach any tab whose backend PTY is still alive (window reload).
-            if (isTerminal && terminalsStore.shouldReattach(tab.pty_id)) {
-              activatedTabIds.add(tab.id);
+        // Session restore. Two independent reasons to bring a background tab live:
+        //  1. Reload reattach: its PTY is still alive in the backend (any mode).
+        //  2. Full-session restore ('all' mode): respawn + auto-resume every
+        //     non-suspended workspace's active tab so a crash / update / relaunch
+        //     comes back exactly as it was — not just the last-active workspace.
+        // The active workspace is already handled by the activation $effect above;
+        // this only adds the background workspaces. Mounting a TerminalPane for a
+        // workspace that isn't visible spawns its PTY detached (no slot) at its
+        // saved size and attaches later via 'terminal-slot-ready' when first shown.
+        const fullRestore = preferencesStore.restoreSession && preferencesStore.sessionRestoreMode === 'all';
+        for (const ws of workspacesStore.workspaces) {
+          let touched = false;
+          for (const pane of ws.panes) {
+            for (const tab of pane.tabs) {
+              const isTerminal = tab.tab_type === 'terminal' || !tab.tab_type;
+              // Reattach any tab whose backend PTY is still alive (window reload).
+              if (isTerminal && terminalsStore.shouldReattach(tab.pty_id)) {
+                activatedTabIds.add(tab.id);
+                touched = true;
+              }
+            }
+            // Full restore: spawn each non-suspended workspace's active tab.
+            if (fullRestore && !ws.suspended && pane.active_tab_id) {
+              activatedTabIds.add(pane.active_tab_id);
               touched = true;
             }
           }
-          // Full restore: spawn each non-suspended workspace's active tab.
-          if (fullRestore && !ws.suspended && pane.active_tab_id) {
-            activatedTabIds.add(pane.active_tab_id);
-            touched = true;
-          }
+          if (touched) activatedWorkspaceIds.add(ws.id);
         }
-        if (touched) activatedWorkspaceIds.add(ws.id);
-      }
 
-      // Seed navigation history with the initial active tab
-      const ws = workspacesStore.activeWorkspace;
-      const pane = ws?.panes.find(p => p.id === ws.active_pane_id);
-      if (ws && pane?.active_tab_id) {
-        navHistoryStore.push({ workspaceId: ws.id, paneId: pane.id, tabId: pane.active_tab_id });
-      }
-      // Rebuild Agent Bridges from persisted state (after workspaces are loaded).
-      agentBridgeStore.rehydrate();
-      // Rebuild Mesh routers + topic registries from persisted state.
-      import('$lib/stores/agentMesh.svelte').then(m => m.agentMeshStore.rehydrate()).catch(() => {});
-    }).catch((e: unknown) => {
-      // A rejection here previously left the window on the loading logo with
-      // no signal to the user. Surface it: log to aiterm.log for post-mortem,
-      // store the message so the UI can render an error state, and expose it
-      // on window for the e2e harness to assert against without needing to
-      // parse the log file.
-      const msg = e instanceof Error ? e.message : String(e);
-      logError(`workspacesStore.load failed: ${msg}`).catch(() => {});
-      loadError = msg;
-      loading = false;
-      (window as unknown as { __maitermLoadError?: string }).__maitermLoadError = msg;
-    });
+        // Seed navigation history with the initial active tab
+        const ws = workspacesStore.activeWorkspace;
+        const pane = ws?.panes.find((p) => p.id === ws.active_pane_id);
+        if (ws && pane?.active_tab_id) {
+          navHistoryStore.push({ workspaceId: ws.id, paneId: pane.id, tabId: pane.active_tab_id });
+        }
+        // Rebuild Agent Bridges from persisted state (after workspaces are loaded).
+        agentBridgeStore.rehydrate();
+        // Rebuild Mesh routers + topic registries from persisted state.
+        import('$lib/stores/agentMesh.svelte').then((m) => m.agentMeshStore.rehydrate()).catch(() => {});
+      })
+      .catch((e: unknown) => {
+        // A rejection here previously left the window on the loading logo with
+        // no signal to the user. Surface it: log to aiterm.log for post-mortem,
+        // store the message so the UI can render an error state, and expose it
+        // on window for the e2e harness to assert against without needing to
+        // parse the log file.
+        const msg = e instanceof Error ? e.message : String(e);
+        logError(`workspacesStore.load failed: ${msg}`).catch(() => {});
+        loadError = msg;
+        loading = false;
+        (window as unknown as { __maitermLoadError?: string }).__maitermLoadError = msg;
+      });
 
     // Listen for tab deactivation requests (e.g. "Suspend Other Tabs")
     function handleDeactivateTabs(e: Event) {
@@ -256,7 +264,10 @@
       if (!tabId) return;
       for (const ws of workspacesStore.workspaces) {
         for (const pane of ws.panes) {
-          if (pane.tabs.some(t => t.id === tabId)) { pendingResumePanes.delete(pane.id); break; }
+          if (pane.tabs.some((t) => t.id === tabId)) {
+            pendingResumePanes.delete(pane.id);
+            break;
+          }
         }
       }
       activatedTabIds.add(tabId);
@@ -295,9 +306,7 @@
         <div class="loading-logo" role="img" aria-label="maiTerm"></div>
         <h2>Couldn't load this window</h2>
         <p class="load-error-message">{loadError}</p>
-        <p class="hint">
-          If another maiTerm process was writing state, the retry usually clears it.
-        </p>
+        <p class="hint">If another maiTerm process was writing state, the retry usually clears it.</p>
         <button class="resume-btn" onclick={retryLoad}>Retry</button>
       </div>
     {:else if loading}
@@ -305,12 +314,12 @@
         <div class="loading-logo" role="img" aria-label="maiTerm"></div>
       </div>
     {:else}
-      <div
-        class="sidebar-wrapper"
-        class:collapsed={workspacesStore.sidebarCollapsed}
-        style="width: {workspacesStore.sidebarCollapsed ? 0 : workspacesStore.sidebarWidth + 4}px"
-      >
-        <WorkspaceSidebar width={workspacesStore.sidebarWidth} onversionclick={() => showChangelog = true} onhelp={() => commands.openHelpWindow(workspacesStore.activeTab?.tab_type === 'editor' ? 'editor' : undefined)} />
+      <div class="sidebar-wrapper" class:collapsed={workspacesStore.sidebarCollapsed} style="width: {workspacesStore.sidebarCollapsed ? 0 : workspacesStore.sidebarWidth + 4}px">
+        <WorkspaceSidebar
+          width={workspacesStore.sidebarWidth}
+          onversionclick={() => (showChangelog = true)}
+          onhelp={() => commands.openHelpWindow(workspacesStore.activeTab?.tab_type === 'editor' ? 'editor' : undefined)}
+        />
         <Resizer direction="horizontal" onresize={handleSidebarResize} onresizeend={handleSidebarResizeEnd} />
       </div>
       {#if workspacesStore.sidebarCollapsed}
@@ -330,16 +339,12 @@
             {/key}
           {:else if workspace.split_root}
             {#key workspace.id}
-              <SplitContainer
-                node={workspace.split_root}
-                workspaceId={workspace.id}
-                panes={workspace.panes}
-              />
+              <SplitContainer node={workspace.split_root} workspaceId={workspace.id} panes={workspace.panes} />
             {/key}
           {/if}
         {:else}
-          {@const suspendedWorkspaces = workspacesStore.workspaces.filter(w => w.suspended)}
-          {@const activeWorkspaces = workspacesStore.workspaces.filter(w => !w.suspended)}
+          {@const suspendedWorkspaces = workspacesStore.workspaces.filter((w) => w.suspended)}
+          {@const activeWorkspaces = workspacesStore.workspaces.filter((w) => !w.suspended)}
           <div class="empty-state">
             {#if suspendedWorkspaces.length > 0}
               {#if activeWorkspaces.length > 0}
@@ -382,7 +387,7 @@
              survive both split tree changes and workspace switches.
              Lazy: only mounts terminals once a workspace is first activated. -->
         <div class="terminal-host">
-          {#each workspacesStore.workspaces.filter(w => activatedWorkspaceIds.has(w.id)) as ws (ws.id)}
+          {#each workspacesStore.workspaces.filter((w) => activatedWorkspaceIds.has(w.id)) as ws (ws.id)}
             {@const meshStage = ws.id === workspacesStore.activeWorkspaceId && ws.bridge_all && agentMeshStore.isStageView(ws.id)}
             {#each ws.panes as pane (pane.id)}
               {#each pane.tabs as tab (tab.id)}
@@ -407,8 +412,8 @@
                     workspaceId={ws.id}
                     paneId={pane.id}
                     tabId={tab.id}
-                    existingPtyId={(terminalsStore.get(tab.id) || terminalsStore.shouldReattach(tab.pty_id)) ? tab.pty_id : null}
-                    visible={meshStage ? agentMeshStore.isMeshMemberTab(tab.id) : (tab.id === pane.active_tab_id && ws.id === workspacesStore.activeWorkspaceId)}
+                    existingPtyId={terminalsStore.get(tab.id) || terminalsStore.shouldReattach(tab.pty_id) ? tab.pty_id : null}
+                    visible={meshStage ? agentMeshStore.isMeshMemberTab(tab.id) : tab.id === pane.active_tab_id && ws.id === workspacesStore.activeWorkspaceId}
                     restoreCwd={tab.restore_cwd}
                     restoreSshCommand={tab.restore_ssh_command}
                     restoreRemoteCwd={tab.restore_remote_cwd}
@@ -431,7 +436,7 @@
   </div>
 </div>
 
-<ChangelogModal open={showChangelog} onclose={() => showChangelog = false} version={appVersion} />
+<ChangelogModal open={showChangelog} onclose={() => (showChangelog = false)} version={appVersion} />
 
 <style>
   .app {
@@ -502,7 +507,10 @@
     color: var(--fg);
     background: var(--bg-dark);
   }
-  .load-error h2 { margin: 8px 0 0; color: var(--fg); }
+  .load-error h2 {
+    margin: 8px 0 0;
+    color: var(--fg);
+  }
   .load-error-message {
     max-width: 480px;
     color: var(--fg-dim);
@@ -570,7 +578,9 @@
     cursor: pointer;
     font-family: inherit;
     font-size: 0.9em;
-    transition: background 0.15s, border-color 0.15s;
+    transition:
+      background 0.15s,
+      border-color 0.15s;
   }
 
   .resume-btn:hover {

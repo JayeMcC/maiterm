@@ -3,11 +3,7 @@ import { toastStore } from './toasts.svelte';
 import type { Toast, ToastSource } from './toasts.svelte';
 import { workspacesStore } from './workspaces.svelte';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import {
-  isPermissionGranted,
-  requestPermission,
-  sendNotification,
-} from '@tauri-apps/plugin-notification';
+import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
 import { info as logInfo } from '@tauri-apps/plugin-log';
 import { playSystemSound } from '$lib/tauri/commands';
 
@@ -104,7 +100,7 @@ export function playNotificationSound() {
 function tabBelongsToWindow(tabId: string): boolean {
   for (const ws of workspacesStore.workspaces) {
     for (const pane of ws.panes) {
-      if (pane.tabs.some(t => t.id === tabId)) return true;
+      if (pane.tabs.some((t) => t.id === tabId)) return true;
     }
   }
   return false;
@@ -114,12 +110,7 @@ function tabBelongsToWindow(tabId: string): boolean {
  * Central notification dispatch. Routes to in-app toast or OS notification
  * based on the user's notification_mode preference and window focus state.
  */
-export async function dispatch(
-  title: string,
-  body: string,
-  type: Toast['type'] = 'info',
-  source?: ToastSource,
-): Promise<void> {
+export async function dispatch(title: string, body: string, type: Toast['type'] = 'info', source?: ToastSource): Promise<void> {
   const mode = preferencesStore.notificationMode;
 
   if (mode === 'disabled') return;

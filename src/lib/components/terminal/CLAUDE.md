@@ -20,6 +20,7 @@ Frontend (xterm.js scrollback=0):
 ```
 
 **Key Rust files** (`src-tauri/src/terminal/`):
+
 - `handle.rs` — `TerminalHandle` wraps `Term<AitermEventProxy>`, `OscInterceptor`, VTE `Processor`
 - `event_proxy.rs` — `AitermEventProxy` implements `EventListener`, routes Title/Bell/Clipboard/PtyWrite events
 - `render.rs` — `render_viewport()` iterates grid cells, emits SGR sequences, returns `TerminalFrame`
@@ -28,10 +29,12 @@ Frontend (xterm.js scrollback=0):
 - `serialize.rs` — buffer serialization/restore via VTE parser (replaces @xterm/addon-serialize)
 
 **Tauri commands** (7 new):
+
 - `scroll_terminal`, `scroll_terminal_to`, `get_terminal_scrollback_info`
 - `search_terminal`, `serialize_terminal`, `restore_terminal_scrollback`, `resize_terminal_grid`
 
 **Frontend event listeners** (TerminalPane.svelte):
+
 - `term-frame-{ptyId}` — rendered ANSI viewport from Rust → `terminal.write(frame.ansi)`
 - `pty-raw-{ptyId}` — raw bytes for trigger engine + activity tracking
 - `term-title-{ptyId}` — title changes (OSC 0/2)
@@ -41,11 +44,12 @@ Frontend (xterm.js scrollback=0):
 - `term-clipboard-{ptyId}` — clipboard set (OSC 52)
 - `term-bell-{ptyId}` — terminal bell
 
-**Resize coalescing (`pty/manager.rs::resize_pty`)**: TUIs (Claude Code/Ink) re-render their retained transcript on every *width* change; mid-stream, the previous rendering has already scrolled into history where it can't be erased, so each SIGWINCH leaves a permanent duplicate block in scrollback (rows-only changes don't re-wrap and are harmless). `resize_pty` therefore: (1) skips resizes that match the current grid; (2) while output is hot (last PTY read < 1s — an active TUI's spinner keeps this true), defers the resize with a 250ms trailing debounce and applies only the final size — an A→B→A flap nets zero SIGWINCHes. Idle resizes apply immediately. PTY and alacritty grid are always resized together.
+**Resize coalescing (`pty/manager.rs::resize_pty`)**: TUIs (Claude Code/Ink) re-render their retained transcript on every _width_ change; mid-stream, the previous rendering has already scrolled into history where it can't be erased, so each SIGWINCH leaves a permanent duplicate block in scrollback (rows-only changes don't re-wrap and are harmless). `resize_pty` therefore: (1) skips resizes that match the current grid; (2) while output is hot (last PTY read < 1s — an active TUI's spinner keeps this true), defers the resize with a 250ms trailing debounce and applies only the final size — an A→B→A flap nets zero SIGWINCHes. Idle resizes apply immediately. PTY and alacritty grid are always resized together.
 
 **Background tab sizing**: hidden tabs can't be measured at mount, so they'd spawn at xterm's 80×24 default and take a width jump on first view (→ TUI re-render → scrollback duplication). `save_terminal_scrollback` records the grid size (cols/rows columns in the SQLite scrollback DB); a hidden fresh spawn applies `getSavedTerminalSize(tabId)` before spawning, so the later fit is a no-op when the restored layout matches.
 
 **Scrollback lifecycle**:
+
 - Serialization: `serializeTerminal(ptyId)` calls Rust to serialize full buffer as ANSI string
 - Restore: `restoreTerminalScrollback(ptyId, scrollback)` feeds ANSI through VTE parser into Term
 - Auto-save: periodic `serializeTerminal` → `setTabScrollback` (staggered, dirty-tracked)
@@ -84,7 +88,7 @@ Dragging a terminal tab to another workspace preserves the running PTY instead o
 Same PTY-preservation machinery as workspace moves (the `+page.svelte` keyed each is **per-pane**, so a pane move also destroys/recreates the component). Three entry points, all in `TerminalTabs.svelte`:
 
 - **Drag onto another pane's tab bar** — inserts at the hovered position; `move_tab_to_pane` takes `insert_before_tab_id` (an ID, not an index, so `groupActiveTabs` display order can't skew it)
-- **Drag onto a pane's body** — edge zones (outer 30%) create a new split on that side via `move_tab_to_split` (the tab *moves* — unlike Cmd+D's `splitPaneWithContext` clone); center zone moves the tab into that pane. Preview overlay is a body-appended `.split-drop-overlay`.
+- **Drag onto a pane's body** — edge zones (outer 30%) create a new split on that side via `move_tab_to_split` (the tab _moves_ — unlike Cmd+D's `splitPaneWithContext` clone); center zone moves the tab into that pane. Preview overlay is a body-appended `.split-drop-overlay`.
 - **Tab right-click menu** — "Move to New Split Right/Down" + per-pane move items (uses `ContextMenu.svelte`)
 
 Both backend commands remove the source pane and collapse the split tree when the move empties it. `SplitNode::split_pane` takes a `before` flag (left/top edge drops put the new pane first). Guards: dropping a pane's only tab on its own edge, or any tab on its own pane center, is a no-op.
@@ -130,6 +134,7 @@ OSC 133 (FinalTerm protocol) detects command start/finish for tab indicators. Co
 **Local hooks** (Rust `pty/manager.rs`): Injected via env vars / ZDOTDIR shim before the shell starts.
 
 **Remote hooks** (`src/lib/utils/shellIntegration.ts`): Two context menu modes:
+
 - **Setup Shell Integration** — sends a one-liner to the current session (temporary). Uses `buildShellIntegrationSnippet()`.
 - **Install Shell Integration** — writes to `~/.bashrc` or `~/.zshrc` via heredoc (permanent). Uses `buildInstallSnippet()`.
 
@@ -150,6 +155,7 @@ OSC 133 (FinalTerm protocol) detects command start/finish for tab indicators. Co
 ### SSH Session Cloning
 
 When source has active SSH, `buildSshCommand()` constructs:
+
 ```
 ssh -t user@host 'cd ~/path && exec $SHELL -l'
 ```
@@ -165,6 +171,7 @@ Priority: OSC 7 (if not stale) → prompt pattern heuristic.
 ### Shell Escaping
 
 `shellEscapePath()` handles quoting for remote shells:
+
 - `~` left unquoted for expansion, rest single-quoted: `~/path` → `~/'path'`
 - Single quotes in paths escaped as `'\''`
 

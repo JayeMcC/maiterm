@@ -3,9 +3,12 @@ import type { AgentRuntime } from './types';
 /** Trigger-variable name holding the session id for a runtime. */
 export function sessionIdVar(runtime: AgentRuntime): string {
   switch (runtime) {
-    case 'codex': return 'codexSessionId';
-    case 'gemini': return 'geminiSessionId';
-    default: return 'claudeSessionId';
+    case 'codex':
+      return 'codexSessionId';
+    case 'gemini':
+      return 'geminiSessionId';
+    default:
+      return 'claudeSessionId';
   }
 }
 
@@ -23,8 +26,11 @@ export function isForkCommand(runtime: AgentRuntime, cmd: string | null | undefi
 /** The default auto-resume command template for a runtime (uses the %<runtime>SessionId trigger var). */
 export function getResumeCommand(runtime: AgentRuntime): string {
   switch (runtime) {
-    case 'codex': return 'codex resume %codexSessionId';
-    case 'gemini': return 'gemini --resume %geminiSessionId';
-    default: return 'claude --resume %claudeSessionId';
+    case 'codex':
+      return 'codex resume %codexSessionId';
+    case 'gemini':
+      return 'gemini --resume %geminiSessionId';
+    default:
+      return 'claude --resume %claudeSessionId';
   }
 }

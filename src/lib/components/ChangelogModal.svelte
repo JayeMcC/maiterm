@@ -57,14 +57,14 @@
     for (const line of raw.split('\n')) {
       const versionMatch = line.match(/^## v(.+)/);
       if (versionMatch) {
-        current = { version: versionMatch[1], items: [] };
+        current = { version: versionMatch[1]!, items: [] };
         entries.push(current);
         continue;
       }
       const itemMatch = line.match(/^- (.+)/);
       if (itemMatch && current) {
         // Keep raw markdown — rendered inline at display time via renderItem()
-        current.items.push(itemMatch[1]);
+        current.items.push(itemMatch[1]!);
       }
     }
     return entries;
@@ -74,14 +74,7 @@
 </script>
 
 {#if open}
-  <div
-    class="backdrop"
-    onclick={handleBackdropClick}
-    onkeydown={handleKeydown}
-    role="dialog"
-    aria-modal="true"
-    tabindex="-1"
-  >
+  <div class="backdrop" onclick={handleBackdropClick} onkeydown={handleKeydown} role="dialog" aria-modal="true" tabindex="-1">
     <div class="modal">
       <div class="header">
         <h2>{title ?? 'Changelog'}</h2>
@@ -89,11 +82,13 @@
       </div>
 
       <div class="content">
-        {#each changelog as entry}
+        {#each changelog as entry (entry.version)}
           <section>
             <h3 class:current={entry.version === version}>v{entry.version}{entry.version === version ? ' (current)' : ''}</h3>
             <ul>
-              {#each entry.items as item}
+              {#each entry.items as item (item)}
+                <!-- renderItem() escapes HTML before applying markdown; input is bundled release notes, not user data -->
+                <!-- eslint-disable-next-line svelte/no-at-html-tags -->
                 <li>{@html renderItem(item)}</li>
               {/each}
             </ul>

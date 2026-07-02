@@ -5,12 +5,13 @@ import { terminalsStore } from './terminals.svelte';
 import { dispatch } from './notificationDispatch';
 
 /** Tracks when each tab's command started (for duration check). */
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative tracker: written in onCommandStart, read/deleted in onCommandComplete, never in reactive contexts
 const commandStartTimes = new Map<string, number>();
 
 function isTabVisible(tabId: string): boolean {
   const ws = workspacesStore.activeWorkspace;
   if (!ws) return false;
-  const pane = ws.panes.find(p => p.active_tab_id === tabId);
+  const pane = ws.panes.find((p) => p.active_tab_id === tabId);
   if (!pane) return false;
   return pane.id === ws.active_pane_id;
 }
@@ -21,7 +22,7 @@ function getTabName(tabId: string): string {
   // Fall back to workspace tab name
   for (const ws of workspacesStore.workspaces) {
     for (const pane of ws.panes) {
-      const tab = pane.tabs.find(t => t.id === tabId);
+      const tab = pane.tabs.find((t) => t.id === tabId);
       if (tab) return tab.name;
     }
   }
@@ -44,11 +45,9 @@ async function handleCommandComplete(tabId: string, exitCode: number) {
   commandStartTimes.delete(tabId);
 
   const name = getTabName(tabId);
-  const body = exitCode === 0
-    ? `"${name}" has finished`
-    : `"${name}" has finished (exit code ${exitCode})`;
+  const body = exitCode === 0 ? `"${name}" has finished` : `"${name}" has finished (exit code ${exitCode})`;
 
-  const type = exitCode === 0 ? 'success' as const : 'error' as const;
+  const type = exitCode === 0 ? ('success' as const) : ('error' as const);
   await dispatch('Command Completed', body, type, { tabId });
 }
 

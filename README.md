@@ -49,7 +49,7 @@ Click any file path in terminal output to open it in an editor tab. Works over S
 
 ### Deep clone everything
 
-Duplicate a tab and get *everything*: scrollback history, CWD, SSH session, Claude resume command, tab name, notes, trigger variables. Or shallow clone for just the name and CWD. New tabs automatically inherit the workspace's most common working directory.
+Duplicate a tab and get _everything_: scrollback history, CWD, SSH session, Claude resume command, tab name, notes, trigger variables. Or shallow clone for just the name and CWD. New tabs automatically inherit the workspace's most common working directory.
 
 ### Tab names that make sense
 
@@ -74,6 +74,7 @@ Triggers watch your terminal output for patterns — Claude asking a question, a
 ## Features
 
 ### Terminal
+
 - **alacritty_terminal + xterm.js** — Rust-based VTE parsing, buffering, and scrollback in the backend; xterm.js is a thin DOM renderer for the visible viewport (~60fps ANSI frames). Scrollback lives in the backend, so the frontend only ever paints one screen — no GPU rendering needed
 - **Split panes** — horizontal and vertical splits, drag to resize, fully recursive
 - **Multiple workspaces** — named workspaces with independent pane layouts, reorderable via drag and drop
@@ -88,6 +89,7 @@ Triggers watch your terminal output for patterns — Claude asking a question, a
 - **Multi-window** — open additional windows, duplicate windows with full tab context
 
 ### Shell Integration
+
 - **OSC 133 (FinalTerm)** — command start/finish detection for tab completion indicators
 - **OSC 7** — directory tracking (remote CWD awareness through SSH)
 - **OSC 8 file hyperlinks** — `l` command wraps `ls` to emit clickable file links; underline appears on hover
@@ -96,6 +98,7 @@ Triggers watch your terminal output for patterns — Claude asking a question, a
 - **Remote install** — one-liner session setup or permanent `~/.bashrc`/`~/.zshrc` installation
 
 ### Code Editor
+
 - **CodeMirror 6** — full-featured editor in tabs alongside terminal tabs
 - **Click to open** — click any file path in terminal output to open it in an editor tab
 - **`Cmd+O`** — file dialog that defaults to the active terminal's CWD
@@ -110,6 +113,7 @@ Triggers watch your terminal output for patterns — Claude asking a question, a
 - **Portal pattern** — editor survives split tree changes (same as terminals)
 
 ### Claude Code IDE Integration
+
 - **MCP server** — WebSocket, SSE, and Streamable HTTP transports expose 25+ tools to Claude Code CLI
 - **Hooks integration** — HTTP lifecycle hooks (SessionStart/End, PreToolUse/PostToolUse, Stop, Notification, PreCompact) provide real-time session state tracking
 - **Tab indicators** — pulsing accent dot (Claude active/thinking), green dot (idle/waiting for input), lock icon (needs permission)
@@ -124,6 +128,7 @@ Triggers watch your terminal output for patterns — Claude asking a question, a
 - **Dev/prod isolation** — dev builds register as `aiterm-dev` with display name "maiTermDev"
 
 ### Trigger System
+
 - **Regex triggers** — watch terminal output for patterns, fire actions
 - **Match modes** — regex, plain text, or variable-condition expressions
 - **Actions** — `notify` (toast or OS notification), `send_command` (write to PTY), `enable_auto_resume`, `set_tab_state`
@@ -133,6 +138,7 @@ Triggers watch your terminal output for patterns — Claude asking a question, a
 - **Custom triggers** — Claude-specific triggers replaced by hooks; trigger engine available for user-defined patterns
 
 ### Notifications
+
 - **Three modes** — `auto` (in-app when focused, OS when not), `in_app`, `native`, `disabled`
 - **Deep-linking** — clicking a toast or OS notification navigates to the source workspace and tab
 - **Toast UI** — max 3 visible, configurable auto-dismiss duration, Tokyo Night styled
@@ -140,6 +146,7 @@ Triggers watch your terminal output for patterns — Claude asking a question, a
 - **Command completion** — notifies when long-running commands finish (configurable minimum duration)
 
 ### Notes
+
 - **Per-tab notes** — markdown or plain text notes panel per terminal/editor tab
 - **Workspace notes** — notes scoped to the whole workspace
 - **Claude-maintained** — ask your Claude Code agent to read, write, update, organize, merge, and clean up notes via MCP tools
@@ -147,51 +154,57 @@ Triggers watch your terminal output for patterns — Claude asking a question, a
 - **Modes** — edit and preview; state persisted per tab
 
 ### Themes
+
 - **10 built-in themes** — Tokyo Night (default), Dracula, Solarized Dark, Solarized Light, Nord, Gruvbox Dark, Monokai, Catppuccin Mocha, One Dark, macOS Pro
 - **Custom themes** — create and edit via theme editor in preferences
 - **Separate UI and terminal colors** — full control over both
 
 ### Workspace Sidebar
+
 - **Sort order** — default (drag and drop), alphabetical, or recent activity
 - **Tab count** — optional display of tab count after workspace names
 - **Recent workspaces** — collapsible section, toggleable
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Cmd+T` | New tab |
-| `Cmd+W` | Close tab (or pane if last tab) |
-| `Cmd+1–9` | Switch to tab |
-| `Cmd+Shift+[` | Previous tab |
-| `Cmd+Shift+]` | Next tab |
-| `Cmd+Shift+T` | Duplicate tab |
-| `Cmd+Shift+R` | Reload tab (duplicate + close) |
-| `Cmd+D` | Split pane (duplicate tab) |
-| `Cmd+N` | New workspace |
-| `Cmd+O` | Open file in editor tab |
-| `Cmd+S` | Save file (editor tabs) |
-| `Cmd+F` | Find/replace (editor tabs) |
-| `Cmd+,` | Preferences |
-| `Cmd+/` | Help |
-| `Cmd+Shift+N` | Notes panel toggle |
+| Shortcut      | Action                          |
+| ------------- | ------------------------------- |
+| `Cmd+T`       | New tab                         |
+| `Cmd+W`       | Close tab (or pane if last tab) |
+| `Cmd+1–9`     | Switch to tab                   |
+| `Cmd+Shift+[` | Previous tab                    |
+| `Cmd+Shift+]` | Next tab                        |
+| `Cmd+Shift+T` | Duplicate tab                   |
+| `Cmd+Shift+R` | Reload tab (duplicate + close)  |
+| `Cmd+D`       | Split pane (duplicate tab)      |
+| `Cmd+N`       | New workspace                   |
+| `Cmd+O`       | Open file in editor tab         |
+| `Cmd+S`       | Save file (editor tabs)         |
+| `Cmd+F`       | Find/replace (editor tabs)      |
+| `Cmd+,`       | Preferences                     |
+| `Cmd+/`       | Help                            |
+| `Cmd+Shift+N` | Notes panel toggle              |
 
 ## Prerequisites
 
 All platforms require:
+
 - [Node.js](https://nodejs.org/) 18+
 - [Rust](https://rustup.rs/)
 
 ### macOS
+
 - macOS 13+
 - Xcode Command Line Tools (`xcode-select --install`)
 
 ### Windows
+
 - Windows 10/11
 - [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) — select "Desktop development with C++" workload
 - [WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (pre-installed on Windows 10/11; bundled by the NSIS installer for end users)
 
 ### Linux
+
 - WebKitGTK 4.1, GTK 3, libayatana-appindicator3 (see [Tauri Linux prerequisites](https://v2.tauri.app/start/prerequisites/#linux))
 
 ## Development
@@ -221,11 +234,11 @@ npm run tauri:build
 
 Build output by platform:
 
-| Platform | Format | Output path |
-|----------|--------|-------------|
-| macOS | DMG | `src-tauri/target/release/bundle/dmg/` |
-| Windows | NSIS installer | `src-tauri/target/release/bundle/nsis/` |
-| Linux | .deb | `src-tauri/target/release/bundle/deb/` |
+| Platform | Format         | Output path                             |
+| -------- | -------------- | --------------------------------------- |
+| macOS    | DMG            | `src-tauri/target/release/bundle/dmg/`  |
+| Windows  | NSIS installer | `src-tauri/target/release/bundle/nsis/` |
+| Linux    | .deb           | `src-tauri/target/release/bundle/deb/`  |
 
 ### macOS post-build
 
@@ -238,6 +251,7 @@ After building on macOS, set the DMG volume icon:
 ### CI
 
 GitHub Actions workflows build automatically on push to `main` and on tags:
+
 - `.github/workflows/build-linux.yml` — Ubuntu, produces `.deb`
 - `.github/workflows/build-windows.yml` — Windows, produces NSIS `.exe` installer
 
@@ -313,15 +327,15 @@ src-tauri/src/                # Backend (Rust)
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Svelte 5 (runes), SvelteKit, TypeScript |
-| Backend | Rust, Tauri 2 |
-| Terminal | alacritty_terminal (Rust VTE parser + buffer) with xterm.js as thin DOM renderer |
-| Editor | CodeMirror 6 (+ MergeView for diffs) |
-| PTY | portable-pty |
-| Scrollback | SQLite (WAL mode) via rusqlite |
-| State | parking_lot RwLock |
+| Layer      | Technology                                                                       |
+| ---------- | -------------------------------------------------------------------------------- |
+| Frontend   | Svelte 5 (runes), SvelteKit, TypeScript                                          |
+| Backend    | Rust, Tauri 2                                                                    |
+| Terminal   | alacritty_terminal (Rust VTE parser + buffer) with xterm.js as thin DOM renderer |
+| Editor     | CodeMirror 6 (+ MergeView for diffs)                                             |
+| PTY        | portable-pty                                                                     |
+| Scrollback | SQLite (WAL mode) via rusqlite                                                   |
+| State      | parking_lot RwLock                                                               |
 
 ## Data Model
 
@@ -369,12 +383,8 @@ Preferences
 Default: Tokyo Night. 10 built-in themes + custom theme support.
 
 ```css
---bg-dark:   #1a1b26   /* main background */
---bg-medium: #24283b   /* elevated surfaces */
---bg-light:  #414868   /* borders, hover */
---fg:        #c0caf5   /* primary text */
---fg-dim:    #565f89   /* secondary text */
---accent:    #7aa2f7   /* interactive elements */
+--bg-dark: #1a1b26 /* main background */ --bg-medium: #24283b /* elevated surfaces */ --bg-light: #414868 /* borders, hover */ --fg: #c0caf5 /* primary text */ --fg-dim: #565f89 /* secondary text */
+  --accent: #7aa2f7 /* interactive elements */;
 ```
 
 ## Privacy
