@@ -87,6 +87,22 @@ fn ws_covered(live: bool, last_drop_ms: u64, now_ms: u64) -> bool {
     live || (last_drop_ms != 0 && now_ms.saturating_sub(last_drop_ms) < WS_COVERAGE_GRACE_MS)
 }
 
+/// The per-tab attention signature the WS/doorbell tickers diff: chat state PLUS the open-prompt
+/// kind (the `prompt` field build_chats computes). Including the prompt kind means an
+/// AskUserQuestion that opens without moving `state` (no coincident permission notification)
+/// still registers as a transition — and a permission that resolves straight into a question
+/// re-fires rather than being masked by the unchanged state.
+fn attn_key(state: &str, prompt: Option<&str>) -> String {
+    format!("{state}|{}", prompt.unwrap_or(""))
+}
+
+/// Whether an `attn_key` means "the agent wants a human": an open permission/question prompt, or
+/// a finished turn waiting on input.
+fn is_attn(key: &str) -> bool {
+    let (state, prompt) = key.split_once('|').unwrap_or((key, ""));
+    state == "permission" || state == "idle" || prompt == "question"
+}
+
 /// `~/Library/Application Support/<slug>/mailink/` (or the OS equivalent).
 fn mailink_dir() -> Option<PathBuf> {
     dirs::data_dir()
@@ -689,11 +705,11 @@ async fn ws_event_loop(mut socket: WebSocket, s: ApiState) {
     // initial snapshot: one chat_state per chat
     for c in build_chats(&s.app) {
         let tab = c["tabId"].as_str().unwrap_or_default().to_string();
-        let st = c["state"].as_str().unwrap_or_default().to_string();
+        let key = attn_key(c["state"].as_str().unwrap_or_default(), c["prompt"].as_str());
         if socket.send(Message::Text(chat_state_event(&c).to_string().into())).await.is_err() {
             return;
         }
-        last.insert(tab, st);
+        last.insert(tab, key);
     }
 
     let mut ticker = tokio::time::interval(std::time::Duration::from_millis(1500));
@@ -714,22 +730,27 @@ async fn ws_event_loop(mut socket: WebSocket, s: ApiState) {
                 for c in &chats {
                     let tab = c["tabId"].as_str().unwrap_or_default().to_string();
                     let st = c["state"].as_str().unwrap_or_default().to_string();
+                    let key = attn_key(&st, c["prompt"].as_str());
                     current_ids.insert(tab.clone());
-                    let prev = last.get(&tab);
+                    let prev = last.get(&tab).cloned();
                     if prev.is_none() {
                         roster_changed = true;
                     }
-                    if prev != Some(&st) {
+                    if prev.as_deref() != Some(key.as_str()) {
                         if socket.send(Message::Text(chat_state_event(c).to_string().into())).await.is_err() {
                             return;
                         }
-                        if st == "permission" || st == "idle" {
+                        // Attention only on an OBSERVED transition into an attention state. A tab
+                        // that merely APPEARS in the roster already idle (exposure toggled on, a
+                        // restore) must not announce "finished" — prev must exist and not already
+                        // have been attention-worthy.
+                        if prev.as_deref().is_some_and(|p| !is_attn(p)) && is_attn(&key) {
                             let ev = attention_event(&s.app, &tab, &st, c["title"].as_str().unwrap_or_default());
                             if socket.send(Message::Text(ev.to_string().into())).await.is_err() {
                                 return;
                             }
                         }
-                        last.insert(tab, st);
+                        last.insert(tab, key);
                     }
                 }
                 // drop tabs that disappeared from the designated set
@@ -1585,12 +1606,24 @@ fn build_chats(app: &AppState) -> Vec<Value> {
                 None => ("dormant", runtime_key(t.runtime), None),
             };
             let ask_open = tool.as_deref() == Some("AskUserQuestion");
+            // The kind of prompt currently open, if any. An open AskUserQuestion outranks the
+            // (usually coincident) permission state — mirrors build_chat_detail/attention_event.
+            let prompt_kind = if ask_open {
+                Some("question")
+            } else if state == "permission" {
+                Some("permission")
+            } else {
+                None
+            };
             let mut chat = json!({
                 "tabId": t.tab_id,
                 "title": t.title,
                 "workspace": t.workspace,
                 "runtime": runtime,
                 "state": state,
+                // Additive field: lets clients (and our own tickers) see prompt-kind changes
+                // that don't move `state` — e.g. an AskUserQuestion opening at state=="active".
+                "prompt": prompt_kind,
                 // ask_open guards the case where a build leaves an open AskUserQuestion at
                 // state=="active" — it still needs to surface as unread in the inbox.
                 "unread": ask_open || state == "permission" || state == "idle",
@@ -1626,7 +1659,11 @@ fn build_chat_detail(app: &AppState, tab_id: &str) -> Option<Value> {
         "workspace": meta.workspace,
         "runtime": runtime,
         "state": state,
-        "unread": state == "permission" || state == "idle",
+        // Same rule as build_chats: an open AskUserQuestion is unread even if a build leaves
+        // the session state at "active".
+        "unread": tool.as_deref() == Some("AskUserQuestion")
+            || state == "permission"
+            || state == "idle",
         "lastActivityTs": last_activity,
         "transcript": transcript,
     });
@@ -1746,8 +1783,10 @@ const DEFAULT_MAILINK_RELAY_URL: &str = "https://updates.maiterm.dev/push";
 /// §6. No-op while no such device exists.
 async fn doorbell_loop(app: Arc<AppState>) {
     let client = reqwest::Client::new();
+    // tab_id → last observed attn_key. Rings only on an OBSERVED transition into attention:
+    // the first sighting of a tab (loop start, roster add) just baselines, so an
+    // already-idle tab that gets exposed doesn't push a phantom "finished".
     let mut last: HashMap<String, String> = HashMap::new();
-    let mut primed = false;
     let mut ticker = tokio::time::interval(std::time::Duration::from_millis(2000));
     loop {
         ticker.tick().await;
@@ -1781,19 +1820,20 @@ async fn doorbell_loop(app: Arc<AppState>) {
         let mut current = std::collections::HashSet::new();
         for c in &chats {
             let tab = c["tabId"].as_str().unwrap_or_default().to_string();
-            let st = c["state"].as_str().unwrap_or_default().to_string();
+            let key = attn_key(
+                c["state"].as_str().unwrap_or_default(),
+                c["prompt"].as_str(),
+            );
             let title = c["title"].as_str().unwrap_or_default().to_string();
             current.insert(tab.clone());
-            let prev = last.get(&tab).cloned();
-            last.insert(tab.clone(), st.clone());
+            let prev = last.insert(tab.clone(), key.clone());
 
-            // Fire only on a fresh transition into attention, after priming, while uncovered.
-            if !primed || covered {
+            // Fire only on an observed transition into attention, while uncovered. First
+            // sighting (prev None) baselines silently — see `last` above.
+            if covered {
                 continue;
             }
-            let is_attn = st == "permission" || st == "idle";
-            let was_attn = matches!(prev.as_deref(), Some("permission") | Some("idle"));
-            if is_attn && !was_attn {
+            if prev.as_deref().is_some_and(|p| !is_attn(p)) && is_attn(&key) {
                 // Distinguish an open AskUserQuestion (state coincides with "permission") from a
                 // real approval prompt so the push line/route matches what the card will show.
                 let kind = match current_prompt(&app, &tab) {
@@ -1805,7 +1845,6 @@ async fn doorbell_loop(app: Arc<AppState>) {
             }
         }
         last.retain(|k, _| current.contains(k));
-        primed = true;
     }
 }
 
@@ -1942,6 +1981,27 @@ mod tests {
         assert_eq!(context_limit_for("claude-opus-4-8-1m"), 1_000_000);
         assert_eq!(context_limit_for("claude-opus-4-8"), 1_000_000);
         assert_eq!(context_limit_for("claude-sonnet-4-5"), 200_000);
+    }
+
+    #[test]
+    fn attn_key_transitions_cover_question_without_state_change() {
+        // Plain states.
+        assert!(!is_attn(&attn_key("active", None)));
+        assert!(!is_attn(&attn_key("dormant", None)));
+        assert!(is_attn(&attn_key("permission", Some("permission"))));
+        assert!(is_attn(&attn_key("idle", None)));
+        // The case the state-only diff missed: an AskUserQuestion opening while the session
+        // state stays "active" (no coincident permission notification).
+        assert!(is_attn(&attn_key("active", Some("question"))));
+        // And the key CHANGES for that transition, so the tickers see it.
+        assert_ne!(attn_key("active", None), attn_key("active", Some("question")));
+        // permission → permission+question changes the key but stays attention-worthy
+        // (no re-ring for the same underlying ask).
+        assert_ne!(
+            attn_key("permission", Some("permission")),
+            attn_key("permission", Some("question"))
+        );
+        assert!(is_attn(&attn_key("permission", Some("question"))));
     }
 
     #[test]
