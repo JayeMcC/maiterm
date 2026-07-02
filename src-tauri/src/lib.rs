@@ -143,7 +143,8 @@ pub fn run() {
     #[cfg(all(feature = "mcp-bridge", debug_assertions))]
     let builder = builder.plugin(tauri_plugin_mcp_bridge::init());
 
-    builder
+    #[allow(unused_mut)]
+    let mut app = builder
         .manage(app_state.clone())
         .setup(move |app| {
             // tauri-plugin-log is active by now — surface the warning that
@@ -629,7 +630,7 @@ pub fn run() {
             commands::system::check_full_disk_access,
             commands::system::open_full_disk_access_settings,
         ])
-        .run({
+        .build({
             let mut context = tauri::generate_context!();
             // Background mode: windows are created (and shown, and made key)
             // BEFORE setup() runs, so the activation-policy tweak there is too
@@ -640,9 +641,28 @@ pub fn run() {
                 for window in &mut context.config_mut().app.windows {
                     window.focus = false;
                     window.always_on_bottom = true;
+                    // Never shown at all: even a non-key window orders itself
+                    // on top of whatever the user is reading. The terminal
+                    // mount pipeline tolerates an invisible webview (rAF is
+                    // raced against a timer; WebKit's hidden-window timer
+                    // clamp only slows polls, it doesn't stop them).
+                    window.visible = false;
                 }
             }
             context
         })
-        .expect("error while running tauri application");
+        .expect("error while building tauri application");
+
+    // Background mode, part 2: tao unconditionally calls
+    // activateIgnoringOtherApps(true) when the run loop launches, and Tauri
+    // exposes no off-switch for it. Under ActivationPolicy::Prohibited the
+    // app "may not be activated", which turns that forced activation into a
+    // no-op — the only launch path that never steals focus. Must be set on
+    // the App BEFORE run() so tao applies it at launch time.
+    #[cfg(target_os = "macos")]
+    if std::env::var("MAITERM_E2E_BACKGROUND").is_ok() {
+        app.set_activation_policy(tauri::ActivationPolicy::Prohibited);
+    }
+
+    app.run(|_, _| {});
 }
