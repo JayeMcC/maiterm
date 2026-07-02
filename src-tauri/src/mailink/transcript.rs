@@ -3,19 +3,73 @@
 //! The old transcript was `recent_text()` — a flattened scrape of the TUI frame (box-drawing,
 //! the `❯` prompt, footer; the agent's markdown already rendered-then-ANSI-stripped). That reads
 //! as terminal chrome in the phone's GFM renderer. Instead we read each turn's **source markdown**
-//! straight from Claude's session transcript JSONL (the agent's actual output, pre-TUI-render).
+//! straight from the agent's session transcript (the actual output, pre-TUI-render).
 //!
-//! Located by the unique session id (`~/.claude/projects/*/<session_id>.jsonl`) — no fragile
-//! cwd-munging, no hook changes. Each maiLink message is `{msg_id, role, text, ts}` where role is
-//! the frozen contract set `agent | user | system | tool`:
-//!   - assistant `text` blocks  → role "agent" (the markdown that lights up code fences/lists)
-//!   - assistant `tool_use`     → role "tool", a slim one-line marker (e.g. `Bash(rm …)`)
-//!   - user string content      → role "user" (the human's actual message)
-//! `thinking` blocks and `tool_result` payloads are skipped (private / noisy). Claude-only for now;
-//! callers fall back to `recent_text()` for other runtimes or when no transcript is found.
+//! Two sources, dispatched by runtime (`turns_for` / `meta_for` / `mtime_for` /
+//! `last_turn_ts_for`):
+//!   * **Claude** — `~/.claude/projects/*/<session_id>.jsonl`, located by the unique session id.
+//!   * **Codex** — `~/.codex/sessions/YYYY/MM/DD/rollout-<ts>-<session_id>.jsonl` (codex-rs
+//!     appends to the same rollout on resume, so the path is stable per session id).
+//!
+//! Each maiLink message is `{msg_id, role, text, ts}` where role is the frozen contract set
+//! `agent | user | system | tool`:
+//!   - assistant text            → role "agent" (the markdown that lights up code fences/lists)
+//!   - tool calls                → role "tool", a slim one-line marker (e.g. `Bash(rm …)`)
+//!   - genuine human messages    → role "user"
+//! Thinking/reasoning blocks and tool outputs are skipped (private / noisy). Gemini has no
+//! transcript source yet; callers fall back to `recent_text()` when nothing resolves.
 
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::path::PathBuf;
+
+use crate::state::AgentRuntime;
+
+// ─── runtime dispatchers ────────────────────────────────────────────────────────────────
+
+/// The last `limit` maiLink messages for a session, per the tab's runtime. `None` when the
+/// runtime has no transcript source (Gemini) or the file can't be located/read.
+pub fn turns_for(rt: AgentRuntime, session_id: &str, limit: usize, tools: ToolRender) -> Option<Vec<Value>> {
+    match rt {
+        AgentRuntime::Claude => turns_for_session(session_id, limit, tools),
+        AgentRuntime::Codex => codex_turns_for_session(session_id, limit, tools),
+        AgentRuntime::Gemini => None,
+    }
+}
+
+/// Per-agent telemetry (model + context gauge) for a session, per runtime.
+pub fn meta_for(rt: AgentRuntime, session_id: &str) -> Option<SessionMeta> {
+    match rt {
+        AgentRuntime::Claude => session_meta(session_id),
+        AgentRuntime::Codex => codex_session_meta(session_id),
+        AgentRuntime::Gemini => None,
+    }
+}
+
+/// Millis-since-epoch mtime of the session's transcript file, if locatable. A cheap change-gate
+/// for WS streaming: an unchanged mtime means no new turns, so the tail isn't re-parsed.
+pub fn mtime_for(rt: AgentRuntime, session_id: &str) -> Option<u64> {
+    let path = match rt {
+        AgentRuntime::Claude => locate_jsonl(session_id)?,
+        AgentRuntime::Codex => locate_codex_jsonl(session_id)?,
+        AgentRuntime::Gemini => return None,
+    };
+    let modified = std::fs::metadata(&path).ok()?.modified().ok()?;
+    modified
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .map(|d| d.as_millis() as u64)
+}
+
+/// Unix-ms timestamp of the session's last REAL turn, per runtime — see
+/// `session_last_turn_ts` for why this is distinct from the file mtime.
+pub fn last_turn_ts_for(rt: AgentRuntime, session_id: &str) -> Option<u64> {
+    match rt {
+        AgentRuntime::Claude => session_last_turn_ts(session_id),
+        AgentRuntime::Codex => codex_session_last_turn_ts(session_id),
+        AgentRuntime::Gemini => None,
+    }
+}
 
 /// How tool calls render in the transcript. (b) is the default — assistant prose plus a slim
 /// one-line tool marker; raw tool_result dumps are always skipped.
@@ -29,7 +83,7 @@ pub enum ToolRender {
 
 /// Build the last `limit` maiLink messages for a Claude session, or `None` if its transcript
 /// can't be found/read (caller falls back to the terminal scrape).
-pub fn turns_for_session(session_id: &str, limit: usize, tools: ToolRender) -> Option<Vec<Value>> {
+fn turns_for_session(session_id: &str, limit: usize, tools: ToolRender) -> Option<Vec<Value>> {
     let path = locate_jsonl(session_id)?;
     let body = std::fs::read_to_string(&path).ok()?;
     // Only the tail can hold the last `limit` turns; bound the work regardless of file size.
@@ -53,18 +107,27 @@ pub fn turns_for_session(session_id: &str, limit: usize, tools: ToolRender) -> O
 /// from the JSONL (not the SessionStart hook, whose `model` is often null) so it's always available
 /// for a Claude tab; naturally Claude-only since it reads `~/.claude` transcripts.
 pub struct SessionMeta {
-    /// Raw model id from the last assistant turn (e.g. "claude-opus-4-8"). Caller normalizes.
-    /// NOTE: the transcript records only the BARE id — it never carries the 1M-context variant
-    /// marker (no "[1m]", no betas field), so the 1M window can't be detected from the id. maiLink
-    /// works around this by assuming 1M for Opus 4.8 (see context_limit_for in mod.rs).
+    /// Raw model id from the last assistant turn (e.g. "claude-opus-4-8", "gpt-5.5"). Caller
+    /// normalizes for display.
+    /// NOTE (Claude): the transcript records only the BARE id — it never carries the 1M-context
+    /// variant marker (no "[1m]", no betas field), so the 1M window can't be detected from the id.
+    /// maiLink works around this by assuming 1M for Opus 4.8 (see context_limit_for in mod.rs).
     pub model_id: Option<String>,
-    /// input + cache_read + cache_creation tokens — matches the maiTerm statusline's context count.
+    /// Tokens currently in the context window. Claude: input + cache_read + cache_creation
+    /// (matches the maiTerm statusline). Codex: the last token_count's
+    /// `last_token_usage.total_tokens` — the LAST request's size IS the current context; the
+    /// `total_token_usage` sibling is a running sum across turns (it exceeds the window on any
+    /// long session) and is what codex-rs's own gauge divides by the window only as a
+    /// no-window fallback display.
     pub context_tokens: u64,
+    /// The model's context window when the transcript states it directly (Codex rollouts carry
+    /// `model_context_window`). `None` for Claude — the caller derives it from the model id.
+    pub context_window: Option<u64>,
 }
 
-/// Read the most recent `message.usage` line from a session's transcript and return its model id +
-/// summed context tokens. None if the transcript can't be found/read or has no usage yet.
-pub fn session_meta(session_id: &str) -> Option<SessionMeta> {
+/// Read the most recent `message.usage` line from a Claude session's transcript and return its
+/// model id + summed context tokens. None if the transcript can't be found/read or has no usage.
+fn session_meta(session_id: &str) -> Option<SessionMeta> {
     let path = locate_jsonl(session_id)?;
     // The last usage block is near EOF (the latest assistant turn); scan a bounded tail so this
     // stays cheap when polled per chat_state. A truncated first line just fails to parse → skipped.
@@ -84,20 +147,9 @@ pub fn session_meta(session_id: &str) -> Option<SessionMeta> {
             continue;
         }
         let model_id = msg.get("model").and_then(|m| m.as_str()).map(String::from);
-        return Some(SessionMeta { model_id, context_tokens: tokens });
+        return Some(SessionMeta { model_id, context_tokens: tokens, context_window: None });
     }
     None
-}
-
-/// Millis-since-epoch mtime of a session's transcript JSONL, if locatable. A cheap change-gate for
-/// WS streaming: an unchanged mtime means no new turns, so the tail isn't re-parsed that tick.
-pub fn session_jsonl_mtime(session_id: &str) -> Option<u64> {
-    let path = locate_jsonl(session_id)?;
-    let modified = std::fs::metadata(&path).ok()?.modified().ok()?;
-    modified
-        .duration_since(std::time::UNIX_EPOCH)
-        .ok()
-        .map(|d| d.as_millis() as u64)
 }
 
 /// Unix-ms timestamp of the last REAL turn in a Claude session transcript — the last assistant/tool
@@ -107,7 +159,7 @@ pub fn session_jsonl_mtime(session_id: &str) -> Option<u64> {
 /// for EVERY restored tab and would clump the whole inbox at "now" on a restart. Sourcing recency
 /// from the last real turn keeps a dormant thread at its true age across a restart. `None` if the
 /// transcript can't be found/read or no real turn falls within the scanned tail.
-pub fn session_last_turn_ts(session_id: &str) -> Option<u64> {
+fn session_last_turn_ts(session_id: &str) -> Option<u64> {
     let path = locate_jsonl(session_id)?;
     // The last real turn sits just before whatever small scaffolding a resume appends at EOF, so a
     // 256KB tail clears the largest realistic resume dump (hook context + deferred-tool list) easily.
@@ -178,6 +230,266 @@ fn locate_jsonl(session_id: &str) -> Option<PathBuf> {
         }
     }
     None
+}
+
+// ─── Codex (rollout JSONL) ──────────────────────────────────────────────────────────────
+//
+// Codex writes one append-only rollout per session:
+// `~/.codex/sessions/YYYY/MM/DD/rollout-<file-ts>-<session_id>.jsonl` (codex-rs resumes append
+// to the SAME file, so the path is stable for a session's lifetime). Lines are
+// `{timestamp, type, payload}`; the content we distill lives in `response_item` payloads:
+//   - `message` role assistant / `output_text` blocks → role "agent"
+//   - `message` role user / `input_text` blocks       → role "user" (scaffolding like
+//     `<user_instructions>`/`<environment_context>` is `<`-tagged → dropped by is_system_noise)
+//   - `function_call` (args = a JSON-encoded string) and `custom_tool_call` → role "tool"
+//   - `reasoning`, `*_output`, `web_search_call`, … → skipped
+// `event_msg` lines mirror the same content for the TUI (skipped to avoid duplicates), except
+// `token_count`, which feeds the context gauge (`total_token_usage.total_tokens` over
+// `model_context_window` — exactly what codex-rs's own footer divides). The model id rides
+// `turn_context.payload.model`.
+
+/// session_id → located rollout path. The walk is date-dir-shaped (years×months×days), so cache
+/// hits skip it; entries re-validate with `is_file()` (safe: resume appends, never moves).
+static CODEX_PATHS: std::sync::OnceLock<std::sync::Mutex<HashMap<String, PathBuf>>> =
+    std::sync::OnceLock::new();
+
+/// Locate a codex rollout by session-id filename suffix, newest date first (recent sessions
+/// resolve after a couple of `read_dir`s).
+fn locate_codex_jsonl(session_id: &str) -> Option<PathBuf> {
+    let cache = CODEX_PATHS.get_or_init(|| std::sync::Mutex::new(HashMap::new()));
+    if let Some(p) = cache.lock().ok()?.get(session_id) {
+        if p.is_file() {
+            return Some(p.clone());
+        }
+    }
+    let root = dirs::home_dir()?.join(".codex").join("sessions");
+    let suffix = format!("-{session_id}.jsonl");
+    for year in subdirs_desc(&root) {
+        for month in subdirs_desc(&year) {
+            for day in subdirs_desc(&month) {
+                let Ok(entries) = std::fs::read_dir(&day) else { continue };
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    let is_match = path
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .is_some_and(|n| n.ends_with(&suffix));
+                    if is_match && path.is_file() {
+                        if let Ok(mut c) = cache.lock() {
+                            c.insert(session_id.to_string(), path.clone());
+                        }
+                        return Some(path);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Subdirectories of `path`, name-sorted descending (the date-dir names sort lexically).
+fn subdirs_desc(path: &std::path::Path) -> Vec<PathBuf> {
+    let Ok(entries) = std::fs::read_dir(path) else { return Vec::new() };
+    let mut dirs: Vec<PathBuf> = entries
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.is_dir())
+        .collect();
+    dirs.sort_unstable();
+    dirs.reverse();
+    dirs
+}
+
+/// Build the last `limit` maiLink messages for a Codex session, or `None` if its rollout can't
+/// be found/read (caller falls back to the terminal scrape). msg_ids are `cx<line>[:<block>]`
+/// keyed on the GLOBAL line number — stable across reads because the rollout is append-only, so
+/// the streamed frame and any REST re-fetch dedup to one entry (same guarantee as Claude's
+/// uuid-based ids).
+fn codex_turns_for_session(session_id: &str, limit: usize, tools: ToolRender) -> Option<Vec<Value>> {
+    let path = locate_codex_jsonl(session_id)?;
+    let body = std::fs::read_to_string(&path).ok()?;
+    let lines: Vec<&str> = body.lines().collect();
+    // Only the tail can hold the last `limit` turns; bound the parse like the Claude path.
+    let start = lines.len().saturating_sub(limit * 12 + 64);
+    let mut msgs: Vec<Value> = Vec::new();
+    for (i, line) in lines[start..].iter().enumerate() {
+        if let Ok(v) = serde_json::from_str::<Value>(line) {
+            push_codex_line_messages(start + i, &v, tools, &mut msgs);
+        }
+    }
+    if msgs.len() > limit {
+        msgs = msgs.split_off(msgs.len() - limit);
+    }
+    Some(msgs)
+}
+
+/// Turn one rollout line into zero or more maiLink messages, appended to `out`.
+fn push_codex_line_messages(line_no: usize, v: &Value, tools: ToolRender, out: &mut Vec<Value>) {
+    if v.get("type").and_then(|t| t.as_str()) != Some("response_item") {
+        return; // event_msg mirrors response_item content; session_meta/turn_context are meta
+    }
+    let Some(p) = v.get("payload") else { return };
+    let ts = v
+        .get("timestamp")
+        .and_then(|t| t.as_str())
+        .map(rfc3339_to_ms)
+        .unwrap_or(0);
+
+    match p.get("type").and_then(|t| t.as_str()) {
+        Some("message") => {
+            let role = p.get("role").and_then(|r| r.as_str()).unwrap_or("");
+            let Some(blocks) = p.get("content").and_then(|c| c.as_array()) else { return };
+            for (bi, b) in blocks.iter().enumerate() {
+                let (block_ty, out_role) = match role {
+                    "assistant" => ("output_text", "agent"),
+                    "user" => ("input_text", "user"),
+                    _ => continue,
+                };
+                if b.get("type").and_then(|t| t.as_str()) != Some(block_ty) {
+                    continue;
+                }
+                let text = b.get("text").and_then(|t| t.as_str()).unwrap_or("");
+                if text.trim().is_empty() || (out_role == "user" && is_system_noise(text)) {
+                    continue;
+                }
+                out.push(msg(format!("cx{line_no}:{bi}"), out_role, text, ts));
+            }
+        }
+        // Tool calls: `arguments` is a JSON-ENCODED STRING (e.g. `{"cmd":"pwd",…}`).
+        Some("function_call") if tools == ToolRender::Marker => {
+            let name = p.get("name").and_then(|n| n.as_str()).unwrap_or("tool");
+            let arg = p
+                .get("arguments")
+                .and_then(|a| a.as_str())
+                .and_then(|s| serde_json::from_str::<Value>(s).ok())
+                .and_then(|input| compact_tool_arg(&input));
+            let text = match arg {
+                Some(a) => format!("{name}({a})"),
+                None => name.to_string(),
+            };
+            out.push(msg(format!("cx{line_no}"), "tool", &text, ts));
+        }
+        // e.g. apply_patch — `input` is the raw patch/text payload.
+        Some("custom_tool_call") if tools == ToolRender::Marker => {
+            let name = p.get("name").and_then(|n| n.as_str()).unwrap_or("tool");
+            let text = match p
+                .get("input")
+                .and_then(|i| i.as_str())
+                .map(one_line_capped)
+                .filter(|s| !s.trim().is_empty())
+            {
+                Some(input) => format!("{name}({input})"),
+                None => name.to_string(),
+            };
+            out.push(msg(format!("cx{line_no}"), "tool", &text, ts));
+        }
+        _ => {} // reasoning, function_call_output, custom_tool_call_output, web_search_call, …
+    }
+}
+
+/// Live per-agent telemetry from the tail of a codex rollout: last `token_count` (context used +
+/// the window, both stated in the file) + last `turn_context` (model id).
+fn codex_session_meta(session_id: &str) -> Option<SessionMeta> {
+    let path = locate_codex_jsonl(session_id)?;
+    let tail = read_tail(&path, 256 * 1024)?;
+    codex_meta_from_tail(&tail)
+}
+
+fn codex_meta_from_tail(tail: &str) -> Option<SessionMeta> {
+    let mut model_id: Option<String> = None;
+    let mut tokens: Option<(u64, Option<u64>)> = None; // (used, window)
+    for line in tail.lines().rev() {
+        if tokens.is_none() && line.contains("\"token_count\"") {
+            if let Ok(v) = serde_json::from_str::<Value>(line) {
+                if let Some(info) = v
+                    .get("payload")
+                    .and_then(|p| p.get("info"))
+                    .filter(|i| !i.is_null())
+                {
+                    // last_token_usage = the latest request = the current context size.
+                    // (total_token_usage is a cross-turn running sum — NOT a context measure.)
+                    let used = ["last_token_usage", "total_token_usage"]
+                        .iter()
+                        .find_map(|k| {
+                            info.get(k)
+                                .and_then(|u| u.get("total_tokens"))
+                                .and_then(|t| t.as_u64())
+                                .filter(|&t| t > 0)
+                        })
+                        .unwrap_or(0);
+                    if used > 0 {
+                        let window = info.get("model_context_window").and_then(|w| w.as_u64());
+                        tokens = Some((used, window.filter(|&w| w > 0)));
+                    }
+                }
+            }
+        } else if model_id.is_none() && line.contains("\"turn_context\"") {
+            if let Ok(v) = serde_json::from_str::<Value>(line) {
+                if v.get("type").and_then(|t| t.as_str()) == Some("turn_context") {
+                    model_id = v
+                        .get("payload")
+                        .and_then(|p| p.get("model"))
+                        .and_then(|m| m.as_str())
+                        .map(String::from);
+                }
+            }
+        }
+        if tokens.is_some() && model_id.is_some() {
+            break;
+        }
+    }
+    let (context_tokens, context_window) = tokens?;
+    Some(SessionMeta { model_id, context_tokens, context_window })
+}
+
+/// Unix-ms timestamp of the last REAL turn in a codex rollout — mirrors
+/// `session_last_turn_ts`'s rationale (recency from content, not file churn).
+fn codex_session_last_turn_ts(session_id: &str) -> Option<u64> {
+    let path = locate_codex_jsonl(session_id)?;
+    let tail = read_tail(&path, 256 * 1024)?;
+    for line in tail.lines().rev() {
+        let Ok(v) = serde_json::from_str::<Value>(line) else { continue };
+        if let Some(ts) = codex_real_turn_ts(&v) {
+            return Some(ts as u64);
+        }
+    }
+    None
+}
+
+/// The unix-ms timestamp of `v` iff it is a REAL codex turn (assistant text, a tool call, or a
+/// genuine — non-scaffolding — human message), else `None`.
+fn codex_real_turn_ts(v: &Value) -> Option<i64> {
+    if v.get("type").and_then(|t| t.as_str()) != Some("response_item") {
+        return None;
+    }
+    let p = v.get("payload")?;
+    let ts = v
+        .get("timestamp")
+        .and_then(|t| t.as_str())
+        .map(rfc3339_to_ms)
+        .filter(|&t| t > 0)?;
+    match p.get("type").and_then(|t| t.as_str()) {
+        Some("function_call") | Some("custom_tool_call") => Some(ts),
+        Some("message") => match p.get("role").and_then(|r| r.as_str()) {
+            Some("assistant") => Some(ts),
+            Some("user") => {
+                let has_real_text = p
+                    .get("content")
+                    .and_then(|c| c.as_array())
+                    .is_some_and(|blocks| {
+                        blocks.iter().any(|b| {
+                            b.get("type").and_then(|t| t.as_str()) == Some("input_text")
+                                && b.get("text").and_then(|t| t.as_str()).is_some_and(|t| {
+                                    !t.trim().is_empty() && !is_system_noise(t)
+                                })
+                        })
+                    });
+                has_real_text.then_some(ts)
+            }
+            _ => None,
+        },
+        _ => None,
+    }
 }
 
 /// Turn one transcript line into zero or more maiLink messages, appended to `out`.
@@ -337,13 +649,18 @@ pub(crate) fn compact_tool_arg(input: &Value) -> Option<String> {
             }
             _ => None,
         })?;
-    let a = arg.replace('\n', " ");
-    let a = if a.chars().count() > 160 {
+    let a = one_line_capped(&arg);
+    (!a.trim().is_empty()).then_some(a)
+}
+
+/// Collapse to one line and cap at 160 chars (payload hygiene — the UI truncates for display).
+fn one_line_capped(s: &str) -> String {
+    let a = s.replace('\n', " ");
+    if a.chars().count() > 160 {
         format!("{} …", a.chars().take(160).collect::<String>())
     } else {
         a
-    };
-    (!a.trim().is_empty()).then_some(a)
+    }
 }
 
 /// Drop user-string content that is injected scaffolding, not a human message.
@@ -568,6 +885,201 @@ mod tests {
         let mut out4 = Vec::new();
         push_line_messages(&tool_img, ToolRender::Marker, &mut out4);
         assert!(out4.is_empty());
+    }
+
+    #[test]
+    fn codex_message_lines_parse_and_scaffolding_skipped() {
+        let at = "2026-06-16T03:45:02.460Z";
+        let ts = rfc3339_to_ms(at);
+
+        // Assistant output_text → role "agent" (shape verbatim from a real rollout).
+        let agent = json!({ "timestamp": at, "type": "response_item", "payload": {
+            "type": "message", "role": "assistant",
+            "content": [ { "type": "output_text", "text": "Hi. What would you like to work on?" } ],
+            "phase": "final_answer" } });
+        // Genuine user input_text → role "user".
+        let user = json!({ "timestamp": at, "type": "response_item", "payload": {
+            "type": "message", "role": "user",
+            "content": [ { "type": "input_text", "text": "hi" } ] } });
+        // Codex scaffolding rides <tagged> user messages → skipped.
+        let scaffold = json!({ "timestamp": at, "type": "response_item", "payload": {
+            "type": "message", "role": "user",
+            "content": [ { "type": "input_text", "text": "<user_instructions>…</user_instructions>" } ] } });
+        // Reasoning and event_msg mirrors are skipped (event_msg would duplicate response_item).
+        let reasoning = json!({ "timestamp": at, "type": "response_item",
+            "payload": { "type": "reasoning", "summary": [] } });
+        let event_dup = json!({ "timestamp": at, "type": "event_msg", "payload": {
+            "type": "agent_message", "message": "Hi. What would you like to work on?" } });
+
+        let mut out = Vec::new();
+        for (i, line) in [agent, user, scaffold, reasoning, event_dup].iter().enumerate() {
+            push_codex_line_messages(i, line, ToolRender::Marker, &mut out);
+        }
+        assert_eq!(out.len(), 2);
+        assert_eq!(out[0]["role"], "agent");
+        assert_eq!(out[0]["text"], "Hi. What would you like to work on?");
+        assert_eq!(out[0]["msg_id"], "cx0:0");
+        assert_eq!(out[0]["ts"], ts);
+        assert_eq!(out[1]["role"], "user");
+        assert_eq!(out[1]["text"], "hi");
+        assert_eq!(out[1]["msg_id"], "cx1:0");
+    }
+
+    #[test]
+    fn codex_tool_calls_become_markers() {
+        let at = "2026-06-16T03:45:02.460Z";
+        // function_call: `arguments` is a JSON-ENCODED STRING; `cmd` is codex's exec key.
+        let exec = json!({ "timestamp": at, "type": "response_item", "payload": {
+            "type": "function_call", "name": "exec_command",
+            "arguments": "{\"cmd\":\"pwd\",\"workdir\":\"/tmp\"}", "call_id": "c1" } });
+        // Older shell tool shape: `command` as an argv ARRAY.
+        let argv = json!({ "timestamp": at, "type": "response_item", "payload": {
+            "type": "function_call", "name": "shell",
+            "arguments": "{\"command\":[\"bash\",\"-lc\",\"ls -la\"]}", "call_id": "c2" } });
+        // custom_tool_call: `input` is the raw payload (capped to one line).
+        let patch = json!({ "timestamp": at, "type": "response_item", "payload": {
+            "type": "custom_tool_call", "status": "completed", "call_id": "c3",
+            "name": "apply_patch", "input": "*** Begin Patch\n*** Add File: a.txt\n+hello" } });
+        // Tool OUTPUT lines are never surfaced.
+        let output = json!({ "timestamp": at, "type": "response_item", "payload": {
+            "type": "function_call_output", "call_id": "c1", "output": "…" } });
+
+        let mut out = Vec::new();
+        for (i, line) in [exec, argv, patch, output].iter().enumerate() {
+            push_codex_line_messages(i, line, ToolRender::Marker, &mut out);
+        }
+        assert_eq!(out.len(), 3);
+        assert_eq!(out[0]["role"], "tool");
+        assert_eq!(out[0]["text"], "exec_command(pwd)");
+        assert_eq!(out[1]["text"], "shell(bash -lc ls -la)");
+        assert_eq!(out[2]["text"], "apply_patch(*** Begin Patch *** Add File: a.txt +hello)");
+
+        // ToolRender::None drops tool markers but keeps messages.
+        let mut none = Vec::new();
+        push_codex_line_messages(
+            0,
+            &json!({ "timestamp": at, "type": "response_item", "payload": {
+                "type": "function_call", "name": "exec_command", "arguments": "{}" } }),
+            ToolRender::None,
+            &mut none,
+        );
+        assert!(none.is_empty());
+    }
+
+    #[test]
+    fn codex_meta_parses_token_count_and_turn_context() {
+        // Shapes verbatim from a real rollout (trimmed).
+        let tail = concat!(
+            r#"{"timestamp":"2026-06-16T03:44:50.000Z","type":"turn_context","payload":{"cwd":"/tmp","approval_policy":"on-request","model":"gpt-5.5","summary":"auto"}}"#, "\n",
+            r#"{"timestamp":"2026-06-16T03:45:02.517Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":16257,"cached_input_tokens":2432,"output_tokens":14,"reasoning_output_tokens":0,"total_tokens":16271},"last_token_usage":{"input_tokens":16257,"cached_input_tokens":2432,"output_tokens":14,"reasoning_output_tokens":0,"total_tokens":16271},"model_context_window":258400},"rate_limits":{}}}"#, "\n",
+        );
+        let meta = codex_meta_from_tail(tail).expect("meta parses");
+        assert_eq!(meta.model_id.as_deref(), Some("gpt-5.5"));
+        assert_eq!(meta.context_tokens, 16271);
+        assert_eq!(meta.context_window, Some(258400));
+
+        // Multi-turn: last_token_usage (current context) wins over the cross-turn running sum,
+        // which exceeds the window on any long session.
+        let multi = r#"{"timestamp":"t","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"total_tokens":494942},"last_token_usage":{"total_tokens":83000},"model_context_window":258400}}}"#;
+        let meta_multi = codex_meta_from_tail(multi).expect("parses");
+        assert_eq!(meta_multi.context_tokens, 83000);
+
+        // A null info (some builds emit rate-limit-only token_counts) is skipped, older one wins.
+        let tail2 = concat!(
+            r#"{"timestamp":"t","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"total_tokens":100},"model_context_window":1000}}}"#, "\n",
+            r#"{"timestamp":"t","type":"event_msg","payload":{"type":"token_count","info":null,"rate_limits":{}}}"#, "\n",
+        );
+        let meta2 = codex_meta_from_tail(tail2).expect("falls back past null info");
+        assert_eq!(meta2.context_tokens, 100);
+        assert_eq!(meta2.context_window, Some(1000));
+        assert_eq!(meta2.model_id, None);
+
+        // No usable token_count at all → None (no gauge is better than a wrong gauge).
+        assert!(codex_meta_from_tail(r#"{"type":"turn_context","payload":{"model":"gpt-5.5"}}"#).is_none());
+    }
+
+    #[test]
+    fn codex_real_turn_ts_counts_content_not_scaffolding() {
+        let at = "2026-06-16T03:45:02.460Z";
+        let ts = rfc3339_to_ms(at);
+        let real = [
+            json!({ "timestamp": at, "type": "response_item", "payload": { "type": "message",
+                "role": "assistant", "content": [ { "type": "output_text", "text": "done" } ] } }),
+            json!({ "timestamp": at, "type": "response_item", "payload": {
+                "type": "function_call", "name": "exec_command", "arguments": "{}" } }),
+            json!({ "timestamp": at, "type": "response_item", "payload": { "type": "message",
+                "role": "user", "content": [ { "type": "input_text", "text": "do it" } ] } }),
+        ];
+        for v in &real {
+            assert_eq!(codex_real_turn_ts(v), Some(ts), "should count: {v}");
+        }
+        let not_real = [
+            json!({ "timestamp": at, "type": "response_item", "payload": { "type": "message",
+                "role": "user", "content": [ { "type": "input_text", "text": "<environment_context>…" } ] } }),
+            json!({ "timestamp": at, "type": "response_item", "payload": { "type": "reasoning" } }),
+            json!({ "timestamp": at, "type": "event_msg", "payload": { "type": "agent_message", "message": "x" } }),
+            json!({ "timestamp": at, "type": "turn_context", "payload": {} }),
+            json!({ "type": "response_item", "payload": { "type": "message", "role": "assistant",
+                "content": [ { "type": "output_text", "text": "no ts" } ] } }),
+        ];
+        for v in &not_real {
+            assert_eq!(codex_real_turn_ts(v), None, "should ignore: {v}");
+        }
+    }
+
+    /// Machine-conditional smoke: when a real ~/.codex/sessions exists, the newest sizeable
+    /// rollout must parse into at least one turn and a usable meta. Skips silently elsewhere
+    /// (same pattern as the openssl DER cross-check above).
+    #[test]
+    fn codex_real_rollout_smoke() {
+        let Some(root) = dirs::home_dir().map(|h| h.join(".codex").join("sessions")) else {
+            return;
+        };
+        if !root.is_dir() {
+            eprintln!("[codex smoke] no ~/.codex/sessions — skipped");
+            return;
+        }
+        // Newest-first walk; pick the first file big enough to hold real turns.
+        let mut picked: Option<(String, PathBuf)> = None;
+        'walk: for y in subdirs_desc(&root) {
+            for m in subdirs_desc(&y) {
+                for d in subdirs_desc(&m) {
+                    let Ok(entries) = std::fs::read_dir(&d) else { continue };
+                    for e in entries.flatten() {
+                        let p = e.path();
+                        let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                        let big = std::fs::metadata(&p).map(|md| md.len() > 20_000).unwrap_or(false);
+                        if name.starts_with("rollout-") && name.ends_with(".jsonl") && big {
+                            // session id = the last 36 chars before ".jsonl" (uuid).
+                            let stem = name.trim_end_matches(".jsonl");
+                            if stem.len() > 36 {
+                                picked = Some((stem[stem.len() - 36..].to_string(), p));
+                                break 'walk;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        let Some((sid, path)) = picked else {
+            eprintln!("[codex smoke] no sizeable rollout — skipped");
+            return;
+        };
+        let located = locate_codex_jsonl(&sid).expect("locates by session id");
+        assert_eq!(located, path, "locator must resolve the same file");
+        let turns = codex_turns_for_session(&sid, 40, ToolRender::Marker).expect("parses");
+        assert!(!turns.is_empty(), "a >20KB rollout distills to at least one turn");
+        let meta = codex_session_meta(&sid).expect("meta parses");
+        assert!(meta.context_tokens > 0);
+        assert!(codex_session_last_turn_ts(&sid).is_some());
+        eprintln!(
+            "[codex smoke] {} → {} turns, model={:?}, ctx={}/{:?}",
+            path.display(),
+            turns.len(),
+            meta.model_id,
+            meta.context_tokens,
+            meta.context_window
+        );
     }
 
     #[test]

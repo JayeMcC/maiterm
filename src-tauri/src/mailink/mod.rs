@@ -824,16 +824,16 @@ async fn stream_new_messages(
     mtimes: &mut HashMap<String, u64>,
 ) -> Result<(), ()> {
     for t in designated_tabs(app) {
-        let Some(sid) = resolved_session_id_for_tab(app, &t.tab_id) else { continue };
+        let Some((rt, sid)) = resolved_session_for_tab(app, &t.tab_id) else { continue };
         // mtime gate: an unchanged transcript means no new turns, so skip the tail re-parse.
-        if let Some(mt) = transcript::session_jsonl_mtime(&sid) {
+        if let Some(mt) = transcript::mtime_for(rt, &sid) {
             if mtimes.get(&t.tab_id) == Some(&mt) {
                 continue;
             }
             mtimes.insert(t.tab_id.clone(), mt);
         }
         // Same call GET uses (limit 40, Marker) so streamed ids are byte-identical to the REST path.
-        let Some(turns) = transcript::turns_for_session(&sid, 40, transcript::ToolRender::Marker)
+        let Some(turns) = transcript::turns_for(rt, &sid, 40, transcript::ToolRender::Marker)
         else {
             continue;
         };
@@ -1339,35 +1339,41 @@ fn pty_for_tab(app: &AppState, tab_id: &str) -> Option<String> {
     app.tab_pty_map.read().get(tab_id).cloned()
 }
 
-/// The session id whose transcript we read for a tab. If a tab has more than one tracked session
-/// (e.g. after a resume minted a new id), prefer the most attention-worthy — consistent with how
-/// `session_states` picks the tab's displayed state.
-fn session_id_for_tab(app: &AppState, tab_id: &str) -> Option<String> {
+/// The (runtime, session id) whose transcript we read for a tab. If a tab has more than one
+/// tracked session (e.g. after a resume minted a new id), prefer the most attention-worthy —
+/// consistent with how `session_states` picks the tab's displayed state.
+fn live_session_for_tab(app: &AppState, tab_id: &str) -> Option<(AgentRuntime, String)> {
     let sessions = app.agent_sessions.read();
     sessions
         .iter()
         .filter(|(_, s)| s.tab_id == tab_id)
         .max_by_key(|(_, s)| rank(s.state))
-        .map(|(id, _)| id.clone())
+        .map(|(id, s)| (s.runtime, id.clone()))
 }
 
-/// The tab's persisted resume session id — the runtime's `*SessionId` trigger variable that the
-/// auto-resume command interpolates (`claude --resume %claudeSessionId`). Used to resolve a
-/// transcript for an agent that has auto-resumed but NOT yet re-run initSession: in that window
-/// `agent_sessions` has no live entry, so without this the phone falls back to a raw terminal
-/// scrape (wide, unwrapped) or empty, and the app shows stale/duplicated detail. Claude only.
-fn persisted_session_id_for_tab(app: &AppState, tab_id: &str) -> Option<String> {
+/// The tab's persisted resume session id — the runtime's `<runtime>SessionId` trigger variable
+/// that the auto-resume command interpolates (`claude --resume %claudeSessionId`,
+/// `codex resume %codexSessionId`). Used to resolve a transcript for an agent that has
+/// auto-resumed but NOT yet re-registered: in that window `agent_sessions` has no live entry, so
+/// without this the phone falls back to a raw terminal scrape (wide, unwrapped) or empty, and
+/// the app shows stale/duplicated detail.
+fn persisted_session_for_tab(app: &AppState, tab_id: &str) -> Option<(AgentRuntime, String)> {
     let data = app.app_data.read();
     for win in &data.windows {
         for ws in &win.workspaces {
             for pane in &ws.panes {
                 for tab in &pane.tabs {
                     if tab.id == tab_id {
+                        // None → Claude (matches designated_tabs' default): tabs persisted by
+                        // app versions predating Tab.runtime can still carry claudeSessionId.
+                        let rt = tab.runtime.unwrap_or_default();
+                        let var = crate::state::agent_runtime::descriptor(rt).session_id_var;
                         return tab
                             .trigger_variables
-                            .get("claudeSessionId")
+                            .get(var)
                             .cloned()
-                            .filter(|s| !s.is_empty());
+                            .filter(|s| !s.is_empty())
+                            .map(|sid| (rt, sid));
                     }
                 }
             }
@@ -1376,10 +1382,10 @@ fn persisted_session_id_for_tab(app: &AppState, tab_id: &str) -> Option<String> 
     None
 }
 
-/// Session id for reading a tab's transcript: the LIVE session if one is registered, else the
-/// PERSISTED resume id (covers the resume-before-initSession window after an app relaunch).
-fn resolved_session_id_for_tab(app: &AppState, tab_id: &str) -> Option<String> {
-    session_id_for_tab(app, tab_id).or_else(|| persisted_session_id_for_tab(app, tab_id))
+/// (runtime, session id) for reading a tab's transcript: the LIVE session if one is registered,
+/// else the PERSISTED resume id (covers the resume-before-initSession window after a relaunch).
+fn resolved_session_for_tab(app: &AppState, tab_id: &str) -> Option<(AgentRuntime, String)> {
+    live_session_for_tab(app, tab_id).or_else(|| persisted_session_for_tab(app, tab_id))
 }
 
 /// The captured AskUserQuestion `tool_input` for a tab (most attention-worthy session), if an
@@ -1442,29 +1448,29 @@ fn map_ask_questions(tool_input: &Value) -> Option<Value> {
     Some(json!(out))
 }
 
-/// Build the chat transcript: per-turn source markdown from the Claude session JSONL when we can
-/// find it, otherwise the old single-system-turn terminal scrape (other runtimes / robustness).
+/// Build the chat transcript: per-turn source markdown from the session's transcript file
+/// (Claude JSONL / Codex rollout) when we can find it, otherwise the old single-system-turn
+/// terminal scrape (Gemini / robustness).
 fn build_transcript(app: &AppState, tab_id: &str, runtime: &str, now: u64) -> Vec<Value> {
-    if runtime == "claude" {
-        // Resolve via the LIVE session, or (post-relaunch, pre-initSession) the persisted resume
-        // id — so a dormant/resuming agent still shows its real distilled conversation, keyed to
-        // THIS tab, instead of a raw terminal scrape or empty (which the app rendered as
-        // stale/duplicated "all agents look the same" detail).
-        if let Some(sid) = resolved_session_id_for_tab(app, tab_id) {
-            if let Some(turns) =
-                transcript::turns_for_session(&sid, 40, transcript::ToolRender::Marker)
-            {
-                if !turns.is_empty() {
-                    return turns;
-                }
+    // Resolve via the LIVE session, or (post-relaunch, pre-initSession) the persisted resume
+    // id — so a dormant/resuming agent still shows its real distilled conversation, keyed to
+    // THIS tab, instead of a raw terminal scrape or empty (which the app rendered as
+    // stale/duplicated "all agents look the same" detail).
+    if let Some((rt, sid)) = resolved_session_for_tab(app, tab_id) {
+        if let Some(turns) = transcript::turns_for(rt, &sid, 40, transcript::ToolRender::Marker) {
+            if !turns.is_empty() {
+                return turns;
             }
         }
+    }
+    if runtime == "claude" {
         // No JSONL resolvable → empty, NOT the raw terminal scrape: the scrape is wide,
         // unwrapped, and easily misread as another agent's content on a phone.
         return Vec::new();
     }
-    // Non-Claude runtimes (no JSONL distillation): distilled recent terminal text as a single
-    // system turn. Uses the LIVE tab→pty map, not the persisted tab.pty_id which can be stale.
+    // Codex with no locatable rollout, Gemini (no transcript source yet), or a hand-designated
+    // plain shell: distilled recent terminal text as a single system turn. Uses the LIVE
+    // tab→pty map, not the persisted tab.pty_id which can be stale.
     let recent = pty_for_tab(app, tab_id)
         .and_then(|p| crate::commands::terminal::recent_text(app, &p, 40).ok())
         .unwrap_or_default();
@@ -1511,6 +1517,22 @@ fn context_limit_for(model_id: &str) -> u64 {
     }
 }
 
+/// Normalize a model id to a friendly display string, per runtime. Claude ids go through
+/// `display_model` ("claude-opus-4-8[1m]" → "Opus 4.8"); Codex ids just get the family
+/// capitalized ("gpt-5.5" → "GPT-5.5", "gpt-5-codex" → "GPT-5-codex"); anything else passes
+/// through as-is.
+fn display_model_for(rt: AgentRuntime, model_id: &str) -> String {
+    match rt {
+        AgentRuntime::Claude => display_model(model_id),
+        AgentRuntime::Codex | AgentRuntime::Gemini => {
+            match model_id.strip_prefix("gpt") {
+                Some(rest) => format!("GPT{rest}"),
+                None => model_id.to_string(),
+            }
+        }
+    }
+}
+
 /// Normalize a Claude model id to a friendly display string: "claude-opus-4-8[1m]" → "Opus 4.8".
 /// Strips the provider prefix and 1M marker, title-cases the family, and dot-joins the version.
 fn display_model(model_id: &str) -> String {
@@ -1537,15 +1559,18 @@ fn display_model(model_id: &str) -> String {
 }
 
 /// Per-agent telemetry (mailink-protocol §12.1 `meta`): model display name + context gauge, read
-/// from the Claude transcript JSONL (the SessionStart hook's model is often null). Live/persisted
-/// session id so it also resolves during the resume-before-init window. `effort` is intentionally
-/// omitted — it's only in Claude Code's statusLine payload, which maiTerm doesn't receive. None for
-/// non-Claude tabs (no Claude JSONL) or before the first assistant turn.
+/// from the session's transcript file — Claude JSONL `message.usage` (the SessionStart hook's
+/// model is often null), or a Codex rollout's `token_count`/`turn_context` (which state the
+/// window and model directly). Live/persisted session id so it also resolves during the
+/// resume-before-init window. `effort` is intentionally omitted — it's only in Claude Code's
+/// statusLine payload, which maiTerm doesn't receive. None for Gemini tabs (no transcript
+/// source) or before the first assistant turn.
 fn build_meta(app: &AppState, tab_id: &str) -> Option<Value> {
-    let sid = resolved_session_id_for_tab(app, tab_id)?;
-    let meta = transcript::session_meta(&sid)?;
+    let (rt, sid) = resolved_session_for_tab(app, tab_id)?;
+    let meta = transcript::meta_for(rt, &sid)?;
     let model_id = meta.model_id.as_deref().unwrap_or("");
-    let limit = context_limit_for(model_id);
+    // Codex rollouts carry the window; Claude's is derived from the model id.
+    let limit = meta.context_window.unwrap_or_else(|| context_limit_for(model_id));
     let pct = ((meta.context_tokens as f64 / limit as f64) * 100.0)
         .round()
         .clamp(0.0, 100.0) as u64;
@@ -1555,7 +1580,7 @@ fn build_meta(app: &AppState, tab_id: &str) -> Option<Value> {
         "contextPct": pct,
     });
     if !model_id.is_empty() {
-        m["model"] = json!(display_model(model_id));
+        m["model"] = json!(display_model_for(rt, model_id));
     }
     Some(m)
 }
@@ -1588,8 +1613,8 @@ fn scrollback_times(app: &AppState) -> HashMap<String, u64> {
 /// on a pure resume. (mtime is still the right change-gate for WS streaming, where "anything
 /// appended → re-scan" is the intended semantics — see stream_new_messages.)
 fn last_activity_ts(app: &AppState, tab_id: &str, scrollback: &HashMap<String, u64>, now: u64) -> u64 {
-    resolved_session_id_for_tab(app, tab_id)
-        .and_then(|sid| transcript::session_last_turn_ts(&sid))
+    resolved_session_for_tab(app, tab_id)
+        .and_then(|(rt, sid)| transcript::last_turn_ts_for(rt, &sid))
         .or_else(|| scrollback.get(tab_id).copied())
         .unwrap_or(now)
 }
