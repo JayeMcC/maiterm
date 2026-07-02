@@ -1,0 +1,49 @@
+.env.review.example
+  s_37bc688fcf5888::t_ea85d3cf289397 77-91
+README.md
+  s_37bc688fcf5888::t_242852cc3a307b 199-230
+docs/adr/0023-multi-ticket-batch-review-mode.md
+  s_356dd0b6dcdade::t_48368a7875bbb7 1-153
+docs/adr/0024-review-runs-self-register-for-fleet-monitoring.md
+  s_37bc688fcf5888::t_1cbed81eb3165b 2
+docs/adr/0025-fleet-hub-otel-graceful-degradation.md
+  s_37bc688fcf5888::t_e1e7f7af17fa47 2
+docs/adr/0026-cooperative-abort-before-force-kill.md
+  s_37bc688fcf5888::t_fbf9072953eac0 2
+docs/adr/0027-trace-per-run-node-spans.md
+  s_37bc688fcf5888::t_9ef5d7b6fc900a 2
+docs/adr/0028-opaque-runid-resume-is-new-run.md
+  s_37bc688fcf5888::t_ad17e149718b80 2
+docs/adr/0029-layered-cost-hub-side-estimation.md
+  s_37bc688fcf5888::t_b1093320c81399 2
+docs/adr/0030-hub-shape-same-repo-one-port.md
+  s_37bc688fcf5888::t_d6419f20a582c6 2
+specs/feature/TOOL-05__fleet-hub/spec-changelog.md
+  s_37bc688fcf5888::t_b8bc14e486dcb3 83-96
+specs/feature/TOOL-05__fleet-hub/tasks.md
+  s_37bc688fcf5888::t_b70e8489c791ad 149-151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "5b9501af646e5302661a9ff60348c502982ab0a5",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_37bc688fcf5888": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98b6ac43-466f-4147-aee9-8502cc685c9f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
