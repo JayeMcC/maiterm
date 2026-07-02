@@ -701,11 +701,43 @@ function createClaudeCodeStore() {
     return { success: true, tabId: args.tabId, displayName: archived.archived_name ?? archived.name };
   }
 
+  /**
+   * Force a tab's TerminalPane to mount: clear any pending-resume gate on its
+   * pane and add it to the activated set (same recipe as the mesh "Wake all"
+   * path). Needed because rapid successive openTab calls steal pane focus
+   * from each other — navigate alone doesn't guarantee earlier tabs ever
+   * mount — and because navigating to a suspended tab shows the resume
+   * prompt instead of mounting.
+   */
+  function forceActivateTab(tabId: string) {
+    window.dispatchEvent(new CustomEvent('mesh-activate-tab', { detail: tabId }));
+  }
+
   async function handleSwitchTab(args: { tabId: string }) {
     const loc = findTabLocation(args.tabId);
     if (!loc) return { error: `Tab not found: ${args.tabId}` };
     await navigateToTab(args.tabId);
-    return { success: true, tabId: args.tabId, workspace: loc.workspace.name, displayName: tabDisplayName(loc.tab) };
+
+    // Make sendKeysToTab's "Try switchTab first to remount" advice true:
+    // if the terminal tab has no live PTY (suspended/uninitialised) or no
+    // mounted instance, force-activate so TerminalPane mounts — spawning a
+    // fresh PTY for suspended tabs, reattaching live ones.
+    const isTerminal = !loc.tab.tab_type || loc.tab.tab_type === 'terminal';
+    const hadPty = !!loc.tab.pty_id;
+    let ptyId = loc.tab.pty_id ?? null;
+    if (isTerminal && (!ptyId || !terminalsStore.get(args.tabId))) {
+      forceActivateTab(args.tabId);
+      const waited = await waitForPtyId(args.tabId, 5000);
+      if (waited) ptyId = waited;
+    }
+    return {
+      success: true,
+      tabId: args.tabId,
+      workspace: loc.workspace.name,
+      displayName: tabDisplayName(loc.tab),
+      ptyId,
+      ...(!hadPty && ptyId ? { remounted: true } : {}),
+    };
   }
 
   /** Encode a UTF-8 string into the number[] shape `commands.writeTerminal` expects. */
@@ -753,18 +785,35 @@ function createClaudeCodeStore() {
       if (existing) {
         await navigateToTab(existing.tab.id);
         let ptyId = existing.tab.pty_id ?? null;
-        if (!ptyId) {
-          // Tab exists but PTY hasn't been spawned yet (suspended/uninitialised);
-          // wait briefly in case it's just remounting.
+        let queued = false;
+        if (args.command) {
+          if (ptyId) {
+            // Ctrl-C first so any running dev server is interrupted before the
+            // new command lands. Small inter-write delay lets the shell's signal
+            // handler print its prompt before we type over it.
+            await commands.writeTerminal(ptyId, encodeForPty('\x03'));
+            await new Promise((r) => setTimeout(r, 50));
+            await commands.writeTerminal(ptyId, encodeForPty(args.command + '\n'));
+          } else {
+            // Suspended/uninitialised tab: queue the command (take-once, so it
+            // can't be dropped OR double-written) and force a mount so the
+            // fresh PTY delivers it — previously this branch silently skipped
+            // the write.
+            terminalsStore.setPendingCommand(existing.tab.id, args.command);
+            forceActivateTab(existing.tab.id);
+            ptyId = await waitForPtyId(existing.tab.id, 5000);
+            if (ptyId) {
+              const pending = terminalsStore.consumePendingCommand(existing.tab.id);
+              if (pending !== undefined) {
+                await commands.writeTerminal(ptyId, encodeForPty(pending + '\n'));
+              }
+            } else {
+              queued = true;
+            }
+          }
+        } else if (!ptyId) {
+          // No command: wait briefly in case the tab is mid-remount.
           ptyId = await waitForPtyId(existing.tab.id, 2000);
-        }
-        if (args.command && ptyId) {
-          // Ctrl-C first so any running dev server is interrupted before the
-          // new command lands. Small inter-write delay lets the shell's signal
-          // handler print its prompt before we type over it.
-          await commands.writeTerminal(ptyId, encodeForPty('\x03'));
-          await new Promise((r) => setTimeout(r, 50));
-          await commands.writeTerminal(ptyId, encodeForPty(args.command + '\n'));
         }
         return {
           action: 'focused',
@@ -773,6 +822,9 @@ function createClaudeCodeStore() {
           workspaceId: ws.id,
           paneId: existing.pane.id,
           displayName: tabDisplayName(existing.tab),
+          ...(queued
+            ? { queued: true, warning: 'PTY not ready within 5s; command queued and will run as soon as the tab mounts.' }
+            : {}),
         };
       }
     }
@@ -787,25 +839,29 @@ function createClaudeCodeStore() {
     await navigateToTab(tab.id);
 
     let ptyId: string | null;
+    let queued = false;
     if (args.command) {
+      // Queue FIRST so the command can never be dropped: whichever of this
+      // handler's wait window or TerminalPane's mount hook sees the PTY first
+      // consumes the queue entry and writes exactly once. Then force-activate:
+      // rapid successive openTab calls steal pane focus from each other, so
+      // navigate alone doesn't guarantee this tab ever mounts.
+      terminalsStore.setPendingCommand(tab.id, args.command);
+      forceActivateTab(tab.id);
       ptyId = await waitForPtyId(tab.id, 5000);
-      if (!ptyId) {
-        return {
-          action: 'created',
-          tabId: tab.id,
-          ptyId: null,
-          workspaceId: ws.id,
-          paneId: pane.id,
-          displayName: args.name,
-          warning: 'Tab created but PTY did not become ready within 5s; command was not written. Caller can retry via sendKeysToTab.',
-        };
+      if (ptyId) {
+        // TODO(cwd): args.cwd is currently inferred from sibling-tab heuristics in
+        // workspacesStore.createTab. Honouring an explicit cwd here would require
+        // either threading it through createTab or `cd`-ing after spawn — left
+        // for a follow-up since the launcher's common case is "inherit the
+        // workspace's standard CWD".
+        const pending = terminalsStore.consumePendingCommand(tab.id);
+        if (pending !== undefined) {
+          await commands.writeTerminal(ptyId, encodeForPty(pending + '\n'));
+        }
+      } else {
+        queued = true;
       }
-      // TODO(cwd): args.cwd is currently inferred from sibling-tab heuristics in
-      // workspacesStore.createTab. Honouring an explicit cwd here would require
-      // either threading it through createTab or `cd`-ing after spawn — left
-      // for a follow-up since the launcher's common case is "inherit the
-      // workspace's standard CWD".
-      await commands.writeTerminal(ptyId, encodeForPty(args.command + '\n'));
     } else {
       // No command: caller may sendKeysToTab later. Don't block on PTY readiness.
       const located = findTabLocation(tab.id);
@@ -819,6 +875,9 @@ function createClaudeCodeStore() {
       workspaceId: ws.id,
       paneId: pane.id,
       displayName: args.name,
+      ...(queued
+        ? { queued: true, warning: 'PTY not ready within 5s; command queued and will run as soon as the tab mounts.' }
+        : {}),
     };
   }
 

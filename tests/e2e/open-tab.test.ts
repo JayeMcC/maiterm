@@ -93,5 +93,80 @@ if (!BIN) {
       expect(sent.success).toBe(true);
       expect(sent.bytes).toBeGreaterThan(0);
     });
+
+    /** Poll getTabContext until `needle` shows up in the tab's content. */
+    async function waitForTabContent(tabId: string, needle: string, timeoutMs = 20_000): Promise<boolean> {
+      const start = Date.now();
+      while (Date.now() - start < timeoutMs) {
+        const res = client.parseToolResult<{ tabs: Array<{ id?: string; content?: string }> }>(await client.callTool('getTabContext', { tabIds: [tabId], lines: 50 }));
+        const tab = Array.isArray(res.tabs) ? res.tabs[0] : undefined;
+        if (tab?.content?.includes(needle)) return true;
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      return false;
+    }
+
+    // Regression: rapid successive openTab calls used to steal pane focus
+    // from each other, so earlier tabs never mounted and their commands were
+    // dropped — sometimes with no warning at all (fork issue #3). The fix
+    // queues the command (take-once) and force-activates the tab.
+    it('openTab delivers commands on ALL tabs created in rapid succession', async () => {
+      const opened: Array<{ tabId: string; marker: string }> = [];
+      for (const n of [1, 2, 3]) {
+        const marker = `e2e-burst-marker-${n}`;
+        const r = client.parseToolResult<{ tabId: string; ptyId: string | null; queued?: boolean }>(
+          await client.callTool('openTab', { name: `e2e-burst-${n}`, command: `echo ${marker}` }),
+        );
+        expect(r.tabId).toBeTruthy();
+        opened.push({ tabId: r.tabId, marker });
+      }
+      // getTabContext needs a session — borrow the first created tab's id.
+      await client.callTool('initSession', { tabId: opened[0]!.tabId });
+      for (const { tabId, marker } of opened) {
+        expect(await waitForTabContent(tabId, marker), `command output for ${marker} in ${tabId}`).toBe(true);
+      }
+    });
+
+    // Regression: reuseExisting used to silently skip the command write when
+    // the reused tab had no live PTY (fork issue #4). With a live PTY it must
+    // rewrite; the result must never drop the command without a queued flag.
+    it('openTab reuseExisting re-runs the command on the reused tab', async () => {
+      const first = client.parseToolResult<{ tabId: string }>(await client.callTool('openTab', { name: 'e2e-rewrite-test', command: 'echo e2e-rewrite-first' }));
+      await client.callTool('initSession', { tabId: first.tabId });
+      expect(await waitForTabContent(first.tabId, 'e2e-rewrite-first')).toBe(true);
+      const second = client.parseToolResult<{ tabId: string; action: string; ptyId: string | null; queued?: boolean }>(
+        await client.callTool('openTab', { name: 'e2e-rewrite-test', command: 'echo e2e-rewrite-second', reuseExisting: true }),
+      );
+      expect(second.action).toBe('focused');
+      expect(second.tabId).toBe(first.tabId);
+      if (!second.queued) expect(second.ptyId).toBeTruthy();
+      expect(await waitForTabContent(first.tabId, 'e2e-rewrite-second')).toBe(true);
+    });
+
+    // Regression: switchTab did not remount a PTY-less tab, so sendKeysToTab's
+    // own "Try switchTab first to remount, then retry" advice never worked
+    // (fork issue #5).
+    it('switchTab remounts a PTY-less tab so sendKeysToTab succeeds after it', async () => {
+      // Create two tabs without commands back-to-back: the second steals pane
+      // focus, so the first may never mount (no force-activation without a
+      // command — that's the scenario the advice is for).
+      const a = client.parseToolResult<{ tabId: string }>(await client.callTool('openTab', { name: 'e2e-remount-a' }));
+      const b = client.parseToolResult<{ tabId: string }>(await client.callTool('openTab', { name: 'e2e-remount-b' }));
+      expect(b.tabId).toBeTruthy();
+
+      const firstTry = await client.callTool('sendKeysToTab', { tabId: a.tabId, text: 'echo e2e-remount-early\n' });
+      const firstParsed = client.parseToolResult<{ success?: boolean; error?: string }>(firstTry);
+      if (!firstParsed.success) {
+        // Tab never mounted — exactly the bug. Follow the advice:
+        const switched = client.parseToolResult<{ success: boolean; ptyId: string | null }>(await client.callTool('switchTab', { tabId: a.tabId }));
+        expect(switched.success).toBe(true);
+        expect(switched.ptyId).toBeTruthy();
+        const retry = client.parseToolResult<{ success: boolean }>(await client.callTool('sendKeysToTab', { tabId: a.tabId, text: 'echo e2e-remount-late\n' }));
+        expect(retry.success).toBe(true);
+      }
+      // Either way the tab must be writable by now.
+      const final = client.parseToolResult<{ success: boolean }>(await client.callTool('sendKeysToTab', { tabId: a.tabId, text: 'echo e2e-remount-final\n' }));
+      expect(final.success).toBe(true);
+    });
   });
 }

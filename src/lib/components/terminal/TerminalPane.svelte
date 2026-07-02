@@ -752,6 +752,18 @@
       }, 300);
     }
 
+    // Deliver any command queued before this PTY existed (MCP openTab on a
+    // tab that hadn't mounted yet — the take-once queue means the MCP
+    // handler's fast path and this hook can never both write it).
+    const pendingCommand = terminalsStore.consumePendingCommand(tabId);
+    if (pendingCommand !== undefined) {
+      try {
+        await writeTerminal(ptyId, Array.from(new TextEncoder().encode(pendingCommand + '\n')));
+      } catch (e) {
+        logError(`Failed to write pending command: ${e}`);
+      }
+    }
+
     // If the source pane was running SSH (or last session had SSH), replay the command.
     // SSH command sent immediately; auto-resume deferred until after bridge setup so
     // AITERM_TAB_ID env var is available in the remote shell when Claude starts.

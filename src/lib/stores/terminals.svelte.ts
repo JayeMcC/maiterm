@@ -59,6 +59,11 @@ function createTerminalsStore() {
   // to the running PTY instead of respawning. Consumed when the tab registers.
   // eslint-disable-next-line svelte/prefer-svelte-reactivity -- seeded once at load, consumed imperatively at register time
   const reattachPtyIds = new Set<string>();
+  // Commands queued for tabs whose PTY isn't ready yet (MCP openTab on an
+  // unmounted/suspended tab). Consumed exactly once — by whichever of the MCP
+  // handler's wait window or TerminalPane's mount hook sees the PTY first.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative take-once queue, no reactive readers
+  const pendingCommands = new Map<string, string>();
   // Listeners notified when any terminal's OSC state changes
   // eslint-disable-next-line svelte/prefer-svelte-reactivity -- callback listener registry
   const oscListeners = new Set<(tabId: string, osc: OscState) => void>();
@@ -144,6 +149,18 @@ function createTerminalsStore() {
 
     setSplitContext(tabId: string, ctx: SplitContext) {
       splitContexts.set(tabId, ctx);
+    },
+
+    /** Queue a command for a tab whose PTY isn't live yet (see pendingCommands). */
+    setPendingCommand(tabId: string, command: string) {
+      pendingCommands.set(tabId, command);
+    },
+
+    /** Take-once: returns the queued command and clears it, or undefined. */
+    consumePendingCommand(tabId: string): string | undefined {
+      const cmd = pendingCommands.get(tabId);
+      if (cmd !== undefined) pendingCommands.delete(tabId);
+      return cmd;
     },
 
     consumeSplitContext(tabId: string): SplitContext | undefined {
