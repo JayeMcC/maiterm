@@ -446,12 +446,26 @@
         const count = await commands.getWindowCount();
 
         if (count <= 1 && isMac()) {
-          // Last window on macOS: kill terminals and show empty state
-          // (macOS convention: apps stay open with no windows)
-          logInfo('Last window (macOS) — showing empty state');
+          // Last window on macOS: destroy the webview and leave the app
+          // running in the Menu Bar (Slack/Notes.app convention). The
+          // previous behaviour — reset workspaces + keep the empty webview
+          // resident — read as "closed the workspaces, not the window",
+          // and kept ~20 MB of WebContent RSS pinned for no user-visible
+          // reason. File > New Window / Cmd+N spawns a fresh one; users
+          // who want to restore the previous layout use Window Presets.
+          logInfo('Last window (macOS) — destroying window, app stays running');
           await terminalsStore.killAllTerminals();
-          await commands.resetWindow();
-          workspacesStore.reset();
+          await commands.closeWindow();
+          try {
+            await invoke('sync_state');
+          } catch (e) {
+            logError(`sync_state failed: ${e}`);
+          }
+          try {
+            await appWindow.destroy();
+          } catch (e) {
+            logError(`destroy() failed: ${e}`);
+          }
         } else if (count <= 1) {
           // Last window on Windows/Linux: exit the app
           logInfo('Last window — exiting app');

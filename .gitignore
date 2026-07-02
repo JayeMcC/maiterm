@@ -33,3 +33,21 @@ TAURI_MCP_NOTES.md
 # Debug
 *.log
 .gstack/
+
+# BEGIN personal-tooling-symlinks
+# Symlinks into linked-tools/ (personal tooling) — do not commit here.
+/.agents
+/docs/agent-environment
+/memory
+/scripts/bw-helpers.sh
+/scripts/cli-catalog.mjs
+/scripts/cli-llm-cassette.mjs
+/scripts/cli-llm.mjs
+/scripts/forwood-seed-entities.mjs
+/scripts/launcher
+/scripts/run-silent.sh
+/scripts/task-engine
+/scripts/test
+# skill-library routing marker rides along inside dir symlinks — never track it downstream.
+**/DESTINATION.md
+# END personal-tooling-symlinks
