@@ -128,8 +128,16 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin({
+            // Background mode: StateFlags::all() includes VISIBLE, and the
+            // plugin SHOWS the managed window at startup — overriding the
+            // config-level visible=false. Strip it so background instances
+            // stay truly invisible.
+            let mut state_flags = tauri_plugin_window_state::StateFlags::all();
+            if std::env::var("MAITERM_E2E_BACKGROUND").is_ok() {
+                state_flags.remove(tauri_plugin_window_state::StateFlags::VISIBLE);
+            }
             let mut ws = tauri_plugin_window_state::Builder::new()
-                .with_state_flags(tauri_plugin_window_state::StateFlags::all())
+                .with_state_flags(state_flags)
                 // Only track the "main" window — dynamically created windows
                 // (UUID labels) are managed by our own state system. The plugin
                 // can cause WebView2 init issues on Windows for unknown labels.
