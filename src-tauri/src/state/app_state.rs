@@ -79,6 +79,11 @@ pub struct AgentSessionInfo {
     pub state: AgentSessionState,
     /// Current tool being executed (set by PreToolUse, cleared by PostToolUse/Stop)
     pub tool_name: Option<String>,
+    /// Compact primary-argument label for the current tool (e.g. `rm -rf ./dist` for Bash),
+    /// extracted from the PreToolUse `tool_input` (or a Codex PermissionRequest, which carries
+    /// tool_name/tool_input directly). Lets the maiLink permission card show WHAT is being
+    /// approved, not just which tool. Cleared with tool_name.
+    pub tool_detail: Option<String>,
     /// Structured content of an open AskUserQuestion: the raw `tool_input` captured from the
     /// PreToolUse hook (its `questions[]` drive the maiLink structured PendingPrompt). Set when
     /// AskUserQuestion starts, cleared when it completes (PostToolUse) or the turn stops.

@@ -32,7 +32,7 @@ use crate::state::app_state::AgentSessionState;
 use crate::state::workspace::TabType;
 use crate::state::{AgentRuntime, AppState, MailinkDevice};
 
-mod transcript;
+pub(crate) mod transcript;
 
 /// Default LAN port. The pairing QR carries the actual host:port, so this is just a
 /// sensible default until a `mailink_port` preference is wired (P2b).
@@ -1372,6 +1372,17 @@ fn pending_question_for_tab(app: &AppState, tab_id: &str) -> Option<Value> {
         .and_then(|(_, s)| s.pending_question.clone())
 }
 
+/// The compact argument label of the tab's current tool (e.g. the Bash command awaiting
+/// approval), resolved like `pending_question_for_tab`. Feeds the permission card text.
+fn tool_detail_for_tab(app: &AppState, tab_id: &str) -> Option<String> {
+    let sessions = app.agent_sessions.read();
+    sessions
+        .iter()
+        .filter(|(_, s)| s.tab_id == tab_id)
+        .max_by_key(|(_, s)| rank(s.state))
+        .and_then(|(_, s)| s.tool_detail.clone())
+}
+
 /// Map Claude's AskUserQuestion `tool_input` into the mailink-protocol §12.1 AskQuestion[] shape
 /// (header, question, multiSelect, options:[{label, description}], allowOther). Returns None on an
 /// unrecognized shape so the caller falls back to a generic prompt. `allowOther` is always true —
@@ -1653,11 +1664,14 @@ fn build_chat_detail(app: &AppState, tab_id: &str) -> Option<Value> {
         detail["pendingPrompt"] = pp;
     } else if state == "permission" {
         // A real permission prompt (some other tool, e.g. Bash). Synthesized: the hook carries no
-        // structured options; that numeric-keystroke respond path is proven, so respondable now.
-        let text = tool
-            .as_deref()
-            .map(|t| format!("{t} — approve?"))
-            .unwrap_or_else(|| "Permission requested".to_string());
+        // structured options; that keystroke respond path is proven, so respondable now. The
+        // compact tool_detail (captured from the PreToolUse / Codex PermissionRequest tool_input)
+        // shows WHAT is being approved, e.g. "Bash(rm -rf ./dist) — approve?".
+        let text = match (tool.as_deref(), tool_detail_for_tab(app, tab_id).as_deref()) {
+            (Some(t), Some(d)) => format!("{t}({d}) — approve?"),
+            (Some(t), None) => format!("{t} — approve?"),
+            _ => "Permission requested".to_string(),
+        };
         detail["pendingPrompt"] = json!({
             "prompt_id": format!("p_{tab_id}"),
             "thread_id": tab_id,

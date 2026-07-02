@@ -679,6 +679,7 @@ fn handle_backend_tool(tool_name: &str, arguments: &Value, state: &Arc<AppState>
                     "state": info.state,
                     "cwd": info.cwd,
                     "toolName": info.tool_name,
+                    "toolDetail": info.tool_detail,
                     "model": info.model,
                 })
             }).collect();
@@ -1173,6 +1174,7 @@ async fn process_message(
                                     cwd: existing.as_ref().and_then(|e| e.cwd.clone()),
                                     state: AgentSessionState::Active,
                                     tool_name: existing.as_ref().and_then(|e| e.tool_name.clone()),
+                                    tool_detail: existing.as_ref().and_then(|e| e.tool_detail.clone()),
                                     pending_question: existing.as_ref().and_then(|e| e.pending_question.clone()),
                                     model: existing.and_then(|e| e.model),
                                     connection_id: Some(connection_id.to_string()),
@@ -1203,6 +1205,7 @@ async fn process_message(
                                         cwd: pending_cwd,
                                         state: AgentSessionState::Active,
                                         tool_name: None,
+                                        tool_detail: None,
                                         pending_question: None,
                                         model: None,
                                         connection_id: Some(connection_id.to_string()),
@@ -1623,6 +1626,7 @@ async fn hooks_handler(
                         cwd: cwd.clone(),
                         state: AgentSessionState::Active,
                         tool_name: None,
+                        tool_detail: None,
                         pending_question: None,
                         model: model.clone(),
                         connection_id: None,
@@ -1733,6 +1737,22 @@ async fn hooks_handler(
                         "permission_prompt" => AgentSessionState::WaitingPermission,
                         _ => session.state,
                     };
+                    // Codex's PermissionRequest carries the gated tool's name + input on the
+                    // event itself (Claude's permission Notification does not — its tool context
+                    // came from the preceding PreToolUse). Refresh so the maiLink permission
+                    // card names the tool/command being approved even if hook ordering diverges.
+                    if notification_type == "permission_prompt" {
+                        if let Some(tn) = event
+                            .get("tool_name")
+                            .and_then(|v| v.as_str())
+                            .filter(|s| !s.is_empty())
+                        {
+                            session.tool_name = Some(tn.to_string());
+                            session.tool_detail = event
+                                .get("tool_input")
+                                .and_then(crate::mailink::transcript::compact_tool_arg);
+                        }
+                    }
                 }
             }
 
@@ -1762,6 +1782,7 @@ async fn hooks_handler(
                 if let Some(session) = sessions.get_mut(&session_id) {
                     session.state = AgentSessionState::Stopped;
                     session.tool_name = None;
+                    session.tool_detail = None;
                     session.pending_question = None;
                 }
             }
@@ -1818,6 +1839,11 @@ async fn hooks_handler(
                 if let Some(session) = sessions.get_mut(&session_id) {
                     session.state = AgentSessionState::Active;
                     session.tool_name = if tool_name.is_empty() { None } else { Some(tool_name.clone()) };
+                    // Compact primary-arg label (e.g. the Bash command) so a permission prompt
+                    // for this tool can show WHAT is being approved (maiLink card).
+                    session.tool_detail = event
+                        .get("tool_input")
+                        .and_then(crate::mailink::transcript::compact_tool_arg);
                     // Capture the structured AskUserQuestion prompt (its tool_input.questions feed
                     // the maiLink PendingPrompt); any other tool starting means no open question.
                     session.pending_question = if tool_name == "AskUserQuestion" {
@@ -1858,6 +1884,7 @@ async fn hooks_handler(
                 let mut sessions = srv.state.agent_sessions.write();
                 if let Some(session) = sessions.get_mut(&session_id) {
                     session.tool_name = None;
+                    session.tool_detail = None;
                     // AskUserQuestion completing means the human answered → no open question.
                     if tool_name == "AskUserQuestion" {
                         session.pending_question = None;

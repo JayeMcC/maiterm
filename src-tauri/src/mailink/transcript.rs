@@ -314,29 +314,36 @@ fn fmt_tokens_k(n: u64) -> String {
 /// A slim one-line label for a tool call, e.g. `Bash(rm -rf …)`, `Edit(src/lib.rs)`.
 fn tool_label(block: &Value) -> String {
     let name = block.get("name").and_then(|n| n.as_str()).unwrap_or("tool");
-    let input = block.get("input");
-    let arg = input.and_then(|inp| {
-        for key in ["command", "file_path", "path", "pattern", "query", "url"] {
-            if let Some(s) = inp.get(key).and_then(|v| v.as_str()) {
-                return Some(s.to_string());
-            }
-        }
-        None
-    });
-    match arg {
-        Some(a) => {
-            // Newlines collapsed so the chip stays one line. The UI truncates for display, so we
-            // only cap as payload hygiene (a heredoc command can be huge) — normal args pass whole.
-            let a = a.replace('\n', " ");
-            let a = if a.chars().count() > 160 {
-                format!("{} …", a.chars().take(160).collect::<String>())
-            } else {
-                a
-            };
-            format!("{name}({a})")
-        }
+    match block.get("input").and_then(compact_tool_arg) {
+        Some(a) => format!("{name}({a})"),
         None => name.to_string(),
     }
+}
+
+/// The compact primary argument of a tool call's input object — the one line that tells a human
+/// what the call actually does (`rm -rf ./dist`, `src/lib.rs`, …). Checked keys cover Claude's
+/// tools plus Codex's (`cmd` for exec_command; a `command` may be an argv ARRAY there). Newlines
+/// collapsed so it stays one line; capped as payload hygiene (a heredoc command can be huge) —
+/// the UI truncates for display. Shared by the transcript tool chips and the session's
+/// `tool_detail` (the maiLink permission card).
+pub(crate) fn compact_tool_arg(input: &Value) -> Option<String> {
+    let arg = ["command", "cmd", "file_path", "path", "pattern", "query", "url"]
+        .iter()
+        .find_map(|key| match input.get(key) {
+            Some(Value::String(s)) => Some(s.clone()),
+            Some(Value::Array(items)) => {
+                let parts: Vec<&str> = items.iter().filter_map(|v| v.as_str()).collect();
+                (!parts.is_empty()).then(|| parts.join(" "))
+            }
+            _ => None,
+        })?;
+    let a = arg.replace('\n', " ");
+    let a = if a.chars().count() > 160 {
+        format!("{} …", a.chars().take(160).collect::<String>())
+    } else {
+        a
+    };
+    (!a.trim().is_empty()).then_some(a)
 }
 
 /// Drop user-string content that is injected system scaffolding, not a human message.
