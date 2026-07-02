@@ -727,7 +727,11 @@ function createClaudeCodeStore() {
     let ptyId = loc.tab.pty_id ?? null;
     if (isTerminal && (!ptyId || !terminalsStore.get(args.tabId))) {
       forceActivateTab(args.tabId);
-      const waited = await waitForPtyId(args.tabId, 5000);
+      // Mount → spawn goes through rAF + layout settle + several Tauri
+      // listen() round-trips, which stretches under load — give it a
+      // generous window. If it still isn't ready, the caller retries
+      // sendKeysToTab (the remount has been initiated either way).
+      const waited = await waitForPtyId(args.tabId, 10_000);
       if (waited) ptyId = waited;
     }
     return {

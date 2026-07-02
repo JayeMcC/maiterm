@@ -470,8 +470,19 @@
     // restoreTerminalScrollback needs the terminal handle to exist first.
     // The initialScrollback value is held and restored below.
 
-    // Wait for container to have dimensions
-    await new Promise((resolve) => requestAnimationFrame(resolve));
+    // Wait for container to have dimensions. Race the rAF against a timer:
+    // macOS throttles (or entirely parks) requestAnimationFrame for occluded
+    // and background windows, and the PTY spawn below must not be hostage to
+    // a render frame — a backgrounded window would otherwise never spawn its
+    // terminals (fork issue #3). Sizing has its own fallbacks (saved size,
+    // 80×24 minimums) when layout hasn't happened yet.
+    await new Promise((resolve) => {
+      const t = setTimeout(resolve, 300);
+      requestAnimationFrame(() => {
+        clearTimeout(t);
+        resolve(undefined);
+      });
+    });
     await new Promise((resolve) => setTimeout(resolve, 100)); // Extra delay for layout
     fitWithPadding();
 
