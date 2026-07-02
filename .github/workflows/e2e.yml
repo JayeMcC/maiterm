@@ -2,7 +2,7 @@ name: E2E (macOS)
 
 on:
   push:
-    branches: ['main', 'feature/**']
+    branches: ['main', 'dev', 'feature/**']
   workflow_dispatch:
 
 jobs:
