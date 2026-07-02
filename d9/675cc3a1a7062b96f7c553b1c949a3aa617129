@@ -1,0 +1,21 @@
+tests/fleet/fleet-schema.test.ts
+  s_37bc688fcf5888::t_9a50b833188d99 1-279
+src/shared/fleet-schema.ts
+  s_37bc688fcf5888::t_ed17aefd96ee6f 1-163
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "d9675cc3a1a7062b96f7c553b1c949a3aa617129",
+  "prompts": {},
+  "sessions": {
+    "s_37bc688fcf5888": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98b6ac43-466f-4147-aee9-8502cc685c9f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
