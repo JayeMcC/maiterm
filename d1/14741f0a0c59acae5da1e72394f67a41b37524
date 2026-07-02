@@ -1,0 +1,32 @@
+src/llm/providers/claude-provider.ts
+  s_37bc688fcf5888::t_ab3a09e97b69e5 120,122-126
+  s_37bc688fcf5888::t_c1f83026e270f6 166-182
+  s_37bc688fcf5888::t_fcfb42a8d6e9b8 234-235
+  s_37bc688fcf5888::t_1006ff6e8e87a3 286
+  s_37bc688fcf5888::t_27af48d32c1611 17-18
+src/llm/providers/cursor-provider.ts
+  s_37bc688fcf5888::t_64787785d48b87 193-209
+  s_37bc688fcf5888::t_094f2544c73765 143
+  s_37bc688fcf5888::t_caf1dbeec9b7d1 170-174
+  s_37bc688fcf5888::t_d1bc26f47797a1 17-18
+src/telemetry/llm-spans.ts
+  s_37bc688fcf5888::t_8706e0d86f6cee 1-109
+tests/telemetry/llm-spans.test.ts
+  s_37bc688fcf5888::t_1e193b7120917a 1-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "d114741f0a0c59acae5da1e72394f67a41b37524",
+  "prompts": {},
+  "sessions": {
+    "s_37bc688fcf5888": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98b6ac43-466f-4147-aee9-8502cc685c9f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
