@@ -1,0 +1,21 @@
+src/hub/ingest/reconcile.ts
+  s_37bc688fcf5888::t_7f06c951b79dc4 1-61
+tests/hub/reconcile.test.ts
+  s_37bc688fcf5888::t_66be67cec1d46c 1-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "73a9153afe32075beeaaec7efdcc1d0fc23acad7",
+  "prompts": {},
+  "sessions": {
+    "s_37bc688fcf5888": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98b6ac43-466f-4147-aee9-8502cc685c9f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
