@@ -1,0 +1,51 @@
+src-tauri/src/commands/window.rs
+  s_0b0a8decae781c::t_e508af710798da 19-25
+.github/workflows/e2e.yml
+  s_0b0a8decae781c::t_b25523351b3d60 52-54,57-75,78,89
+  s_0b0a8decae781c::t_b71247df68b8cc 79-84,86
+src-tauri/src/claude_code/server.rs
+  s_0b0a8decae781c::t_71c5f0d67f996c 488-542
+  s_0b0a8decae781c::t_39d25b8a4ec19e 1419-1424
+  s_0b0a8decae781c::t_ade20961a873aa 20
+src/routes/+page.svelte
+  s_0b0a8decae781c::t_aee111cd0881c6 23,26-30
+  s_0b0a8decae781c::t_ec72360f371923 293-304
+  s_0b0a8decae781c::t_fcc8f48017b4a2 175-187
+  s_0b0a8decae781c::t_21a254c6d35504 493-514
+  s_0b0a8decae781c::t_a52eded23bc22b 232-242
+src/routes/+layout.svelte
+  s_0b0a8decae781c::t_468262b844a5c0 902-903
+  s_0b0a8decae781c::t_2492b20cd83d56 253-267
+tests/e2e/create-window.test.ts
+  s_0b0a8decae781c::t_46447f50283b05 1-95
+src-tauri/src/claude_code/protocol.rs
+  s_0b0a8decae781c::t_f7fe365f51db0f 185-197
+  s_0b0a8decae781c::t_7103d13a042d93 184
+src-tauri/src/commands/workspace.rs
+  s_0b0a8decae781c::t_d50fb2139afbbb 2458,2460
+  s_0b0a8decae781c::t_affee4be777b6c 2447-2453,2461
+  s_0b0a8decae781c::t_a74ae3be09b17c 9
+src-tauri/src/lib.rs
+  s_0b0a8decae781c::t_18abd971f241b4 367-394
+  s_0b0a8decae781c::t_e0fbc1ecefa5c4 11
+  s_0b0a8decae781c::t_fd35fa8c335050 45-50
+src-tauri/src/state/persistence.rs
+  s_0b0a8decae781c::t_5bf78ffd86bbeb 56-72,77,79-80,94-149,151
+  s_0b0a8decae781c::t_fdcb0e8f2e622d 73-74,81-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "d3840a93b788b8b610808e6af4e95fc3216ace33",
+  "prompts": {},
+  "sessions": {
+    "s_0b0a8decae781c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cfc355c0-94be-492a-be60-d41bbc1f9a19",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
