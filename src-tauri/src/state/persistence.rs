@@ -53,12 +53,102 @@ pub fn get_save_stats() -> (u64, u64, u64, u64) {
     )
 }
 
+/// The upstream (original maiTerm) slugs. The fork uses its own slugs (see
+/// `app_data_slug`) so it never shares an Application Support directory with a
+/// side-by-side install of the upstream release.
+///
+/// `migrate_fork_data_dir()` uses these on first launch to lift the user's
+/// existing workspaces / scrollback / backups over so the fork isn't a fresh
+/// install on the first run.
+pub const UPSTREAM_DEV_SLUG: &str = "com.aiterm.dev";
+pub const UPSTREAM_PROD_SLUG: &str = "com.aiterm.app";
+
+/// Application-support directory name for this build. The fork must NOT share
+/// this with the upstream maiTerm install — two processes racing on the same
+/// state file produced the "another maiTerm process likely wrote since this
+/// one loaded" errors and, in turn, the blank-white-window symptom where a
+/// freshly-created window's state entry was clobbered by the sibling process
+/// before the new webview could look it up.
+///
+/// Debug and release builds get DIFFERENT slugs (dev2 vs app2) so a locally
+/// running dev instance can't clobber a production install's state either.
 pub fn app_data_slug() -> &'static str {
     if cfg!(debug_assertions) {
-        "com.aiterm.dev"
+        "com.aiterm.dev2"
     } else {
-        "com.aiterm.app"
+        "com.aiterm.app2"
     }
+}
+
+/// Log-directory slug — the Tauri identifier from `tauri.conf.json`. Unlike
+/// `app_data_slug()`, this does NOT vary by debug/release: the Tauri
+/// identifier is a single compile-time constant baked in via the config
+/// (which `tauri.dev.conf.json` does not override), so both debug and
+/// release builds of the fork log to `~/Library/Logs/com.aiterm.app2/`.
+///
+/// Keep the returned string in sync with the `identifier` field of
+/// `tauri.conf.json` — `read_app_logs` uses it to locate the file
+/// `tauri-plugin-log` is writing to.
+pub fn log_dir_slug() -> &'static str {
+    "com.aiterm.app2"
+}
+
+/// First-launch migration: if this fork's data dir doesn't exist but the
+/// matching upstream dir does, copy the upstream contents over so the user
+/// doesn't lose workspaces / scrollback / backups when the slug changes.
+///
+/// Non-destructive: only runs if the destination is missing. If the user has
+/// already run this build once (destination exists), we leave both dirs alone
+/// so the upstream install stays viable for a rollback.
+///
+/// Copies recursively but stops at directories — good enough since the state
+/// dir is flat aside from `history/` and `shell-integration/` (both of which
+/// we DO want to carry over). Failures are logged and swallowed so a broken
+/// migration doesn't wedge the app: the user just gets a fresh install and
+/// can `Import State…` from the upstream backup dir manually.
+pub fn migrate_fork_data_dir() {
+    let Some(data_root) = dirs::data_dir() else { return };
+    let dst = data_root.join(app_data_slug());
+    if dst.exists() {
+        return;
+    }
+    let src_slug = if cfg!(debug_assertions) { UPSTREAM_DEV_SLUG } else { UPSTREAM_PROD_SLUG };
+    let src = data_root.join(src_slug);
+    if !src.exists() {
+        return;
+    }
+    match copy_dir_recursive(&src, &dst) {
+        Ok(n) => log::info!(
+            "Migrated {} entries from upstream data dir {} → fork data dir {}",
+            n, src.display(), dst.display()
+        ),
+        Err(e) => log::warn!(
+            "Fork data-dir migration from {} → {} failed: {}. \
+             Starting fresh; upstream install is untouched.",
+            src.display(), dst.display(), e
+        ),
+    }
+}
+
+fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<usize> {
+    fs::create_dir_all(dst)?;
+    let mut count = 0;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+        if file_type.is_dir() {
+            count += copy_dir_recursive(&src_path, &dst_path)?;
+        } else if file_type.is_file() {
+            fs::copy(&src_path, &dst_path)?;
+            count += 1;
+        }
+        // Symlinks: skip. There are none in the data dir under normal use, and
+        // blindly copying them across identifiers could resolve to the wrong
+        // side of the split.
+    }
+    Ok(count)
 }
 
 pub fn get_state_path() -> Option<PathBuf> {

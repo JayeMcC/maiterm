@@ -20,8 +20,14 @@
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { modLabel, modSymbol, altLabel } from '$lib/utils/platform';
   import * as commands from '$lib/tauri/commands';
+  import { error as logError } from '@tauri-apps/plugin-log';
 
   let loading = $state(true);
+  // Populated when workspacesStore.load() rejects. Previously an unhandled
+  // rejection left `loading = true` forever, producing a blank window with the
+  // half-opacity logo — visually indistinguishable from a broken build. Now
+  // the failure is surfaced with a retry so the user (and CI) can see it.
+  let loadError = $state<string | null>(null);
   let showChangelog = $state(false);
   let appVersion = $state('');
   getVersion().then(v => { appVersion = v; });
@@ -166,6 +172,19 @@
     return () => clearInterval(interval);
   });
 
+  async function retryLoad() {
+    loadError = null;
+    loading = true;
+    try {
+      await getCurrentWindow().emit('workspace-load-retry');
+    } catch { /* ignore — the reload below is the real recovery */ }
+    // A retry from a "Window not found" state means our backend WindowData
+    // entry vanished (usually because another process clobbered state).
+    // Reloading forces the Rust side to re-read state fresh and
+    // getWindowData to be retried against the new snapshot.
+    window.location.reload();
+  }
+
   onMount(() => {
     workspacesStore.load().then(() => {
       loading = false;
@@ -210,6 +229,17 @@
       agentBridgeStore.rehydrate();
       // Rebuild Mesh routers + topic registries from persisted state.
       import('$lib/stores/agentMesh.svelte').then(m => m.agentMeshStore.rehydrate()).catch(() => {});
+    }).catch((e: unknown) => {
+      // A rejection here previously left the window on the loading logo with
+      // no signal to the user. Surface it: log to aiterm.log for post-mortem,
+      // store the message so the UI can render an error state, and expose it
+      // on window for the e2e harness to assert against without needing to
+      // parse the log file.
+      const msg = e instanceof Error ? e.message : String(e);
+      logError(`workspacesStore.load failed: ${msg}`).catch(() => {});
+      loadError = msg;
+      loading = false;
+      (window as unknown as { __maitermLoadError?: string }).__maitermLoadError = msg;
     });
 
     // Listen for tab deactivation requests (e.g. "Suspend Other Tabs")
@@ -260,8 +290,18 @@
     <div class="titlebar-logo" role="img" aria-label="maiTerm"></div>
   </div>
   <div class="app-body">
-    {#if loading}
-      <div class="loading">
+    {#if loadError}
+      <div class="load-error" data-testid="load-error">
+        <div class="loading-logo" role="img" aria-label="maiTerm"></div>
+        <h2>Couldn't load this window</h2>
+        <p class="load-error-message">{loadError}</p>
+        <p class="hint">
+          If another maiTerm process was writing state, the retry usually clears it.
+        </p>
+        <button class="resume-btn" onclick={retryLoad}>Retry</button>
+      </div>
+    {:else if loading}
+      <div class="loading" data-testid="loading">
         <div class="loading-logo" role="img" aria-label="maiTerm"></div>
       </div>
     {:else}
@@ -448,6 +488,28 @@
     aspect-ratio: 2745 / 489;
     opacity: 0.5;
     background: var(--logo-url, url(/logo-light.png)) center / contain no-repeat;
+  }
+
+  .load-error {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
+    text-align: center;
+    color: var(--fg);
+    background: var(--bg-dark);
+  }
+  .load-error h2 { margin: 8px 0 0; color: var(--fg); }
+  .load-error-message {
+    max-width: 480px;
+    color: var(--fg-dim);
+    font-family: monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
 
   .sidebar-wrapper {

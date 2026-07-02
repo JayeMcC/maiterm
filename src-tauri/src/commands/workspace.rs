@@ -6,7 +6,7 @@ use tauri::{Emitter, State};
 
 use crate::state::{save_state, AppState, Pane, Preferences, Tab, Workspace};
 use crate::state::workspace::WorkspaceNote;
-use crate::state::persistence::{app_data_slug, parse_state};
+use crate::state::persistence::{app_data_slug, log_dir_slug, parse_state};
 use crate::state::workspace::{EditorFileInfo, SplitDirection, TabType};
 use crate::state::ScrollbackDb;
 use crate::commands::window::{TabContext, clone_workspace_with_id_mapping};
@@ -2444,14 +2444,21 @@ pub fn read_app_logs(lines: Option<usize>, level: Option<String>, search: Option
     let is_dev = cfg!(debug_assertions);
     let file_name = if is_dev { "aiterm-dev" } else { "aiterm" };
 
-    // Resolve log directory (matches tauri-plugin-log default)
+    // Resolve log directory (matches tauri-plugin-log default). Uses
+    // log_dir_slug() (the Tauri identifier) rather than app_data_slug(),
+    // because tauri-plugin-log writes to ~/Library/Logs/<identifier>/ and
+    // the identifier is a single compile-time constant that doesn't vary
+    // by debug/release — while app_data_slug() DOES vary (dev2 vs app2).
+    // Mixing the two produced silently-empty readLogs output for debug
+    // builds after the fork rename.
     let log_dir = dirs::data_dir()
         .or_else(dirs::config_dir)
         .map(|d| {
             if cfg!(target_os = "macos") {
-                // macOS: ~/Library/Logs/com.aiterm.app/
+                // macOS: ~/Library/Logs/<identifier>/
                 dirs::home_dir().unwrap_or(d.clone())
-                    .join("Library/Logs/com.aiterm.app")
+                    .join("Library/Logs")
+                    .join(log_dir_slug())
             } else {
                 // Linux/Windows: config_dir/aiterm/logs/
                 d.join("aiterm/logs")

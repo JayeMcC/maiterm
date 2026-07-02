@@ -250,6 +250,21 @@
       }
     }).then(unlisten => { unlistenReloadTab = unlisten; });
 
+    // File > New Window / Duplicate Window menu items. The Cmd+N / Cmd+Shift+N
+    // accelerators fire keydown directly in the focused webview and the
+    // handleKeydown below intercepts them; *clicking* the menu item goes
+    // through Rust's app.on_menu_event, which emits these events to us.
+    let unlistenNewWindow: (() => void) | undefined;
+    listen('new_window', () => {
+      commands.createNewWindow().catch(e => logError(`new_window (menu) failed: ${e}`));
+    }).then(unlisten => { unlistenNewWindow = unlisten; });
+
+    let unlistenDuplicateWindow: (() => void) | undefined;
+    listen('duplicate_window', () => {
+      workspacesStore.duplicateWindow().catch((e: unknown) =>
+        logError(`duplicate_window (menu) failed: ${e}`));
+    }).then(unlisten => { unlistenDuplicateWindow = unlisten; });
+
     // Check for updates menu event
     let unlistenCheckUpdates: (() => void) | undefined;
     listen('check-for-updates', () => {
@@ -884,6 +899,8 @@
       unlistenClose?.();
       unlistenQuit?.();
       unlistenReloadTab?.();
+      unlistenNewWindow?.();
+      unlistenDuplicateWindow?.();
       unlistenExportState?.();
       unlistenImportState?.();
       unlistenStateImported?.();

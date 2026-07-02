@@ -8,7 +8,7 @@ pub const APP_DISPLAY_NAME: &str = if cfg!(debug_assertions) { "maiTerm2Dev" } e
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 use state::{load_state, save_state, AppState, WindowData, Workspace};
-use state::persistence::{arm_running_marker, load_memory_trend, log_previous_run_status, migrate_app_data, migrate_scrollback_to_db};
+use state::persistence::{arm_running_marker, load_memory_trend, log_previous_run_status, migrate_app_data, migrate_fork_data_dir, migrate_scrollback_to_db};
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
 use tauri::menu::{AboutMetadata, MenuBuilder, MenuItem, SubmenuBuilder};
@@ -42,6 +42,12 @@ fn build_log_plugin() -> tauri_plugin_log::Builder {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Fork isolation: on first launch of the fork, copy the upstream install's
+    // data directory over so the user keeps their workspaces. MUST run BEFORE
+    // arm_running_marker() (which touches a file in the destination dir) and
+    // BEFORE load_state() (which reads from it).
+    migrate_fork_data_dir();
+
     // Arm crash marker BEFORE any other init. arm_running_marker() captures
     // whether a marker file from the previous run still exists (= unclean
     // exit) and then re-writes it for this run. The captured PreviousRunInfo
@@ -358,9 +364,34 @@ pub fn run() {
                         }
                     }
                     "new_window" | "duplicate_window" => {
-                        // These are handled by frontend keyboard shortcuts.
-                        // The menu accelerators trigger the keydown event which
-                        // the frontend handles.
+                        // Accelerators (Cmd+N / Cmd+Shift+N) fire directly into
+                        // the focused webview's keydown, but *clicking* the menu
+                        // item skips the accelerator path — the frontend never
+                        // sees a keydown, so before this handler existed the
+                        // menu items appeared broken (silent no-op).
+                        //
+                        // Emit an event to the focused window so its layout
+                        // handler runs the same code path as the shortcut.
+                        // Duplicate needs the focused window to build the tab-
+                        // context snapshot from its own state, so we can't just
+                        // invoke create_window here — the frontend has to drive
+                        // it either way.
+                        let event_name = event.id().as_ref();
+                        let mut dispatched = false;
+                        for (_, win) in app_handle.webview_windows() {
+                            if win.is_focused().unwrap_or(false) {
+                                let _ = win.emit(event_name, ());
+                                dispatched = true;
+                                break;
+                            }
+                        }
+                        // Fallback: no window has OS focus (rare — Menu-only
+                        // states on macOS when all windows are minimised).
+                        // Broadcast so at least one window responds; the
+                        // frontend guards duplicate against no-active-workspace.
+                        if !dispatched {
+                            let _ = app_handle.emit(event_name, ());
+                        }
                     }
                     "help" => {
                         if let Some(win) = app_handle.get_webview_window("main") {

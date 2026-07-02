@@ -182,6 +182,20 @@ pub fn tool_list_response() -> Value {
             "inputSchema": { "type": "object", "properties": {}, "required": [] }
         },
         {
+            "name": "createWindow",
+            "description": "Open a new empty maiTerm window and return its label + a readiness signal once the frontend has finished loading. Backs the File > New Window menu item, the Cmd+N shortcut, and the e2e coverage that verifies the new-window webview isn't blank. The `windowLabel` is the internal identifier used by getWindowData; `frontendReady` is true when the new window's Svelte layout registered its listeners within the timeout (default 10s). A false value means the window opened but didn't finish booting — the exact failure mode we want CI to catch.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "readyTimeoutMs": {
+                        "type": "integer",
+                        "description": "How long to wait (ms) for the new webview's frontend to mark itself ready before returning. Default 10000. Pass 0 to skip the readiness wait entirely and return as soon as the window is enqueued (useful for scripting; the returned frontendReady will be false)."
+                    }
+                },
+                "required": []
+            }
+        },
+        {
             "name": "listWorkspaces",
             "description": "List all workspaces with their panes and tabs. Returns windowId, windowLabel, workspace IDs, names, pane structure, tab IDs, interpolated display names, tab types, active states, and notes indicators. Use this to discover tabs for switchTab or notes operations. Each maiTerm window has its own set of workspaces; pass windowId to query a specific window.",
             "inputSchema": {

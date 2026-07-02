@@ -16,6 +16,13 @@ pub fn get_window_data(window: tauri::Window, state: State<'_, Arc<AppState>>) -
 
 #[tauri::command]
 pub fn create_window(app: tauri::AppHandle, state: State<'_, Arc<AppState>>) -> Result<String, String> {
+    create_window_internal(&app, state.inner())
+}
+
+/// Shared implementation used by both the Tauri command and the MCP
+/// `createWindow` tool. Takes borrows so it composes cleanly from the
+/// backend-tool dispatcher in `claude_code::server`.
+pub fn create_window_internal(app: &tauri::AppHandle, state: &Arc<AppState>) -> Result<String, String> {
     let label = format!("window-{}", uuid::Uuid::new_v4());
 
     // Create window data with a default workspace

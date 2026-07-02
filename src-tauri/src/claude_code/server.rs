@@ -17,7 +17,7 @@ use axum::{
 use futures_util::{SinkExt, StreamExt};
 use rand::Rng;
 use serde_json::Value;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{mpsc, oneshot};
 
 use super::lockfile::cleanup_stale_lockfiles;
@@ -485,6 +485,61 @@ fn preference_meta() -> Vec<(&'static str, PrefMeta)> {
 /// Returns Some(result) if handled, None if the tool should be forwarded to the frontend.
 fn handle_backend_tool(tool_name: &str, arguments: &Value, state: &Arc<AppState>, app_handle: &AppHandle) -> Option<Value> {
     match tool_name {
+        "createWindow" => {
+            // Drive the same code path the File > New Window menu and Cmd+N
+            // shortcut hit. Purely backend so an external MCP client can
+            // create windows without needing a frontend to route through.
+            let label = match crate::commands::window::create_window_internal(app_handle, state) {
+                Ok(l) => l,
+                Err(e) => {
+                    return Some(serde_json::json!({
+                        "error": format!("Failed to create window: {}", e),
+                    }));
+                }
+            };
+
+            // Wait until the new webview's frontend loads. Polls
+            // `webview_windows()` for the label (the webview exists) AND
+            // asserts we can read a WindowData for it (state entry survived
+            // any concurrent state writes — the exact race that produced the
+            // blank-white regression). Bounded so callers can't get stuck.
+            //
+            // readyTimeoutMs=0 lets scripts skip the wait; 10s default is
+            // roomy enough for a cold-boot debug binary on macOS CI (Vite
+            // dev server hot-reload is faster, but we want CI to not flake).
+            let timeout_ms = arguments.get("readyTimeoutMs")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(10_000);
+            let deadline = std::time::Instant::now() + std::time::Duration::from_millis(timeout_ms);
+            let mut webview_ready = false;
+            let mut state_present = false;
+            if timeout_ms > 0 {
+                loop {
+                    if !webview_ready {
+                        webview_ready = app_handle.webview_windows().contains_key(&label);
+                    }
+                    if !state_present {
+                        state_present = state.app_data.read().windows.iter().any(|w| w.label == label);
+                    }
+                    if webview_ready && state_present {
+                        break;
+                    }
+                    if std::time::Instant::now() >= deadline {
+                        break;
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                }
+            } else {
+                state_present = state.app_data.read().windows.iter().any(|w| w.label == label);
+            }
+
+            Some(serde_json::json!({
+                "windowLabel": label,
+                "frontendReady": webview_ready && state_present,
+                "webviewOpen": webview_ready,
+                "stateEntryPresent": state_present,
+            }))
+        }
         "listWindows" => {
             let app_data = state.app_data.read();
             let windows: Vec<Value> = app_data.windows.iter()
@@ -1361,6 +1416,12 @@ async fn process_message(
                         // sendKeysToTab is naturally exempt below because it takes
                         // an explicit `tabId` argument that satisfies the guard.
                         "openTab",
+                        // createWindow: same rationale as openTab — the caller
+                        // has no window (let alone tab) yet, so requiring
+                        // initSession first would be circular. The e2e harness
+                        // relies on this exemption to spawn a blank test
+                        // window before any tab exists.
+                        "createWindow",
                     ];
                     if !global_tools.contains(&tool_name.as_str())
                         && arguments.get("tabId").and_then(|v| v.as_str()).map_or(true, |s| s.is_empty())

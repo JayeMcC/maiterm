@@ -49,14 +49,42 @@ jobs:
         working-directory: tests/e2e
         env:
           MAITERM_BINARY: ${{ github.workspace }}/src-tauri/target/debug/aiterm
+          # The createWindow test asserts frontendReady=true, which fails
+          # deterministically if the loading spinner never flips (the blank-
+          # white-window regression this suite was extended to catch).
         run: npm test
 
-      - name: Upload maiTerm logs on failure
-        if: failure()
+      # Visual sanity check for the "new window renders" story. The
+      # createWindow test already proves it via a DOM round-trip
+      # (frontendReady=true), but a screenshot as an artifact lets a human
+      # eyeball what the CI runner actually saw — useful when future
+      # regressions produce a *partially* blank window that still passes
+      # the DOM check. Screenshot runs even on success so we always have a
+      # baseline; failure keeps the artifact + logs.
+      - name: Capture screen for visual verification
+        if: always()
+        run: |
+          mkdir -p artifacts
+          # `screencapture -x` = silent, no shutter sound. -t png explicit.
+          # macos-latest runners have a WindowServer available in headless
+          # mode so a screen capture yields a real render, not black.
+          screencapture -x -t png artifacts/screen-after-e2e.png || \
+            echo "screencapture unavailable (headless runner without WindowServer)"
+
+      - name: Upload E2E artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: maiterm-logs
+          name: maiterm-e2e-artifacts
+          # tauri-plugin-log follows the Tauri identifier, which is a single
+          # compile-time constant (see state/persistence.rs::log_dir_slug).
+          # Debug and release builds of the fork both write to
+          # ~/Library/Logs/com.aiterm.app2/. The com.aiterm.app path is the
+          # legacy upstream slug — still uploaded so a partial regression
+          # that fell back to it isn't invisible.
           path: |
+            ~/Library/Logs/com.aiterm.app2/
             ~/Library/Logs/com.aiterm.app/
             ~/.claude/ide/
+            artifacts/
           if-no-files-found: ignore
