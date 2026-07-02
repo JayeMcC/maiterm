@@ -369,6 +369,18 @@ shortcut; this guarantees it can't corrupt a TUI mid-prompt.
 - **Free-text message / proactive command** (`POST .../message {text, submit:true}`):
   bracketed-paste `text`, settle, send `\r`. If the tab is busy/dormant it **queues** and
   flushes on the next `Stop`/re-init (same as bridge messages). Returns `queued|delivered`.
+- **Image attachment** (`POST .../message {text?, images:[{data,ext}]}`): the desktop writes each
+  image to a temp file named **`maiterm-mailink-<uuid>.<ext>`** (`mod.rs:974`, via `temp_dir()`)
+  and injects the file path(s) followed by `text` on the same rails — the "raw-path inject". Claude
+  Code does **not** reliably convert a programmatically-typed path into a native `[Image #N]` chip
+  (that's a paste/drag heuristic in the interactive composer), so the path usually stays literal in
+  the persisted user turn as `<path…> <caption>`. **The `maiterm-mailink-` filename stem is a shared
+  cross-repo contract**: the desktop distiller strips a leading run of these paths from the echoed
+  user turn (`transcript.rs` `strip_leading_image_refs`, keyed on that marker) so the persisted echo
+  is the bare caption, and the app's `captionFromEcho` strips the same marker for its optimistic
+  live bubble — so echo == caption on both the live send and thread re-open. A leading path is only
+  stripped if it carries the marker, so ordinary messages that mention a path are untouched. **If the
+  temp-file stem ever changes, both sides must change together.**
 - **Answer a permission/question** (`POST .../respond {choice, prompt_id}`): Claude's TUI
   answers permission with a numeric/selection keystroke (e.g. `1`=yes, `2`=yes+don't-ask,
   `3`/Esc=no). The desktop maps `choice` → the correct keystroke for that runtime and injects
