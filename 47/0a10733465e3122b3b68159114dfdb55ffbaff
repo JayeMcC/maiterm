@@ -1,0 +1,39 @@
+src/hub/server.ts
+  s_37bc688fcf5888::t_36314c2b870146 1-93
+tsconfig.json
+  s_37bc688fcf5888::t_fbc878c1dc5f7d 29
+src/hub/ui/vite.config.ts
+  s_37bc688fcf5888::t_28df809df425ac 1-19
+src/hub/ui/tsconfig.json
+  s_37bc688fcf5888::t_9ac9d8c9d7167b 1-14
+src/hub/ui/index.html
+  s_37bc688fcf5888::t_082f01bd6004bd 1-13
+src/hub/ui/public/style.css
+  s_37bc688fcf5888::t_defab1f6bc65f1 1-50
+src/hub/ui/views/FleetTable.tsx
+  s_37bc688fcf5888::t_29b015cee65aef 1-77
+src/hub/ui/main.tsx
+  s_37bc688fcf5888::t_a0521f8c3a5b92 1-55
+src/hub/ui/views/AcProgressTable.tsx
+  s_37bc688fcf5888::t_7ab23a981b90dc 1-59
+src/hub/ui/views/RunDrilldown.tsx
+  s_37bc688fcf5888::t_9a3a5add8220f4 1-20
+src/hub/ui/api.ts
+  s_37bc688fcf5888::t_3660c0cfedd07b 1-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "470a10733465e3122b3b68159114dfdb55ffbaff",
+  "prompts": {},
+  "sessions": {
+    "s_37bc688fcf5888": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98b6ac43-466f-4147-aee9-8502cc685c9f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
