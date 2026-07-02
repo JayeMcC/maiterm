@@ -629,6 +629,20 @@ pub fn run() {
             commands::system::check_full_disk_access,
             commands::system::open_full_disk_access_settings,
         ])
-        .run(tauri::generate_context!())
+        .run({
+            let mut context = tauri::generate_context!();
+            // Background mode: windows are created (and shown, and made key)
+            // BEFORE setup() runs, so the activation-policy tweak there is too
+            // late to stop the launch-time focus grab. Strip `focus` from the
+            // window config itself so creation never takes key focus — the
+            // e2e harness spawns many instances while the user keeps typing.
+            if std::env::var("MAITERM_E2E_BACKGROUND").is_ok() {
+                for window in &mut context.config_mut().app.windows {
+                    window.focus = false;
+                    window.always_on_bottom = true;
+                }
+            }
+            context
+        })
         .expect("error while running tauri application");
 }
