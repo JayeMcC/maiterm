@@ -1,0 +1,22 @@
+tests/utils/classify-codify-eligibility.test.ts
+  s_ec41e3361fd247::t_9d4fc605f9e4cd 1-174,179-187,189-278
+  s_ec41e3361fd247::t_5423467d798987 175-178,188
+src/utils/classify-codify-eligibility.ts
+  s_ec41e3361fd247::t_c359b4c718e561 1-237
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "8206373d4c8d368ad2af7bcebef42026c8651bce",
+  "prompts": {},
+  "sessions": {
+    "s_ec41e3361fd247": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46706c9c-5e98-4950-9b5a-9d3c8f043b7c",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
