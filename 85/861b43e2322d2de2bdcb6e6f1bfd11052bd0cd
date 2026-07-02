@@ -1,0 +1,19 @@
+specs/feature/TOOL-06__digest-context-tiering/tasks.md
+  s_356dd0b6dcdade::t_c6aa24abcfd6e6 45-47,57-61,73-80,93-97,123-125,137-141,150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "85861b43e2322d2de2bdcb6e6f1bfd11052bd0cd",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
