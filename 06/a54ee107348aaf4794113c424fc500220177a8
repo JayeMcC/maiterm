@@ -1,0 +1,38 @@
+src-tauri/src/claude_code/cursor.rs
+  s_ad2f963c4afad3::t_b7095f6c8592c9 1-191
+src-tauri/src/pty/manager.rs
+  s_ad2f963c4afad3::t_76df06f08dad64 871
+docs/fork-todo.md
+  s_ad2f963c4afad3::t_011b562d937668 59-63
+src-tauri/src/state/agent_runtime.rs
+  s_ad2f963c4afad3::t_83dde9ae4ae3f3 21
+  s_ad2f963c4afad3::t_d2a071ebd5de8d 53
+  s_ad2f963c4afad3::t_5f3d665e39a8cc 171-189,196
+  s_ad2f963c4afad3::t_85935ab62b544b 32
+  s_ad2f963c4afad3::t_2dc11d7bb368f6 43
+src-tauri/src/claude_code/mod.rs
+  s_ad2f963c4afad3::t_2d0c0994603eb0 2
+src-tauri/src/mailink/mod.rs
+  s_ad2f963c4afad3::t_e39428d6a8c7f6 1288
+src-tauri/src/claude_code/registrar.rs
+  s_ad2f963c4afad3::t_785c413dd2659a 46-50
+src-tauri/src/state/workspace.rs
+  s_ad2f963c4afad3::t_83a58087b82747 972-976
+  s_ad2f963c4afad3::t_8e4f768214e14e 1147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "06a54ee107348aaf4794113c424fc500220177a8",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
