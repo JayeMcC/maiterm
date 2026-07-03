@@ -1,126 +1,137 @@
-import { open as shellOpen } from '@tauri-apps/plugin-shell';
+import { check, type Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { getVersion } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
 import { toastStore } from './toasts.svelte';
 import { terminalsStore } from './terminals.svelte';
 import * as commands from '$lib/tauri/commands';
 import { info as logInfo, error as logError } from '@tauri-apps/plugin-log';
-import type { Update } from '@tauri-apps/plugin-updater';
 import type { ChangelogEntry } from '$lib/components/ChangelogModal.svelte';
 
-/**
- * Update checker for the personal fork's SOURCE distribution.
- *
- * The fork is distributed as source: GitHub is the source of truth, and the
- * stable line is mirrored to the shared tools Bitbucket repo as the `Jaye-term`
- * branch (see reference-maiterm-git-remotes). It has NO signed updater feed
- * (`createUpdaterArtifacts: false`, no private key), so the Tauri auto-installer
- * can't apply updates — and the upstream endpoints would offer the ORIGINAL's
- * releases, which is exactly what we must NOT link to. So instead of the Tauri
- * `check()`, we compare the running build's embedded git SHA (`__GIT_SHA__`)
- * against the tip of the distribution branch and, when they differ, prompt the
- * user to pull & rebuild — opening the Bitbucket branch. No upstream, no
- * auto-install, no binary download.
- *
- * The Tauri-installer surface below (currentUpdate / downloadAndInstall /
- * restart / release-notes) is retired to inert stubs so the existing banner /
- * What's-New UI still compiles; the live path is checkForUpdates →
- * openDistribution. The banner is kept dormant (showBanner === false) so the
- * only prompt is the toast, whose action opens Bitbucket.
- */
-const DIST_REMOTE = 'git@bitbucket.org:forwood/forwood-one-tools.git';
-const DIST_BRANCH = 'Jaye-term';
-const DIST_URL = 'https://bitbucket.org/forwood/forwood-one-tools/branch/Jaye-term';
+interface GitHubRelease {
+  tag_name: string;
+  body: string | null;
+}
+
+/** Compare semver strings. Returns true if a > b. */
+function isNewerVersion(a: string, b: string): boolean {
+  const pa = a.replace(/^v/, '').split('.').map(Number);
+  const pb = b.replace(/^v/, '').split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] ?? 0) > (pb[i] ?? 0)) return true;
+    if ((pa[i] ?? 0) < (pb[i] ?? 0)) return false;
+  }
+  return false;
+}
+
+/** Parse a GitHub release body into changelog items. */
+function parseReleaseBody(body: string): string[] {
+  return body
+    .split('\n')
+    .map((line) => line.match(/^- (.+)/))
+    .filter((m): m is RegExpMatchArray => m !== null)
+    .map((m) => m[1]!.replace(/`([^`]+)`/g, '$1'));
+}
 
 function createUpdaterStore() {
   let checking = $state(false);
-  let updateAvailable = $state(false);
-  let latestSha = $state<string | null>(null);
+  let downloading = $state(false);
+  let installed = $state(false);
+  let currentUpdate = $state<Update | null>(null);
   let dismissed = $state(false);
   let releaseNotes = $state<ChangelogEntry[]>([]);
+  let loadingNotes = $state(false);
   let showWhatsNewRequested = $state(false);
-  // Inert remnants of the retired Tauri-installer surface — never change.
-  const downloading = false;
-  const installed = false;
-  const currentUpdate: Update | null = null;
-  const loadingNotes = false;
 
-  /** Open the distribution branch so the user can pull & rebuild. */
-  async function openDistribution(): Promise<void> {
-    try {
-      await shellOpen(DIST_URL);
-    } catch {
-      /* opener unavailable — ignore */
-    }
-  }
-
-  async function checkForUpdates(silent = false): Promise<void> {
-    if (checking) return;
+  async function checkForUpdates(silent = false): Promise<Update | null> {
+    if (checking || downloading) return null;
     checking = true;
     try {
-      // `git ls-remote` over the login shell — a GUI-launched app's PATH has no
-      // git/ssh-agent otherwise. The tip of Jaye-term is the same commit the
-      // running build's SHA was stamped from.
-      const res = await commands.runRailProvider(
-        'git',
-        ['ls-remote', DIST_REMOTE, DIST_BRANCH],
-        undefined,
-        15,
-        true,
-      );
-      if (res.exitCode !== 0) {
-        throw new Error(res.stderr.trim() || `git ls-remote exited ${res.exitCode}`);
-      }
-      const remoteSha = (res.stdout.trim().split(/\s+/)[0] ?? '').toLowerCase();
-      const localSha = (__GIT_SHA__ || '').toLowerCase().replace(/-dirty$/, '');
-      if (!remoteSha) throw new Error('empty ls-remote response');
-
-      // Embedded SHA is a short prefix; a match means the remote tip == the
-      // commit this build came from.
-      const upToDate = !!localSha && remoteSha.startsWith(localSha);
-      updateAvailable = !upToDate;
-      latestSha = remoteSha.slice(0, 9);
-
-      if (!upToDate) {
+      const update = await check();
+      if (update) {
+        currentUpdate = update;
         dismissed = false;
-        logInfo(`Update available on ${DIST_BRANCH}: ${latestSha} (running ${localSha || 'unknown'})`);
+        logInfo(`Update available: v${update.version}`);
         if (!silent) {
-          toastStore.addToast(
-            'Update Available',
-            `${DIST_BRANCH} has newer changes (${latestSha}) — click to pull & rebuild`,
-            'info',
-            undefined,
-            undefined,
-            () => void openDistribution(),
-          );
+          toastStore.addToast('Update Available', `v${update.version} is ready — click to review`, 'info', undefined, undefined, () => {
+            showWhatsNewRequested = true;
+          });
         }
       } else if (!silent) {
-        toastStore.addToast('Up to Date', `Running the latest ${DIST_BRANCH} (${latestSha}).`, 'success');
+        toastStore.addToast('Up to Date', 'You are running the latest version.', 'success');
       }
+      return update;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       logError(`Update check failed: ${msg}`);
-      if (!silent) toastStore.addToast('Update Check Failed', msg, 'error');
+      if (!silent) {
+        toastStore.addToast('Update Check Failed', msg, 'error');
+      }
+      return null;
     } finally {
       checking = false;
     }
   }
 
-  // --- Retired Tauri auto-installer surface (no signed feed for the fork) ---
-  // Inert stubs so the banner / What's-New UI still compiles. The live update
-  // path is checkForUpdates → openDistribution.
   async function fetchReleaseNotes(): Promise<ChangelogEntry[]> {
-    releaseNotes = [];
-    return [];
+    loadingNotes = true;
+    try {
+      const currentVersion = await getVersion();
+      const res = await fetch('https://api.github.com/repos/JayeMcC/maiterm/releases');
+      if (!res.ok) throw new Error(`GitHub API: ${res.status}`);
+      const releases: GitHubRelease[] = await res.json();
+
+      const entries: ChangelogEntry[] = releases
+        .filter((r) => isNewerVersion(r.tag_name, currentVersion) && r.body)
+        .map((r) => ({
+          version: r.tag_name.replace(/^v/, ''),
+          items: parseReleaseBody(r.body!),
+        }))
+        .filter((e) => e.items.length > 0);
+
+      releaseNotes = entries;
+      return entries;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      logError(`Failed to fetch release notes: ${msg}`);
+      return [];
+    } finally {
+      loadingNotes = false;
+    }
   }
+
+  /** Re-check for updates and return the newer update if one exists beyond currentUpdate */
   async function recheckForNewer(): Promise<Update | null> {
+    if (!currentUpdate) return null;
+    try {
+      const freshUpdate = await check();
+      if (freshUpdate && isNewerVersion(freshUpdate.version, currentUpdate.version)) {
+        return freshUpdate;
+      }
+    } catch (e) {
+      logError(`Re-check failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
     return null;
   }
-  function switchToUpdate(_update: Update) {
-    void _update;
+
+  /** Switch currentUpdate to a different update object (e.g. a newer one found during re-check) */
+  function switchToUpdate(update: Update) {
+    currentUpdate = update;
   }
+
   async function downloadAndInstall() {
-    await openDistribution();
+    if (!currentUpdate || downloading) return;
+    downloading = true;
+    try {
+      await currentUpdate.downloadAndInstall();
+      installed = true;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      logError(`Update install failed: ${msg}`);
+      toastStore.addToast('Update Failed', msg, 'error');
+    } finally {
+      downloading = false;
+    }
   }
 
   function dismiss() {
@@ -130,7 +141,8 @@ function createUpdaterStore() {
   /**
    * Flush state to disk, then relaunch. relaunch() hard-kills the process
    * without firing onCloseRequested/quit-requested, so the normal shutdown
-   * save path never runs — mirror it here or recently-changed state is lost.
+   * save path never runs — we must mirror it here or recently-changed state
+   * (tab names, scrollback, geometry) is lost across the update.
    */
   async function restart() {
     try {
@@ -157,12 +169,6 @@ function createUpdaterStore() {
     get currentUpdate() {
       return currentUpdate;
     },
-    get updateAvailable() {
-      return updateAvailable;
-    },
-    get latestSha() {
-      return latestSha;
-    },
     get dismissed() {
       return dismissed;
     },
@@ -172,15 +178,15 @@ function createUpdaterStore() {
     get loadingNotes() {
       return loadingNotes;
     },
-    /** Banner retired for the fork — the toast is the prompt. */
+    /** True when the banner should be visible */
     get showBanner() {
-      return false;
+      return (currentUpdate !== null || installed) && !dismissed;
     },
+    /** True when a toast click requested showing the What's New modal */
     get showWhatsNewRequested() {
       return showWhatsNewRequested;
     },
     checkForUpdates,
-    openDistribution,
     recheckForNewer,
     switchToUpdate,
     downloadAndInstall,

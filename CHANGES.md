@@ -19,3 +19,12 @@ editor indexes them.
 
 Git add: `git add .gitignore .cursorignore`
 Git commit: `git commit -m "chore(ignore): meridian sync artefact + cursorignore for linked-tools"`
+
+## ✅ 3. Setup docs + updater store follow-ups (appended)
+
+`docs/forwood-setup.md` — install section rewritten around the release
+download (build-from-source demoted to app development); updater store
+touch-ups pairing with the re-homed feed.
+
+Git add: `git add docs/forwood-setup.md src/lib/stores/updater.svelte.ts`
+Git commit: `git commit -m "docs(setup): download-first install; updater store follow-up"`

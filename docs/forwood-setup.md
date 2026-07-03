@@ -22,11 +22,29 @@ The rail is two parts working together:
 | **`forwood-one-tools`** | Home of `forwood-launcher`. | already cloned for team tooling |
 | **Xcode CLT + Rust** | Building the Tauri app. | `xcode-select --install`, `rustup` |
 
-## 2. Build & install maiTerm
+## 2. Install maiTerm
 
-The fork ships MCP tools and the rail that upstream `maiTerm` doesn't have, so
-you build from source. It installs as **maiTerm3** (`com.aiterm.app3`), side by
-side with any upstream maiTerm.
+Two ways. Most people want the **download**; build from source only if you're
+developing the app itself. Either way it installs as **maiTerm3**
+(`com.aiterm.app3`), side by side with any upstream maiTerm.
+
+### A. Download the DMG (recommended)
+
+Grab the latest `.dmg` from the fork's releases:
+**<https://github.com/JayeMcC/maiterm/releases/latest>** → open it → drag
+**maiTerm3** into Applications.
+
+**First launch needs a one-time Gatekeeper bypass.** The app is signed but not
+Apple-notarized, so macOS quarantines the download. Clear it once:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/maiTerm3.app
+```
+
+(or right-click the app → **Open** → **Open** the first time). After that it
+launches normally and updates itself in-app (§6).
+
+### B. Build from source (developers)
 
 ```sh
 git clone git@github.com:JayeMcC/maiterm.git ~/proj/maiterm
@@ -36,10 +54,10 @@ bash scripts/install-local.sh --release
 ```
 
 `install-local.sh` builds the bundle, copies it to `/Applications/maiTerm3.app`,
-**and re-signs it** — that last step is mandatory (a plain copy breaks the ad-hoc
-signature and the app launches to a white screen; the script handles it and
-verifies with `codesign -v`). When it prints `✓ maiTerm3 installed and signature
-verified`, launch it from `/Applications`.
+**and re-signs it** — mandatory (a plain copy breaks the ad-hoc signature and the
+app launches to a white screen; the script handles it and verifies with
+`codesign -v`). When it prints `✓ maiTerm3 installed and signature verified`,
+launch it from `/Applications`.
 
 ## 3. Link `forwood-launcher` onto your PATH
 
@@ -89,16 +107,33 @@ switching to a tab in another clone re-targets it.
 
 ## 6. Updates
 
-maiTerm is distributed as source — there's no auto-installer. On launch it checks
-the `Jaye-term` distribution branch and, if there are newer changes, shows an
-"Update Available" toast; click it to open the branch. To update:
+maiTerm updates itself. On launch it checks the fork's release feed and, when a
+newer version exists, shows an **"Update Available"** toast — click it, review,
+and install; the app downloads the signed update, swaps itself, and restarts.
+(After an update the swapped binary may need the one-time `xattr` bypass from §2A
+on its next launch — Apple notarization would remove even that, a future step.)
+
+If you built from source instead, update by pulling and rebuilding:
 
 ```sh
 cd ~/proj/maiterm && git pull && bash scripts/install-local.sh --release
 ```
 
-(The fork's own repo is `JayeMcC/maiterm` on GitHub; `Jaye-term` in the tools
-Bitbucket repo is the distribution mirror of its `main`.)
+## Releasing (maintainer only)
+
+Cut a release so everyone's in-app updater picks it up:
+
+```sh
+bash scripts/release.sh 1.18.1     # any version higher than the last
+```
+
+That bumps the version, tags `v1.18.1`, and pushes — the **Release** workflow
+builds + signs the maiTerm3 bundle and publishes a GitHub Release with the `.dmg`
+and the `latest.json` updater feed. One-time setup: the repo secrets
+`TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` must be set
+(Settings → Secrets → Actions). The signing key's public half is embedded in the
+app; keep the private half (`~/.tauri/maiterm-updater.key`) backed up — losing it
+means existing installs can't verify future updates.
 
 ## Troubleshooting
 
