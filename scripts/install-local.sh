@@ -56,10 +56,15 @@ DEST="/Applications/${APP_NAME}.app"
 
 if [[ "$DO_BUILD" == 1 ]]; then
   echo "→ building ${APP_NAME} (channel=${CHANNEL}, MAITERM_CHANNEL='${MAITERM_CHANNEL}', profile=${PROFILE_DIR})…"
-  npx tauri build "${BUILD_FLAG[@]}" "${CONFIG_FLAG[@]}"
+  # Tolerate a non-zero exit: a RELEASE build produces the .app, then fails
+  # signing the UPDATER tarball (needs TAURI_SIGNING_PRIVATE_KEY, a CI-only
+  # secret). That failure is post-bundle and irrelevant to a local install —
+  # the .app existence check below is the real gate.
+  npx tauri build "${BUILD_FLAG[@]}" "${CONFIG_FLAG[@]}" || \
+    echo "→ tauri build exited non-zero (likely updater signing) — checking for the .app anyway…"
 fi
 
-[[ -d "$SRC" ]] || { echo "bundle not found: $SRC (run without --no-build)" >&2; exit 1; }
+[[ -d "$SRC" ]] || { echo "bundle not found: $SRC (build failed before producing the .app)" >&2; exit 1; }
 
 echo "→ installing to ${DEST}…"
 rm -rf "$DEST"
