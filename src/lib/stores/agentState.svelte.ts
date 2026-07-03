@@ -64,6 +64,15 @@ function buildActionString(runtime: AgentRuntime, toolName: string, toolInput: R
   return detail ? `${displayName}: ${detail}` : displayName;
 }
 
+/** Is this tab the one currently on-screen (active tab of the active pane in the active
+ *  workspace)? Used to gate "needs you" toasts to tabs the human isn't already looking at. */
+function isTabVisible(tabId: string): boolean {
+  const ws = workspacesStore.activeWorkspace;
+  if (!ws) return false;
+  const pane = ws.panes.find((p) => p.active_tab_id === tabId);
+  return !!pane && pane.id === ws.active_pane_id;
+}
+
 function createAgentStateStore() {
   // tabId → session info.
   // SvelteMap so getState / breakdown / rollups (all read in reactive getters below) pick up
@@ -358,6 +367,13 @@ function createAgentStateStore() {
         const detail = getDescriptor(runtime).summarizeTool(tool_name, tool_input);
         setState(tab_id, session_id, 'active', tool_name, detail, runtime);
         setVariable(tab_id, 'claudeAction', action);
+        // AskUserQuestion is the agent's native "ask the human" tool — the single canonical
+        // "needs you" signal (alongside permission prompts). When it fires on a tab you're not
+        // looking at (e.g. a background mesh agent), surface a toast + deep-link so it isn't
+        // missed. Agents must NOT also print the question or write a note (no double-messaging).
+        if (tool_name === 'AskUserQuestion' && !isTabVisible(tab_id)) {
+          dispatch(getDescriptor(runtime).displayName, 'Needs your input', 'info', { tabId: tab_id });
+        }
       });
       unlisteners.push(u7);
 

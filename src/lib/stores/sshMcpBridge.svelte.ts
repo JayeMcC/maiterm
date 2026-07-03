@@ -161,7 +161,7 @@ function buildSetupScript(remotePort: number, authToken: string, tabId: string, 
     '[ -n "$AITERM_TAB_ID" ] && ' +
     'AITERM_SID=$(cat | sed -n \'s/.*"session_id" *: *"\\([^"]*\\)".*/\\1/p\' | head -1) && ' +
     "echo 'Your maiTerm tab ID is '$AITERM_TAB_ID'. Your session ID is '$AITERM_SID'. " +
-    "You MUST immediately call the maiterm initSession tool with this tabId and sessionId before responding to the user. This is required for correct tab targeting.' || true";
+    "You MUST immediately call the maiterm initSession tool with this tabId and sessionId before responding to the user. You can run it in parallel with your other opening tool calls to save a round-trip, but not alongside other maiterm calls. This is required for correct tab targeting.' || true";
 
   const httpHook = { matcher: '', hooks: [{ type: 'http', url: hooksUrl, headers: { 'x-claude-code-ide-authorization': authToken } }] };
 
@@ -286,8 +286,12 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
   // Strip leading "ssh " prefix — callers may pass the full ps command or just the args
   sshArgs = sshArgs.replace(/^ssh\s+/, '');
 
-  // Already bridged or in progress?
-  if (bridgeStates.has(tabId)) return bridgeStates.get(tabId)!.status === 'connected';
+  // Already bridged or in progress? A prior 'failed' attempt is NOT a dead end —
+  // fall through and retry it (the remote may have been briefly down, e.g. a network
+  // blip during a reload). Only 'connected'/'pending' short-circuit.
+  const existing = bridgeStates.get(tabId);
+  const retryingFailed = existing?.status === 'failed';
+  if (existing && !retryingFailed) return existing.status === 'connected';
 
   // Mark as pending immediately to prevent concurrent calls from racing
   const hostKey = extractHostKey(sshArgs);
@@ -378,7 +382,11 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
       error: errMsg,
     });
 
-    dispatch('MCP Bridge Failed', `Could not connect to ${hostKey}: ${errMsg}`, 'error', { tabId });
+    // Only surface the toast on the first failure of an episode. Retries (driven by
+    // term-title events once the host recovers) that fail again shouldn't re-nag.
+    if (!retryingFailed) {
+      dispatch('MCP Bridge Failed', `Could not connect to ${hostKey}: ${errMsg}`, 'error', { tabId });
+    }
     return false;
   }
 }

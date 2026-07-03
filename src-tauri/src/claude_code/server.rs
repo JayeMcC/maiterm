@@ -1228,6 +1228,7 @@ async fn process_message(
                                     cwd: existing.as_ref().and_then(|e| e.cwd.clone()),
                                     state: AgentSessionState::Active,
                                     tool_name: existing.as_ref().and_then(|e| e.tool_name.clone()),
+                                    pending_question: existing.as_ref().and_then(|e| e.pending_question.clone()),
                                     model: existing.and_then(|e| e.model),
                                     connection_id: Some(connection_id.to_string()),
                                 },
@@ -1257,6 +1258,7 @@ async fn process_message(
                                         cwd: pending_cwd,
                                         state: AgentSessionState::Active,
                                         tool_name: None,
+                                        pending_question: None,
                                         model: None,
                                         connection_id: Some(connection_id.to_string()),
                                     },
@@ -1713,6 +1715,7 @@ async fn hooks_handler(
                         cwd: cwd.clone(),
                         state: AgentSessionState::Active,
                         tool_name: None,
+                        pending_question: None,
                         model: model.clone(),
                         connection_id: None,
                     },
@@ -1851,6 +1854,7 @@ async fn hooks_handler(
                 if let Some(session) = sessions.get_mut(&session_id) {
                     session.state = AgentSessionState::Stopped;
                     session.tool_name = None;
+                    session.pending_question = None;
                 }
             }
 
@@ -1906,6 +1910,13 @@ async fn hooks_handler(
                 if let Some(session) = sessions.get_mut(&session_id) {
                     session.state = AgentSessionState::Active;
                     session.tool_name = if tool_name.is_empty() { None } else { Some(tool_name.clone()) };
+                    // Capture the structured AskUserQuestion prompt (its tool_input.questions feed
+                    // the maiLink PendingPrompt); any other tool starting means no open question.
+                    session.pending_question = if tool_name == "AskUserQuestion" {
+                        event.get("tool_input").cloned()
+                    } else {
+                        None
+                    };
                 }
             }
 
@@ -1935,9 +1946,24 @@ async fn hooks_handler(
 
             // Clear current tool (back to thinking)
             if !session_id.is_empty() {
+                use crate::state::app_state::AgentSessionState;
                 let mut sessions = srv.state.agent_sessions.write();
                 if let Some(session) = sessions.get_mut(&session_id) {
                     session.tool_name = None;
+                    // AskUserQuestion completing means the human answered → no open question.
+                    if tool_name == "AskUserQuestion" {
+                        session.pending_question = None;
+                        // The WaitingPermission coinciding with an open ask (Claude fires a
+                        // permission_prompt Notification while AskUserQuestion waits) is spent
+                        // the moment the ask completes. Without this reset it lingers until the
+                        // NEXT hook event (seconds of post-answer thinking), and maiLink
+                        // synthesizes a ghost "permission" card from the stale state. Scoped to
+                        // AskUserQuestion so a real gate held for another (parallel) tool is
+                        // never masked.
+                        if matches!(session.state, AgentSessionState::WaitingPermission) {
+                            session.state = AgentSessionState::Active;
+                        }
+                    }
                 }
             }
 

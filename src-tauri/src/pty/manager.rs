@@ -9,7 +9,7 @@ use tauri::{AppHandle, Emitter};
 use crate::state::{AppState, PtyCommand, PtyHandle, PtyStats};
 use crate::state::persistence::app_data_slug;
 use crate::terminal::event_proxy::AitermEventProxy;
-use crate::terminal::handle::create_terminal;
+use crate::terminal::handle::{create_terminal, TerminalHandle};
 use crate::terminal::osc::OscEvent;
 use crate::terminal::render;
 
@@ -17,6 +17,98 @@ use crate::terminal::render;
 /// the emitter thread renders at most one frame per interval; a trailing frame is
 /// always emitted within one interval of the last read once output settles.
 const FRAME_INTERVAL: Duration = Duration::from_millis(16);
+
+/// Byte budget for the resume-menu scan. Claude Code's blocking "Resume from summary?" startup
+/// selector renders in the first few KB of a resumed session (it's asked BEFORE the transcript is
+/// drawn), so we only scan the start of a PTY's life — bounding the per-read cost for every terminal
+/// and never touching steady-state streaming.
+const RESUME_SCAN_MAX_BYTES: u64 = 256 * 1024;
+/// Trailing output retained between reads so the multi-line menu signature is still matched when it
+/// straddles two PTY reads.
+const RESUME_SCAN_TAIL_KEEP: usize = 1024;
+
+/// Detect Claude Code's blocking "Resume from summary?" startup menu and, on the first sighting,
+/// tell the caller to auto-select "Resume full session as-is" (option 2) — the operator's choice is
+/// a FULL resume (no summary/compaction). This unblocks an auto-resumed agent with no human in the
+/// loop: it then runs its own `/aiterm init` and re-registers. Without it, the menu deadlocks the
+/// agent AND is invisible to maiLink (it appears before the session/hooks exist).
+///
+/// Returns true exactly once per PTY. Scanning is latched off after the first hit and bounded to
+/// RESUME_SCAN_MAX_BYTES, so it's ~free for the overwhelming majority of terminals that never show
+/// the menu. Requiring BOTH option labels (summary AND full) makes an agent merely printing the word
+/// "Resume" unable to trigger a spurious keystroke.
+fn detect_resume_menu(handle: &mut TerminalHandle, data: &[u8], total_read: u64) -> bool {
+    resume_menu_scan(
+        &mut handle.resume_menu_handled,
+        &mut handle.resume_scan_tail,
+        data,
+        total_read,
+    )
+}
+
+/// Pure core of `detect_resume_menu` (unit-tested). `handled` latches after the first hit; `tail`
+/// carries a small window across reads to catch a menu split between chunks.
+fn resume_menu_scan(handled: &mut bool, tail: &mut Vec<u8>, data: &[u8], total_read: u64) -> bool {
+    if *handled || total_read > RESUME_SCAN_MAX_BYTES {
+        if !tail.is_empty() {
+            *tail = Vec::new(); // past budget / handled — release the tail
+        }
+        return false;
+    }
+    let mut hay = std::mem::take(tail);
+    hay.extend_from_slice(data);
+    let text = String::from_utf8_lossy(&hay);
+    if text.contains("Resume from summary") && text.contains("Resume full session") {
+        *handled = true;
+        return true;
+    }
+    let start = hay.len().saturating_sub(RESUME_SCAN_TAIL_KEEP);
+    *tail = hay[start..].to_vec();
+    false
+}
+
+#[cfg(test)]
+mod resume_menu_tests {
+    use super::*;
+
+    const MENU: &[u8] = b"\x1b[1mThis session is 4h 39m old and 200.5k tokens.\x1b[0m\r\n\r\n\
+Resuming the full session will consume a substantial portion of your usage limits.\r\n\
+\x1b[36m\xe2\x9d\xaf 1. Resume from summary (recommended)\x1b[0m\r\n  2. Resume full session as-is\r\n  3. Don't ask me again\r\n";
+
+    #[test]
+    fn fires_once_on_the_menu() {
+        let (mut handled, mut tail) = (false, Vec::new());
+        assert!(resume_menu_scan(&mut handled, &mut tail, MENU, MENU.len() as u64));
+        assert!(handled);
+        // Latched: a redraw (cursor blink, selection move) must not re-inject.
+        assert!(!resume_menu_scan(&mut handled, &mut tail, MENU, MENU.len() as u64 * 2));
+    }
+
+    #[test]
+    fn catches_a_menu_split_across_two_reads() {
+        let mid = MENU.len() / 2;
+        let (mut handled, mut tail) = (false, Vec::new());
+        assert!(!resume_menu_scan(&mut handled, &mut tail, &MENU[..mid], mid as u64));
+        assert!(resume_menu_scan(&mut handled, &mut tail, &MENU[mid..], MENU.len() as u64));
+    }
+
+    #[test]
+    fn ignores_ordinary_output_mentioning_resume() {
+        let (mut handled, mut tail) = (false, Vec::new());
+        let chatter = b"Let me resume the deploy. I'll resume from where we left off.\r\n";
+        assert!(!resume_menu_scan(&mut handled, &mut tail, chatter, chatter.len() as u64));
+        assert!(!handled);
+    }
+
+    #[test]
+    fn stops_scanning_past_the_byte_budget() {
+        let (mut handled, mut tail) = (false, Vec::new());
+        // Menu shows only after a lot of unrelated output — past the budget, don't act.
+        assert!(!resume_menu_scan(&mut handled, &mut tail, MENU, RESUME_SCAN_MAX_BYTES + 1));
+        assert!(!handled);
+        assert!(tail.is_empty());
+    }
+}
 
 /// Shared signal between a PTY's reader thread and its frame-emitter thread.
 /// The reader sets `dirty` after advancing the VTE parser; the emitter coalesces
@@ -427,12 +519,14 @@ pub fn spawn_pty(
                 }
                 Ok(n) => {
                     // Track bytes read for diagnostics + resize coalescing
+                    let mut total_read: u64 = n as u64;
                     {
                         use std::sync::atomic::Ordering;
                         let stats = state_reader.pty_stats.read();
                         if let Some(s) = stats.get(&pty_id_clone) {
                             s.bytes_read.fetch_add(n as u64, Ordering::Relaxed);
                             s.last_read_ms.store(epoch_millis(), Ordering::Relaxed);
+                            total_read = s.bytes_read.load(Ordering::Relaxed);
                         }
                     }
                     let data = &buf[..n];
@@ -479,12 +573,27 @@ pub fn spawn_pty(
                     // Temporarily move our external selection onto term.selection so
                     // alacritty's scroll handlers rotate it correctly when new output
                     // pushes content up. Read it back after processing.
-                    {
+                    let inject_resume_full = {
                         let mut registry = state_reader.terminal_registry.write();
                         if let Some(handle) = registry.get_mut(&pty_id_clone) {
                             handle.term.selection = handle.selection.take();
                             handle.processor.advance(&mut handle.term, data);
                             handle.selection = handle.term.selection.take();
+                            detect_resume_menu(handle, data, total_read)
+                        } else {
+                            false
+                        }
+                    };
+
+                    // Auto-answer Claude Code's blocking resume startup menu (full resume, option 2)
+                    // outside the terminal_registry lock — write_pty takes the pty_registry lock.
+                    if inject_resume_full {
+                        log::info!(
+                            "[resume-menu] auto-selecting 'Resume full session as-is' for pty {}",
+                            pty_id_clone
+                        );
+                        if let Err(e) = write_pty(&state_reader, &pty_id_clone, b"2") {
+                            log::warn!("[resume-menu] inject failed for pty {}: {}", pty_id_clone, e);
                         }
                     }
 
@@ -754,6 +863,32 @@ pub fn get_pty_info(state: &Arc<AppState>, pty_id: &str) -> Result<PtyInfo, Stri
     let foreground_command = get_foreground_command(pid);
 
     Ok(PtyInfo { cwd, foreground_command })
+}
+
+/// Which agent CLIs to look for in a tab's process tree. Union of every runtime's
+/// `agent_process_names` (see `state/agent_runtime.rs`) — kept as a small literal so
+/// the readiness probe needn't know a tab's runtime up front.
+const AGENT_PROCESS_NAMES: &[&str] = &["claude", "codex", "gemini"];
+
+/// Liveness signals for the mesh readiness check — see the `get_agent_liveness` command.
+#[derive(serde::Serialize, Clone)]
+pub struct AgentLiveness {
+    pub agent_running: bool,
+    pub ssh_foreground: bool,
+}
+
+pub fn get_agent_liveness(state: &Arc<AppState>, pty_id: &str) -> Result<AgentLiveness, String> {
+    // Grab the child pid and drop the registry lock before the (heavier) process scan.
+    let pid = {
+        let registry = state.pty_registry.read();
+        let handle = registry.get(pty_id).ok_or("PTY not found")?;
+        handle.child_pid.ok_or("No child PID")?
+    };
+    // get_foreground_command only ever reports ssh/mosh/autossh, so Some(_) == a live
+    // remote session (the remote agent isn't in the local tree — this stands in for it).
+    let ssh_foreground = get_foreground_command(pid).is_some();
+    let agent_running = agent_process_alive(pid, AGENT_PROCESS_NAMES);
+    Ok(AgentLiveness { agent_running, ssh_foreground })
 }
 
 /// Get the current working directory of a process via /proc (Linux)

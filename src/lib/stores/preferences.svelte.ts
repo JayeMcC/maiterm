@@ -61,6 +61,9 @@ function createPreferencesStore() {
   let codexHooks = $state(true);
   let codexAutoResume = $state(true);
   let codexHooksBypassTrust = $state(false);
+  let mailinkEnabled = $state(false);
+  let mailinkExposeAll = $state(true);
+  let mailinkRelayUrl = $state('');
   let composerDefaultOpen = $state(true);
   let windowsShell = $state('powershell');
   let fileLinkAction = $state('modifier_click');
@@ -74,9 +77,9 @@ function createPreferencesStore() {
   let autoCheckUpdates = $state(true);
   let quickOpenShowHidden = $state(false);
   let quickOpenShowIgnored = $state(false);
-  let meshSoftCap = $state(12);
-  let meshHardCap = $state(40);
-  let meshTopicTtlMinutes = $state(30);
+  let meshSoftCap = $state(0);
+  let meshHardCap = $state(0);
+  let meshTopicTtlMinutes = $state(0);
 
   return {
     /** Resolves once the initial load() has completed. */
@@ -239,6 +242,15 @@ function createPreferencesStore() {
     get codexHooksBypassTrust() {
       return codexHooksBypassTrust;
     },
+    get mailinkEnabled() {
+      return mailinkEnabled;
+    },
+    get mailinkExposeAll() {
+      return mailinkExposeAll;
+    },
+    get mailinkRelayUrl() {
+      return mailinkRelayUrl;
+    },
     get composerDefaultOpen() {
       return composerDefaultOpen;
     },
@@ -353,6 +365,9 @@ function createPreferencesStore() {
       codexHooks = prefs.codex_hooks ?? true;
       codexAutoResume = prefs.codex_auto_resume ?? true;
       codexHooksBypassTrust = prefs.codex_hooks_bypass_trust ?? false;
+      mailinkEnabled = prefs.mailink_enabled ?? false;
+      mailinkExposeAll = prefs.mailink_expose_all ?? true;
+      mailinkRelayUrl = prefs.mailink_relay_url ?? '';
       composerDefaultOpen = prefs.composer_default_open ?? true;
       windowsShell = prefs.windows_shell ?? 'powershell';
       fileLinkAction = prefs.file_link_action ?? 'modifier_click';
@@ -366,9 +381,9 @@ function createPreferencesStore() {
       autoCheckUpdates = prefs.auto_check_updates ?? true;
       quickOpenShowHidden = prefs.quick_open_show_hidden ?? false;
       quickOpenShowIgnored = prefs.quick_open_show_ignored ?? false;
-      meshSoftCap = prefs.mesh_soft_cap ?? 12;
-      meshHardCap = prefs.mesh_hard_cap ?? 40;
-      meshTopicTtlMinutes = prefs.mesh_topic_ttl_minutes ?? 30;
+      meshSoftCap = prefs.mesh_soft_cap ?? 0;
+      meshHardCap = prefs.mesh_hard_cap ?? 0;
+      meshTopicTtlMinutes = prefs.mesh_topic_ttl_minutes ?? 0;
       _resolveReady();
     },
 
@@ -629,6 +644,28 @@ function createPreferencesStore() {
       await this.save();
     },
 
+    async setMailinkEnabled(value: boolean) {
+      mailinkEnabled = value;
+      try {
+        // Dedicated command: persists the flag AND starts/stops the live LAN listener, so the
+        // bridge actually comes up (pairing works) without an app restart.
+        await commands.mailinkSetEnabled(value);
+      } catch (e) {
+        mailinkEnabled = !value; // revert the toggle if start/stop failed
+        throw e;
+      }
+    },
+
+    async setMailinkExposeAll(value: boolean) {
+      mailinkExposeAll = value;
+      await this.save();
+    },
+
+    async setMailinkRelayUrl(value: string) {
+      mailinkRelayUrl = value;
+      await this.save();
+    },
+
     async setWindowsShell(value: string) {
       windowsShell = value;
       await this.save();
@@ -689,13 +726,15 @@ function createPreferencesStore() {
       await this.save();
     },
 
+    // All three mesh loop-control limits use 0 = OFF and are independent (no inter-field
+    // coupling): a user can disable any one without the others forcing it back on.
     async setMeshSoftCap(value: number) {
-      meshSoftCap = Math.max(1, Math.round(value));
+      meshSoftCap = Math.max(0, Math.round(value));
       await this.save();
     },
 
     async setMeshHardCap(value: number) {
-      meshHardCap = Math.max(meshSoftCap, Math.round(value));
+      meshHardCap = Math.max(0, Math.round(value));
       await this.save();
     },
 
@@ -779,6 +818,9 @@ function createPreferencesStore() {
       codexHooks = prefs.codex_hooks ?? true;
       codexAutoResume = prefs.codex_auto_resume ?? true;
       codexHooksBypassTrust = prefs.codex_hooks_bypass_trust ?? false;
+      mailinkEnabled = prefs.mailink_enabled ?? false;
+      mailinkExposeAll = prefs.mailink_expose_all ?? true;
+      mailinkRelayUrl = prefs.mailink_relay_url ?? '';
       composerDefaultOpen = prefs.composer_default_open ?? true;
       windowsShell = prefs.windows_shell ?? 'powershell';
       fileLinkAction = prefs.file_link_action ?? 'modifier_click';
@@ -792,9 +834,9 @@ function createPreferencesStore() {
       autoCheckUpdates = prefs.auto_check_updates ?? true;
       quickOpenShowHidden = prefs.quick_open_show_hidden ?? false;
       quickOpenShowIgnored = prefs.quick_open_show_ignored ?? false;
-      meshSoftCap = prefs.mesh_soft_cap ?? 12;
-      meshHardCap = prefs.mesh_hard_cap ?? 40;
-      meshTopicTtlMinutes = prefs.mesh_topic_ttl_minutes ?? 30;
+      meshSoftCap = prefs.mesh_soft_cap ?? 0;
+      meshHardCap = prefs.mesh_hard_cap ?? 0;
+      meshTopicTtlMinutes = prefs.mesh_topic_ttl_minutes ?? 0;
     },
 
     async save() {
@@ -852,6 +894,9 @@ function createPreferencesStore() {
         codex_hooks: codexHooks,
         codex_auto_resume: codexAutoResume,
         codex_hooks_bypass_trust: codexHooksBypassTrust,
+        mailink_enabled: mailinkEnabled,
+        mailink_expose_all: mailinkExposeAll,
+        mailink_relay_url: mailinkRelayUrl.trim() || null,
         composer_default_open: composerDefaultOpen,
         windows_shell: windowsShell,
         file_link_action: fileLinkAction,

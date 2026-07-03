@@ -285,6 +285,131 @@ pub async fn save_clipboard_image(
     Ok(path.to_string_lossy().to_string())
 }
 
+/// Return a non-colliding path inside `dir` for `name`, appending " (1)", " (2)", …
+/// before the extension if a file of that name already exists.
+fn unique_path(dir: &Path, name: &str) -> std::path::PathBuf {
+    let first = dir.join(name);
+    if !first.exists() {
+        return first;
+    }
+    let p = Path::new(name);
+    let stem = p
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_else(|| name.to_string());
+    let ext = p
+        .extension()
+        .map(|e| format!(".{}", e.to_string_lossy()))
+        .unwrap_or_default();
+    for i in 1..1000 {
+        let candidate = dir.join(format!("{} ({}){}", stem, i, ext));
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    first
+}
+
+/// Reveal a local file in the OS file manager (Finder / Explorer / file
+/// browser), selecting the file itself where the platform supports it.
+#[command]
+pub async fn reveal_in_file_manager(path: String) -> Result<(), String> {
+    let path = expand_tilde(&path);
+    let p = Path::new(&path);
+    if !p.exists() {
+        return Err(format!("File does not exist: {}", path));
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg("-R")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to reveal in Finder: {}", e))?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        // `explorer /select,<path>` selects the file. Explorer returns a
+        // non-zero exit code even on success, so we spawn and don't check status.
+        std::process::Command::new("explorer")
+            .arg(format!("/select,{}", path))
+            .spawn()
+            .map_err(|e| format!("Failed to reveal in Explorer: {}", e))?;
+    }
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        // Prefer the freedesktop FileManager1 interface (selects the file in
+        // most Linux file managers); fall back to opening the parent directory.
+        let uri = format!("file://{}", path);
+        let dbus_ok = std::process::Command::new("dbus-send")
+            .args([
+                "--session",
+                "--dest=org.freedesktop.FileManager1",
+                "--type=method_call",
+                "/org/freedesktop/FileManager1",
+                "org.freedesktop.FileManager1.ShowItems",
+                &format!("array:string:{}", uri),
+                "string:",
+            ])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if !dbus_ok {
+            let parent = p
+                .parent()
+                .map(|x| x.to_path_buf())
+                .unwrap_or_else(|| p.to_path_buf());
+            std::process::Command::new("xdg-open")
+                .arg(parent)
+                .spawn()
+                .map_err(|e| format!("Failed to open file manager: {}", e))?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Download a remote file over SCP into the local Downloads directory.
+/// Returns the absolute local path of the saved copy.
+#[command]
+pub async fn download_remote_file(
+    ssh_command: String,
+    remote_path: String,
+) -> Result<String, String> {
+    let user_host = extract_user_host(&ssh_command)?;
+    let remote_path = expand_remote_tilde(&user_host, &remote_path);
+
+    let downloads = dirs::download_dir()
+        .ok_or_else(|| "Could not locate the Downloads directory".to_string())?;
+    std::fs::create_dir_all(&downloads)
+        .map_err(|e| format!("Cannot create Downloads directory: {}", e))?;
+
+    let basename = Path::new(&remote_path)
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .filter(|n| !n.is_empty())
+        .unwrap_or_else(|| "download".to_string());
+    let dest = unique_path(&downloads, &basename);
+
+    let output = std::process::Command::new("scp")
+        .arg("-o").arg("BatchMode=yes")
+        .arg("-o").arg("ConnectTimeout=10")
+        .arg(format!("{}:{}", user_host, remote_path))
+        .arg(dest.to_str().ok_or("Invalid destination path")?)
+        .output()
+        .map_err(|e| format!("Failed to run scp: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Download failed: {}", stderr.trim()));
+    }
+
+    Ok(dest.to_string_lossy().to_string())
+}
+
 /// Progress frame emitted as `scp-progress-{upload_id}` during an upload.
 #[derive(Clone, serde::Serialize)]
 struct ScpProgress {

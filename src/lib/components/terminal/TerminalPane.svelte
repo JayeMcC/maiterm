@@ -60,7 +60,7 @@
   import type { AgentRuntime } from '$lib/agents/types';
   import { createFilePathLinkProvider } from '$lib/utils/filePathDetector';
   import { openFileFromTerminal } from '$lib/utils/openFile';
-  import { enableBridge, disableBridge, hasBridge, getBridgeInfo, buildUserSetupScript, isInteractiveSshSession } from '$lib/stores/sshMcpBridge.svelte';
+  import { enableBridge, disableBridge, hasBridge, getBridgeInfo, getBridgeStatus, buildUserSetupScript, isInteractiveSshSession } from '$lib/stores/sshMcpBridge.svelte';
   import { claudeStateStore } from '$lib/stores/agentState.svelte';
   import { sshDisconnectStore } from '$lib/stores/sshDisconnect.svelte';
   import Icon from '$lib/components/Icon.svelte';
@@ -614,7 +614,11 @@
               // ssh is back (e.g. user reconnected manually) — clear any stale badge.
               sshDisconnectStore.clear(tabId);
             }
-            if (isInteractiveSsh && !hasBridge(tabId)) {
+            // Retry on 'failed' too, not just when there's no bridge — a failed
+            // attempt (host briefly down) otherwise wedges forever since hasBridge()
+            // stays true. Skip only while 'connected'/'pending' to avoid re-injecting.
+            const bridgeStatus = getBridgeStatus(tabId);
+            if (isInteractiveSsh && bridgeStatus !== 'connected' && bridgeStatus !== 'pending') {
               enableBridge(tabId, cmd, ptyId).catch(() => {});
             } else if (!cmd && hasBridge(tabId)) {
               disableBridge(tabId).catch(() => {});
@@ -1880,7 +1884,7 @@
       ...(preferencesStore.claudeCodeIde && preferencesStore.claudeCodeIdeSsh
         ? [
             { label: '', separator: true, action: () => {} },
-            ...(hasBridge(tabId)
+            ...(getBridgeStatus(tabId) === 'connected'
               ? [
                   {
                     label: 'Inject maiTerm Env Vars',
