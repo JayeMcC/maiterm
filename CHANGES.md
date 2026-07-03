@@ -28,3 +28,12 @@ touch-ups pairing with the re-homed feed.
 
 Git add: `git add docs/forwood-setup.md src/lib/stores/updater.svelte.ts`
 Git commit: `git commit -m "docs(setup): download-first install; updater store follow-up"`
+
+## In flight — NOT committed (active parallel session)
+
+`.github/workflows/{build-macos,release}.yml`, `scripts/release.sh`,
+`src-tauri/tauri.release.conf.json` — a release-pipeline family that
+appeared WHILE this plan was being applied (files materialising between
+status checks). Another session is actively authoring it; committing a
+moving tree would capture a half-written pipeline. Re-run report-changes
+when that work settles.
