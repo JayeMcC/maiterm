@@ -1,0 +1,23 @@
+linked-tools/core/scripts/task-engine/src/__tests__/dispatchers-maiterm.test.ts
+  s_ad2f963c4afad3::t_7d2b5a5e5109da 302-338
+linked-tools/core/scripts/task-engine/src/dispatchers/maiterm.ts
+  s_ad2f963c4afad3::t_43d90d57272667 169-180,183,186
+  s_ad2f963c4afad3::t_78e9d706a8d0d6 215-227
+  s_ad2f963c4afad3::t_47f5e0ad77a748 214
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "414cb7b270362d186ade84b7edc16d50be29cb6b",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
