@@ -1,0 +1,25 @@
+src/lib/tauri/commands.ts
+  s_ad2f963c4afad3::t_a4bcb5b188fd31 846-851
+src-tauri/src/commands/rail.rs
+  s_ad2f963c4afad3::t_725bec7de14c54 81-100
+docs/forwood-setup.md
+  s_ad2f963c4afad3::t_41b10f7387d83c 138-167
+src-tauri/src/lib.rs
+  s_ad2f963c4afad3::t_3f72f41b19d778 615
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "d25dea8836043acbb8b2f16c2a7dc9b5a5ce4bc7",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

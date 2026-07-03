@@ -1,0 +1,20 @@
+src/lib/components/terminal/TerminalTabs.svelte
+  s_ad2f963c4afad3::t_b84cff42fd10b4 25
+  s_ad2f963c4afad3::t_ebe5ed1d47d29f 998-1007
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "61f2a8374eb8d80c0026eb7138ebbda11f630883",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

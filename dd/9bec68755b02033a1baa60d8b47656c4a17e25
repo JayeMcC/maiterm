@@ -1,0 +1,21 @@
+src/lib/components/workspace/WorkspaceSidebar.svelte
+  s_ad2f963c4afad3::t_9bd59153098e38 708,711
+docs/fork-todo.md
+  s_ad2f963c4afad3::t_82be3907785f32 49-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "dd9bec68755b02033a1baa60d8b47656c4a17e25",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
