@@ -1184,21 +1184,26 @@ function createClaudeCodeStore() {
 
   // --- Tab context tool ---
 
-  async function getTerminalText(tabId: string, lineCount: number): Promise<string | null> {
-    const instance = terminalsStore.get(tabId);
-    if (instance) {
-      // Live terminal — read from Rust alacritty_terminal buffer
+  async function getTerminalText(tab: Tab, lineCount: number): Promise<string | null> {
+    // The alacritty grid lives in Rust and is maintained for EVERY live PTY,
+    // whether or not the frontend rendered the tab. So a backgrounded tab
+    // (e.g. a dev server running in an unfocused tab) is fully readable — we
+    // just need its pty_id. Prefer the mounted instance's id; fall back to the
+    // tab model's pty_id, which is set for live background tabs too.
+    const ptyId = terminalsStore.get(tab.id)?.ptyId ?? tab.pty_id ?? null;
+    if (ptyId) {
       try {
-        const text = await commands.getTerminalRecentText(instance.ptyId, lineCount);
-        return text.trimEnd() || null;
+        const text = await commands.getTerminalRecentText(ptyId, lineCount);
+        if (text.trimEnd()) return text.trimEnd();
       } catch {
-        // Terminal may have been killed, fall through to persisted scrollback
+        // PTY gone (killed / stale-after-restart) — fall through to persisted.
       }
     }
 
-    // Unmounted terminal — read from SQLite via Rust
+    // No live PTY — read the last persisted scrollback from SQLite (best
+    // available for a tab that was never mounted this session).
     try {
-      const text = await commands.getSavedScrollbackText(tabId, lineCount);
+      const text = await commands.getSavedScrollbackText(tab.id, lineCount);
       if (text) return text;
     } catch {
       // Tab may not have scrollback saved
@@ -1251,7 +1256,7 @@ function createClaudeCodeStore() {
         let content: string | null = null;
 
         if (tabType === 'terminal') {
-          content = await getTerminalText(tab.id, lineCount);
+          content = await getTerminalText(tab, lineCount);
         } else if (tabType === 'editor') {
           content = getEditorText(tab.id, lineCount);
         }
