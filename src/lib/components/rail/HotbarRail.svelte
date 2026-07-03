@@ -113,7 +113,7 @@
               {#if cs.ports.length > 0}
                 <div class="port-list">
                   {#each cs.ports as p (p.hostPort)}
-                    <button class="port-row" title="Open http://localhost:{p.hostPort}" onclick={() => hotbarStore.openPort(p.hostPort)}>
+                    <button class="port-row" title="Open {p.scheme ?? 'http'}://localhost:{p.hostPort}" onclick={() => hotbarStore.openPort(p.hostPort, p.scheme)}>
                       <span class="dot" class:live={p.listening}></span>
                       <span class="port-label">{p.service}</span>
                       <span class="port-num">:{p.hostPort}</span>
