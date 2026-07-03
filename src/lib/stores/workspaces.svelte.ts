@@ -991,6 +991,30 @@ function createWorkspacesStore() {
       return tab;
     },
 
+    /**
+     * Split a new pane off `sourcePaneId` and open `fileInfo` in it as an
+     * editor — a file opened from a terminal lands in a panel BESIDE the
+     * terminal, not as a tab over it. (Terminal file-link ⌘-click; the caller
+     * reuses an existing editor pane instead when one is already open.)
+     */
+    async splitPaneWithEditor(
+      workspaceId: string,
+      sourcePaneId: string,
+      fileInfo: EditorFileInfo,
+      direction: SplitDirection = 'horizontal',
+    ) {
+      const newPane = await commands.splitPane(workspaceId, sourcePaneId, direction, null, fileInfo);
+      // Reload window data so the new split_root + pane are reflected.
+      const data = await commands.getWindowData();
+      const freshWs = data.workspaces.find((w) => w.id === workspaceId);
+      if (freshWs) {
+        const idx = workspaces.findIndex((w) => w.id === workspaceId);
+        if (idx >= 0) workspaces[idx] = freshWs;
+        freshWs.active_pane_id = newPane.id; // focus the new editor panel
+      }
+      return newPane;
+    },
+
     async createDiffTab(workspaceId: string, paneId: string, name: string, diffContext: DiffContext, afterTabId?: string | null) {
       const tab = await commands.createDiffTab(workspaceId, paneId, name, diffContext, afterTabId);
       const wsForDiffTab = workspaces.find((w) => w.id === workspaceId);

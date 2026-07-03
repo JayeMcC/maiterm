@@ -65,8 +65,19 @@ export async function openFileFromTerminal(workspaceId: string, paneId: string, 
       language,
     };
 
-    // Create tab immediately — EditorPane shows loading state and handles errors
-    await workspacesStore.createEditorTab(workspaceId, paneId, fileName, fileInfo);
+    // Open in an editor PANEL beside the terminal, not as a tab over it. Reuse
+    // an existing editor pane in this workspace if one is open (so repeated
+    // ⌘-clicks don't proliferate panes); otherwise split a new one. EditorPane
+    // handles loading/errors and renders markdown for .md files.
+    const ws = workspacesStore.workspaces.find((w) => w.id === workspaceId);
+    const editorPane = ws?.panes.find(
+      (p) => p.id !== paneId && p.tabs.some((t) => t.tab_type === 'editor'),
+    );
+    if (editorPane) {
+      await workspacesStore.createEditorTab(workspaceId, editorPane.id, fileName, fileInfo);
+    } else {
+      await workspacesStore.splitPaneWithEditor(workspaceId, paneId, fileInfo);
+    }
   } catch (e) {
     logError(`Failed to open file: ${e}`);
   }
