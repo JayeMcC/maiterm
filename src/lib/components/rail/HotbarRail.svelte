@@ -46,42 +46,52 @@
         </div>
 
         {#each hotbarStore.sections as section (section.provider.marker)}
+          {@const key = section.provider.marker}
+          {@const sectionCollapsed = hotbarStore.isSectionCollapsed(key)}
           <section class="rail-section">
-            <header class="section-head">{section.provider.label}</header>
+            <button class="section-head toggle" onclick={() => hotbarStore.toggleSection(key)}>
+              <span class="chevron" class:collapsed={sectionCollapsed}>▾</span>
+              {section.provider.label}
+            </button>
 
-            {#if section.error}
-              <p class="section-error" title={section.error}>{section.error}</p>
-            {:else if section.items.length === 0}
-              <p class="section-empty">No items</p>
-            {:else}
-              <div class="section-items">
-                {#each section.items as item (item.label)}
-                  <button
-                    class="rail-item"
-                    class:container={item.executionContext === 'container'}
-                    class:firing={section.firing === item.label}
-                    disabled={section.firing !== null}
-                    title={item.executionContext ? `${item.label} (${item.executionContext})` : item.label}
-                    onclick={() => hotbarStore.fire(section, item)}
-                  >
-                    {item.label}
-                  </button>
-                {/each}
-              </div>
+            {#if !sectionCollapsed}
+              {#if section.error}
+                <p class="section-error" title={section.error}>{section.error}</p>
+              {:else if section.items.length === 0}
+                <p class="section-empty">No items</p>
+              {:else}
+                <div class="section-items">
+                  {#each section.items as item (item.label)}
+                    <button
+                      class="rail-item"
+                      class:container={item.executionContext === 'container'}
+                      class:firing={section.firing === item.label}
+                      disabled={section.firing !== null}
+                      title={item.executionContext ? `${item.label} (${item.executionContext})` : item.label}
+                      onclick={() => hotbarStore.fire(section, item)}
+                    >
+                      {item.label}
+                    </button>
+                  {/each}
+                </div>
+              {/if}
             {/if}
           </section>
         {/each}
 
         {#if hotbarStore.hasContainer}
           {@const cs = hotbarStore.containerStatus}
+          {@const containerCollapsed = hotbarStore.isSectionCollapsed('container')}
           <section class="rail-section">
-            <header class="section-head">
+            <button class="section-head toggle" onclick={() => hotbarStore.toggleSection('container')}>
+              <span class="chevron" class:collapsed={containerCollapsed}>▾</span>
               Container
               {#if cs}
                 <span class="state state-{cs.state}">{cs.state}</span>
               {/if}
-            </header>
+            </button>
 
+            {#if !containerCollapsed}
             {#if hotbarStore.containerError}
               <p class="section-error" title={hotbarStore.containerError}>{hotbarStore.containerError}</p>
             {/if}
@@ -124,6 +134,7 @@
               <p class="section-empty">Container down — spin up dev servers</p>
             {:else if cs && cs.state === 'runtime-unavailable'}
               <p class="section-empty">Docker not running</p>
+            {/if}
             {/if}
           </section>
         {/if}
@@ -192,6 +203,29 @@
     font-weight: 600;
     color: var(--text-muted, #999);
     margin-bottom: 4px;
+  }
+  .section-head.toggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 2px 0;
+    cursor: pointer;
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .section-head.toggle:hover {
+    color: var(--text-color, #ddd);
+  }
+  .chevron {
+    font-size: 9px;
+    transition: transform 0.12s ease;
+  }
+  .chevron.collapsed {
+    transform: rotate(-90deg);
   }
   .section-items {
     display: flex;

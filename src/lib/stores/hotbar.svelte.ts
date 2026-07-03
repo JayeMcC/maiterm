@@ -101,6 +101,9 @@ function createHotbarStore() {
   let loading = $state(false);
   let collapsed = $state(false);
   let lastDir = $state<string | null>(null);
+  // Per-section collapse (independent of the whole-rail collapse). Keyed by
+  // section id: a task section's marker, or 'container'.
+  let collapsedSections = $state<Record<string, boolean>>({});
 
   // Container section state.
   let containerDir = $state<string | null>(null);
@@ -292,6 +295,12 @@ function createHotbarStore() {
     },
     toggleCollapsed() {
       collapsed = !collapsed;
+    },
+    isSectionCollapsed(key: string) {
+      return collapsedSections[key] === true;
+    },
+    toggleSection(key: string) {
+      collapsedSections = { ...collapsedSections, [key]: !collapsedSections[key] };
     },
     refresh,
     refreshContainerStatus,
