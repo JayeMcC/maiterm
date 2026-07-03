@@ -11,14 +11,11 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
   `[BOOT]`/log-target changes, CI workflows), re-run the CI suite, then
   re-promote to the fork's `main`.
 
-## Stability (parked — low priority)
-- [ ] **Sluggish under high CPU load.** Reassessed 2026-07-03: the latest
-  occurrence was just *slow*, not broken (earlier "breaks" may have been the
-  now-fixed white screen). Parked — don't chase. If it ever hard-breaks
-  again, note the exact symptom and grab
-  `~/Library/Logs/com.aiterm.app3/aiterm.log` at that moment (the `[BOOT]`
-  banner + any `web content process terminated` / state-conflict lines point
-  the cause). No crash reports / terminations in the log at rest.
+## Stability
+- **Won't do — sluggish under high CPU load.** Reassessed 2026-07-03: the latest
+  occurrence was just *slow*, not broken (earlier "breaks" were the now-fixed
+  white screen). Not chasing it. If it ever HARD-breaks (crash/blank), grab
+  `~/Library/Logs/com.aiterm.app3/aiterm.log` at that moment and reopen then.
 
 ## Rail (PLAN-15 stream 3)
 - **Done: Container-tab detection** — confirmed working. The rail resolves the
@@ -40,13 +37,11 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
   builds+signs the maiTerm3 bundle and publishes a Release + `latest.json`,
   `scripts/release.sh <version>` cuts it, the in-app updater checks the fork feed
   (not Flexmark). Install via DMG download (one-time `xattr` bypass).
-- **Deferred (reference only — probably won't do).** Layer 2: Apple Developer
-  ID + notarization would remove the one-time Gatekeeper `xattr` bypass entirely
-  (frictionless install/update on any Mac). It needs a paid Apple Developer
-  account ($99/yr) + Developer ID cert, then `APPLE_CERTIFICATE` / `APPLE_ID` /
-  `APPLE_PASSWORD` / `APPLE_TEAM_ID` secrets and a notarize+staple step in
-  `release.yml`. Kept here so the requirement is known if frictionless install
-  ever becomes worth the cost.
+- **Won't do — Layer 2 (Apple notarization).** Would remove the one-time
+  Gatekeeper `xattr` bypass, but needs a paid Apple Developer account ($99/yr) +
+  cert + notarize/staple in `release.yml`. Decided not worth it — the one-time
+  `xattr` (or right-click-Open) is acceptable. Kept only as a reference for what
+  it would take.
 
 ## In-app integrations
 - **Done:** Report Bug / Feature Request buttons (WorkspaceSidebar footer) now
@@ -69,9 +64,9 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
     sessionEnd best-effort). The dormancy reaper (already covers Cursor via
     PtyExitOrPrompt) drives idle. So: **working (blue) during shell/MCP ops +
     idle (green)** — as much as the Cursor CLI reliably offers.
-  - [ ] **Phase 3 — gaps** (blocked on Cursor): the "waiting for permission" (red)
-    dot — the Cursor CLI has no reliable approval-needed hook. Revisit when
-    Cursor's CLI lifecycle hooks mature (today it reliably fires only shell hooks).
+  - **Won't do — Phase 3** (permission/red dot). The Cursor CLI has no reliable
+    approval-needed hook, so this isn't achievable from our side. Parked
+    permanently unless Cursor changes its CLI hooks.
   - **Open:** "Cursor API" (cloud/background-agents) is a separate, out-of-scope
     integration vs the `cursor-agent` CLI covered here — confirm intent.
 
