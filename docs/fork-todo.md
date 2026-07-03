@@ -61,9 +61,17 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
     `CursorRegistrar` writing `~/.cursor/mcp.json` (Bearer auth), gated on the new
     `cursor_ide` pref (default on). cursor-agent now auto-connects to the maiterm
     MCP server → gets every terminal tool + registers a runtime=cursor session.
-  - [ ] **Phase 2 — status dots** (medium): hooks + dormancy reaper → working/idle.
-  - [ ] **Phase 3 — gaps**: "waiting for permission" dot is blocked on Cursor CLI
-    hooks maturing (the CLI reliably fires only shell-execution hooks today).
+  - **Done: Phase 2 (lite) — status dots.** CursorRegistrar also writes
+    `~/.cursor/hooks.json` (Cursor's flat schema) + the shared agent-hook shim
+    (parameterized with `runtime=$3`), forwarding to `/hooks?runtime=cursor`.
+    `normalize_hook_event` maps Cursor's camelCase events (before/afterShellExecution
+    + before/afterMCPExecution → tool pre/post = "working"; sessionStart/stop/
+    sessionEnd best-effort). The dormancy reaper (already covers Cursor via
+    PtyExitOrPrompt) drives idle. So: **working (blue) during shell/MCP ops +
+    idle (green)** — as much as the Cursor CLI reliably offers.
+  - [ ] **Phase 3 — gaps** (blocked on Cursor): the "waiting for permission" (red)
+    dot — the Cursor CLI has no reliable approval-needed hook. Revisit when
+    Cursor's CLI lifecycle hooks mature (today it reliably fires only shell hooks).
   - **Open:** "Cursor API" (cloud/background-agents) is a separate, out-of-scope
     integration vs the `cursor-agent` CLI covered here — confirm intent.
 

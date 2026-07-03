@@ -1626,6 +1626,19 @@ fn normalize_hook_event(_runtime: crate::state::AgentRuntime, name: &str, event:
         },
         // Codex emits PostCompact alongside PreCompact; both are compaction signals.
         "PostCompact" => HookPhase::Compact,
+        // Cursor CLI (cursor-agent) uses camelCase event names. The CLI reliably fires
+        // only the shell/MCP execution hooks today (its lifecycle hooks are flaky —
+        // see docs/cursor-parity-design.md), so shell/MCP execution drives the "working"
+        // (active) state and the dormancy reaper handles idle. sessionStart/stop/
+        // sessionEnd are registered best-effort. No reliable Cursor approval signal, so
+        // there is no permission mapping (the "waiting" dot is the known Phase-2 gap).
+        "sessionStart" => HookPhase::SessionStart,
+        "sessionEnd" => HookPhase::SessionEnd,
+        "stop" => HookPhase::Stop,
+        "beforeSubmitPrompt" => HookPhase::Prompt,
+        "preToolUse" | "beforeShellExecution" | "beforeMCPExecution" => HookPhase::ToolPre,
+        "postToolUse" | "afterShellExecution" | "afterMCPExecution" => HookPhase::ToolPost,
+        "preCompact" => HookPhase::Compact,
         // NOTE: Codex has no SessionEnd hook — a Codex session going away is derived from
         // dormancy (PTY exit / shell-prompt return), not a hook event.
         _ => HookPhase::Other,

@@ -1,27 +1,31 @@
 #!/usr/bin/env bash
-# maiTerm Codex hook shim.
+# maiTerm agent hook shim (Codex + Cursor).
 #
-# Codex hooks are COMMAND hooks (no native HTTP hook type), so each lifecycle event
-# runs this script, which forwards the event to the local maiTerm MCP server's /hooks
-# endpoint — the same endpoint Claude Code posts to over HTTP. Codex passes the hook
-# event as JSON on stdin.
+# Codex and Cursor hooks are COMMAND hooks (no native HTTP hook type), so each
+# lifecycle event runs this script, which forwards the event to the local maiTerm
+# MCP server's /hooks endpoint — the same endpoint Claude Code posts to over HTTP.
+# Both pass the hook event as JSON on stdin.
 #
 # Args / env (set by maiTerm at install + PTY spawn):
-#   $1            the MCP auth token (embedded in ~/.codex/hooks.json by CodexRegistrar)
+#   $1            the MCP auth token (embedded in the runtime's hooks.json by its Registrar)
 #   $2            (optional) the MCP server port baked at install time. Used for the
 #                 SSH-remote install, where the reverse-tunnel port is fixed for the
 #                 bridge and the live shell may lack $AITERM_PORT (tmux/sudo/su). Local
 #                 installs omit it and rely on the per-process $AITERM_PORT env var.
+#   $3            (optional) the runtime tag for ?runtime= (default "codex"; "cursor" for
+#                 the Cursor CLI). Tells maiTerm's /hooks handler which event-name schema
+#                 to normalize.
 #   $AITERM_PORT  the maiTerm MCP server port (live, per-process)
-#   $AITERM_TAB_ID  the maiTerm tab this Codex session runs in
+#   $AITERM_TAB_ID  the maiTerm tab this agent session runs in
 #
-# The ?runtime=codex tag tells maiTerm's /hooks handler to normalize Codex's event
-# names/payload; ?tab_id routes the event to the right frontend tab. Output is a bare
-# `{}` (a valid no-op decision) so Stop/PreToolUse/PermissionRequest hooks — which
-# expect JSON on stdout — get a well-formed "no decision" and never block the turn.
+# ?tab_id routes the event to the right frontend tab. Output is a bare `{}` (a valid
+# no-op decision) so hooks that expect JSON on stdout (Codex Stop/PreToolUse/
+# PermissionRequest; Cursor beforeShellExecution/stop) get a well-formed "no decision"
+# and never block the turn.
 
 token="$1"
 baked_port="${2:-}"
+runtime="${3:-codex}"
 
 # tmux / sudo / su don't inherit the maiTerm env vars. Fall back to the ~/.aiterm file
 # the bridge wrote (export AITERM_TAB_ID / AITERM_PORT) so hooks still route correctly.
@@ -42,7 +46,7 @@ if [ -n "$port" ]; then
     -H "Authorization: Bearer ${token}" \
     -H "Content-Type: application/json" \
     --data-binary "$payload" \
-    "http://127.0.0.1:${port}/hooks?runtime=codex&tab_id=${tab}" \
+    "http://127.0.0.1:${port}/hooks?runtime=${runtime}&tab_id=${tab}" \
     >/dev/null 2>&1 || true
 fi
 
