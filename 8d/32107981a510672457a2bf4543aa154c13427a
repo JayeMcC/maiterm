@@ -1,0 +1,93 @@
+skill-library/local-dev/dictaflow-issue/SKILL.md
+  s_4fc1ad887b3254::t_6cdba7db18f189 158-159
+  s_4fc1ad887b3254::t_b8242343f88710 62-66
+  s_4fc1ad887b3254::t_5b8e1c1c611fc6 2-59,91-96,110-113,152,171-201,208-244
+  s_4fc1ad887b3254::t_177acf58b93a85 203-206
+  s_4fc1ad887b3254::t_d211669e99fce6 97-103
+  s_4fc1ad887b3254::t_1dbf1fe4a0b3a6 117-127,154
+  s_4fc1ad887b3254::t_9ab0a0878b9d08 1
+  s_4fc1ad887b3254::t_69689d5a5c9d1f 60-61
+  s_4fc1ad887b3254::t_11f9480d0bc830 67-69,88-90
+  s_4fc1ad887b3254::t_a5105669b08a69 104-109
+  s_4fc1ad887b3254::t_fb4eb2bb04a841 114-116
+  s_4fc1ad887b3254::t_36245145eb70df 128-130,149-151
+  s_4fc1ad887b3254::t_27d9a0edea8e49 153
+  s_4fc1ad887b3254::t_4a775b677556f5 155-157
+  s_4fc1ad887b3254::t_35529dc243e6d3 160-162,168-170
+  s_4fc1ad887b3254::t_bf33e464cf79f8 202
+  s_4fc1ad887b3254::t_7e87d2f8e0e0f8 207
+  s_4fc1ad887b3254::t_0238c2bbc82ecf 245-247
+  s_4fc1ad887b3254::t_fe219230b70be7 70-87,131-148,163-167,248-258
+skill-library/external-services/meridian-admin/DESTINATION.md
+  s_c586f16f73bc3e::t_20eba1996adfc2 1-3
+skill-library/external-services/meridian-admin/SKILL.md
+  s_c586f16f73bc3e::t_ba9b3c0128444a 1-117
+skill-library/external-services/meridian-analytics/DESTINATION.md
+  s_c586f16f73bc3e::t_1b9322eaa61576 1-3
+skill-library/external-services/meridian-analytics/SKILL.md
+  s_c586f16f73bc3e::t_27ca2266a1db86 1-21
+skill-library/external-services/meridian-cicd/DESTINATION.md
+  s_c586f16f73bc3e::t_6449487fbe4048 1-3
+skill-library/external-services/meridian-cicd/SKILL.md
+  s_c586f16f73bc3e::t_be2a217bba443d 1-472
+skill-library/external-services/meridian-core/DESTINATION.md
+  s_c586f16f73bc3e::t_97a466d9893fc7 1-3
+skill-library/external-services/meridian-core/SKILL.md
+  s_c586f16f73bc3e::t_cd82c2309accf3 1-58
+skill-library/external-services/meridian-data-fixer/DESTINATION.md
+  s_c586f16f73bc3e::t_22547576b93ef5 1-3
+skill-library/external-services/meridian-data-fixer/SKILL.md
+  s_c586f16f73bc3e::t_1efec2bd15d37c 1-182
+skill-library/external-services/meridian-environments/DESTINATION.md
+  s_c586f16f73bc3e::t_bc43494407fdf4 1-3
+skill-library/external-services/meridian-environments/SKILL.md
+  s_c586f16f73bc3e::t_531a7fa3f9827f 1-37
+skill-library/external-services/meridian-executions/DESTINATION.md
+  s_c586f16f73bc3e::t_f0f7c4a110d6e8 1-3
+skill-library/external-services/meridian-executions/SKILL.md
+  s_c586f16f73bc3e::t_b6833703e5c432 1-28
+skill-library/external-services/meridian-quality-gates/DESTINATION.md
+  s_c586f16f73bc3e::t_ef64025bfe72ca 1-3
+skill-library/external-services/meridian-quality-gates/SKILL.md
+  s_c586f16f73bc3e::t_19bcf1ffcace94 1-16
+skill-library/external-services/meridian-releases/DESTINATION.md
+  s_c586f16f73bc3e::t_00bb89fba5c087 1-3
+skill-library/external-services/meridian-releases/SKILL.md
+  s_c586f16f73bc3e::t_b7505260c05d42 1-19
+skill-library/external-services/meridian-reporting/DESTINATION.md
+  s_c586f16f73bc3e::t_8696883afe3b8c 1-3
+skill-library/external-services/meridian-reporting/SKILL.md
+  s_c586f16f73bc3e::t_c14da52fee211d 1-76
+skill-library/external-services/meridian-settings/DESTINATION.md
+  s_c586f16f73bc3e::t_71c88942b43f6f 1-3
+skill-library/external-services/meridian-settings/SKILL.md
+  s_c586f16f73bc3e::t_9082b27762c81e 1-14
+skill-library/local-dev/dictaflow-issue/DESTINATION.md
+  s_4fc1ad887b3254::t_50fd581fd071ec 1-3
+skill-library/local-dev/dictaflow-issue/JOBS.md
+  s_4fc1ad887b3254::t_1449d00e46ce6c 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "8d32107981a510672457a2bf4543aa154c13427a",
+  "prompts": {},
+  "sessions": {
+    "s_4fc1ad887b3254": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9d5ba5ea-1c04-4dc9-8ffd-e52377e095ee",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_c586f16f73bc3e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "058b44b2-75f5-49f1-a841-5d707157b4e6",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
