@@ -1,0 +1,19 @@
+.github/workflows/task-engine.yml
+  s_ef2c94701ed321::t_a2baac785807b4 1-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "912baac3084c219588d0813981de8abdda43a0e9",
+  "prompts": {},
+  "sessions": {
+    "s_ef2c94701ed321": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fa8cb8b7-5b19-4d5b-88ac-0421f5efd53f",
+        "model": "claude-fable-5"
+      },
+      "human_author": null
+    }
+  }
+}
