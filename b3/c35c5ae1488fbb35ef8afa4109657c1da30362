@@ -1,0 +1,20 @@
+src-tauri/src/commands/window_presets.rs
+  s_ad2f963c4afad3::t_102deda7a32657 288-306
+  s_ad2f963c4afad3::t_0d66b2a542276c 343
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "b3c35c5ae1488fbb35ef8afa4109657c1da30362",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
