@@ -8,10 +8,8 @@
 !/scripts/cli-llm-cassette.mjs
 !/scripts/cli-llm.mjs
 !/scripts/forwood-seed-entities.mjs
-!/scripts/launcher
 !/scripts/meridian
 !/scripts/run-silent.sh
-!/scripts/task-engine
 !/scripts/test
 # Hide the skill-library routing marker from the editor in consumer repos (last match wins).
 **/DESTINATION.md
