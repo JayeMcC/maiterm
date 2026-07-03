@@ -1,0 +1,35 @@
+src-tauri/src/commands/window_presets.rs
+  s_ad2f963c4afad3::t_2ee1c76a9b4e71 343,345
+  s_ad2f963c4afad3::t_4d8470311ed35b 313-314,333-334
+  s_ad2f963c4afad3::t_06548af5fe3afe 224-312,315-332,335-342,344,346-372
+src/lib/components/WindowPresetsManagerModal.svelte
+  s_ad2f963c4afad3::t_35ef6f05def55d 85-119
+  s_ad2f963c4afad3::t_93c93fbf840ca8 254-256
+  s_ad2f963c4afad3::t_6d2df137387754 382-383
+  s_ad2f963c4afad3::t_20304e9591b7a0 8-9
+src/lib/tauri/commands.ts
+  s_ad2f963c4afad3::t_a92dae5c09cfe0 596-599,602-605
+  s_ad2f963c4afad3::t_53b0e8e6f334e6 600-601,606-607
+docs/fork-todo.md
+  s_ad2f963c4afad3::t_5a5abc97b833aa 77-86
+src-tauri/src/lib.rs
+  s_ad2f963c4afad3::t_f5f65c4f994f0c 616-617
+src/lib/stores/workspaces.svelte.ts
+  s_ad2f963c4afad3::t_ad40207aa3b09a 2108-2122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "f677964e4c6725fd6108adf6eda443db5bf4e51e",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
