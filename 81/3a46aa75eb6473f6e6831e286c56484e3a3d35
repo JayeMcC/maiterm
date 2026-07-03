@@ -1,0 +1,24 @@
+docs/forwood-setup.md
+  s_ef2c94701ed321::t_d69fff7defb753 7,10-37,43,45,47
+  s_ef2c94701ed321::t_57adc1e40a1617 131-133
+  s_ef2c94701ed321::t_63d311e802b75e 92-93
+scripts/forwood-setup.sh
+  s_ef2c94701ed321::t_7924772045b78c 1-102,118-165
+  s_ef2c94701ed321::t_6b960ac60d7828 103-117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "813a46aa75eb6473f6e6831e286c56484e3a3d35",
+  "prompts": {},
+  "sessions": {
+    "s_ef2c94701ed321": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fa8cb8b7-5b19-4d5b-88ac-0421f5efd53f",
+        "model": "claude-fable-5"
+      },
+      "human_author": null
+    }
+  }
+}
