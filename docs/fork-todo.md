@@ -59,14 +59,16 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
   feature; scope a design pass first.
 
 ## UI
-- [ ] **Tab close (×) button hidden when the name is too long.** When a pane
-  has multiple tabs and not enough width for them all to fit, a long tab name
-  expands and pushes the close button out of view. Reserve fixed space for the
-  × (and/or truncate the name with ellipsis) so it stays visible regardless of
-  name length or tab count. (`TerminalTabs.svelte` tab layout — flex sizing.)
+- **Done: tab close (×) button no longer hidden by long names.** `.tab-name`
+  now `flex: 1 1 auto; min-width: 0` so it truncates with its ellipsis, and
+  `.tab-actions` is `flex-shrink: 0` so the × keeps its reserved width and stays
+  clickable regardless of name length or tab count.
 
 ## Fork issues (GitHub)
-- [ ] **#6** — allow read-only MCP introspection (`getTabContext`/
-  `listWorkspaces`) without `initSession` for token-authenticated clients.
+- **Done: #6** — read-only MCP introspection without `initSession`. `getTabContext`
+  + `getActiveTab` added to the `global_tools` allowlist in `server.rs` (the rest
+  — `listWorkspaces`/`listWindows`/`getDiagnostics`/`getOpenEditors` — were
+  already exempt). Token auth is independent of the session gate, so
+  token-authenticated clients can now read state without borrowing a tabId.
 - (For reference, #1 state-file thrash and #2 pointer-dead editor panes are
   pre-existing upstream-ish issues, not from the PLAN-15 work.)

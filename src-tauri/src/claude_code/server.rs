@@ -1410,6 +1410,13 @@ async fn process_message(
                         "sendNotification", "readLogs", "listWindows", "listWorkspaces",
                         "getPreferences", "setPreference", "createBackup",
                         "getClaudeSessions",
+                        // Read-only introspection that doesn't consume a session
+                        // tabId (issue #6). getTabContext reads by explicit
+                        // `tabIds` (plural) or all tabs; getActiveTab reads the
+                        // UI-active tab. Both are safe without initSession, and
+                        // exempting getActiveTab also unblocks initSession's own
+                        // stale-tab recovery hint ("call getActiveTab first").
+                        "getTabContext", "getActiveTab",
                         // openTab creates a new tab; the caller (e.g. an external
                         // launcher CLI) has no tab affinity yet and shouldn't be
                         // forced into a chicken-and-egg initSession dance.

@@ -1612,6 +1612,11 @@
   }
 
   .tab-name {
+    /* flex + min-width:0 so a long name truncates with the ellipsis (already
+       set below) instead of keeping its full nowrap width and shoving the
+       action cluster (× close button) past the clipped tab box. */
+    flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1620,6 +1625,9 @@
 
   .tab-actions {
     display: flex;
+    /* Never shrink — the × close button keeps its reserved width and stays
+       visible/clickable regardless of tab-name length or tab count. */
+    flex-shrink: 0;
     align-items: center;
     align-self: stretch;
     margin-left: 0;
