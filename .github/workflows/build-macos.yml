@@ -60,9 +60,10 @@ jobs:
         run: npx tauri build --target universal-apple-darwin ${{ steps.channel.outputs.tauri_config_flag }}
         env:
           MAITERM_CHANNEL: ${{ steps.channel.outputs.channel == 'dev' && 'dev' || '' }}
-          # No TAURI_SIGNING_* — the fork consumes upstream (Flexmark-signed)
-          # updates and does not publish its own, so bundle.createUpdaterArtifacts
-          # is false and no updater tarball is produced or signed.
+          # No TAURI_SIGNING_* here — this CI build produces UNSIGNED artifacts
+          # for testing. Signed releases (with the updater feed) are cut by
+          # release.yml on a tag; base createUpdaterArtifacts stays false so this
+          # keyless build never tries to sign.
 
       - name: Upload .dmg
         uses: actions/upload-artifact@v7

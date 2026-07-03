@@ -34,13 +34,16 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
   HTTPS. Add a protocol heuristic (or per-port config).
 
 ## Updater
-- [ ] **Retire the dead Tauri-installer UI.** The updater store now checks the
-  `Jaye-term` branch via `git ls-remote` and prompts via toast → Bitbucket
-  (no upstream, no auto-install). The old banner + What's-New modal +
-  install/restart flow in `WorkspaceSidebar.svelte` are kept as inert stubs
-  (`showBanner === false`). A cleanup pass could delete that UI and the stub
-  store methods (`currentUpdate`/`downloadAndInstall`/`recheckForNewer`/
-  `switchToUpdate`/`fetchReleaseNotes`/`restart`) outright.
+- **Done (Layer 1):** signed updater feed on the fork's GitHub Releases. Own
+  minisign keypair (pubkey embedded; private key in repo secrets), `release.yml`
+  builds+signs the maiTerm3 bundle and publishes a Release + `latest.json`,
+  `scripts/release.sh <version>` cuts it, the in-app updater checks the fork feed
+  (not Flexmark). Install via DMG download (one-time `xattr` bypass).
+- [ ] **Layer 2 — Apple Developer ID + notarization.** Removes the one-time
+  Gatekeeper bypass on download/update entirely (truly frictionless on any Mac).
+  Needs a paid Apple Developer account ($99/yr) + Developer ID cert; add
+  `APPLE_CERTIFICATE` / `APPLE_ID` / `APPLE_PASSWORD` / `APPLE_TEAM_ID` secrets
+  and the notarize+staple step to `release.yml`. Purely additive on Layer 1.
 
 ## Fork issues (GitHub)
 - [ ] **#6** — allow read-only MCP introspection (`getTabContext`/

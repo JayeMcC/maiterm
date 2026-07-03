@@ -1,0 +1,63 @@
+name: Release
+
+# Cut a signed, installable release. Push a tag like `v1.18.1` (use
+# scripts/release.sh, which bumps the version to match) and this builds the
+# maiTerm3 universal bundle, signs the updater artifacts, and publishes a
+# GitHub Release with the .dmg (manual install) + the updater tarball + a
+# latest.json feed that the in-app updater consumes.
+#
+# Requires two repo secrets (Settings → Secrets → Actions):
+#   TAURI_SIGNING_PRIVATE_KEY           — contents of ~/.tauri/maiterm-updater.key
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  — its password ("" if generated without one)
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: macos-latest
+    permissions:
+      contents: write # create the Release + upload assets
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: release
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # Builds the universal (aarch64 + x86_64) maiTerm3 bundle, signs the
+      # updater tarball with the private key, creates the GitHub Release for the
+      # pushed tag, and uploads the .dmg, the signed .app.tar.gz, and latest.json.
+      - name: Build, sign, and publish release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          MAITERM_CHANNEL: dev # compile-time → maiTerm3 / com.aiterm.app3 (the installed variant)
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'maiTerm3 ${{ github.ref_name }}'
+          releaseBody: 'Download the .dmg to install, or update in-app. First launch after a manual download may need a one-time Gatekeeper bypass — see docs/forwood-setup.md.'
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
+          args: --target universal-apple-darwin --config src-tauri/tauri.release.conf.json
