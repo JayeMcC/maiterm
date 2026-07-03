@@ -705,10 +705,10 @@
 
   <div class="sidebar-footer">
     <div class="footer-side">
-      <IconButton tooltip="Report Bug" size={24} style="border-radius:4px" onclick={() => shellOpen('https://github.com/Flexmark-Intl/maiterm/issues/new?labels=bug&type=bug')}
+      <IconButton tooltip="Report Bug" size={24} style="border-radius:4px" onclick={() => shellOpen('https://github.com/JayeMcC/maiterm/issues/new?labels=bug&type=bug')}
         ><Icon name="bug" size={14} /></IconButton
       >
-      <IconButton tooltip="Feature Request" size={24} style="border-radius:4px" onclick={() => shellOpen('https://github.com/Flexmark-Intl/maiterm/issues/new?type=feature')}
+      <IconButton tooltip="Feature Request" size={24} style="border-radius:4px" onclick={() => shellOpen('https://github.com/JayeMcC/maiterm/issues/new?type=feature')}
         ><Icon name="lightbulb" size={14} /></IconButton
       >
     </div>

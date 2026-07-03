@@ -46,11 +46,8 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
   and the notarize+staple step to `release.yml`. Purely additive on Layer 1.
 
 ## In-app integrations
-- [ ] **Point the Report Bug / Feature Request buttons at the fork.** The in-app
-  buttons should open issues against **`JayeMcC/maiterm`** (our version), not
-  upstream `Flexmark-Intl/maiterm`. Find the button handlers (likely a settings
-  or help menu → `issues/new` URL) and swap the repo slug; align with the
-  `maiterm-issue` skill, which already targets the fork.
+- **Done:** Report Bug / Feature Request buttons (WorkspaceSidebar footer) now
+  open issues against `JayeMcC/maiterm` instead of upstream.
 - [ ] **AI-agent feature parity: Cursor + Claude Code.** Today the terminal
   integrates Claude Code (the `maiterm` MCP server, `claudeCode.svelte.ts`).
   Extend the same first-class integration to the **Cursor API** and the
