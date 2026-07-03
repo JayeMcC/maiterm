@@ -1,0 +1,21 @@
+src-tauri/src/claude_code/lockfile.rs
+  s_2faedf32a94ff1::t_5bbd2c82083b04 610-611,613
+src-tauri/src/state/agent_runtime.rs
+  s_2faedf32a94ff1::t_6d89a4b6861157 182-184,186,188
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "c482371a6aab2ab55289e60c38eb55548c8859ad",
+  "prompts": {},
+  "sessions": {
+    "s_2faedf32a94ff1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6445d28c-8b55-4fce-aa24-e77fe148004a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

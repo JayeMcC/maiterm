@@ -1,0 +1,28 @@
+.github/workflows/render-parity.yml
+  s_ad2f963c4afad3::t_49826fff114640 1-9,11,21-22,25,51,54,56-61,63-65,68,70,72,74,76-80,82,89,91-93
+tests/e2e/harness/render-probe.ts
+  s_ad2f963c4afad3::t_2daa8e28735ed0 19-25
+tests/e2e/render-smoke.test.ts
+  s_ad2f963c4afad3::t_cb1f8b1631e434 23-25
+src-tauri/src/lib.rs
+  s_ad2f963c4afad3::t_6ee6630fbc5b27 48-54
+tests/e2e/harness/spawn.ts
+  s_ad2f963c4afad3::t_80718af666d463 58-62
+  s_ad2f963c4afad3::t_79b77c8350224d 80-84,92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "818b1d256bbab6a745fc028c9743fd54fe6ad391",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

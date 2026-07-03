@@ -1,0 +1,28 @@
+src-tauri/tauri.release.conf.json
+  s_ad2f963c4afad3::t_abb7de9e773a56 1-15
+.github/workflows/release.yml
+  s_ad2f963c4afad3::t_e389d5cee601e2 1-62
+  s_ad2f963c4afad3::t_62da9d1725e684 63
+scripts/release.sh
+  s_ad2f963c4afad3::t_de7c1ab437a336 1-53
+docs/fork-todo.md
+  s_ad2f963c4afad3::t_02b656bd4884e9 37-46
+.github/workflows/build-macos.yml
+  s_ad2f963c4afad3::t_afe0c8019d2cb4 63-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "4c285d913e314c35f6c2b388202cc84f428a558a",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

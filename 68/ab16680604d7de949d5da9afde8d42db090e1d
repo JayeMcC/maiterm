@@ -1,0 +1,35 @@
+src-tauri/src/lib.rs
+  s_ad2f963c4afad3::t_6d27243a5e3718 613-614
+src-tauri/src/commands/mod.rs
+  s_ad2f963c4afad3::t_18810c5db9be42 3
+src/lib/stores/hotbar.svelte.ts
+  s_ad2f963c4afad3::t_6ec61131fa1079 114-119,121-122,131,134,136
+  s_ad2f963c4afad3::t_4edb234b221306 1-113,120,123-130,132-133,135,137-161
+src/lib/components/rail/HotbarRail.svelte
+  s_ad2f963c4afad3::t_3b001c3a2c6455 1-163
+src/routes/+page.svelte
+  s_ad2f963c4afad3::t_f83db61bb43622 441
+  s_ad2f963c4afad3::t_b85d894deb36f3 12
+eslint.config.js
+  s_ad2f963c4afad3::t_8140f4e2a9e383 48-50
+src-tauri/src/commands/rail.rs
+  s_ad2f963c4afad3::t_3b9e0891b95462 1-99
+src/lib/tauri/commands.ts
+  s_ad2f963c4afad3::t_6a3294a9c8b351 806-836
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "68ab16680604d7de949d5da9afde8d42db090e1d",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+src/graph/codify-state-annotation.ts
+  s_ec41e3361fd247::t_1ad11788b57fe2 1-81
+src/nodes/review-dispatch-codify.ts
+  s_ec41e3361fd247::t_4a98ac7a21b21c 1-182
+src/graph/review-loop.ts
+  s_ec41e3361fd247::t_5af0509dca7334 136
+  s_ec41e3361fd247::t_ef09a49f027c0c 59
+  s_ec41e3361fd247::t_a0f84de8eaceff 108
+  s_ec41e3361fd247::t_7132c9c2858469 216-220,224-225
+src/graph/codify-tail-loop.ts
+  s_ec41e3361fd247::t_eeed2f21b743c5 1-129
+src/review/phases.ts
+  s_ec41e3361fd247::t_37a97606584491 29-30
+  s_ec41e3361fd247::t_8b6fb067f709ca 56
+  s_ec41e3361fd247::t_693c1383e1f398 93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "ebdc4b653586ca819999009c0a8ae219ea0aaf67",
+  "prompts": {},
+  "sessions": {
+    "s_ec41e3361fd247": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46706c9c-5e98-4950-9b5a-9d3c8f043b7c",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

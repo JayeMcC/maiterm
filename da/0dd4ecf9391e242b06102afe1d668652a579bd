@@ -1,0 +1,54 @@
+CHANGES.md
+  s_ec41e3361fd247::t_0db6ac48445ba9 534
+  s_ec41e3361fd247::t_643c52126b235d 3-12,18-41,45,49-69,75,81-82,88-89,94,99-122,128-129,135-136,143-144,149,153-176,181-183,189-190,196-198,203,208-252,258-264,270-271,277-284,289,293-317,323-324,330-331,337-339,344,348,350-360,362-365,367-372,378,384-385,391-392,397,401-455,457-464,466,468,472-503,509-511,517-518,525-527,532,537-555,561-562,568-569,576-577,582-583,586-620,622,624-637,639-642,644-661,663-704
+  s_ec41e3361fd247::t_cce84c20012e56 291-292
+  s_ec41e3361fd247::t_863325e7e6220e 470
+  s_3c5806474896bb::t_fa293e0e1992af 16
+  s_ec41e3361fd247::t_291ba9315a77df 584-585
+  s_ec41e3361fd247::t_ccc7df0e57ddc1 205
+  s_ec41e3361fd247::t_ddbfe6f4815195 96
+  s_ec41e3361fd247::t_6a750c4dc12c6c 151
+  s_ec41e3361fd247::t_cc4563f7e0a51c 346
+  s_ec41e3361fd247::t_8881453e26b878 399-400
+  s_d68799056db508::t_b2fa485cbc6b20 524,662
+  s_ec41e3361fd247::t_c28143c0205730 47
+  s_ec41e3361fd247::t_681c5e68d14a3f 1-2
+  s_3c5806474896bb::t_16d34ef61ca3b6 14-15
+  s_ec41e3361fd247::t_5949f89d35a444 290
+  s_ec41e3361fd247::t_d435664965ad00 398
+  s_ec41e3361fd247::t_dc7b49d81983df 17
+forwood-vault/wiki/changes-archive/forwood-one-review/forwood-one-review-004.md
+  s_ec41e3361fd247::t_2a4607df81c770 1-174
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "da0dd4ecf9391e242b06102afe1d668652a579bd",
+  "prompts": {},
+  "sessions": {
+    "s_3c5806474896bb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "69eadc33-1c30-4f4c-85ba-c689c72fafcb",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_d68799056db508": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "647c6832-5706-45ac-929e-c54d4f67a87f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_ec41e3361fd247": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46706c9c-5e98-4950-9b5a-9d3c8f043b7c",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

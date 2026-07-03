@@ -1,0 +1,23 @@
+tests/e2e/harness/render-check.ts
+  s_ad2f963c4afad3::t_e5a4de3091ed1d 66-75,77
+  s_ad2f963c4afad3::t_d3c2dd127b9753 1-23,28-65,76,78-83
+  s_ad2f963c4afad3::t_c604a774a85ef5 24-27
+tests/e2e/render-smoke.test.ts
+  s_ad2f963c4afad3::t_f29fc4dd693e0d 1-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "c142c12dfb3e6d8d65e56e8ebbd06888569f47c0",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
