@@ -868,7 +868,7 @@ pub fn get_pty_info(state: &Arc<AppState>, pty_id: &str) -> Result<PtyInfo, Stri
 /// Which agent CLIs to look for in a tab's process tree. Union of every runtime's
 /// `agent_process_names` (see `state/agent_runtime.rs`) — kept as a small literal so
 /// the readiness probe needn't know a tab's runtime up front.
-const AGENT_PROCESS_NAMES: &[&str] = &["claude", "codex", "gemini"];
+const AGENT_PROCESS_NAMES: &[&str] = &["claude", "codex", "gemini", "cursor-agent"];
 
 /// Liveness signals for the mesh readiness check — see the `get_agent_liveness` command.
 #[derive(serde::Serialize, Clone)]

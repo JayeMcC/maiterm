@@ -43,7 +43,11 @@ impl Registrar for ClaudeRegistrar {
 /// CodexRegistrar is listed but only installs when prefs.codex_ide is on (default off),
 /// so enabling it is fully opt-in; exit-cleanup unregisters both unconditionally.
 pub fn all_registrars() -> Vec<Box<dyn Registrar>> {
-    vec![Box::new(ClaudeRegistrar), Box::new(super::codex::CodexRegistrar)]
+    vec![
+        Box::new(ClaudeRegistrar),
+        Box::new(super::codex::CodexRegistrar),
+        Box::new(super::cursor::CursorRegistrar),
+    ]
 }
 /// Registrars whose integration is currently enabled (used for install + reassert).
 pub fn enabled_registrars(prefs: &Preferences) -> Vec<Box<dyn Registrar>> {

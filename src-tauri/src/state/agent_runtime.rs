@@ -18,6 +18,7 @@ pub enum AgentRuntime {
     Claude,
     Codex,
     Gemini,
+    Cursor,
 }
 
 #[allow(dead_code)]
@@ -28,6 +29,7 @@ impl AgentRuntime {
             "claude" => Some(Self::Claude),
             "codex" => Some(Self::Codex),
             "gemini" => Some(Self::Gemini),
+            "cursor" => Some(Self::Cursor),
             _ => None,
         }
     }
@@ -38,6 +40,7 @@ impl AgentRuntime {
             Self::Claude => "claude",
             Self::Codex => "codex",
             Self::Gemini => "gemini",
+            Self::Cursor => "cursor",
         }
     }
 
@@ -47,6 +50,7 @@ impl AgentRuntime {
         match client_info_name.map(|n| n.to_ascii_lowercase()) {
             Some(n) if n.contains("codex") => Self::Codex,
             Some(n) if n.contains("gemini") => Self::Gemini,
+            Some(n) if n.contains("cursor") => Self::Cursor,
             _ => Self::Claude,
         }
     }
@@ -164,12 +168,32 @@ pub static GEMINI_DESC: RuntimeDescriptor = RuntimeDescriptor {
     tool_stale_timeout_ms: 15_000,
 };
 
+/// Cursor CLI (`cursor-agent`). Connects over MCP (Bearer auth); dormancy is
+/// PTY-inferred because the Cursor CLI's lifecycle hooks are unreliable (it
+/// reliably fires only shell-execution hooks today — see cursor-parity-design.md).
+pub static CURSOR_DESC: RuntimeDescriptor = RuntimeDescriptor {
+    runtime: AgentRuntime::Cursor,
+    display_name: "Cursor",
+    mcp_server_base: "maiterm",
+    client_info_name: "cursor",
+    session_id_var: "cursorSessionId",
+    auth_header: "Authorization",
+    supports_fork: false,
+    needs_mcp_reassert: false,
+    hook_config: HookConfigKind::CodexHooksJson,
+    dormancy: DormancySource::PtyExitOrPrompt,
+    // The Cursor headless CLI runs as `cursor-agent`.
+    agent_process_names: &["cursor-agent"],
+    tool_stale_timeout_ms: 15_000,
+};
+
 /// Resolve the static descriptor row for a runtime.
 #[allow(dead_code)]
 pub fn descriptor(rt: AgentRuntime) -> &'static RuntimeDescriptor {
     match rt {
         AgentRuntime::Codex => &CODEX_DESC,
         AgentRuntime::Gemini => &GEMINI_DESC,
+        AgentRuntime::Cursor => &CURSOR_DESC,
         AgentRuntime::Claude => &CLAUDE_DESC,
     }
 }

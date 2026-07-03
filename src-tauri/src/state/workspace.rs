@@ -969,6 +969,11 @@ pub struct Preferences {
     /// Enable Codex hooks-based auto-resume. Default on.
     #[serde(default = "default_true")]
     pub codex_auto_resume: bool,
+    /// Enable the Cursor (cursor-agent CLI) IDE/MCP integration — writes the
+    /// maiterm MCP server into ~/.cursor/mcp.json so cursor-agent connects.
+    /// Default on. (Status hooks are Phase 2 — see docs/cursor-parity-design.md.)
+    #[serde(default = "default_true")]
+    pub cursor_ide: bool,
     /// Suppress the one-time Codex hook-trust prompt friction (advanced; default OFF —
     /// the trust prompt is a one-time interactive approval we deliberately keep).
     #[serde(default)]
@@ -1139,6 +1144,7 @@ impl Default for Preferences {
             codex_ide_ssh: true,
             codex_hooks: true,
             codex_auto_resume: true,
+            cursor_ide: true,
             codex_hooks_bypass_trust: false,
             composer_default_open: true,
             windows_shell: default_windows_shell(),

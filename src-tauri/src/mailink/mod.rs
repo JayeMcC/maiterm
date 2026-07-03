@@ -1285,6 +1285,7 @@ fn runtime_key(r: AgentRuntime) -> &'static str {
         AgentRuntime::Claude => "claude",
         AgentRuntime::Codex => "codex",
         AgentRuntime::Gemini => "gemini",
+        AgentRuntime::Cursor => "cursor",
     }
 }
 

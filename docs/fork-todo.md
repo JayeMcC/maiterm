@@ -56,8 +56,11 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
   `cursor-agent` via `Authorization: Bearer` with no changes. Three plug-in
   points (liveness match list, a `CursorRegistrar` → `~/.cursor/mcp.json`, a
   `~/.cursor/hooks.json` → `/hooks?runtime=cursor` + dormancy reaper).
-  - [ ] **Phase 1 — tools + presence** (small): MCP connect + liveness detection
-    → cursor-agent gets all terminal tools + shows as a running agent.
+  - **Done: Phase 1 — tools + presence.** `AgentRuntime::Cursor` (agent_runtime.rs)
+    + `cursor-agent` in the liveness lists (pty/manager.rs, descriptor) + a
+    `CursorRegistrar` writing `~/.cursor/mcp.json` (Bearer auth), gated on the new
+    `cursor_ide` pref (default on). cursor-agent now auto-connects to the maiterm
+    MCP server → gets every terminal tool + registers a runtime=cursor session.
   - [ ] **Phase 2 — status dots** (medium): hooks + dormancy reaper → working/idle.
   - [ ] **Phase 3 — gaps**: "waiting for permission" dot is blocked on Cursor CLI
     hooks maturing (the CLI reliably fires only shell-execution hooks today).
