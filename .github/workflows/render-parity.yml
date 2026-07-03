@@ -48,13 +48,19 @@ jobs:
         run: npx tauri build --debug --no-bundle
       - name: Probe DEBUG render
         working-directory: tests/e2e
-        run: npx tsx harness/render-probe.ts "${GITHUB_WORKSPACE}/src-tauri/target/debug/aiterm" debug | tee /tmp/debug.txt
+        # pipefail so the probe's non-zero exit (blank window) fails the step;
+        # tee alone would mask it.
+        run: |
+          set -o pipefail
+          npx tsx harness/render-probe.ts "${GITHUB_WORKSPACE}/src-tauri/target/debug/aiterm" debug | tee /tmp/debug.txt
 
       - name: Build RELEASE binary
         run: npx tauri build --no-bundle
       - name: Probe RELEASE render
         working-directory: tests/e2e
-        run: npx tsx harness/render-probe.ts "${GITHUB_WORKSPACE}/src-tauri/target/release/aiterm" release | tee /tmp/release.txt
+        run: |
+          set -o pipefail
+          npx tsx harness/render-probe.ts "${GITHUB_WORKSPACE}/src-tauri/target/release/aiterm" release | tee /tmp/release.txt
 
       - name: Summary
         if: always()

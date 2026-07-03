@@ -56,6 +56,26 @@ function distinctColorsInCentre(bmp: Buffer, sampleFrac = 0.4, step = 7): number
 }
 
 /**
+ * Poll `checkRendered` until the window paints (distinctColors ≥ minColors) or
+ * `timeoutMs` elapses. Debug builds paint slowly, so a single fixed-delay shot
+ * is timing-flaky — this retries until a real frame lands. Returns the last
+ * check either way; a CaptureUnavailableError propagates immediately.
+ */
+export async function waitForRender(
+  minColors = 12,
+  timeoutMs = 25_000,
+  intervalMs = 1000,
+): Promise<RenderCheck> {
+  const start = Date.now();
+  let last = checkRendered(minColors);
+  while (!last.rendered && Date.now() - start < timeoutMs) {
+    await new Promise((r) => setTimeout(r, intervalMs));
+    last = checkRendered(minColors);
+  }
+  return last;
+}
+
+/**
  * Capture the primary display and assert the centred app window rendered
  * something. `minColors` default 12: a blank window is 1–2; the maiTerm UI
  * (title bar, sidebar, terminal, prompt) is far more.

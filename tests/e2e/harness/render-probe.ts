@@ -7,7 +7,7 @@
  *   → RENDER_RESULT label=<label> distinctColors=<n> rendered=<bool>
  */
 import { spawnMaiterm } from './spawn.ts';
-import { checkRendered, CaptureUnavailableError } from './render-check.ts';
+import { waitForRender, CaptureUnavailableError } from './render-check.ts';
 
 const binary = process.argv[2];
 const label = process.argv[3] ?? 'unlabeled';
@@ -22,9 +22,9 @@ if (process.env.MAITERM_ENABLE_WEBVIEW_LOG) {
   passEnv.MAITERM_ENABLE_WEBVIEW_LOG = process.env.MAITERM_ENABLE_WEBVIEW_LOG;
 }
 const handle = await spawnMaiterm({ binary, timeoutMs: 90_000, env: passEnv });
-await new Promise((r) => setTimeout(r, 6000));
+await new Promise((r) => setTimeout(r, 3000));
 try {
-  const res = checkRendered();
+  const res = await waitForRender();
   console.log(
     `RENDER_RESULT label=${label} distinctColors=${res.distinctColors} rendered=${res.rendered}`,
   );

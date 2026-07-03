@@ -11,7 +11,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { spawnMaiterm, type MaitermHandle } from './harness/spawn.ts';
-import { checkRendered, CaptureUnavailableError } from './harness/render-check.ts';
+import { waitForRender, CaptureUnavailableError } from './harness/render-check.ts';
 
 const BIN = process.env.MAITERM_BINARY;
 const RUN = !!BIN && !!process.env.CI;
@@ -23,18 +23,18 @@ const RUN = !!BIN && !!process.env.CI;
     // Plain visible spawn (CI-only) — a render check needs real paint.
     // Hermetic HOME so it doesn't touch the runner's profile.
     handle = await spawnMaiterm({ binary: BIN!, timeoutMs: 90_000 });
-    // Give the Svelte shell time to mount + paint the first frame.
-    await new Promise((r) => setTimeout(r, 6000));
+    // Let the shell start mounting before the polling render check begins.
+    await new Promise((r) => setTimeout(r, 3000));
   }, 120_000);
 
   afterAll(async () => {
     if (handle) await handle.kill();
   });
 
-  it('renders a non-blank window (not a white screen)', () => {
+  it('renders a non-blank window (not a white screen)', async () => {
     let result;
     try {
-      result = checkRendered();
+      result = await waitForRender();
     } catch (err) {
       if (err instanceof CaptureUnavailableError) {
         // No Screen Recording grant on this runner — can't judge; don't
