@@ -45,17 +45,6 @@ export interface RailItem {
   executionContext: 'host' | 'container' | null;
 }
 
-/**
- * Which execution context the tab itself is in, inferred from its cwd: a
- * devcontainer mounts the repo at `/workspaces/…`, so that path prefix means
- * the tab is a container shell; anything else is the host. The rail shows
- * tasks matching the tab's context — host tab → host tasks, container tab →
- * container tasks (a task with no derived context shows in both).
- */
-function tabContextOf(cwd: string): 'host' | 'container' {
-  return /(^|\/)workspaces(\/|$)/.test(cwd) ? 'container' : 'host';
-}
-
 export interface RailSection {
   provider: RailProvider;
   /** Repo root the marker resolved to (the provider's `--dir`). */
@@ -86,7 +75,6 @@ function createHotbarStore() {
     }
 
     loading = true;
-    const tabContext = tabContextOf(dir);
     try {
       const found = await findMarkersUpward(dir, MARKERS);
       const next: RailSection[] = [];
@@ -108,15 +96,16 @@ function createHotbarStore() {
             const report = JSON.parse(res.stdout) as {
               tasks?: Array<{ label: string; presentation?: { group?: string }; executionContext?: 'host' | 'container' }>;
             };
-            section.items = (report.tasks ?? [])
-              // Show tasks matching the tab's context; a task with no derived
-              // context (null) is context-agnostic → shows in both.
-              .filter((t) => t.executionContext == null || t.executionContext === tabContext)
-              .map((t) => ({
-                label: t.label,
-                group: t.presentation?.group ?? null,
-                executionContext: t.executionContext ?? null,
-              }));
+            // Show ALL tasks — the task's declared context decides where it
+            // RUNS when fired (the launcher wraps container tasks in
+            // devcontainer exec, runs host tasks on the host), not whether it
+            // appears. So everything is triggerable from anywhere with a task
+            // list; the badge just tells you where it'll land.
+            section.items = (report.tasks ?? []).map((t) => ({
+              label: t.label,
+              group: t.presentation?.group ?? null,
+              executionContext: t.executionContext ?? null,
+            }));
           }
         } catch (e) {
           section.error = e instanceof Error ? e.message : String(e);
