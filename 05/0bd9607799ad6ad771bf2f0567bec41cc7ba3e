@@ -1,0 +1,24 @@
+src-tauri/src/commands/rail.rs
+  s_ad2f963c4afad3::t_c4f0cbc89959bb 72-76,80-84,91,93-107
+src/lib/stores/hotbar.svelte.ts
+  s_ad2f963c4afad3::t_85cc334650905f 90-91
+  s_ad2f963c4afad3::t_56dfc3f6d9a870 131
+src/lib/tauri/commands.ts
+  s_ad2f963c4afad3::t_b8922837cc3143 828-830,836,838-844
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "050bd9607799ad6ad771bf2f0567bec41cc7ba3e",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
