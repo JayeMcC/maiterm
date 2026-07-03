@@ -1,0 +1,22 @@
+tests/utils/mem0-recall.test.ts
+  s_356dd0b6dcdade::t_38f1015d0fc47c 1,7-22
+  s_356dd0b6dcdade::t_a503398ed9d29d 79-82,86
+  s_356dd0b6dcdade::t_cb98f8aa637ebe 134-142
+  s_356dd0b6dcdade::t_9b7a80730de7e4 23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "d534f1784bfbde0731964277b2adddf386fd5da7",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
