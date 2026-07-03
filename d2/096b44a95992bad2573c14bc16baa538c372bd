@@ -1,0 +1,23 @@
+tests/utils/mechanical-files.test.ts
+  s_356dd0b6dcdade::t_f614891d21cc9a 1-102
+src/config/constants.ts
+  s_356dd0b6dcdade::t_8299fcc0bb7f6d 101-120
+src/utils/mechanical-files.ts
+  s_356dd0b6dcdade::t_970aa00dd5da2d 1-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "d2096b44a95992bad2573c14bc16baa538c372bd",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

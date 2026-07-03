@@ -1,0 +1,22 @@
+specs/feature/PLAN-15__maiterm-hotbar/tasks.md
+  s_ad2f963c4afad3::t_3384af27840051 69
+  s_ad2f963c4afad3::t_868e18468bef2a 67
+linked-tools/repos/forwood-one/.vscode/scripts/tasks/open-browser-root-dev.sh
+  s_ad2f963c4afad3::t_ee407a320dc4d9 88-96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "fa0987e50d72e662c53474a3e7589ba4119e853d",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

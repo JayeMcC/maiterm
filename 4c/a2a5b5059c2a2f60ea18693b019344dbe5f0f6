@@ -1,0 +1,21 @@
+specs/feature/PLAN-15__maiterm-hotbar/tasks.md
+  s_ad2f963c4afad3::t_3a85790b22ea8a 54
+linked-tools/repos/forwood-one/.vscode/scripts/tasks/require-devcontainer.sh
+  s_ad2f963c4afad3::t_c7b8239757c449 2-8,10-26,29-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "4ca2a5b5059c2a2f60ea18693b019344dbe5f0f6",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

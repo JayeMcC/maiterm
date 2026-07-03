@@ -1,0 +1,21 @@
+src/discovery-loop/runner.ts
+  s_356dd0b6dcdade::t_f5fb3f80993bf3 65,72-87,238-250
+tests/discovery-loop/runner.test.ts
+  s_356dd0b6dcdade::t_053d941b8dd801 373-402
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "37f917d3c905606f905ba2bdf06ccda638fbaae1",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

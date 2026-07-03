@@ -1,0 +1,65 @@
+src/nodes/review-write-readalong.ts
+  s_356dd0b6dcdade::t_424c61ccaaf96a 2-3,5-8,10-16,18-20,22-28,31-34,47-53,59,61-64,67,81,86-91,94-96,99,102-113,118-124,127,130-143,164,168-170,176-188,190,192,200
+  s_d68799056db508::t_715ad253267530 46
+  s_d68799056db508::t_927ec93e24aab6 98,100-101,114-117
+  s_356dd0b6dcdade::t_824d62bc847392 54
+  s_356dd0b6dcdade::t_3f8612731953c9 144-161
+  s_356dd0b6dcdade::t_adc41d809ea359 97,162-163
+src/llm/types.ts
+  s_356dd0b6dcdade::t_c41a39a9f83ca3 4-15
+src/llm/index.ts
+  s_356dd0b6dcdade::t_b7b26077283de6 101-117,119-127
+  s_356dd0b6dcdade::t_766ac89849d41c 188-191
+tests/graph/review-e2e-integration.test.ts
+  s_356dd0b6dcdade::t_29e0ec0073df8d 327-329,335-348
+  s_356dd0b6dcdade::t_7d37bf07451249 349,545-548
+src/nodes/review-manifest-pre-pass.ts
+  s_356dd0b6dcdade::t_48f23ff0d5995a 151-171
+src/nodes/review-analyse-doc.ts
+  s_356dd0b6dcdade::t_6f24b4dfa49452 103-109,115-130,132-133,135-157
+  s_356dd0b6dcdade::t_71098f6fa67034 31,33,39-45
+  s_356dd0b6dcdade::t_37f564531dd16e 281-283
+  s_356dd0b6dcdade::t_1ca1ef5beca40f 244-245
+src/utils/analyse-doc-llm.ts
+  s_356dd0b6dcdade::t_407265707a8229 16
+  s_356dd0b6dcdade::t_f5089c4e287d82 786-795
+  s_356dd0b6dcdade::t_881e01adac45be 998-1001
+  s_356dd0b6dcdade::t_dc7b9923d1bb96 938,940-947
+  s_356dd0b6dcdade::t_2551f7ac2731b1 877-882
+src/review/contracts.ts
+  s_356dd0b6dcdade::t_4da638269cc8b6 168-181
+src/utils/file-digest.ts
+  s_356dd0b6dcdade::t_809e47f018b7e7 28
+  s_356dd0b6dcdade::t_0c21b2d720f72c 99-106
+tests/utils/build-frontmatter.test.ts
+  s_356dd0b6dcdade::t_7c3c172012e656 18-20,73-85
+  s_356dd0b6dcdade::t_b268683c4c9e57 86-88
+src/utils/build-frontmatter.ts
+  s_356dd0b6dcdade::t_f1ea1205b3e439 93,97-107
+  s_356dd0b6dcdade::t_d2e4e3267c178b 42-48
+  s_356dd0b6dcdade::t_f63416c7ef113a 108-109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "c76f25a8ae390abd048dbb10efde609f7c55d961",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_d68799056db508": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "647c6832-5706-45ac-929e-c54d4f67a87f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

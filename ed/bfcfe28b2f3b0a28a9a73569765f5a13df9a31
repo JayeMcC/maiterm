@@ -1,0 +1,27 @@
+src/llm/providers/spawn.ts
+  s_37bc688fcf5888::t_ca0a199d83a888 110
+  s_37bc688fcf5888::t_f7a7f84f611134 47-48
+  s_37bc688fcf5888::t_8fd4f5a9be22c1 12
+src/fleet/graceful-shutdown.ts
+  s_37bc688fcf5888::t_8d9911cb73ecf7 69,77
+  s_37bc688fcf5888::t_9b4253a9d43698 40-52
+tests/fleet/abort.test.ts
+  s_37bc688fcf5888::t_af7b0ff8c76240 87-107
+  s_37bc688fcf5888::t_5ea848aafc76d0 1-86,108-124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "edbfcfe28b2f3b0a28a9a73569765f5a13df9a31",
+  "prompts": {},
+  "sessions": {
+    "s_37bc688fcf5888": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98b6ac43-466f-4147-aee9-8502cc685c9f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

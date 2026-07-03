@@ -1,0 +1,25 @@
+skill-library/local-dev/maiterm-push/SKILL.md
+  s_ad2f963c4afad3::t_b8776c59836da6 1-68
+linked-tools/core/.agents/commands/maiterm-push.md
+  s_ad2f963c4afad3::t_8f3c96c900625c 1-7
+.agents/skills/maiterm-push
+  s_ad2f963c4afad3::t_19cded30aafc2b 1
+linked-tools/core/.agents/skills/maiterm-push/SKILL.md
+  s_ad2f963c4afad3::t_0e7427c6c1219b 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "aa5dfe7b71106dd62dc218d6983a37a361845720",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+tests/review/triage-records.test.ts
+  s_356dd0b6dcdade::t_949f7e9fe1c5b9 1-52
+src/review/triage-records.ts
+  s_356dd0b6dcdade::t_4870f4f75a3a24 1-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "b3320b7778b68ebf3aebec09d6f5dc3a2b6a3600",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

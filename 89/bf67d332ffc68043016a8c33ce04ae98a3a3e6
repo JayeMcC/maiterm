@@ -1,0 +1,21 @@
+specs/feature/PLAN-15__maiterm-hotbar/quickstart.md
+  s_ad2f963c4afad3::t_66bbb55300cca8 51-57
+specs/feature/PLAN-15__maiterm-hotbar/tasks.md
+  s_ad2f963c4afad3::t_a9fa873e739077 87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "89bf67d332ffc68043016a8c33ce04ae98a3a3e6",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

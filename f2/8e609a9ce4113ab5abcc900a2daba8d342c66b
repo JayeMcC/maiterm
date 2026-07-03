@@ -1,0 +1,22 @@
+specs/feature/TOOL-07__fix-pr-automation/spec.md
+  s_356dd0b6dcdade::t_e62d0b8ee74886 1-143
+  s_356dd0b6dcdade::t_c719e283e7fae4 144-148
+specs/feature/TOOL-07__fix-pr-automation/spec-changelog.md
+  s_356dd0b6dcdade::t_e274ea876ac009 1-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "f28e609a9ce4113ab5abcc900a2daba8d342c66b",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

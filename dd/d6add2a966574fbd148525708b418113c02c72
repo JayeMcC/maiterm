@@ -1,0 +1,21 @@
+src/fleet/run-identity.ts
+  s_37bc688fcf5888::t_e7d9032b21fba8 1-57
+tests/fleet/run-identity.test.ts
+  s_37bc688fcf5888::t_d068c66134cca4 1-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "ddd6add2a966574fbd148525708b418113c02c72",
+  "prompts": {},
+  "sessions": {
+    "s_37bc688fcf5888": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98b6ac43-466f-4147-aee9-8502cc685c9f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

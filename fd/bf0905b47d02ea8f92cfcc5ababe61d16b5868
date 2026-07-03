@@ -1,0 +1,21 @@
+src/nodes/review-manifest-pre-pass.ts
+  s_356dd0b6dcdade::t_63a8fc28fe95bb 48
+src/nodes/review-write-readalong.ts
+  s_356dd0b6dcdade::t_b1b88484b0f8a3 59-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "fdbf0905b47d02ea8f92cfcc5ababe61d16b5868",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

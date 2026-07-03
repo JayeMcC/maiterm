@@ -1,0 +1,33 @@
+linked-tools/repos/forwood-one/.vscode/tasks.json
+  s_ad2f963c4afad3::t_e6ebe4f866f913 87
+  s_ad2f963c4afad3::t_760c09af8bf476 325
+  s_ad2f963c4afad3::t_38bb873ecea8ef 354
+  s_ad2f963c4afad3::t_c3f740758694f3 152
+  s_ad2f963c4afad3::t_58c67f435a9dfa 369
+  s_ad2f963c4afad3::t_cd506936884beb 137
+  s_ad2f963c4afad3::t_c9bf294f8592b3 106
+  s_ad2f963c4afad3::t_595896f9b6db02 72
+  s_ad2f963c4afad3::t_73042d52cfaaaf 121
+  s_ad2f963c4afad3::t_c2dd232725f5bb 57
+  s_ad2f963c4afad3::t_666b2d6ec4dd93 310
+  s_ad2f963c4afad3::t_ce42c1595a34ac 276
+  s_ad2f963c4afad3::t_d8746c89d58750 262
+  s_ad2f963c4afad3::t_9bb52f23bca267 290
+  s_ad2f963c4afad3::t_0036e93a300fb4 171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "b961645f0a3c95f53f8bb5f5beb3b5065e584913",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

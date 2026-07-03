@@ -1,0 +1,21 @@
+src/hub/ingest/otlp-receiver.ts
+  s_37bc688fcf5888::t_8ed97779d05d78 1-101
+tests/hub/otlp-receiver.test.ts
+  s_37bc688fcf5888::t_17ef53b6a8f455 1-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "9c1f860d47d9d6b91d6608115c22176acf574b80",
+  "prompts": {},
+  "sessions": {
+    "s_37bc688fcf5888": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98b6ac43-466f-4147-aee9-8502cc685c9f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,43 @@
+docs/adr/0032-provider-agnostic-model-tiers.md
+  s_356dd0b6dcdade::t_1245ee80689935 1-28
+specs/feature/TOOL-06__digest-context-tiering/research.md
+  s_356dd0b6dcdade::t_cd8db1c5b172bc 1-119
+specs/feature/TOOL-06__digest-context-tiering/spec.md
+  s_356dd0b6dcdade::t_b9abd741272b4a 1-302
+specs/feature/TOOL-06__digest-context-tiering/data-model.md
+  s_356dd0b6dcdade::t_e06021d83c3a71 1-115
+specs/feature/TOOL-06__digest-context-tiering/quickstart.md
+  s_356dd0b6dcdade::t_6f7c873259e2d1 1-84
+docs/adr/0031-digest-based-context-tiering.md
+  s_356dd0b6dcdade::t_1f8af80b8a651e 1-54
+specs/feature/TOOL-06__digest-context-tiering/tasks.md
+  s_356dd0b6dcdade::t_c2b0f87fb7f712 57
+  s_356dd0b6dcdade::t_27153e64c43507 184
+  s_356dd0b6dcdade::t_e88356d283aa35 1-56,58-59,61-74,76,78-183
+  s_356dd0b6dcdade::t_470871b6a918c7 75,77
+  s_356dd0b6dcdade::t_82ae8060ae842e 60
+specs/feature/TOOL-06__digest-context-tiering/baseline-metrics.md
+  s_356dd0b6dcdade::t_254ff3a0f7d8b3 1-42
+specs/feature/TOOL-06__digest-context-tiering/spec-changelog.md
+  s_356dd0b6dcdade::t_36d122b0d107bd 1-14
+specs/feature/TOOL-06__digest-context-tiering/checklists/requirements.md
+  s_356dd0b6dcdade::t_df013f5dfa9e98 1-42
+specs/feature/TOOL-06__digest-context-tiering/plan.md
+  s_356dd0b6dcdade::t_b007008c2555e1 1-147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "ac01083bfb85232bec8814e1f6f5605b048a3cf6",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

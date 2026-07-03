@@ -1,0 +1,27 @@
+tests/hub/db.test.ts
+  s_37bc688fcf5888::t_3b35bc61a9263c 1-269
+src/hub/config/model-prices.ts
+  s_37bc688fcf5888::t_db3b347069ad3d 1-25
+src/hub/config/phase-profiles.ts
+  s_37bc688fcf5888::t_bf4d658bee5031 1-31
+src/hub/db/dao.ts
+  s_37bc688fcf5888::t_0f7932804648e8 1-324
+src/hub/db/schema.ts
+  s_37bc688fcf5888::t_c583c987a5b758 1-130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "efb00e9e7968c76a2f0bbd6ecb79be5265b37972",
+  "prompts": {},
+  "sessions": {
+    "s_37bc688fcf5888": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98b6ac43-466f-4147-aee9-8502cc685c9f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
