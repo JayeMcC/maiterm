@@ -1,0 +1,50 @@
+tests/utils/classify-adequate-coverage.test.ts
+  s_2882d72424ca24::t_a1bddcba4360cf 1-104,106-116,123,151-158,161-162,164-193
+  s_2882d72424ca24::t_c98947d0a7fe49 127,132-135,139-150
+  s_2882d72424ca24::t_0571550505f77a 105
+  s_2882d72424ca24::t_02ba39aa5d5116 117-122,124-126,128-131,136-138
+  s_2882d72424ca24::t_f93e9cebb19b64 159-160,163
+tests/nodes/review-compose-tests-pass-isolation.test.ts
+  s_2882d72424ca24::t_bc680bf98f60bb 118-123
+src/nodes/review-compose-comment.ts
+  s_2882d72424ca24::t_5a847df63beabe 581-587,589,591-593,600
+  s_2882d72424ca24::t_5f34593edaa863 913
+  s_2882d72424ca24::t_678d5abfee31b4 1341
+  s_2882d72424ca24::t_6276eb10a1f9ea 1353,1359,1366
+  s_2882d72424ca24::t_54d23adc297c4a 62-65
+  s_2882d72424ca24::t_8080a7b2414bae 540-548
+  s_2882d72424ca24::t_059955ef33238b 677
+  s_2882d72424ca24::t_2c299c94bfb255 180-182
+  s_2882d72424ca24::t_a578176bffe78b 1604
+  s_2882d72424ca24::t_a5e6db9731bd10 183-189
+  s_2882d72424ca24::t_788acb2d22792a 590
+  s_2882d72424ca24::t_0165e5580eaf90 588
+  s_2882d72424ca24::t_fe18e07d2f8ea0 1530,1545-1549,1553,1561
+src/utils/classify-adequate-coverage.ts
+  s_2882d72424ca24::t_a5cf9172d55fa3 172-174,182-186,201-209,216
+  s_2882d72424ca24::t_efd8a923bc05bd 36-46
+  s_2882d72424ca24::t_f0f1d08e230768 1-35,47-171,175-181,187-200,210-215,217-241
+tests/nodes/review-compose-subclaims.test.ts
+  s_2882d72424ca24::t_d90d741a37d3bb 136-140,142
+  s_2882d72424ca24::t_5df32c07f7994a 144,181,342
+tests/nodes/review-compose-reconcile.test.ts
+  s_2882d72424ca24::t_5df32c07f7994a 139,145,148,150
+tests/nodes/review-compose-format.test.ts
+  s_2882d72424ca24::t_5df32c07f7994a 124-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "3a1236663f47f956c87950d73d95d1ec61637668",
+  "prompts": {},
+  "sessions": {
+    "s_2882d72424ca24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "43e76dc3-bd21-4ee0-8002-4768725865e0",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

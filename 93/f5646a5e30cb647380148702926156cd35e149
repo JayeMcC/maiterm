@@ -1,0 +1,107 @@
+archived/wave-md-view/README.md
+  s_43dee496f7ad7b::t_60e92612a11f8e 1-31
+scripts/terminal/tmux-workspaces/tmux.conf
+  s_794eb1918b8f1f::t_842e5c5ae98c87 25-26
+  s_794eb1918b8f1f::t_b5dc641dc44e54 37
+  s_794eb1918b8f1f::t_9f90e5fa9a42f8 45-46
+  s_4b677405fcf0b3::t_9bcaa0fd933c5d 10-15
+archived/wave-terminal/README.md
+  s_43dee496f7ad7b::t_95a181c6a464f6 1-18,20,23,32
+  s_43dee496f7ad7b::t_b6eecc61d3f569 19,21-22,24-31,33-34
+archived/wave-md-view/scripts/md-server/.gitignore
+  s_43dee496f7ad7b::t_909847c82ff8aa 1-2
+archived/wave-md-view/scripts/md-server/package.json
+  s_43dee496f7ad7b::t_fe43c81111a2b7 1-14
+archived/wave-md-view/scripts/md-server/start.sh
+  s_43dee496f7ad7b::t_422d8164fd5a8a 1-43
+archived/wave-md-view/scripts/md-view
+  s_43dee496f7ad7b::t_0516dbf0b7a6fa 1-55
+archived/wave-md-view/skill/JOBS.md
+  s_43dee496f7ad7b::t_4046a2c735cf78 1-4
+archived/wave-md-view/skill/SKILL.md
+  s_43dee496f7ad7b::t_a4e7a70414c1e7 1-179
+archived/wave-md-view/wave-md-view-default.md
+  s_43dee496f7ad7b::t_c062303661a397 1-68
+archived/wave-terminal/wave/bin/wave-devc-shell
+  s_99dc823096f0e5::t_6ddff1b6fdfc3d 1-35
+archived/wave-terminal/wave/bin/wave-devc-tmux
+  s_4b677405fcf0b3::t_8ae4d959787681 1-60
+archived/wave-terminal/wave/bin/wave-rpc
+  s_01507068621dd6::t_ec3780e23df066 41-46
+archived/wave-terminal/wave/bin/wave-running
+  s_1daa06c0b7c6d9::t_7d0495272291ac 1-100
+archived/wave-terminal/wave/config/widgets.json
+  s_4b677405fcf0b3::t_9ce1f83b6eaff9 1-44
+archived/wave-terminal/wave/layouts/devcontainers.json
+  s_82312589c4187d::t_84b4a1c5b2fd62 1-19
+archived/wave-terminal/wave/layouts/developing.json
+  s_4b677405fcf0b3::t_e88ca52fb5c4dc 1-27
+archived/wave-terminal/wave/layouts/experimenting.json
+  s_4b677405fcf0b3::t_af76e979c4e899 1-27
+archived/wave-terminal/wave/layouts/reviewing.json
+  s_4b677405fcf0b3::t_828da6947ce207 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "93f5646a5e30cb647380148702926156cd35e149",
+  "prompts": {},
+  "sessions": {
+    "s_01507068621dd6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fab55de1-f214-41da-8c78-e58af516c3aa",
+        "model": "unknown"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_1daa06c0b7c6d9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a3ba88bf-1c22-4c0a-a218-13f85a3fc10b",
+        "model": "unknown"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_43dee496f7ad7b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1044ba60-4f0d-4229-aecc-09215f62eee6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_4b677405fcf0b3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5ab6c7b5-dc37-4c81-a74d-f4c0cf53e6dd",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_794eb1918b8f1f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5bb2cf26-a6dc-4f12-9ccd-f08ea2d48fcd",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_82312589c4187d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "71559c86-5ae6-4701-a73b-7a4c0104c97d",
+        "model": "unknown"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_99dc823096f0e5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4a9a0006-85ce-4e8e-8f22-d37db40aa416",
+        "model": "unknown"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

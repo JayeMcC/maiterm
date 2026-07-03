@@ -1,0 +1,26 @@
+scripts/personal-tooling-sync/helpers/sync/engine/tools-env-into-main.mjs
+  s_36596460844258::t_c9498b4f136776 4-6,12,28-58
+scripts/personal-tooling-sync/helpers/sync/engine/ignores.mjs
+  s_36596460844258::t_bfda1f58c58e43 8-10,15,21-42,45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "0a7d4038002e90aad2526f3e2049be0b7515f892",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_36596460844258": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3c5863b9-4d11-4308-be03-ba64880f2ef9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

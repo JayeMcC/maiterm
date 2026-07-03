@@ -1,0 +1,27 @@
+package.json
+  s_10b069ebcfad9c::t_c5f68da88402ce 55
+src/behaviors/generic/wrapped-click.ts
+  s_10b069ebcfad9c::t_282c2028bf3375 1-194
+tests/behaviors/wrapped-click.test.ts
+  s_10b069ebcfad9c::t_12d8b575d5fce1 1-251
+src/behaviors/generic/errors.ts
+  s_10b069ebcfad9c::t_cb8493f02b097d 1-42
+pnpm-lock.yaml
+  s_10b069ebcfad9c::t_2080bfa3071cf8 51-53,425-429,878-882,1152-1161,1683-1686,2108-2110,2350-2357
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "0eed78191cf01aeeede435e17797f10663d267a4",
+  "prompts": {},
+  "sessions": {
+    "s_10b069ebcfad9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a534af91-48df-4e47-9019-e2d3a4b4cfd9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+tests/utils/author-cli-evidence-guard.test.ts
+  s_15b80792f12d41::t_eac403be859e46 311-342
+src/utils/author-cli-evidence.ts
+  s_15b80792f12d41::t_2703e7256ee11c 920,924-957
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "8fee2d6be8b8c9e77493393b413cca8c6a9732e0",
+  "prompts": {},
+  "sessions": {
+    "s_15b80792f12d41": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7a8edb5-f6d8-4a6b-b255-010bdfa18f85",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

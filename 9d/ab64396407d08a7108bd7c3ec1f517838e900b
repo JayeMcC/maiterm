@@ -1,0 +1,19 @@
+src/utils/compose-test-nuance.ts
+  s_375e7f88918ce6::t_a9624bdbfc830a 120-166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "9dab64396407d08a7108bd7c3ec1f517838e900b",
+  "prompts": {},
+  "sessions": {
+    "s_375e7f88918ce6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f938b24-227f-44ba-ba49-0b22b04477c1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

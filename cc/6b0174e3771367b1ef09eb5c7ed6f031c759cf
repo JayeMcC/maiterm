@@ -1,0 +1,21 @@
+.agents/rules/10-project/verdict-column-semantics.md
+  s_15b80792f12d41::t_772a3ad819da03 156-161
+src/nodes/e2e-walk-for-ac.ts
+  s_15b80792f12d41::t_cadb8e4ba07290 404-416,418-456
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "cc6b0174e3771367b1ef09eb5c7ed6f031c759cf",
+  "prompts": {},
+  "sessions": {
+    "s_15b80792f12d41": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7a8edb5-f6d8-4a6b-b255-010bdfa18f85",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

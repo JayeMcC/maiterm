@@ -1,0 +1,43 @@
+tests/utils/validate-probe-shape.test.ts
+  s_10d7e958b8b364::t_fad1dd346c6a1c 1-50,85-214
+  s_10d7e958b8b364::t_2a782b590d89d8 51-84
+src/utils/validate-probe-shape.ts
+  s_10d7e958b8b364::t_36a953e555a285 242-244,246
+  s_10d7e958b8b364::t_3c980107609861 15-18
+  s_10d7e958b8b364::t_d002b1692c610c 1-14,19-56,62-75,77-104,138-172,180-241,245,247-269
+  s_10d7e958b8b364::t_ed050f25bbd921 57-61
+  s_10d7e958b8b364::t_506fc7dad9ce8a 76
+  s_10d7e958b8b364::t_0037d95f932f31 105-137,173-179
+tests/utils/validate-probe-grounding.test.ts
+  s_10d7e958b8b364::t_696d41c58cb4b3 1-219
+tests/utils/probe-dev-web.test.ts
+  s_375e7f88918ce6::t_85890d33b2a0cb 1-164
+src/utils/probe-dev-web.ts
+  s_375e7f88918ce6::t_7b70ae2b35146d 1-187
+src/utils/validate-probe-grounding.ts
+  s_10d7e958b8b364::t_701ec557163de4 1-158
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "22eaf723d3d56286098ba32e739574e016bfec70",
+  "prompts": {},
+  "sessions": {
+    "s_10d7e958b8b364": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46384a65-2676-4658-b4d1-9722428b95fa",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_375e7f88918ce6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f938b24-227f-44ba-ba49-0b22b04477c1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

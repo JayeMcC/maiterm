@@ -1,0 +1,19 @@
+scripts/cursor-agent-interceptor/interceptor.js
+  s_97977c05ed22dc::t_83bb1c031a0175 9-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "39f980205e95ec19dc907104d7f2f85cba3c5910",
+  "prompts": {},
+  "sessions": {
+    "s_97977c05ed22dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c2fbd296-0e4f-488c-9b7b-a7b135fb5e27",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

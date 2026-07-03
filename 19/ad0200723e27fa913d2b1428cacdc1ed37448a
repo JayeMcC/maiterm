@@ -1,0 +1,41 @@
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/20-workflow/playwright-ticket-red-mode.mdc
+  s_f8c3644c396f55::t_533a1e0e0c42dc 1-50
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/10-project/red-test-screenshot-and-link.mdc
+  s_f8c3644c396f55::t_13d98324ebb5d5 9-10
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/00-governance/e2e-red-playwright-cli-before-edit.mdc
+  s_f8c3644c396f55::t_13d98324ebb5d5 5-6
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/10-project/main-app-data-testid-policy.md
+  s_f8c3644c396f55::t_e2033eeab8421c 18-19
+  s_f8c3644c396f55::t_13d98324ebb5d5 11-12
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/20-workflow/harness-violation-patch-not-promise.mdc
+  s_f8c3644c396f55::t_533a1e0e0c42dc 1-16
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/10-project/no-e2e-soft-skip.mdc
+  s_f8c3644c396f55::t_13d98324ebb5d5 5-6
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/20-workflow/playwright-e2e-failure-troubleshooting.md
+  s_f8c3644c396f55::t_533a1e0e0c42dc 1-113
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/00-governance/spec-failure-playwright-cli-headed-persistent-proof.mdc
+  s_f8c3644c396f55::t_13d98324ebb5d5 5-6
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/10-project/test-id-reference-card-main-app-policy.md
+  s_f8c3644c396f55::t_e2033eeab8421c 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "19ad0200723e27fa913d2b1428cacdc1ed37448a",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_f8c3644c396f55": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "775a13ea-5412-4c2b-8c85-be03290cfbf2",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

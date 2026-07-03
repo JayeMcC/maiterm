@@ -1,0 +1,19 @@
+src/graph/ac-inner-loop.ts
+  ai_agent 107,189,227
+src/nodes/pick-ac.ts
+  ai_agent 41
+src/graph/edges.ts
+  ai_agent 26,38,52,175-176,181,187-190,194-195,204-205
+src/nodes/e2e-diagnose.ts
+  ai_agent 6-7,205-207
+src/nodes/e2e-run-specs.ts
+  ai_agent 52,96
+src/nodes/e2e-flake-check.ts
+  ai_agent 3,5,8-9,11,37-38,123-124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "9318026a8805c2db505b8404f99fcadf45c06105",
+  "prompts": {}
+}

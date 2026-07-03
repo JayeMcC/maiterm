@@ -1,0 +1,37 @@
+CONTEXT.md
+  s_3c5806474896bb::t_93a6a7c8cef7f9 539-546
+  s_3c5806474896bb::t_94b1699be21fab 503-509,516-538,554-555
+  s_ec41e3361fd247::t_0f4ec73b9dc047 557-592
+  s_ec41e3361fd247::t_261ca57641e1a0 406-410
+  s_3c5806474896bb::t_c4f9d4ae9579c1 547-553
+  s_ec41e3361fd247::t_ed3033a447e94c 510-512
+  s_3c5806474896bb::t_ece9c4b61f668a 500-502
+  s_ec41e3361fd247::t_f7f678396843ed 593
+  s_ec41e3361fd247::t_cf18bb1c532763 556
+docs/adr/0022-walk-is-the-review-engine.md
+  s_ec41e3361fd247::t_72d14ad825df20 1-8,12-231
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "891567952733ab9338b6755d7106f894b387e56d",
+  "prompts": {},
+  "sessions": {
+    "s_3c5806474896bb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "69eadc33-1c30-4f4c-85ba-c689c72fafcb",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_ec41e3361fd247": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46706c9c-5e98-4950-9b5a-9d3c8f043b7c",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

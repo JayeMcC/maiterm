@@ -1,0 +1,32 @@
+src/compose-flow/llm-call.ts
+  s_10b069ebcfad9c::t_33d00370798503 1-102
+src/compose-flow/index.ts
+  s_10b069ebcfad9c::t_8e403a8165602f 103-122
+  s_10b069ebcfad9c::t_223f8cdcfe41a7 26-28
+tests/compose-flow/llm-stages.test.ts
+  s_10b069ebcfad9c::t_a27604128f8b7f 95
+  s_10b069ebcfad9c::t_4055d07b708ca1 74,79
+  s_10b069ebcfad9c::t_73c688813e4b05 1-73,75-78,80-94,96-214
+src/compose-flow/stage3-factor.ts
+  s_10b069ebcfad9c::t_7a10c91ccb64c2 1-75
+src/compose-flow/stage1-segment.ts
+  s_10b069ebcfad9c::t_610b35585a9f15 1-86
+src/compose-flow/stage4-author.ts
+  s_10b069ebcfad9c::t_008b223445b60f 1-168
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "bbdc1da81b438ee7490cd6c08c9d7400cea92107",
+  "prompts": {},
+  "sessions": {
+    "s_10b069ebcfad9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a534af91-48df-4e47-9019-e2d3a4b4cfd9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,39 @@
+tests/utils/load-per-file-diff-context.test.ts
+  s_d9071b20c4f57b::t_a4f94e22e8dc03 1-75
+tests/nodes/review-run-generated-test.test.ts
+  s_d9071b20c4f57b::t_a4f94e22e8dc03 1-104
+tests/nodes/review-dispatch-seed-entities.test.ts
+  s_d9071b20c4f57b::t_a4f94e22e8dc03 24,32-38,42,85-86,92-93,95
+tests/nodes/review-dispatch-ui-fallback.test.ts
+  s_d9071b20c4f57b::t_a4f94e22e8dc03 26-36,40,77-78,83-84
+tests/graph/review-e2e-integration.test.ts
+  s_d9071b20c4f57b::t_a4f94e22e8dc03 13-14,163-181,282-287,289-291,394,457,476,500,502-503,560,565,831-832,834-835,839-840,844-845,852,855,860
+tests/nodes/review-dispatch-only-ac.test.ts
+  s_d9071b20c4f57b::t_a4f94e22e8dc03 24-30,41,58-59,65-67,69,78,102-104
+tests/nodes/review-dispatch-source-grep.test.ts
+  s_d9071b20c4f57b::t_a4f94e22e8dc03 33-40,49,91-92,97-98,183-189
+tests/graph/review-loop.test.ts
+  s_d9071b20c4f57b::t_a4f94e22e8dc03 43-51,140,173,201-205,253-254,258-259
+tests/utils/persist-probes.test.ts
+  s_d9071b20c4f57b::t_a4f94e22e8dc03 116
+tests/helpers/verification-plan.ts
+  s_d9071b20c4f57b::t_a4f94e22e8dc03 1-27
+tests/graph/review-phase1-integration.test.ts
+  s_d9071b20c4f57b::t_a4f94e22e8dc03 132-143,151,280,311,355
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "46650c960777a95f1c61b842d190c61be78a8e0e",
+  "prompts": {},
+  "sessions": {
+    "s_d9071b20c4f57b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "33cb174e-472e-4800-a99c-0551f529065f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

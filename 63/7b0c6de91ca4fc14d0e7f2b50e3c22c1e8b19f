@@ -1,0 +1,19 @@
+package.json
+  s_ec41e3361fd247::t_b1f785ebf82b85 35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "637b0c6de91ca4fc14d0e7f2b50e3c22c1e8b19f",
+  "prompts": {},
+  "sessions": {
+    "s_ec41e3361fd247": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46706c9c-5e98-4950-9b5a-9d3c8f043b7c",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+specs/feature/TOOL-03__tests-pass-signal-isolation/spec.md
+  s_2882d72424ca24::t_744985fe060943 144-145
+  s_2882d72424ca24::t_8f9a76866a0576 1-69,71,76,82,84-85,87-88,91-96,98-104,111-114,118-143,146-159,168-178
+  s_2882d72424ca24::t_d8e3e19fd81140 70,72-75,77-81,83,86,89-90,97,105-110,115-117
+  s_2882d72424ca24::t_c82e31878bd42d 160-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "3b2d28f1eb2787c9f9d2546daf62604bc54d2e3c",
+  "prompts": {},
+  "sessions": {
+    "s_2882d72424ca24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "43e76dc3-bd21-4ee0-8002-4768725865e0",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

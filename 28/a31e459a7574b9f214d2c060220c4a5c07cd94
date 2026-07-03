@@ -1,0 +1,19 @@
+docs/adr/0022-walk-is-the-review-engine.md
+  s_3c5806474896bb::t_cbbe892b584e53 1-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "28a31e459a7574b9f214d2c060220c4a5c07cd94",
+  "prompts": {},
+  "sessions": {
+    "s_3c5806474896bb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "69eadc33-1c30-4f4c-85ba-c689c72fafcb",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+tests/utils/load-ac-context.test.ts
+  s_10d7e958b8b364::t_7cfa16da8d0a1e 1-169
+src/utils/load-ac-context.ts
+  s_10d7e958b8b364::t_168df15fb15761 1-86,88-144
+  s_10d7e958b8b364::t_3f669f650e896e 87
+tests/nodes/ac-context-footnote.test.ts
+  s_10d7e958b8b364::t_56a2ed84016f39 1-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "0d1924dac59551b01b60c12caa267bf9ab768846",
+  "prompts": {},
+  "sessions": {
+    "s_10d7e958b8b364": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46384a65-2676-4658-b4d1-9722428b95fa",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

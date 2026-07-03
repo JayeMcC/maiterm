@@ -1,0 +1,71 @@
+scripts/terminal/wave/config/presets.json
+  s_36596460844258::t_50cd5b2eb92cb6 1-15
+scripts/terminal/wave/tmux.conf
+  s_36596460844258::t_50cd5b2eb92cb6 1-26
+scripts/terminal/wave/bin/wave-mint-token
+  s_36596460844258::t_50cd5b2eb92cb6 1-148
+scripts/terminal/wave/bin/wave-spawn
+  s_99dc823096f0e5::t_7a44dbaab07be2 130-152
+  s_99dc823096f0e5::t_cf2ff49e2f080c 233
+scripts/terminal/wave/config/connections.json
+  s_36596460844258::t_50cd5b2eb92cb6 1-7
+scripts/terminal/wave/layouts/devcontainers.json
+  s_36596460844258::t_50cd5b2eb92cb6 1-12
+scripts/terminal/wave/bin/wave-rpc
+  s_36596460844258::t_50cd5b2eb92cb6 1-67
+scripts/terminal/wave/LAYOUT.md
+  s_36596460844258::t_50cd5b2eb92cb6 1-96
+scripts/terminal/wave/install.sh
+  s_99dc823096f0e5::t_cf94452572e415 63-79
+  s_99dc823096f0e5::t_dcb0516f7d5202 257
+scripts/terminal/wave/tests/run.sh
+  s_36596460844258::t_50cd5b2eb92cb6 1-185
+docs/plans/10-wave-as-default-terminal.md
+  s_36596460844258::t_50cd5b2eb92cb6 1-426
+scripts/terminal/wave/layouts/development.json
+  s_36596460844258::t_50cd5b2eb92cb6 1-12
+scripts/terminal/wave/config/settings.json
+  s_36596460844258::t_50cd5b2eb92cb6 1-12
+scripts/terminal/wave/bin/wave-jwt-bootstrap
+  s_36596460844258::t_50cd5b2eb92cb6 1-70
+scripts/terminal/wave/fixtures/spike-test.md
+  s_36596460844258::t_50cd5b2eb92cb6 1-36
+scripts/terminal/wave/layouts/meta.json
+  s_36596460844258::t_50cd5b2eb92cb6 1-28
+scripts/terminal/wave/bin/view
+  s_36596460844258::t_50cd5b2eb92cb6 1-233
+scripts/terminal/tmux-workspaces/tmux.conf
+  s_36596460844258::t_50cd5b2eb92cb6 76-81
+scripts/terminal/wave/README.md
+  s_99dc823096f0e5::t_9c55b2d8792ab9 33-36
+  s_99dc823096f0e5::t_d381af204800d2 151-231
+scripts/terminal/wave/bin/wave-event-publish
+  s_99dc823096f0e5::t_ad02039f3dd84c 42-44,56
+  s_99dc823096f0e5::t_7e0188779068be 1-41,45-55,57-122
+scripts/terminal/wave/config/widgets.json
+  s_36596460844258::t_50cd5b2eb92cb6 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "6f9c08b42a856351dea951e9c026f056d36bf58f",
+  "prompts": {},
+  "sessions": {
+    "s_36596460844258": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3c5863b9-4d11-4308-be03-ba64880f2ef9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_99dc823096f0e5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4a9a0006-85ce-4e8e-8f22-d37db40aa416",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

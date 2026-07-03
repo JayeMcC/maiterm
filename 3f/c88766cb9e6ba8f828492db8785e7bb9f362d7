@@ -1,0 +1,27 @@
+src/evidence/verdict.ts
+  s_7d356ed1988a96::t_83492e26344cef 1-91
+src/evidence/index.ts
+  s_7d356ed1988a96::t_199c826fd5e3df 18-19
+tests/evidence/verdict.test.ts
+  s_7d356ed1988a96::t_fbdfb274d0b651 1-61
+tests/evidence/apparatus-gap.test.ts
+  s_7d356ed1988a96::t_33f65bac7bf5a1 1-51
+src/evidence/apparatus-gap.ts
+  s_7d356ed1988a96::t_b3dab94613163e 1-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "3fc88766cb9e6ba8f828492db8785e7bb9f362d7",
+  "prompts": {},
+  "sessions": {
+    "s_7d356ed1988a96": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "8a1f0cda-d4a8-4c90-a9e4-520ac4291ea5",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

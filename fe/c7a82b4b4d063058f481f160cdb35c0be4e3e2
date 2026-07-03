@@ -1,0 +1,19 @@
+src/nodes/walk-plan-subgoal.ts
+  s_10b069ebcfad9c::t_5a61f6ce1402e8 49-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.1",
+  "base_commit_sha": "fec7a82b4b4d063058f481f160cdb35c0be4e3e2",
+  "prompts": {},
+  "sessions": {
+    "s_10b069ebcfad9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a534af91-48df-4e47-9019-e2d3a4b4cfd9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

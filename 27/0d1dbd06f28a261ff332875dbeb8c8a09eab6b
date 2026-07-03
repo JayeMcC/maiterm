@@ -1,0 +1,42 @@
+.agents/skills/verify-review/evals/evals.json
+  s_76494a5c6f60b3::t_7ad66e8ca41532 22-27
+.agents/skills/review-pr/SKILL.md
+  s_f8c501d675a886::t_a1f7d4c8783109 156-159,161,167-169,172-187,189
+  s_f8c501d675a886::t_eab86adcd85c6a 162-166
+.agents/skills/verify-review/SKILL.md
+  s_2882d72424ca24::t_14e1f9721efcd0 176-240,243-256
+.agents/skills/atlassian-jira/SKILL.md
+  s_2882d72424ca24::t_14e1f9721efcd0 162-185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "270d1dbd06f28a261ff332875dbeb8c8a09eab6b",
+  "prompts": {},
+  "sessions": {
+    "s_2882d72424ca24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "43e76dc3-bd21-4ee0-8002-4768725865e0",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_76494a5c6f60b3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "689c5e67-4d3f-43bb-8b09-3076e2bdff39",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_f8c501d675a886": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f7c3e947-3b4a-4e5e-a5cf-73ed563208b1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

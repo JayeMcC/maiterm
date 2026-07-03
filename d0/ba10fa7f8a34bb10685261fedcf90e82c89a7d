@@ -1,0 +1,19 @@
+.agents/skills/teach-me/SKILL.md
+  s_854e559785495c::t_ad147ac7cceec4 1-278
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "d0ba10fa7f8a34bb10685261fedcf90e82c89a7d",
+  "prompts": {},
+  "sessions": {
+    "s_854e559785495c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2522f56d-9858-4f1f-9243-c51db22ed7fd",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,54 @@
+scripts/personal-tooling-sync/helpers/sync/engine/verify-sync.mjs
+  s_4e9ea33086dc68::t_4e773441212bb0 73-101
+scripts/personal-tooling-sync/README.md
+  s_4e9ea33086dc68::t_dcf1ed643f3fd9 12-14
+  s_4e9ea33086dc68::t_ecc603cdc55f0a 10-11
+  s_4e9ea33086dc68::t_6522ecc311e960 15
+scripts/personal-tooling-sync/helpers/layout/linked-merge.mjs
+  s_4e9ea33086dc68::t_cb1ac0c2b5831a 134-136
+scripts/personal-tooling-sync/helpers/sync/engine/index.mjs
+  s_4e9ea33086dc68::t_c4475edc597686 13
+scripts/personal-tooling-sync/helpers/sync/engine/tooling.mjs
+  s_f73e7e9a87e88a::t_2437c364aee9e5 304-312
+  s_f73e7e9a87e88a::t_35266d4584f17a 390-400
+  s_4e9ea33086dc68::t_9527b68febbd99 421-427
+scripts/personal-tooling-sync/helpers/sync/commands.mjs
+  s_4e9ea33086dc68::t_37c1b6362809dd 9,11,23-31
+  s_4e9ea33086dc68::t_4e82a7532ce314 49-53,59-61
+scripts/personal-tooling-sync/helpers/sync/engine/ignores.mjs
+  s_4e9ea33086dc68::t_26ab1fe449f947 50-51,56-57
+scripts/personal-tooling-sync/helpers/layout/package-paths.mjs
+  s_4e9ea33086dc68::t_d6741ba9d2ec16 79-84
+scripts/personal-tooling-sync/helpers/link-utils.mjs
+  s_4e9ea33086dc68::t_2144e1fe789884 4
+  s_4e9ea33086dc68::t_0cbd6837e048e8 16-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "77a1eaacc9e50bb1877f9378703850fab0ab63aa",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_4e9ea33086dc68": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "eaae79ea-935d-44ce-9b9d-d9c72e0b26d5",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_f73e7e9a87e88a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "340ed5a6-783c-4672-b162-3fa669388ad3",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

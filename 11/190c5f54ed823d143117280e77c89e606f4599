@@ -1,0 +1,21 @@
+linked-tools/repos/forwood-one/scripts/claude-settings.json
+  s_50c46be58e10ab::t_09c19c396de592 1-7
+linked-tools/repos/forwood-one/scripts/claude-statusline.sh
+  s_50c46be58e10ab::t_f75db0feaaa27b 1-134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "11190c5f54ed823d143117280e77c89e606f4599",
+  "prompts": {},
+  "sessions": {
+    "s_50c46be58e10ab": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "616e0317-1707-45f8-9b3c-e5dfc57c15d5",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

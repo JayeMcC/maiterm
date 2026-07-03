@@ -1,0 +1,70 @@
+linked-tools/core/.agents/meta/cli-agent-architecture.md
+  s_fdb4e548464e0f::t_2f2c2ee9fad658 53-57
+  s_fdb4e548464e0f::t_fa316490ea5a34 1-52,58-132
+specs/feature/PLAN-20__cli-backpressure-doctrine/checklists/requirements.md
+  s_fdb4e548464e0f::t_a63824f76b891f 1-36
+linked-tools/core/scripts/test/README.md
+  s_fdb4e548464e0f::t_0bc5818b301af5 1-17
+linked-tools/core/scripts/test/run-silent.test.mjs
+  s_fdb4e548464e0f::t_97b8cae7b562f1 1-32,36-39
+  s_fdb4e548464e0f::t_f2b86e8bc39d7c 33-35
+  s_fdb4e548464e0f::t_4d0a7c212a9087 40-54
+specs/feature/PLAN-20__cli-backpressure-doctrine/tasks.md
+  s_fdb4e548464e0f::t_fe462e98edb421 67
+  s_fdb4e548464e0f::t_c637ff8460dbff 114
+  s_fdb4e548464e0f::t_8390a93f864335 1-36,39-47,49-61,64-66,68-80,83-85,87-99,105-111,115-149
+  s_fdb4e548464e0f::t_c83916273869c3 62-63
+  s_fdb4e548464e0f::t_6ff5aa3c45bed4 48
+  s_fdb4e548464e0f::t_da937df11f04d5 86
+  s_fdb4e548464e0f::t_a096d63a8a8e96 112-113
+  s_fdb4e548464e0f::t_acb6448d11fadb 81-82
+  s_fdb4e548464e0f::t_ea557d7eb85015 100-103
+  s_fdb4e548464e0f::t_7919038bf292e9 104
+  s_fdb4e548464e0f::t_48690d232d405d 37-38
+specs/feature/PLAN-20__cli-backpressure-doctrine/spec.md
+  s_fdb4e548464e0f::t_c9bc1b9f8fbcff 92
+  s_fdb4e548464e0f::t_88288bbb92befa 1-26,29-58,60-70,72-91,93-109
+  s_fdb4e548464e0f::t_d1a20796332b73 27-28
+  s_fdb4e548464e0f::t_b2a4eb800fdc11 59
+  s_fdb4e548464e0f::t_0344d8a931535b 71
+specs/feature/PLAN-20__cli-backpressure-doctrine/data-model.md
+  s_fdb4e548464e0f::t_69b19cc5af6d3d 1-35,37
+  s_fdb4e548464e0f::t_c84185822b6d0d 36,38-41
+specs/feature/PLAN-20__cli-backpressure-doctrine/quickstart.md
+  s_fdb4e548464e0f::t_fc35c176897597 21-29
+  s_fdb4e548464e0f::t_f636996716c9b6 1-20,30-58
+linked-tools/core/.agents/meta/backpressure-reference-card.md
+  s_fdb4e548464e0f::t_ad49de475e363e 1-172
+linked-tools/core/scripts/run-silent.sh
+  s_fdb4e548464e0f::t_f7eff047347856 25-34,45-51
+  s_fdb4e548464e0f::t_42c6d0b10b96e0 1-24,35-44,52-55
+specs/feature/PLAN-20__cli-backpressure-doctrine/research.md
+  s_fdb4e548464e0f::t_88d5f2d245d86c 1-51
+linked-tools/core/.agents/rules/20-workflow/context-efficient-output.md
+  s_fdb4e548464e0f::t_79f3f28be0ad21 1-64
+specs/feature/PLAN-20__cli-backpressure-doctrine/plan.md
+  s_fdb4e548464e0f::t_ffab63ab40496d 1-75
+linked-tools/core/.agents/meta/context-efficient-backpressure.md
+  s_fdb4e548464e0f::t_53493e3d26da94 1-218
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "333abcda67f4df1df8731d1e03881e937d8010c7",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_fdb4e548464e0f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "cf3fdd53-bc3b-4b20-a1b8-758aad5d4c5f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

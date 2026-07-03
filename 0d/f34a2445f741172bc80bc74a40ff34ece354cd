@@ -1,0 +1,23 @@
+skill-library/speckit/speckit-flow-tools/SKILL.md
+  s_5f14770e38a813::t_c42935c5e1a7a1 3
+  s_5f14770e38a813::t_1c3297f4f28eed 174,176,182-186
+skill-library/speckit/speckit-step-flow/SKILL.md
+  s_5f14770e38a813::t_962e997b988787 4
+  s_5f14770e38a813::t_a27d4ce05ab199 122,124-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "0df34a2445f741172bc80bc74a40ff34ece354cd",
+  "prompts": {},
+  "sessions": {
+    "s_5f14770e38a813": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "20f2e9e3-5ce3-4e4f-aa58-f7da934517a3",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

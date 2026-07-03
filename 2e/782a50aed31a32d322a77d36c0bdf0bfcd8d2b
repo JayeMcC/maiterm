@@ -1,0 +1,109 @@
+tests/nodes/review-dispatch-source-grep.test.ts
+  s_2882d72424ca24::t_14e1f9721efcd0 26-31,142-174
+src/nodes/review-collect-test-results.ts
+  s_6417cc1fe474ed::t_217c3a7ac9c597 90-101,114,120-158
+tests/graph/review-e2e-integration.test.ts
+  s_2882d72424ca24::t_c6691cec805989 574-584
+  s_2882d72424ca24::t_c04bb716ac082b 559-571
+src/nodes/review-write-readalong.ts
+  s_97977c05ed22dc::t_d7018d8b32706b 46-50,52
+  s_97977c05ed22dc::t_dadf0db460d15a 51
+  s_97977c05ed22dc::t_00829f8398c898 138-140
+  s_97977c05ed22dc::t_bfea6e513d77d3 101,103,109-112
+src/nodes/review-fetch-artefacts.ts
+  s_2882d72424ca24::t_14e1f9721efcd0 15-23,55,145,148-175,178-179,184-189,191-202,284-289
+src/nodes/review-dispatch-e2e-review.ts
+  s_d30a25af462e94::t_a782268ac68e9f 54,77,210,213-218,220-249,251,319-322,347-350,461-501,1094-1106,1242-1260,1267-1277,1366-1370,1422-1427,1891,1895-1909,1927,1931-1942,2257-2262,2282,2304-2312,2356-2362,2369-2374,2380-2401
+src/nodes/review-extract-acs.ts
+  s_f8c501d675a886::t_eefd8d34e78fe6 65-79,81-87,89,96-125
+tests/graph/review-phase1-integration.test.ts
+  s_2882d72424ca24::t_14e1f9721efcd0 120-126
+src/scripts/review-start.ts
+  s_5d60cd2e047626::t_a1d382427349a7 443,446
+  s_97977c05ed22dc::t_993dc9a8d0b50c 480
+  s_82312589c4187d::t_5f2993858ba3ad 136-145,147,149-162
+  s_2882d72424ca24::t_14e1f9721efcd0 48-49,99-109,202-211,217-218,226-228,340-356,399-400
+  s_f8c501d675a886::t_ed4761f048552e 219-224,229
+  s_f8c501d675a886::t_0c9b498b37d222 367-369
+  s_97977c05ed22dc::t_f5357d04c3e083 309-334
+  s_97977c05ed22dc::t_d5ff1aa58697ae 47
+  s_f8c501d675a886::t_f36f6a45a99281 45
+  s_97977c05ed22dc::t_2ee7643ba99e97 46
+  s_82312589c4187d::t_f9f4958598040a 50
+  s_97977c05ed22dc::t_936c6699898c9a 238-248,251-257,275-294,298
+  s_f8c501d675a886::t_25fb1c145f3512 358-366,370-396,398
+src/nodes/e2e-explore.ts
+  s_2882d72424ca24::t_14e1f9721efcd0 1401-1405,1407-1432,1435
+src/nodes/review-manifest-pre-pass.ts
+  s_2882d72424ca24::t_14e1f9721efcd0 91-98,100-107
+src/nodes/review-analyse-doc.ts
+  s_5d60cd2e047626::t_fd3de0980b8871 36
+  s_97977c05ed22dc::t_46d90705d97c11 124
+  s_97977c05ed22dc::t_66c182fa9902cf 31
+  s_2882d72424ca24::t_14e1f9721efcd0 70-89
+  s_5d60cd2e047626::t_9a1426d8cd16e1 173-183,190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "2e782a50aed31a32d322a77d36c0bdf0bfcd8d2b",
+  "prompts": {},
+  "sessions": {
+    "s_2882d72424ca24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "43e76dc3-bd21-4ee0-8002-4768725865e0",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_5d60cd2e047626": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "69f8e6b7-1ea9-406f-8e96-9ee856f245b4",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_6417cc1fe474ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "86b26ca9-1e95-417c-9a4a-183734494ba4",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_82312589c4187d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "71559c86-5ae6-4701-a73b-7a4c0104c97d",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_97977c05ed22dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c2fbd296-0e4f-488c-9b7b-a7b135fb5e27",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_d30a25af462e94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cea7a41b-5106-476e-94d9-b2866bc06a6f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_f8c501d675a886": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f7c3e947-3b4a-4e5e-a5cf-73ed563208b1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

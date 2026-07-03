@@ -1,0 +1,31 @@
+.agents/commands/speckit-flow-tools.md
+  s_dc969cb3b38e4f::t_64816bde7674f5 1-37
+.agents/commands/speckit.implement.md
+  s_dc969cb3b38e4f::t_64816bde7674f5 1-131
+skill-library/developing-ticket/speckit-flow-tools/SKILL.md
+  s_dc969cb3b38e4f::t_64816bde7674f5 1-217
+docs/linked-tools-index.md
+  s_dc969cb3b38e4f::t_64816bde7674f5 22,62
+skill-library/developing-ticket/speckit-flow-tools/references/implement-runtime.md
+  s_dc969cb3b38e4f::t_64816bde7674f5 1-128
+docs/plans/PLAN-04-speckit-pilot-findings.md
+  s_dc969cb3b38e4f::t_64816bde7674f5 1-162
+skill-library/developing-ticket/speckit-flow-tools/references/keep-replace-drop.md
+  s_dc969cb3b38e4f::t_64816bde7674f5 1-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "954f96db0b4e474b9ac167a7e35e1879933fea1b",
+  "prompts": {},
+  "sessions": {
+    "s_dc969cb3b38e4f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4e71e973-1752-488e-8634-d53d83f8c78d",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

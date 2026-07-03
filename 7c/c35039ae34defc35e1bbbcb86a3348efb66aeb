@@ -1,0 +1,21 @@
+src/utils/api-test-commands.ts
+  s_10d7e958b8b364::t_3de930835daa08 45-55
+tests/utils/api-test-commands.test.ts
+  s_10d7e958b8b364::t_0281d982140916 1-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "7cc35039ae34defc35e1bbbcb86a3348efb66aeb",
+  "prompts": {},
+  "sessions": {
+    "s_10d7e958b8b364": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46384a65-2676-4658-b4d1-9722428b95fa",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

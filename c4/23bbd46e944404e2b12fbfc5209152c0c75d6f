@@ -1,0 +1,19 @@
+forwood-vault/wiki/changes-archive/forwood-one-tools/forwood-one-tools-003.md
+  s_3c5806474896bb::t_e2e377734e4786 1-185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "c423bbd46e944404e2b12fbfc5209152c0c75d6f",
+  "prompts": {},
+  "sessions": {
+    "s_3c5806474896bb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "69eadc33-1c30-4f4c-85ba-c689c72fafcb",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

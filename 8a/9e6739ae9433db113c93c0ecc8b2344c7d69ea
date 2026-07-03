@@ -1,0 +1,23 @@
+tests/evidence/planner/route-derive.test.ts
+  s_7d356ed1988a96::t_70cdce2a9edfbe 23-30
+src/evidence/planner/route-derive.ts
+  s_7d356ed1988a96::t_36011afe78e6a4 23-33,38-39
+specs/feature/TOOL-01__deterministic-visual-evidence/tasks.md
+  s_7d356ed1988a96::t_de9677e2de3533 85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "8a9e6739ae9433db113c93c0ecc8b2344c7d69ea",
+  "prompts": {},
+  "sessions": {
+    "s_7d356ed1988a96": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "8a1f0cda-d4a8-4c90-a9e4-520ac4291ea5",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

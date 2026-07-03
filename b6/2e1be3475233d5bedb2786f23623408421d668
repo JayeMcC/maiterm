@@ -1,0 +1,23 @@
+docs/adr/0012-two-commands-brief-and-review.md
+  s_f15ac91486a4a9::t_473dd394cff80f 1-39
+docs/adr/0011-brief-acceptance-criteria-jira-fallback.md
+  s_f15ac91486a4a9::t_8e0aef43287283 1-40
+docs/adr/0010-ticket-brief-lives-in-tests-repo.md
+  s_f15ac91486a4a9::t_a4be73d859d2e3 1-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "b62e1be3475233d5bedb2786f23623408421d668",
+  "prompts": {},
+  "sessions": {
+    "s_f15ac91486a4a9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bef5689e-5924-4eba-bb00-5eacb31a0a4b",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

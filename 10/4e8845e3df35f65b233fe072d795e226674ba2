@@ -1,0 +1,19 @@
+docs/pid-ticket-brief.md
+  s_f15ac91486a4a9::t_f4f18606eafd50 1-206
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "104e8845e3df35f65b233fe072d795e226674ba2",
+  "prompts": {},
+  "sessions": {
+    "s_f15ac91486a4a9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bef5689e-5924-4eba-bb00-5eacb31a0a4b",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

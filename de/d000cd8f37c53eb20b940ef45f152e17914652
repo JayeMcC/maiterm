@@ -1,0 +1,35 @@
+.agents/skills/shepherd-review/scripts/watch-review.sh
+  s_5aac4798da16ee::t_5d51b32ee1380a 1-175
+.agents/memory/learnings.jsonl
+  s_8eea8f6d9a305f::t_2a0593bec632fc 18
+  s_8eea8f6d9a305f::t_5a9c295b01cc99 17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "ded000cd8f37c53eb20b940ef45f152e17914652",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_5aac4798da16ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b7a2bed4-0233-498e-a7a9-b01f9fa46abb",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_8eea8f6d9a305f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dd3b4c29-15e7-4eae-8fd4-327d54be3250",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

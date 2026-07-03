@@ -1,0 +1,38 @@
+docs/adr/0017-behavior-library-three-kinds-graph-composition-shells.md
+  s_10b069ebcfad9c::t_bd0cfb6016be10 1-59
+CONTEXT.md
+  s_10b069ebcfad9c::t_239b1ab6523a5f 400-406,408-417
+  s_10b069ebcfad9c::t_a6f94508b6b108 399,407,418,430-458
+  s_10b069ebcfad9c::t_928db1e5542468 329-354,360,370-397
+  s_10b069ebcfad9c::t_83806fa2be7642 358-359,361-369
+  s_10b069ebcfad9c::t_73e498b07284bc 419-429
+  s_10b069ebcfad9c::t_9a71325921796a 355-357
+  s_10b069ebcfad9c::t_f1c08093f2b0bc 398
+docs/adr/0019-walker-behaviors-stage-and-promote-on-sub-goal-complete.md
+  s_10b069ebcfad9c::t_46b5a8df855ddc 1-33,38-52
+  s_10b069ebcfad9c::t_08502700b16ab7 34-37
+docs/adr/0018-emitted-specs-mirror-behaviors-walker-authoritative.md
+  s_10b069ebcfad9c::t_e071e897cb7336 1-55
+docs/adr/0020-agent-drive-incremental-discovery-loop.md
+  s_10b069ebcfad9c::t_d709cec0dbea42 1-65
+docs/adr/0021-compose-flow-multi-stage-pipeline.md
+  s_10b069ebcfad9c::t_91da720c72d154 1-58
+docs/adr/0016-emit-specs-inline-atomics-verbatim.md
+  s_10b069ebcfad9c::t_a5967367d15b4c 3-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "dd5d84bbdb97badf04f380431509616ca0ec3a36",
+  "prompts": {},
+  "sessions": {
+    "s_10b069ebcfad9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a534af91-48df-4e47-9019-e2d3a4b4cfd9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

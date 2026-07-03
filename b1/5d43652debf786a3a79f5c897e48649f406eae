@@ -1,0 +1,38 @@
+tests/nodes/review-compose-automation-backlog.test.ts
+  s_15b80792f12d41::t_6dc194b94f3a69 34-53
+tests/nodes/review-compose-checkpoint.test.ts
+  s_15b80792f12d41::t_73b3aefa3ac70a 38-57
+tests/nodes/review-ac-sort.test.ts
+  s_15b80792f12d41::t_ba332ac63f92fb 56-75
+tests/graph/review-e2e-integration.test.ts
+  s_15b80792f12d41::t_597fad6f26809e 388-399
+  s_15b80792f12d41::t_432324ef464cbc 604-605,609
+tests/nodes/review-compose-subclaims.test.ts
+  s_15b80792f12d41::t_6e60ac1bf9a4f5 34-53
+tests/nodes/review-compose-scenarios.test.ts
+  s_15b80792f12d41::t_c50b2f2e6d060b 37-56
+tests/nodes/review-compose-wire-evidence.test.ts
+  s_15b80792f12d41::t_6ef7623babe474 31-50
+tests/nodes/review-compose-tests-pass-isolation.test.ts
+  s_15b80792f12d41::t_cc90add8709afa 40-59
+tests/nodes/review-compose-reconcile.test.ts
+  s_15b80792f12d41::t_c01da11409f689 37-56
+tests/nodes/review-compose-format.test.ts
+  s_15b80792f12d41::t_60e923f3f32886 33-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "b15d43652debf786a3a79f5c897e48649f406eae",
+  "prompts": {},
+  "sessions": {
+    "s_15b80792f12d41": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7a8edb5-f6d8-4a6b-b255-010bdfa18f85",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,31 @@
+specs/feature/PLAN-21__cassette-record-replay/checklists/requirements.md
+  s_36596460844258::t_7fd4e492f88747 1-35
+specs/feature/PLAN-21__cassette-record-replay/data-model.md
+  s_36596460844258::t_7fd4e492f88747 1-69
+specs/feature/PLAN-21__cassette-record-replay/quickstart.md
+  s_36596460844258::t_7fd4e492f88747 1-50
+specs/feature/PLAN-21__cassette-record-replay/research.md
+  s_36596460844258::t_7fd4e492f88747 1-79
+specs/feature/PLAN-21__cassette-record-replay/spec.md
+  s_36596460844258::t_7fd4e492f88747 1-142
+specs/feature/PLAN-21__cassette-record-replay/plan.md
+  s_36596460844258::t_7fd4e492f88747 1-73
+specs/feature/PLAN-21__cassette-record-replay/tasks.md
+  s_36596460844258::t_7fd4e492f88747 1-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "ec3ad67adbcf18dffebcb47bf172530888ae4c62",
+  "prompts": {},
+  "sessions": {
+    "s_36596460844258": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3c5863b9-4d11-4308-be03-ba64880f2ef9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

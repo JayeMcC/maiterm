@@ -1,0 +1,21 @@
+src/evidence/primitives/reveal.ts
+  s_2882d72424ca24::t_bd8117601ea536 7-13,24-60,65-68,86
+tests/evidence/primitives/primitives.test.ts
+  s_2882d72424ca24::t_207a1d4f8af676 158,163-168,171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "3fd055d3429bf15253a9aaabf445089229b9d0ff",
+  "prompts": {},
+  "sessions": {
+    "s_2882d72424ca24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "43e76dc3-bd21-4ee0-8002-4768725865e0",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

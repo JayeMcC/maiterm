@@ -1,0 +1,33 @@
+linked-tools/repos/forwood-one-tests/.agents/skills/forwood-bw-credentials/SKILL.md
+  s_dc969cb3b38e4f::t_9d62e15bdeb550 1-145
+linked-tools/repos/forwood-one-tests/AGENTS.md
+  s_dc969cb3b38e4f::t_9d62e15bdeb550 1-223
+linked-tools/repos/forwood-one-tests/scripts/bw-map.local.sh
+  s_dc969cb3b38e4f::t_9d62e15bdeb550 1-22
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/no-e2e-soft-skip.mdc
+  s_dc969cb3b38e4f::t_9d62e15bdeb550 1-16
+linked-tools/repos/forwood-one-tests/.agents/rules/editor/red-test-screenshot-and-link.mdc
+  s_dc969cb3b38e4f::t_9d62e15bdeb550 1-33
+linked-tools/repos/forwood-one-tests/scripts/bw-map.testing.sh
+  s_dc969cb3b38e4f::t_9d62e15bdeb550 1-20
+linked-tools/repos/forwood-one-tests/.agents/rules/10-project/testing.md
+  s_dc969cb3b38e4f::t_9d62e15bdeb550 1-218
+linked-tools/repos/forwood-one-tests/docs/bitwarden-vault-layout.md
+  s_dc969cb3b38e4f::t_9d62e15bdeb550 1-132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "b05eaeb0c0dd9e8f84743a40846b30f81840381d",
+  "prompts": {},
+  "sessions": {
+    "s_dc969cb3b38e4f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4e71e973-1752-488e-8634-d53d83f8c78d",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

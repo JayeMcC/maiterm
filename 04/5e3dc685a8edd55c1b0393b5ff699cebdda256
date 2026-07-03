@@ -1,0 +1,32 @@
+src/utils/audit-not-covered.ts
+  s_82312589c4187d::t_96f130700b9a4d 220-223,229-230
+  s_82312589c4187d::t_7054e52c4a449c 63-83
+  s_2882d72424ca24::t_14e1f9721efcd0 114-120
+  s_82312589c4187d::t_1dfb7585b4f79c 168-179
+tests/utils/audit-not-covered.test.ts
+  s_82312589c4187d::t_d4126a31d808f5 29-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "045e3dc685a8edd55c1b0393b5ff699cebdda256",
+  "prompts": {},
+  "sessions": {
+    "s_2882d72424ca24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "43e76dc3-bd21-4ee0-8002-4768725865e0",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_82312589c4187d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "71559c86-5ae6-4701-a73b-7a4c0104c97d",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

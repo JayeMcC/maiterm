@@ -1,0 +1,46 @@
+src/graph/walk-state-annotation.ts
+  s_ec41e3361fd247::t_dbe0d66b9c6251 180-183,189-190,192-195
+  s_ec41e3361fd247::t_d7ad936cd79d7a 171-179,184-188,191,196
+  s_ec41e3361fd247::t_19d0ade76c560f 197-213
+src/nodes/walk-plan-subgoal.ts
+  s_ec41e3361fd247::t_8c822c8c43b100 29
+  s_ec41e3361fd247::t_6ebe4ad86adefc 87-89
+  s_ec41e3361fd247::t_2d0fbff778923c 100-113
+src/nodes/walk-await-human.ts
+  s_ec41e3361fd247::t_df82cf9506f16a 85-98
+  s_ec41e3361fd247::t_78d1f6d48150ac 56-82
+  s_ec41e3361fd247::t_f74296e27e2aff 40
+  s_ec41e3361fd247::t_29ea3449f2cd98 83-84
+  s_ec41e3361fd247::t_318aa52f0dd499 99-100
+src/graph/walk-edges.ts
+  s_ec41e3361fd247::t_c34fcaaa499f92 56-60,66-68,71-73
+src/graph/walk-subgraph.ts
+  s_ec41e3361fd247::t_708e736de43f56 85-87,89
+src/scripts/walk-start.ts
+  s_ec41e3361fd247::t_19366aa2b6e009 473-474
+  s_ec41e3361fd247::t_ba809ed0dbad8d 475-478
+src/nodes/walk-agent-drive.ts
+  s_ec41e3361fd247::t_44c3c52003461b 235-239,256-260
+  s_ec41e3361fd247::t_19c699622912eb 66-72,89
+  s_ec41e3361fd247::t_530ed9a46058c6 73-88
+  s_ec41e3361fd247::t_59df862f86b957 93-99,101,111-113
+  s_ec41e3361fd247::t_0bea2f53a15111 197-201
+  s_ec41e3361fd247::t_07f64d31994890 175-178
+  s_ec41e3361fd247::t_5e138a7a107ce5 34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "8506fea1352ca57f4e5aa6f30a3d391ef4fb8977",
+  "prompts": {},
+  "sessions": {
+    "s_ec41e3361fd247": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46706c9c-5e98-4950-9b5a-9d3c8f043b7c",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

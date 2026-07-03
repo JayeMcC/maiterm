@@ -1,0 +1,170 @@
+eval/scenarios/verify-review-workspace/iteration-4-hard-fixture/haiku-without_skill/outputs/answer.md
+  s_cf9932eea4f083::t_a5e182998459de 1-12,23-24,32-42,48-61,68-69
+  s_cf9932eea4f083::t_6ff018225dadfb 13-22,25-31,43-47,62-67
+eval/scenarios/verify-review-workspace/iteration-1/eval-1-are-blockers-real/with_skill/run-1/timing.json
+  s_cf9932eea4f083::t_a5e182998459de 1
+eval/scenarios/verify-review-workspace/iteration-3-tier-sweep/sonnet-without_skill/outputs/answer.md
+  s_cf9932eea4f083::t_a5e182998459de 1-2,4-20
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+eval/scenarios/verify-review-workspace/iteration-4-hard-fixture/opus-without_skill/outputs/answer.md
+  s_cf9932eea4f083::t_6ff018225dadfb 30-31
+  s_cf9932eea4f083::t_a5e182998459de 1-29,32-65
+eval/scenarios/verify-review-workspace/iteration-1/eval-1-are-blockers-real/without_skill/run-1/timing.json
+  s_cf9932eea4f083::t_a5e182998459de 1
+eval/scenarios/verify-review-workspace/iteration-2/eval-0-should-i-bounce/with_skill/run-1/grading.json
+  s_cf9932eea4f083::t_a5e182998459de 1-45
+eval/scenarios/verify-review-workspace/iteration-1/eval-0-verify-before-acting/without_skill/run-1/timing.json
+  s_cf9932eea4f083::t_a5e182998459de 1
+eval/scenarios/verify-review-workspace/iteration-4-hard-fixture/sonnet-without_skill/outputs/answer.md
+  s_cf9932eea4f083::t_6ff018225dadfb 20-25
+  s_cf9932eea4f083::t_a5e182998459de 1-19,26-47
+eval/scenarios/verify-review-workspace/iteration-4-hard-fixture/haiku-with_skill/outputs/answer.md
+  s_cf9932eea4f083::t_6ff018225dadfb 3-4,43-44
+  s_cf9932eea4f083::t_a5e182998459de 1-2,5-42,45-86
+eval/scenarios/verify-review-workspace/iteration-2/benchmark.json
+  s_cf9932eea4f083::t_a5e182998459de 1-276
+eval/scenarios/verify-review-workspace/iteration-4-hard-fixture/opus-with_skill/outputs/answer.md
+  s_cf9932eea4f083::t_6ff018225dadfb 26-31
+  s_cf9932eea4f083::t_a5e182998459de 1-25,32-44
+eval/drafts/verify-review/evals/fixtures/eap-3202/source/api/src/modules/user/services/impl/user.service.impl.spec.ts
+  s_cf9932eea4f083::t_a5e182998459de 1-13
+eval/README.md
+  s_cf9932eea4f083::t_a5e182998459de 1-8,19-68
+  s_cf9932eea4f083::t_6ff018225dadfb 9-18
+eval/scenarios/verify-review-workspace/grade.py
+  s_0133f9ca4f9c8f::t_4c3cbb2e8a567b 1-77
+eval/scenarios/verify-review-workspace/iteration-1/eval-0-verify-before-acting/with_skill/run-1/timing.json
+  s_cf9932eea4f083::t_a5e182998459de 1
+eval/drafts/verify-review/evals/fixtures/eap-3202/source/api/src/modules/casl/registries/__tests__/taxonomy-instance-checks.spec.ts
+  s_cf9932eea4f083::t_a5e182998459de 1-24
+eval/scenarios/verify-review-workspace/iteration-2/eval-1-where-it-stands/with_skill/run-1/grading.json
+  s_cf9932eea4f083::t_a5e182998459de 1-45
+eval/scenarios/verify-review-workspace/iteration-1/eval-1-are-blockers-real/with_skill/run-1/outputs/verification-report.md
+  s_cf9932eea4f083::t_a5e182998459de 1-2,4-19,24,28-37
+  s_cf9932eea4f083::t_6ff018225dadfb 3,20-23,25-27
+eval/drafts/verify-review/evals/fixtures/eap-3201/review/manual-evidence/AC-01/cli-probes.json
+  s_cf9932eea4f083::t_a5e182998459de 1-12
+eval/drafts/verify-review/evals/fixtures/eap-3201/review/jira-review-comment.md
+  s_cf9932eea4f083::t_a5e182998459de 1-69
+eval/scenarios/verify-review-workspace/iteration-1/eval-0-verify-before-acting/with_skill/run-1/outputs/verification-report.md
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+  s_cf9932eea4f083::t_a5e182998459de 1-2,4-20
+eval/scenarios/verify-review-workspace/iteration-1/eval-1-are-blockers-real/with_skill/run-1/grading.json
+  s_cf9932eea4f083::t_a5e182998459de 1-45
+eval/scenarios/verify-review-workspace/iteration-2/eval-0-should-i-bounce/with_skill/run-1/outputs/answer.md
+  s_cf9932eea4f083::t_6ff018225dadfb 25-29,31-32,39-40
+  s_cf9932eea4f083::t_a5e182998459de 1-24,30,33-38,41-49
+eval/scenarios/verify-review-workspace/iteration-2/review.html
+  s_0133f9ca4f9c8f::t_4c3cbb2e8a567b 1-1325
+eval/scenarios/verify-review-workspace/iteration-2/benchmark.md
+  s_cf9932eea4f083::t_a5e182998459de 1-13
+eval/scenarios/verify-review-workspace/iteration-3-tier-sweep/haiku-with_skill/outputs/answer.md
+  s_cf9932eea4f083::t_a5e182998459de 1-2,4-19
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+eval/drafts/verify-review/evals/fixtures/eap-3201/source/api/src/modules/casl/registries/__tests__/taxonomy-translators.spec.ts
+  s_cf9932eea4f083::t_a5e182998459de 1-27
+eval/scenarios/verify-review-workspace/iteration-1/benchmark.md
+  s_cf9932eea4f083::t_a5e182998459de 1-13
+eval/drafts/verify-review/evals/fixtures/eap-3202/review/manual-evidence/AC-01/cli-evidence.md
+  s_cf9932eea4f083::t_a5e182998459de 1-12,16-19
+  s_cf9932eea4f083::t_6ff018225dadfb 13-15
+eval/scenarios/verify-review-workspace/iteration-2/eval-0-should-i-bounce/with_skill/run-1/timing.json
+  s_cf9932eea4f083::t_a5e182998459de 1
+eval/scenarios/verify-review-workspace/iteration-2/eval-1-where-it-stands/without_skill/run-1/grading.json
+  s_cf9932eea4f083::t_a5e182998459de 1-45
+eval/drafts/verify-review/evals/fixtures/eap-3201/source/api/src/modules/casl/registries/taxonomy-translators.ts
+  s_cf9932eea4f083::t_a5e182998459de 1-15
+eval/scenarios/verify-review-workspace/iteration-3-tier-sweep/opus-with_skill/outputs/answer.md
+  s_cf9932eea4f083::t_a5e182998459de 1-23
+eval/scenarios/verify-review-workspace/iteration-2/eval-1-where-it-stands/with_skill/run-1/outputs/answer.md
+  s_cf9932eea4f083::t_a5e182998459de 1-24
+eval/drafts/verify-review/SKILL.md
+  s_cf9932eea4f083::t_6ff018225dadfb 4-14,28,30-32,34,36,38,113-114,133,154,179-180,182-184,186-187
+  s_cf9932eea4f083::t_a5e182998459de 1-3,15-27,29,33,35,37,39-112,115-132,134-153,155-178,181,185,188
+eval/scenarios/verify-review-workspace/iteration-1/eval-0-verify-before-acting/with_skill/run-1/grading.json
+  s_cf9932eea4f083::t_a5e182998459de 1-45
+eval/scenarios/verify-review-workspace/iteration-1/eval-1-are-blockers-real/eval_metadata.json
+  s_cf9932eea4f083::t_a5e182998459de 1
+eval/scenarios/verify-review-workspace/iteration-2/eval-0-should-i-bounce/without_skill/run-1/grading.json
+  s_cf9932eea4f083::t_a5e182998459de 1-45
+eval/scenarios/verify-review-workspace/iteration-3-tier-sweep/sonnet-with_skill/outputs/answer.md
+  s_cf9932eea4f083::t_a5e182998459de 1-2,4-20
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+eval/scenarios/verify-review-workspace/iteration-1/eval-0-verify-before-acting/eval_metadata.json
+  s_cf9932eea4f083::t_a5e182998459de 1
+eval/drafts/verify-review/evals/evals.json
+  s_cf9932eea4f083::t_a5e182998459de 1-44
+eval/drafts/verify-review/evals/fixtures/eap-3202/review/jira-review-comment.md
+  s_cf9932eea4f083::t_a5e182998459de 1-52
+eval/scenarios/verify-review-workspace/iteration-2/eval-1-where-it-stands/without_skill/run-1/timing.json
+  s_cf9932eea4f083::t_a5e182998459de 1
+eval/scenarios/verify-review-workspace/iteration-1/eval-1-are-blockers-real/without_skill/run-1/grading.json
+  s_cf9932eea4f083::t_a5e182998459de 1-45
+eval/scenarios/verify-review-workspace/iteration-1/eval-1-are-blockers-real/without_skill/run-1/outputs/verification-report.md
+  s_cf9932eea4f083::t_a5e182998459de 1-57
+eval/drafts/verify-review/evals/fixtures/eap-3201/source/api/src/modules/user/services/impl/user.service.impl.spec.ts
+  s_cf9932eea4f083::t_a5e182998459de 1-21
+eval/scenarios/verify-review-workspace/iteration-1/eval-0-verify-before-acting/without_skill/run-1/grading.json
+  s_cf9932eea4f083::t_a5e182998459de 1-45
+eval/scenarios/verify-review-workspace/iteration-4-hard-fixture/sonnet-with_skill/outputs/answer.md
+  s_cf9932eea4f083::t_a5e182998459de 1-23,27-57
+  s_cf9932eea4f083::t_6ff018225dadfb 24-26
+eval/scenarios/verify-review-workspace/iteration-2/eval-0-should-i-bounce/without_skill/run-1/outputs/answer.md
+  s_cf9932eea4f083::t_a5e182998459de 1-34
+eval/scenarios/verify-review-workspace/iteration-3-tier-sweep/haiku-without_skill/outputs/answer.md
+  s_cf9932eea4f083::t_a5e182998459de 1-2,4-27
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+eval/scenarios/verify-review-workspace/iteration-1/eval-0-verify-before-acting/without_skill/run-1/outputs/verification-report.md
+  s_cf9932eea4f083::t_a5e182998459de 1-2,4-24
+  s_cf9932eea4f083::t_6ff018225dadfb 3
+eval/scenarios/verify-review-workspace/iteration-2/eval-0-should-i-bounce/without_skill/run-1/timing.json
+  s_cf9932eea4f083::t_a5e182998459de 1
+eval/drafts/eval-fixture-design/SKILL.md
+  s_cf9932eea4f083::t_a5e182998459de 1-3,14-47,49,51-58,60,64-70,72-78,81-87,90,92-114,119,122,124-144,146-150,152,155-176,179,181-201,203-217
+  s_cf9932eea4f083::t_6ff018225dadfb 4-13,48,50,59,61-63,71,79-80,88-89,91,115-118,120-121,123,145,151,153-154,177-178,180,202
+eval/scenarios/README.md
+  s_cf9932eea4f083::t_a5e182998459de 1-9
+eval/scenarios/verify-review-workspace/iteration-3-tier-sweep/opus-without_skill/outputs/answer.md
+  s_cf9932eea4f083::t_a5e182998459de 1-20,27-28,32-33,35-38,42,44-56
+  s_cf9932eea4f083::t_6ff018225dadfb 21-26,29-31,34,39-41,43
+eval/scenarios/verify-review-workspace/iteration-2/eval-1-where-it-stands/without_skill/run-1/outputs/answer.md
+  s_cf9932eea4f083::t_6ff018225dadfb 41-42,44,46-47
+  s_cf9932eea4f083::t_a5e182998459de 1-40,43,45,48-56
+eval/scenarios/verify-review-workspace/iteration-2/eval-1-where-it-stands/with_skill/run-1/timing.json
+  s_cf9932eea4f083::t_a5e182998459de 1
+eval/scenarios/verify-review-workspace/iteration-1/benchmark.json
+  s_cf9932eea4f083::t_a5e182998459de 1-276
+eval/drafts/verify-review/evals/fixtures/eap-3201/source/api/eslint.config.mts
+  s_0133f9ca4f9c8f::t_4c3cbb2e8a567b 1-28
+eval/drafts/verify-review/evals/fixtures/eap-3202/source/api/src/modules/casl/registries/taxonomy-instance-checks.ts
+  s_cf9932eea4f083::t_a5e182998459de 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "6ed9fba121198b8be26bc63c7ba6f8fa7ee0b76b",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_0133f9ca4f9c8f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f7b249c-cb2f-42de-b16f-d4abe003d778",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_cf9932eea4f083": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9e21c60d-a6fc-4c15-91f5-aeb86f4271ef",
+        "model": "default"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

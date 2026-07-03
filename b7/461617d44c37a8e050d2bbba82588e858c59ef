@@ -1,0 +1,24 @@
+linked-tools/core/scripts/launcher/docs/install.md
+  s_2faedf32a94ff1::t_1a03ca4ba0170e 72,74-79
+linked-tools/core/scripts/launcher/src/clone-resolver.ts
+  s_2faedf32a94ff1::t_c7f90a68bc3f07 3,8-13,19-21,30,38-39,59-91,108-109
+linked-tools/core/scripts/launcher/src/__tests__/clone-resolver.test.ts
+  s_2faedf32a94ff1::t_c8a5d151c485b4 7
+  s_2faedf32a94ff1::t_b3729b3a80ec70 43-117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "b7461617d44c37a8e050d2bbba82588e858c59ef",
+  "prompts": {},
+  "sessions": {
+    "s_2faedf32a94ff1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6445d28c-8b55-4fce-aa24-e77fe148004a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

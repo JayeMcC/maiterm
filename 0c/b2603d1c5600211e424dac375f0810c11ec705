@@ -1,0 +1,113 @@
+src/nodes/review-generate-test.ts
+  s_e31c7a65767e05::t_e4b50d3a8e3d09 42-43
+  s_833e3b9f4e603f::t_0198231c8b3910 63-86
+src/nodes/review-pick-doc.ts
+  s_f564a29912e002::t_87ec91444f2f06 28-30,32
+  s_f564a29912e002::t_5efa6d725fb957 55-64,78,81-116
+src/utils/build-frontmatter.ts
+  s_00be4cd2f0942d::t_bbac11a6269ac2 66-67,73-86
+src/nodes/review-run-generated-test.ts
+  s_833e3b9f4e603f::t_b4e0ef764428cb 90-93,95-96,98
+  s_833e3b9f4e603f::t_3c16347790674d 17-18
+src/nodes/review-analyse-doc.ts
+  s_f564a29912e002::t_e3c7add520dc40 126
+  s_00be4cd2f0942d::t_7c66fc58e5da84 22
+  s_f564a29912e002::t_5fcdd6906e7f97 77-80,83
+src/nodes/review-derive-summary.ts
+  s_4bcd84e72dcefb::t_4dd68efbda9d46 32
+  s_4bcd84e72dcefb::t_37687e2650b3ac 49-62,66
+src/utils/analyse-doc-llm.ts
+  s_f564a29912e002::t_b93363b23daff0 205-209
+  s_e31c7a65767e05::t_ef90bd382b9806 26-29
+  s_e31c7a65767e05::t_25465ca2dcfcb1 64
+  s_e31c7a65767e05::t_f6e2583d92f96b 39,44
+  s_e31c7a65767e05::t_615f2e907cd5a5 72,74
+  s_f564a29912e002::t_9110def1536aa1 77-95
+  s_e31c7a65767e05::t_f5668a10ea7b03 216-251,254-257
+  s_f564a29912e002::t_000b5dd31b0624 140-143
+  s_00be4cd2f0942d::t_7c66fc58e5da84 263
+src/nodes/review-fetch-artefacts.ts
+  s_f564a29912e002::t_1dbabf5d699035 22-26
+  s_00be4cd2f0942d::t_ede9004755e09e 220-223
+  s_42e92683536a33::t_2dbf3ecd2abad0 27,30-31
+  s_f564a29912e002::t_cc5ff26da2845e 52
+  s_f564a29912e002::t_e0e782b722dda5 181-207,209
+  s_42e92683536a33::t_8229122c08d37c 208,210,224,229-235
+src/nodes/review-dispatch-test-runs.ts
+  s_833e3b9f4e603f::t_9ca7532d3e9efa 143-146,157,164,183
+  s_833e3b9f4e603f::t_b7d4e84cbf50c8 39-40
+src/nodes/review-flag-misread.ts
+  s_833e3b9f4e603f::t_ac16b0f8f8e9bb 49-55
+src/utils/generate-test-llm.ts
+  s_e31c7a65767e05::t_f4cb2a2f6ed542 136-157
+  s_e31c7a65767e05::t_a087f73018ac00 226,229
+  s_e31c7a65767e05::t_680c825f915f48 195
+  s_e31c7a65767e05::t_05eac9deb81960 73-75
+  s_e31c7a65767e05::t_452fa742215524 21
+  s_e31c7a65767e05::t_bc8f21cbe31a9b 194
+  s_e31c7a65767e05::t_a7246cbe26a6f4 235-256,259-284,286-316
+  s_e31c7a65767e05::t_4b380d8a834c1a 257-258
+  s_e31c7a65767e05::t_8201eca5715230 285
+  s_e31c7a65767e05::t_061f3e6f41c133 114-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "0cb2603d1c5600211e424dac375f0810c11ec705",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_00be4cd2f0942d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3653879d-80f6-4ef5-afe9-30e3e186cbb7",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_42e92683536a33": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "551226ef-2cab-4b90-acf3-acfdcdd4703b",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_4bcd84e72dcefb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f97064eb-9d21-4fba-9dea-f7e730080f8f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_833e3b9f4e603f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1480282c-1a1d-412f-a4e8-3b16fa2b7fab",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_e31c7a65767e05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d50d1d97-8621-45c8-aa17-41b3e65d5356",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_f564a29912e002": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5b1311d3-636c-4b95-b5a4-cd0e3cdadbba",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+linked-tools/repos/forwood-one/.vscode/scripts/add-qa-test-users.mjs
+  s_fa161b2e607650::t_897ad9bb136bb9 6-13,94-111,114-120,146-241,244-245,313-333,392-396,405-406,412-414,417-422,454-461,484-485,491-492,495-500
+linked-tools/repos/forwood-one/.vscode/scripts/tasks/kill-dev-ports.sh
+  s_fa161b2e607650::t_897ad9bb136bb9 2-7,13-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "59fb2958b1e2c74b9f1bff7e7182ec4d98c3bf24",
+  "prompts": {},
+  "sessions": {
+    "s_fa161b2e607650": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5cc8a47c-675d-4602-8b0f-0cb695415d9b",
+        "model": "composer-2.5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

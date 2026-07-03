@@ -1,0 +1,33 @@
+src/discovery-loop/agent-drive-adapter.ts
+  s_10b069ebcfad9c::t_2be8c23faa7957 1-135
+src/nodes/walk-agent-drive.ts
+  s_10b069ebcfad9c::t_f0df7e925dc642 33
+  s_10b069ebcfad9c::t_5b68376261be4e 69-108
+src/discovery-loop/types.ts
+  s_10b069ebcfad9c::t_0821fb5e0ba184 27
+src/discovery-loop/pcli-driver.ts
+  s_10b069ebcfad9c::t_c94feb528d0c4a 1-151
+src/discovery-loop/runner.ts
+  s_10b069ebcfad9c::t_6383793223fcba 1-193
+tests/discovery-loop/runner.test.ts
+  s_10b069ebcfad9c::t_22424fc6a94849 191,194,198
+  s_10b069ebcfad9c::t_e66d8eb56f9760 1-190,192-193,195-197,199-225
+src/discovery-loop/per-step-decision.ts
+  s_10b069ebcfad9c::t_d5d397ce9e5646 56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "fc4997d1581f58e1bbd5142be3ff44dce86dcaf9",
+  "prompts": {},
+  "sessions": {
+    "s_10b069ebcfad9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a534af91-48df-4e47-9019-e2d3a4b4cfd9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

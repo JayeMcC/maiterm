@@ -1,0 +1,21 @@
+src/utils/discover-specs.ts
+  s_375e7f88918ce6::t_dd1c39f0806a2f 93-94
+  s_375e7f88918ce6::t_0f3e376add4f99 140,142,153,157,189-214,336
+  s_375e7f88918ce6::t_d8ee029b2b6649 67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "b3a352a486c9b15c67d6403673fb8c66df54ce42",
+  "prompts": {},
+  "sessions": {
+    "s_375e7f88918ce6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f938b24-227f-44ba-ba49-0b22b04477c1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

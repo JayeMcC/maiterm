@@ -1,0 +1,21 @@
+tests/utils/codegen-attach.test.ts
+  s_10b069ebcfad9c::t_2d4632e1f94690 1-53
+src/utils/codegen-attach.ts
+  s_10b069ebcfad9c::t_a73c9be039fbff 270-275,278-282,284,291-321,324-373
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.1",
+  "base_commit_sha": "ed2416a2fb58bfac592b59a577b81185cc69a5e7",
+  "prompts": {},
+  "sessions": {
+    "s_10b069ebcfad9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a534af91-48df-4e47-9019-e2d3a4b4cfd9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,39 @@
+src/nodes/review-dispatch-brief-evidence.ts
+  s_10d7e958b8b364::t_6521e3f687042e 1-20,29-41,50-62,64,66,68,71-72,90-91,101,177,306
+  s_10d7e958b8b364::t_8959abad6fe350 48
+  s_10d7e958b8b364::t_3b018fc93de390 21-28
+  s_10d7e958b8b364::t_7576be44a7976f 208-270
+  s_10d7e958b8b364::t_3297224842fa8e 43-47,49
+  s_10d7e958b8b364::t_2906b78b52b0f5 119-128,138-139,148-149,151-152,159-160,169-176,178-207,271-305
+  s_10d7e958b8b364::t_918eb91041a2bd 150,153-158
+  s_10d7e958b8b364::t_44a65f909e82ef 63,83-89,104-116,129-136,140-147,161-168
+  s_10d7e958b8b364::t_176f284cdb1bb2 42,65,67,69-70,73-82,92-100,102-103,117-118,137
+src/utils/execute-brief-walk.ts
+  s_10d7e958b8b364::t_be259f67913ea1 1-236
+src/utils/execute-brief-scenario.ts
+  s_10d7e958b8b364::t_76384330eeee57 117
+  s_10d7e958b8b364::t_188fc2d0c03fb7 163-174
+  s_10d7e958b8b364::t_ef0effddcbe6d4 1-29,31-116,118-162,175-768
+  s_10d7e958b8b364::t_6d4001ccbb7f06 30
+src/utils/normalize-brief-llm.ts
+  s_10d7e958b8b364::t_c6dc3798a64424 1-172,184-191,207-209,228-470
+  s_10d7e958b8b364::t_7a2f32c732ec51 192-206
+  s_10d7e958b8b364::t_b66f3d757fc162 210-227
+  s_10d7e958b8b364::t_bcb69e23b89df2 173-183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "dabc2d12f8a236018ee07f39135c9393a4d7fae4",
+  "prompts": {},
+  "sessions": {
+    "s_10d7e958b8b364": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46384a65-2676-4658-b4d1-9722428b95fa",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+skill-library/reviewing/ingest-ai-test-review/workflow.md
+  s_02cd628bf76a70::t_0cc721682fbb73 32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "cd0603bd4590b30f8b532b154c69ca940530794c",
+  "prompts": {},
+  "sessions": {
+    "s_02cd628bf76a70": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "99db2a40-255a-4fa7-b482-e40a1572232a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

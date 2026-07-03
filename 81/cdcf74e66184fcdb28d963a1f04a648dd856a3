@@ -1,0 +1,26 @@
+specs/feature/PLAN-25__visual-regression-standalone-cli/tasks.md
+  s_36596460844258::t_7c254db51d2c7b 28-30
+  s_36596460844258::t_155b150664900e 20,32,34-36,44,46,50,58-59,61,70,73,83,86,97
+  s_36596460844258::t_21d15fd2df5416 22
+  s_36596460844258::t_2b480ed8a122a8 31,33,47-49,69,71,85,98
+specs/feature/PLAN-25__visual-regression-standalone-cli/plan.md
+  s_36596460844258::t_2b480ed8a122a8 111
+  s_36596460844258::t_7dc8df7b19bf81 14
+  s_36596460844258::t_b51de97c6b2066 64-97,99-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "81cdcf74e66184fcdb28d963a1f04a648dd856a3",
+  "prompts": {},
+  "sessions": {
+    "s_36596460844258": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3c5863b9-4d11-4308-be03-ba64880f2ef9",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

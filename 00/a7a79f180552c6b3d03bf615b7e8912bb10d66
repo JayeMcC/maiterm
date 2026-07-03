@@ -1,0 +1,29 @@
+linked-tools/core/scripts/task-engine/src/dispatchers/tmux.ts
+  s_2faedf32a94ff1::t_b650368f8615a9 1-134
+linked-tools/core/scripts/task-engine/src/index.ts
+  s_2faedf32a94ff1::t_e384dbf5983b6a 34-40
+linked-tools/core/scripts/task-engine/src/cli.ts
+  s_2faedf32a94ff1::t_aafc78403c09fc 56-64
+  s_2faedf32a94ff1::t_fd8ddce7524a9a 3,6-7,14-26,31
+  s_2faedf32a94ff1::t_218acd4c44969e 108-139
+  s_2faedf32a94ff1::t_3e8564ae0de5a8 71-76
+linked-tools/core/scripts/task-engine/src/__tests__/dispatchers-tmux.test.ts
+  s_2faedf32a94ff1::t_97efc4574a2779 97-99,101
+  s_2faedf32a94ff1::t_975eb150a382e3 1-96,100,102-189
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "00a7a79f180552c6b3d03bf615b7e8912bb10d66",
+  "prompts": {},
+  "sessions": {
+    "s_2faedf32a94ff1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6445d28c-8b55-4fce-aa24-e77fe148004a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

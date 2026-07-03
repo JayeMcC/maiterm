@@ -1,0 +1,94 @@
+skill-library/local-dev/playwright-recording/SKILL.md
+  s_5f14770e38a813::t_6aec4d7dfdf070 82-84,87-124
+  s_5f14770e38a813::t_2ce572ccd9cbb6 132-133
+  s_5f14770e38a813::t_62a7a2f769a5d5 19-41
+  s_5f14770e38a813::t_98b166d07dac30 42-59
+  s_5f14770e38a813::t_cd7b3c2d7f1318 125
+skill-library/speckit/speckit-flow-tools/SKILL.md
+  s_f16c30277f6a1a::t_5310f876bfc2f1 159-181
+skill-library/local-dev/report-stack-status/SKILL.md
+  s_9ac4f15516dfd0::t_ccdfdc3ca0371c 1-75
+skill-library/local-dev/maiterm-issue/JOBS.md
+  s_f34d55eef828f5::t_8e463e8768b922 1-4
+skill-library/local-dev/maiterm-issue/evals/evals.json
+  s_f34d55eef828f5::t_d830fc11105111 1-51
+skill-library/local-dev/playwright-recording/scripts/record-fill.sh
+  s_5f14770e38a813::t_0614c80a64bec3 75-76
+  s_5f14770e38a813::t_636099e688bdb0 126-137,140-157,163-167,169-170,172,195,198-200,203-211,213-215
+  s_5f14770e38a813::t_cdea611ba16af6 4-5
+  s_5f14770e38a813::t_b0e1d7b3293142 173-176,182-187,191-194,197,201-202
+  s_5f14770e38a813::t_8ac287350df5e5 158-162,168,171,177-181,189-190,196
+  s_5f14770e38a813::t_7f3c0b5b9a538c 48-53
+  s_5f14770e38a813::t_d2d20ae534115b 39-40
+skill-library/local-dev/maiterm-issue/SKILL.md
+  s_f34d55eef828f5::t_2395c448b58655 100-101
+  s_f34d55eef828f5::t_eff1af3867b42f 1-2,4-9,22-27,29-49,51-55,57-68,70-72,74-77,82,84,93-94,96-97,99,102-112,114-130,140,146-149,151-152,156-182,184-198,200-206,208,220-223
+  s_de93a79e17441b::t_ce39549b3f1677 3,10-21,28,50,56,69,73,78-81,83,85-92,95,98,113,131-139,141-145,150,153-155,183,199,207,209-219,224
+skill-library/speckit/speckit-step-flow/SKILL.md
+  s_f16c30277f6a1a::t_6d59cba18d3f22 201,203
+  s_f16c30277f6a1a::t_348b2e72ceee1b 150
+  s_f16c30277f6a1a::t_e92e894d770be3 333
+  s_f16c30277f6a1a::t_67bacecd0ef8aa 209,213-297,305
+.agents/skills/maiterm-issue
+  s_43dee496f7ad7b::t_2e14319ce9c209 1
+.agents/skills/triage-pr-feedback
+  s_43dee496f7ad7b::t_e4a64d3b8c94b7 1
+skill-jobs/setting-up-locally/maiterm-issue
+  s_43dee496f7ad7b::t_bf101f42941660 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "27cb72c50aa69e96bf87e1b046a4dbc4a331c6e6",
+  "prompts": {},
+  "sessions": {
+    "s_43dee496f7ad7b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1044ba60-4f0d-4229-aecc-09215f62eee6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_5f14770e38a813": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "20f2e9e3-5ce3-4e4f-aa58-f7da934517a3",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_9ac4f15516dfd0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9ee9362f-1323-4598-a894-a1cbd708dcab",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_de93a79e17441b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "43402ee8-58d3-49f2-834a-2372025cd0dd",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_f16c30277f6a1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cc9bffe6-e5c4-48ac-af34-bb772801a5f0",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_f34d55eef828f5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ab429360-4ace-42dc-abd5-e57768673347",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

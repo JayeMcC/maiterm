@@ -1,0 +1,31 @@
+src/utils/author-cli-evidence.ts
+  s_15b80792f12d41::t_d6367da891d325 578-664
+src/utils/analyse-doc-llm.ts
+  s_15b80792f12d41::t_791955dac559f6 365-415
+  s_97977c05ed22dc::t_ddf60c6dfb29bb 497-518
+  s_97977c05ed22dc::t_c14fd306461046 329-364
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "8050455c85800a8e03354562fe51c58d1512a347",
+  "prompts": {},
+  "sessions": {
+    "s_15b80792f12d41": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7a8edb5-f6d8-4a6b-b255-010bdfa18f85",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_97977c05ed22dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c2fbd296-0e4f-488c-9b7b-a7b135fb5e27",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

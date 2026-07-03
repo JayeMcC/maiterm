@@ -1,0 +1,25 @@
+src/evidence/planner/inject-testid.ts
+  s_d30a25af462e94::t_d0cc636c38b54e 1-188
+tests/evidence/planner/inject-testid.test.ts
+  s_d30a25af462e94::t_d0cc636c38b54e 1-158
+tests/evidence/planner/residual-plan.test.ts
+  s_d30a25af462e94::t_d0cc636c38b54e 1-67
+src/evidence/planner/residual-plan.ts
+  s_d30a25af462e94::t_d0cc636c38b54e 1-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "57d67acd4f794652b11b21d16a5bce0b9a3b6ac9",
+  "prompts": {},
+  "sessions": {
+    "s_d30a25af462e94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cea7a41b-5106-476e-94d9-b2866bc06a6f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

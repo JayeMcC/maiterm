@@ -1,0 +1,40 @@
+src/utils/compose-test-comment.ts
+  s_97977c05ed22dc::t_b5aa6e903680b7 108
+  s_97977c05ed22dc::t_0ff2b0dd2c5350 165-179,183,185-186,188,190-191
+  s_97977c05ed22dc::t_b692138e80eb75 50-57
+  s_97977c05ed22dc::t_e182fa1ba426dc 146-151,153-161,181-182,196,198
+  s_97977c05ed22dc::t_93642457aff308 2,4-6,8-9,11-31,37,39-49,58-59,66-75,81,85-91,102-107,109-115,118-122,124,126-129,131-139,141-142,144-145,162,194-195,197,199-200,202-205,207-212,214-248,252-255,257-259,261-264,267-297,308,314-343
+src/nodes/review-compose-comment.ts
+  s_97977c05ed22dc::t_3d7b6df60835f9 1101-1108
+  s_15b80792f12d41::t_e835e0febd13bf 2013-2026,2037-2038
+  s_97977c05ed22dc::t_09b944b7f2b854 1089-1096,1098-1100,1109-1157,1165-1167,1172
+  s_97977c05ed22dc::t_a9a2e9b7207d29 1158-1164
+src/utils/compose-test-nuance.ts
+  s_97977c05ed22dc::t_e97376b3531bf7 96
+  s_97977c05ed22dc::t_e3feddfa4068ae 158-175
+  s_97977c05ed22dc::t_47597221b4ee40 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "1e5fccb3474597f2874a8bc141dd5eb25a85faf1",
+  "prompts": {},
+  "sessions": {
+    "s_15b80792f12d41": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7a8edb5-f6d8-4a6b-b255-010bdfa18f85",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_97977c05ed22dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c2fbd296-0e4f-488c-9b7b-a7b135fb5e27",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

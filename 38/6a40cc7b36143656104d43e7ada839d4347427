@@ -1,0 +1,27 @@
+scripts/terminal/wave/config/settings.json
+  s_e078af93d4b3e2::t_883fd5b0bb60f8 8
+scripts/terminal/wave/bin/wave-rpc
+  s_e078af93d4b3e2::t_883fd5b0bb60f8 47-54
+scripts/terminal/wave/bin/view
+  s_e078af93d4b3e2::t_883fd5b0bb60f8 6-12,20-24,27-28,42-59,93-101,110,126-164
+scripts/terminal/wave/bin/wave-spawn
+  s_e078af93d4b3e2::t_883fd5b0bb60f8 7-22,148-154,156-181,183-210,212-243,293-301,334-340,361-365,367,370,372,386-398,400-403,421-428,434-446,463,489-501,504,506,514,516
+scripts/terminal/wave/install.sh
+  s_e078af93d4b3e2::t_883fd5b0bb60f8 27-31,67,69,71,87-89,101-103,125-131,133,137-165,191-194
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "386a40cc7b36143656104d43e7ada839d4347427",
+  "prompts": {},
+  "sessions": {
+    "s_e078af93d4b3e2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93c1630f-9f15-4bd0-be17-5038e1c2afa1",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+tests/graph/review-loop.test.ts
+  s_ec41e3361fd247::t_93e0895c5f22eb 127-133
+vitest.config.ts
+  s_ec41e3361fd247::t_a240f1fda75c92 8-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "2fd88bacfc25d95b9714b3e3f97b5831d9449981",
+  "prompts": {},
+  "sessions": {
+    "s_ec41e3361fd247": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46706c9c-5e98-4950-9b5a-9d3c8f043b7c",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

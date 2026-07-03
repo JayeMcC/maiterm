@@ -1,0 +1,42 @@
+linked-tools/repos/forwood-vault/.specify/templates/tasks-template.md
+  s_cb3783f7107f3d::t_9c549b484bb4d2 47-49
+  s_cb3783f7107f3d::t_81ebb42ce3a03e 20-29
+linked-tools/repos/forwood-vault/.specify/memory/constitution.md
+  s_cb3783f7107f3d::t_213850f3a91b00 1-109
+linked-tools/repos/forwood-vault/.agents/commands/speckit.specify.md
+  s_cb3783f7107f3d::t_9e2621bfeefe25 220
+linked-tools/repos/forwood-vault/.agents/commands/speckit-flow-tools.md
+  s_cb3783f7107f3d::t_bea9f93c7f3d28 1-41
+skill-library/tools-maintenance/skill-lint/reference/skills-layout.md
+  s_cb3783f7107f3d::t_360f85f17ec2b2 26
+  s_cb3783f7107f3d::t_f4dfea483718a1 57,61
+scripts/personal-tooling-sync/helpers/sync/engine/skill-library-links.mjs
+  s_cb3783f7107f3d::t_64a74dfd4c4e25 23
+  s_cb3783f7107f3d::t_a5b0b6222c3532 38
+  s_cb3783f7107f3d::t_8fc7c4fdfa2a75 62-63
+linked-tools/repos/forwood-vault/.agents/commands/speckit.implement.md
+  s_cb3783f7107f3d::t_b0ca973ebcba15 8
+linked-tools/repos/forwood-vault/.specify/templates/spec-template.md
+  s_cb3783f7107f3d::t_5ccea0d3b8873c 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "012085463303262246eaa4420cbf5f2797706d4c",
+  "prompts": {},
+  "humans": {
+    "h_0e239642edda1b": {
+      "author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  },
+  "sessions": {
+    "s_cb3783f7107f3d": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9e4f6f81-8045-438f-b69a-987641d60711",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

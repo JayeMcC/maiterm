@@ -1,0 +1,47 @@
+src/utils/source-clone-checkout.ts
+  s_cffcdb85151673::t_6205123ca689b1 139-150,152,168,172-190,193-203
+  s_cffcdb85151673::t_719e41d2b7c84b 217-224
+src/utils/pause-run.ts
+  s_cffcdb85151673::t_ece7af911d64d7 1-21,23-176
+  s_cffcdb85151673::t_e58174acea1ad7 22
+src/utils/strip-stack-suffixes.ts
+  s_de93a79e17441b::t_9244244a7aeda4 1-60
+src/utils/script-substitution.ts
+  s_6b259a54074bb7::t_ef52fcdc3b29c1 142-151
+  s_6b259a54074bb7::t_fdf2a0c469065c 1-141,152-249,255,257-260
+  s_6b259a54074bb7::t_6ec12f05babd46 250-254,256
+tests/utils/script-substitution.test.ts
+  s_6b259a54074bb7::t_58724ff2a915fc 1-239
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "4c45d8fddd6fbe8a56efaf5bde4c2c9318e20904",
+  "prompts": {},
+  "sessions": {
+    "s_6b259a54074bb7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f71878d-1aef-44be-b05f-fa6a9d0bdae8",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_cffcdb85151673": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f7e649e-6902-4adb-a456-e6e44cd2d2b2",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_de93a79e17441b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "43402ee8-58d3-49f2-834a-2372025cd0dd",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
