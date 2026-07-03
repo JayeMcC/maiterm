@@ -1,0 +1,124 @@
+src/nodes/e2e-collect-diagnostic-evidence.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 30,220,228
+src/utils/generate-test-llm.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 26,235,240,319,324
+src/llm/providers/claude-provider.ts
+  s_356dd0b6dcdade::t_0c50d9ab6db261 20,23-33,37-47,64,68-72
+src/nodes/e2e-diagnose.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 26,181,189
+src/config/model-tiers.ts
+  s_356dd0b6dcdade::t_b0f86c0262151d 1-45
+src/utils/author-api-evidence.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 31,186
+  s_356dd0b6dcdade::t_dd3da944478c48 188
+src/nodes/e2e-reexplore-failing-step.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 31,295,303
+src/utils/author-fe-arrange.ts
+  s_356dd0b6dcdade::t_dd3da944478c48 147
+  s_356dd0b6dcdade::t_c37c95927c94d7 26,145
+src/llm/providers/cursor-provider.ts
+  s_356dd0b6dcdade::t_2a519a07b78e35 135
+  s_356dd0b6dcdade::t_df16b0cb1f26cb 17,25-42,45-59
+  s_356dd0b6dcdade::t_54a6e188eb9d17 82,86-99
+src/utils/compose-ac-eli5-llm.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 22,90,95
+src/utils/readalong-fragment-cache.ts
+  s_d68799056db508::t_b6a52ac4684d6c 1-73
+src/utils/classify-diff-file.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 22,95,100
+src/llm/types.ts
+  s_356dd0b6dcdade::t_a08bff686b6cd8 27-31,33-39
+src/llm/providers/litellm-provider.ts
+  s_356dd0b6dcdade::t_c32d57b620a366 16,18-28,47-48,51-52
+  s_356dd0b6dcdade::t_385e182e51cc1f 53
+src/nodes/review-dispatch-test-runs.ts
+  s_356dd0b6dcdade::t_b155a415159a3c 38
+  s_356dd0b6dcdade::t_81b6e00c329507 67-100,108-115,118-119,123-130,145-208
+  s_356dd0b6dcdade::t_59ed5f1410709e 209
+src/utils/audit-not-covered.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 28,244,252
+src/utils/author-arrange-oracle.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 32,125
+  s_356dd0b6dcdade::t_dd3da944478c48 128
+src/utils/compose-ac-gaps-llm.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 36,189,194
+src/utils/audit-spec-llm.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 16,110,115
+src/nodes/e2e-plan-test-narrative.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 32,262,278
+src/nodes/e2e-write-data-gen.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 24,561,654
+src/nodes/e2e-write-verification.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 28,296,428
+src/utils/assess-ac-feasibility.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 36,196
+  s_356dd0b6dcdade::t_dd3da944478c48 199
+src/utils/compose-coverage-llm.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 14,997,1002
+src/utils/compose-test-nuance.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 27,272,285
+src/utils/analyse-doc-llm.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 17,986,1003
+src/utils/curate-gaps-llm.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 22,110,115
+src/utils/extract-manual-test-requirements.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 19,95,100
+src/utils/decompose-ac.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 21,182,190
+  s_356dd0b6dcdade::t_fee1ee16a8250c 185
+src/utils/f1cli-author-setup.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 14,104
+  s_356dd0b6dcdade::t_9d83c552bb0763 106
+src/utils/normalize-brief-llm.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 26,270,275
+src/utils/extract-addendum-keys.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 19,57,62
+src/utils/grounding-index.ts
+  s_356dd0b6dcdade::t_dd3da944478c48 180
+  s_356dd0b6dcdade::t_c37c95927c94d7 28
+src/utils/author-cli-evidence.ts
+  s_356dd0b6dcdade::t_dd3da944478c48 1220
+  s_356dd0b6dcdade::t_c37c95927c94d7 18,1218
+src/utils/author-source-evidence.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 16,1190,1354
+  s_356dd0b6dcdade::t_dd3da944478c48 1192,1356
+src/utils/compose-ac-required-tests-llm.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 22,183,188
+src/utils/file-digest.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 26,166,171
+src/utils/triage-ac-modality.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 30,144,170
+  s_356dd0b6dcdade::t_9d83c552bb0763 146,172
+src/config/model-config.ts
+  s_356dd0b6dcdade::t_e0a3d0939c4482 2,4-11,17,25-29,31-32,34-86,89-116,118-119,121-123,127-136,141,145
+src/nodes/e2e-split-manual-steps.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 31,271,280
+tests/config/model-tiers.test.ts
+  s_356dd0b6dcdade::t_a453651761755c 1-46
+src/nodes/review-write-bearings.ts
+  s_356dd0b6dcdade::t_c37c95927c94d7 28,139,145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "6daab1672c7cecddc4dfce58cb2f3d2e3d0f34ec",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_d68799056db508": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "647c6832-5706-45ac-929e-c54d4f67a87f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,46 @@
+tests/utils/file-digest.test.ts
+  s_356dd0b6dcdade::t_bf67bc0da287ab 1-89
+tests/utils/import-neighbours.test.ts
+  s_356dd0b6dcdade::t_2254a6fed8b269 1-108
+src/utils/digest-cache.ts
+  s_356dd0b6dcdade::t_1458235c1d7844 1-84
+src/utils/import-neighbours.ts
+  s_356dd0b6dcdade::t_f880f285e924b1 1-27,33-41,45,50-122
+  s_356dd0b6dcdade::t_9c77a9ab78a63c 28-32,42-44,46-49
+tests/utils/digest-cache.test.ts
+  s_356dd0b6dcdade::t_19b050d15f8fc3 1-107
+src/utils/branch-cache.ts
+  s_356dd0b6dcdade::t_0e3cff9fc0b253 87-105
+  s_356dd0b6dcdade::t_a525f2207203aa 75-86
+  s_d68799056db508::t_43cfffe4f0cd14 1-38,45-46,53-74,106-130
+  s_d68799056db508::t_54d7864ea15ba0 39-44,47-52
+src/utils/file-digest.ts
+  s_356dd0b6dcdade::t_2ecc2bab89bd6d 176-178
+  s_356dd0b6dcdade::t_38b9564d7ce315 1-175,179-214
+src/config/model-config.ts
+  s_356dd0b6dcdade::t_c81c5dfbf404ed 67-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "1a5ac68a0ed3e991c945b7b636b9aa13c7564e0f",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_d68799056db508": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "647c6832-5706-45ac-929e-c54d4f67a87f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

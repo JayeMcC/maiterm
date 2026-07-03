@@ -1,0 +1,19 @@
+.agents/rules/20-workflow/reviewer-notes-not-hand-edits.md
+  s_356dd0b6dcdade::t_0fff0c92251ab7 1-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "7fdfcd110a6043a5fa2a31edd829b1994a0405d3",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

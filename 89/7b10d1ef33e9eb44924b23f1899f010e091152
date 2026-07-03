@@ -1,0 +1,19 @@
+.env.example
+  s_c586f16f73bc3e::t_27cda49a19242e 121-129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "897b10d1ef33e9eb44924b23f1899f010e091152",
+  "prompts": {},
+  "sessions": {
+    "s_c586f16f73bc3e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "058b44b2-75f5-49f1-a841-5d707157b4e6",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

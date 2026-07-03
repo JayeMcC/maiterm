@@ -1,0 +1,23 @@
+src/fleet/control-plane-client.ts
+  s_37bc688fcf5888::t_7f48ee9905e621 1-177
+tests/fleet/control-plane-client.test.ts
+  s_37bc688fcf5888::t_6cc32cbf5e2b7a 1-169
+src/fleet/registry-fallback.ts
+  s_37bc688fcf5888::t_025887d096ead9 1-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "c82d383093ffe47fd42472da85da2a66a6f97003",
+  "prompts": {},
+  "sessions": {
+    "s_37bc688fcf5888": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98b6ac43-466f-4147-aee9-8502cc685c9f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+docs/issues/walk-outlives-review-complete.md
+  s_356dd0b6dcdade::t_79b2d4b7d8bdf1 1-60
+src/scripts/review-start.ts
+  s_356dd0b6dcdade::t_dbb40f58c825e4 529-576
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "e31c6ff4e2893833189b20470ee9b389ba40d4d1",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+src/utils/reviewer-notes.ts
+  s_356dd0b6dcdade::t_f72b67678319b8 1-142
+tests/utils/reviewer-notes.test.ts
+  s_356dd0b6dcdade::t_496ec0e098fbb1 1-55
+src/nodes/review-compose-comment.ts
+  s_356dd0b6dcdade::t_86d3527f75771b 954,2367,2431
+  s_356dd0b6dcdade::t_0e9ff8fab72cde 2340,2397
+  s_356dd0b6dcdade::t_b4fe1d1f2241cb 46,2235,2268-2273,2299,2309-2310
+  s_356dd0b6dcdade::t_a7b44cb8545603 936-940,992-997
+CONTEXT.md
+  s_356dd0b6dcdade::t_05328c095b651d 584-595
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "84694ff00f1c983a4ded611e7830be3b0f7a8d8c",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

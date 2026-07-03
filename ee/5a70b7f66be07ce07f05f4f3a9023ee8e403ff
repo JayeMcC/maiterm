@@ -1,0 +1,21 @@
+src/hub/render/jira-wiki.ts
+  s_37bc688fcf5888::t_af77a78a1f22c7 1-116
+tests/hub/jira-wiki.test.ts
+  s_37bc688fcf5888::t_c80cd0580d0ab6 1-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "ee5a70b7f66be07ce07f05f4f3a9023ee8e403ff",
+  "prompts": {},
+  "sessions": {
+    "s_37bc688fcf5888": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98b6ac43-466f-4147-aee9-8502cc685c9f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

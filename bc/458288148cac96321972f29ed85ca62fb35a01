@@ -1,0 +1,21 @@
+src/utils/deferral-ledger.ts
+  s_356dd0b6dcdade::t_08e24e44f4ce3d 1-140
+src/nodes/review-compose-comment.ts
+  s_356dd0b6dcdade::t_fbc86860531a2c 47,904-926
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "bc458288148cac96321972f29ed85ca62fb35a01",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
