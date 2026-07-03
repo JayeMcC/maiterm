@@ -843,3 +843,9 @@ export async function runRailProvider(
     loginShell: loginShell ?? false,
   });
 }
+
+/** Raw JSON of the optional rail provider override (`~/.config/maiterm/rail.json`),
+ *  or null when absent. The rail merges it over its built-in defaults. */
+export async function readRailConfig(): Promise<string | null> {
+  return invoke('read_rail_config');
+}

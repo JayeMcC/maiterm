@@ -78,6 +78,26 @@ fn sh_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\\''"))
 }
 
+/// Read the optional rail provider config, so the rail is a generic
+/// "contextual action rail" rather than hardcoded to one toolchain. Returns the
+/// raw JSON at `~/.config/maiterm/rail.json` (the frontend merges it over its
+/// built-in defaults), or `None` when the file is absent. A read/parse problem
+/// surfaces as `None` too — a broken override should fall back to defaults, not
+/// wedge the rail.
+#[command]
+pub async fn read_rail_config() -> Result<Option<String>, String> {
+    let home = match std::env::var_os("HOME") {
+        Some(h) => h,
+        None => return Ok(None),
+    };
+    let path = std::path::Path::new(&home).join(".config/maiterm/rail.json");
+    match std::fs::read_to_string(&path) {
+        Ok(s) => Ok(Some(s)),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(_) => Ok(None),
+    }
+}
+
 /// Run a one-shot provider command and capture its output. NOT a PTY — this is
 /// for machine-readable provider calls (list/status) and fire-and-report
 /// buttons, bounded by a timeout so a hung provider can't wedge the rail.

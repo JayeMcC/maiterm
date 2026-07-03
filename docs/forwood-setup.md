@@ -135,6 +135,36 @@ and the `latest.json` updater feed. One-time setup: the repo secrets
 app; keep the private half (`~/.tauri/maiterm-updater.key`) backed up — losing it
 means existing installs can't verify future updates.
 
+## Customizing the rail (advanced)
+
+The rail ships with the forwood providers built in, so there's nothing to
+configure for normal use. To point it at a different toolchain (or a second
+launcher), drop a `~/.config/maiterm/rail.json` — it's merged over the defaults:
+
+```json
+{
+  "taskProviders": [
+    {
+      "marker": ".vscode/tasks.json",
+      "label": "Tasks",
+      "program": "forwood-launcher",
+      "listArgs": ["--list", "--json", "--dir", "{dir}"],
+      "fireArgs": ["--fire", "{label}", "--dir", "{dir}"]
+    }
+  ],
+  "containerProvider": {
+    "marker": ".devcontainer/devcontainer.json",
+    "program": "forwood-launcher",
+    "statusArgs": ["--container-status", "--dir", "{dir}"],
+    "forwardArgs": ["--forward", "{port}", "--dir", "{dir}"],
+    "unforwardArgs": ["--unforward", "{port}", "--dir", "{dir}"]
+  }
+}
+```
+
+`{dir}` expands to the detected repo root, `{label}` to the fired task, `{port}`
+to the port. A missing or malformed file falls back to the defaults silently.
+
 ## Troubleshooting
 
 | Symptom | Likely cause / fix |
