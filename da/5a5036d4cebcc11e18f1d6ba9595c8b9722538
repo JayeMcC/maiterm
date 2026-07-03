@@ -1,0 +1,19 @@
+linked-tools/core/scripts/launcher/docs/install.md
+  s_ad2f963c4afad3::t_448e93a2bf71e1 3-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "da5a5036d4cebcc11e18f1d6ba9595c8b9722538",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

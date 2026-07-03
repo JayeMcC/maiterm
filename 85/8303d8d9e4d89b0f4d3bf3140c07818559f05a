@@ -1,0 +1,27 @@
+linked-tools/repos/forwood-one/.vscode/scripts/tasks/rebuild-container.sh
+  s_ad2f963c4afad3::t_85b89f146f0721 1-25
+linked-tools/repos/forwood-one/.vscode/tasks.json
+  s_ad2f963c4afad3::t_de9849a9d547a6 378-409
+linked-tools/repos/forwood-one/.vscode/scripts/tasks/require-host.sh
+  s_ad2f963c4afad3::t_79f01f0007b9a7 1-10
+specs/feature/PLAN-15__maiterm-hotbar/tasks.md
+  s_ad2f963c4afad3::t_adb52e7e551c6c 86
+  s_ad2f963c4afad3::t_d57e337f7d35d3 85
+  s_ad2f963c4afad3::t_857f7c74956e5f 84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "858303d8d9e4d89b0f4d3bf3140c07818559f05a",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

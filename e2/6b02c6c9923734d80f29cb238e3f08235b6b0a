@@ -1,0 +1,42 @@
+scripts/personal-sync-devcontainer-setup/README.md
+  s_cbc45a62f968d2::t_ff57b99996ca6e 21
+  s_cbc45a62f968d2::t_6ae3a94926d3d6 27
+linked-tools/repos/forwood-one/.vscode/scripts/tasks/branch-change-setup.sh
+  s_356dd0b6dcdade::t_cb25b87d9baca7 55-59
+scripts/personal-sync-devcontainer-setup/apply.mjs
+  s_cbc45a62f968d2::t_e3e2a662d46e08 340-347,349
+  s_cbc45a62f968d2::t_87c722b0c71ad9 270,274-277,293-333
+  s_cbc45a62f968d2::t_234c7a320da181 212,219-222,238
+  s_cbc45a62f968d2::t_3b785e76651aa7 15-18
+.vscode/tasks.json
+  s_cbc45a62f968d2::t_b2f1fdbd503616 47-58
+  s_cbc45a62f968d2::t_dd5b3a0a116b5d 45-46
+scripts/sync.mjs
+  s_cbc45a62f968d2::t_1d01a9752ca129 52,55
+scripts/personal-sync-devcontainer-setup/templates/forwood-one_core/.changesignore-content
+  s_356dd0b6dcdade::t_b69e6bbc073e32 17,21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "e26b02c6c9923734d80f29cb238e3f08235b6b0a",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_cbc45a62f968d2": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c5e8a91f-585f-43c8-960a-e7d1ed3e62a6",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+src/lib/stores/claudeCode.svelte.ts
+  s_ad2f963c4afad3::t_970223fa2af2ec 1187-1194,1196-1197,1199,1203-1204,1206
+  s_ad2f963c4afad3::t_5229604c99f519 1259
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "35c7622643019dac6d9cdf286cb570f16f75d2e8",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

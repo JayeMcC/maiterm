@@ -1,0 +1,21 @@
+package.json
+  s_ad2f963c4afad3::t_2d67254cd3a7e1 3
+src-tauri/tauri.conf.json
+  s_ad2f963c4afad3::t_7c2430762b1f69 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "cd8619f5f8e7500e2fc97b5737e20af2e5ea113a",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

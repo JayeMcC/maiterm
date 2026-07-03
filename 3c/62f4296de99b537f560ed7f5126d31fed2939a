@@ -1,0 +1,21 @@
+.github/workflows/render-parity.yml
+  s_ad2f963c4afad3::t_174d3b01832ec6 1-107
+tests/e2e/harness/render-probe.ts
+  s_ad2f963c4afad3::t_fceea80da1c984 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "3c62f4296de99b537f560ed7f5126d31fed2939a",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

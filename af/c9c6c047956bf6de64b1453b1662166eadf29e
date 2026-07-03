@@ -1,0 +1,21 @@
+src-tauri/src/lib.rs
+  s_ad2f963c4afad3::t_8f261c9afadd3d 633,654-667
+  s_ad2f963c4afad3::t_e1f52212111374 644-649
+  s_ad2f963c4afad3::t_66d4e39a61917e 146-147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "afc9c6c047956bf6de64b1453b1662166eadf29e",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

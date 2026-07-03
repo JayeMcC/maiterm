@@ -1,0 +1,21 @@
+.gitignore
+  s_e515b0ac108a75::t_c1c6b2509fdd89 36-53
+src/routes/+layout.svelte
+  s_e515b0ac108a75::t_4d5473385eb467 449-456,458-468
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "944f1aa879c7b7430e10a0eca18a43776f695ca8",
+  "prompts": {},
+  "sessions": {
+    "s_e515b0ac108a75": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f840c9d4-5091-4c2f-95b0-200e2883e960",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

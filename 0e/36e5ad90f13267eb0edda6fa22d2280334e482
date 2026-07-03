@@ -1,0 +1,34 @@
+src-tauri/src/lib.rs
+  s_e515b0ac108a75::t_a03d2e93991c43 7-26
+src-tauri/src/claude_code/lockfile.rs
+  s_e515b0ac108a75::t_983b31c0b03334 79
+.github/workflows/build-linux.yml
+  s_e515b0ac108a75::t_1b5ae796378ce4 3-5,8,19-31,49-50,66,68-71,78,85
+.github/workflows/build-windows.yml
+  s_e515b0ac108a75::t_c6837d87edb315 3-5,8,19-32,40,57,59,66,73
+.github/workflows/build-macos.yml
+  s_e515b0ac108a75::t_509dd83a5bde40 1-80
+src-tauri/tauri.channel-dev.conf.json
+  s_e515b0ac108a75::t_fb7b4892a349e9 1-11
+src-tauri/src/state/persistence.rs
+  s_e515b0ac108a75::t_4d59b0e78edd02 75-83,85-89
+  s_e515b0ac108a75::t_8048cd7b1b171f 102-107,111,113
+src-tauri/src/claude_code/protocol.rs
+  s_e515b0ac108a75::t_4db3baa9eba32f 592
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "0e36e5ad90f13267eb0edda6fa22d2280334e482",
+  "prompts": {},
+  "sessions": {
+    "s_e515b0ac108a75": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f840c9d4-5091-4c2f-95b0-200e2883e960",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

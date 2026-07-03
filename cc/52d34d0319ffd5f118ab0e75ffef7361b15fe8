@@ -1,0 +1,19 @@
+docs/plans/15-maiterm-hotbar.md
+  s_ad2f963c4afad3::t_820e1291b0f093 110-117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "cc52d34d0319ffd5f118ab0e75ffef7361b15fe8",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

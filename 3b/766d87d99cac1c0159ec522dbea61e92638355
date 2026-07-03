@@ -1,0 +1,24 @@
+docs/forwood-setup.md
+  s_ad2f963c4afad3::t_95ba6fb61030e4 1-111
+docs/fork-todo.md
+  s_ad2f963c4afad3::t_b546be1512b2f2 36-44
+src/lib/stores/updater.svelte.ts
+  s_ad2f963c4afad3::t_73fbbb8c665315 1,8,11-33,37-38,47-55,57-58,61-84,86,88-95,98,103,109-111,113-114,119-120,123,133,160-165,175,177,183
+  s_ad2f963c4afad3::t_f3a6bc0e7876a0 42-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "3b766d87d99cac1c0159ec522dbea61e92638355",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

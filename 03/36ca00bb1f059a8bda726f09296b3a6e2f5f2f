@@ -1,0 +1,38 @@
+linked-tools/core/scripts/task-engine/src/index.ts
+  s_ad2f963c4afad3::t_6cf28b9f288a8c 90-100,105-106,112,116-127
+  s_ad2f963c4afad3::t_f181cecff6a5e6 71
+linked-tools/core/scripts/task-engine/src/__tests__/cli.test.ts
+  s_ad2f963c4afad3::t_0fae2309ef7313 260,262
+  s_ad2f963c4afad3::t_665d15a5dc059c 172-173,176
+specs/feature/PLAN-15__maiterm-hotbar/spec-changelog.md
+  s_ad2f963c4afad3::t_97faf8bba87221 1-19
+linked-tools/core/scripts/task-engine/src/dispatchers/maiterm.ts
+  s_ad2f963c4afad3::t_1241804070cd26 61-68
+  s_ad2f963c4afad3::t_715b743f3824a4 169-175
+  s_ad2f963c4afad3::t_db51ad7bbfb79a 148
+linked-tools/core/scripts/task-engine/src/__tests__/fixtures/contexts/.vscode/tasks.json
+  s_ad2f963c4afad3::t_67504e026c7faa 1-29
+linked-tools/core/scripts/task-engine/src/__tests__/dispatchers-maiterm.test.ts
+  s_ad2f963c4afad3::t_d406233e5fba83 264-301
+linked-tools/core/scripts/task-engine/src/cli.ts
+  s_ad2f963c4afad3::t_08abe9dee75118 148
+  s_ad2f963c4afad3::t_8fa9333d7e92a6 163,167,175
+linked-tools/core/scripts/task-engine/src/__tests__/resolve-context.test.ts
+  s_ad2f963c4afad3::t_ea97994d3f30d8 1-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "0336ca00bb1f059a8bda726f09296b3a6e2f5f2f",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

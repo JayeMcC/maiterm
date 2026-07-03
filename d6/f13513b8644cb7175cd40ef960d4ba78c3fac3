@@ -1,0 +1,32 @@
+src/app.d.ts
+  s_ad2f963c4afad3::t_3dee828aaa19aa 5-7
+src-tauri/src/lib.rs
+  s_ad2f963c4afad3::t_6ec1d2d6de258f 162-177
+src/routes/+page.svelte
+  s_ad2f963c4afad3::t_487395a485ccba 23
+  s_ad2f963c4afad3::t_28d6334f643389 194-197,201
+src/routes/+layout.svelte
+  s_ad2f963c4afad3::t_0ebc0a1e70e10c 103-106,108
+  s_ad2f963c4afad3::t_8f30cde77073ea 985-992
+  s_ad2f963c4afad3::t_0d5fbde9e8c0d0 107
+vite.config.ts
+  s_ad2f963c4afad3::t_4a5e2f8b2063c5 1-2,6-25,28-31
+src-tauri/build.rs
+  s_ad2f963c4afad3::t_a487949b3a4622 2-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "d6f13513b8644cb7175cd40ef960d4ba78c3fac3",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+linked-tools/core/scripts/task-engine/src/dispatchers/maiterm.ts
+  s_ad2f963c4afad3::t_a638424622c3ff 161-164
+  s_ad2f963c4afad3::t_d9f49763ac7a91 108
+  s_ad2f963c4afad3::t_6dc3d716a84ec7 1
+  s_ad2f963c4afad3::t_fae05d26fad519 131-136,141
+linked-tools/core/scripts/task-engine/src/__tests__/cli.test.ts
+  s_ad2f963c4afad3::t_e6f5f0d9c44743 261
+  s_ad2f963c4afad3::t_687accea1f1098 171-173
+linked-tools/core/scripts/task-engine/src/__tests__/dispatchers-tmux.test.ts
+  s_ad2f963c4afad3::t_1e6a5b77f75000 4,195-224
+  s_ad2f963c4afad3::t_c2e1ed7d40fb6c 75,97-100
+  s_ad2f963c4afad3::t_92f13b801dff32 101-103
+  s_ad2f963c4afad3::t_f79dfb8e4bbef4 225
+linked-tools/core/scripts/task-engine/src/__tests__/dispatchers-maiterm.test.ts
+  s_ad2f963c4afad3::t_c212b830546a02 4,12
+  s_ad2f963c4afad3::t_1e6a5b77f75000 217-261
+  s_ad2f963c4afad3::t_4cab26f7352c86 262-263
+linked-tools/core/scripts/task-engine/src/dispatchers/tmux.ts
+  s_ad2f963c4afad3::t_55ea0a55603256 109-111,115-118
+specs/feature/PLAN-15__maiterm-hotbar/tasks.md
+  s_ad2f963c4afad3::t_d6f09ff5a00fc5 71
+  s_ad2f963c4afad3::t_471cbd971b3640 68
+  s_ad2f963c4afad3::t_a4af50c7d1d2a5 70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "3c5f2c0fe062365b33a88175702bc32cea76f44a",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}

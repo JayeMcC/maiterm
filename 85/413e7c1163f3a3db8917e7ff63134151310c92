@@ -1,0 +1,21 @@
+.github/workflows/build-macos.yml
+  s_ad2f963c4afad3::t_5133a48900d3a3 63-65
+src-tauri/tauri.conf.json
+  s_ad2f963c4afad3::t_6fcfc88dce59ae 35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "85413e7c1163f3a3db8917e7ff63134151310c92",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
