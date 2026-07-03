@@ -63,9 +63,13 @@ pub async fn find_markers_upward(
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProviderResult {
     pub stdout: String,
     pub stderr: String,
+    // Tauri serializes return values via serde as-is (no camelCase magic like
+    // it does for command ARGS), so without the rename the frontend would read
+    // `exit_code` — reading `exitCode` gave undefined → "provider exited undefined".
     pub exit_code: i32,
 }
 
