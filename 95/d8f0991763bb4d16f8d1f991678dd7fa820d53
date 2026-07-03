@@ -1,0 +1,29 @@
+.agents/rules/20-workflow/non-green-probe-triage.md
+  s_6b259a54074bb7::t_a4bb5577a54cbc 1-162
+.agents/rules/20-workflow/multi-ticket-review-mode.md
+  s_356dd0b6dcdade::t_5903cce0c57100 1-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "95d8f0991763bb4d16f8d1f991678dd7fa820d53",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "unknown"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_6b259a54074bb7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f71878d-1aef-44be-b05f-fa6a9d0bdae8",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
