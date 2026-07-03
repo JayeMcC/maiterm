@@ -1,0 +1,21 @@
+src/lib/utils/openFile.ts
+  s_ad2f963c4afad3::t_9927ecc3bf6e3b 68-80
+src/lib/stores/workspaces.svelte.ts
+  s_ad2f963c4afad3::t_96c3b4f9c8326b 994-1017
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "12128259c61de74a767fdec9f2d69c9e1cf154fc",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
