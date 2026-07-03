@@ -1,0 +1,30 @@
+src-tauri/src/claude_code/server.rs
+  s_ad2f963c4afad3::t_d1ea0eb6c9339c 1629-1641
+src-tauri/resources/maiterm-skill/bin/agent-hook.sh
+  s_ad2f963c4afad3::t_c93a5a9f2c4fec 2,4-7,10,15-17,19,21-24,28
+  s_ad2f963c4afad3::t_5e018f42435e31 49
+src-tauri/src/claude_code/cursor.rs
+  s_ad2f963c4afad3::t_52c48e2dde679d 292-322
+  s_ad2f963c4afad3::t_4cf1ee1b0c672b 47,51-63,66-83,87-88,95-100,103-104,108-126
+  s_ad2f963c4afad3::t_e72ae495989bf8 137-207
+  s_ad2f963c4afad3::t_dd9d746fde8a4a 14,17-33
+  s_ad2f963c4afad3::t_03417eb38018c4 34
+docs/fork-todo.md
+  s_ad2f963c4afad3::t_8d12674a93265c 64-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "736e11cfd839f8fe2a950b4c2ec71f93fd48ed79",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
