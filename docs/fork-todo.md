@@ -21,11 +21,10 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
   the cause). No crash reports / terminations in the log at rest.
 
 ## Rail (PLAN-15 stream 3)
-- [ ] **Container-tab detection** — the rail only appears on host tabs. A tab
-  whose cwd is `/workspaces/…` (inside a container) isn't detected host-side.
-  Map the container path → the host clone (docker inspection; disambiguate
-  which container, since `/workspaces/website` is shared across
-  developing/reviewing/experimenting).
+- **Done: Container-tab detection** — confirmed working. The rail resolves the
+  active tab's real cwd from its PTY process (`getPtyInfo`), and a container
+  tab's host-side process cwd resolves to the host clone, so the rail targets
+  the right stack without a separate `/workspaces/…` → clone mapping.
 - **Done: Provider config.** Rail providers now come from
   `~/.config/maiterm/rail.json` (merged over the forwood defaults; new
   `read_rail_config` command) — the rail is a generic, configurable action rail.
@@ -41,11 +40,13 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
   builds+signs the maiTerm3 bundle and publishes a Release + `latest.json`,
   `scripts/release.sh <version>` cuts it, the in-app updater checks the fork feed
   (not Flexmark). Install via DMG download (one-time `xattr` bypass).
-- [ ] **Layer 2 — Apple Developer ID + notarization.** Removes the one-time
-  Gatekeeper bypass on download/update entirely (truly frictionless on any Mac).
-  Needs a paid Apple Developer account ($99/yr) + Developer ID cert; add
-  `APPLE_CERTIFICATE` / `APPLE_ID` / `APPLE_PASSWORD` / `APPLE_TEAM_ID` secrets
-  and the notarize+staple step to `release.yml`. Purely additive on Layer 1.
+- **Deferred (reference only — probably won't do).** Layer 2: Apple Developer
+  ID + notarization would remove the one-time Gatekeeper `xattr` bypass entirely
+  (frictionless install/update on any Mac). It needs a paid Apple Developer
+  account ($99/yr) + Developer ID cert, then `APPLE_CERTIFICATE` / `APPLE_ID` /
+  `APPLE_PASSWORD` / `APPLE_TEAM_ID` secrets and a notarize+staple step in
+  `release.yml`. Kept here so the requirement is known if frictionless install
+  ever becomes worth the cost.
 
 ## In-app integrations
 - **Done:** Report Bug / Feature Request buttons (WorkspaceSidebar footer) now
