@@ -1,0 +1,24 @@
+src/lib/components/terminal/TerminalTabs.svelte
+  s_ad2f963c4afad3::t_fd7c7d2269ca9a 1615-1619,1628-1630
+docs/fork-todo.md
+  s_ad2f963c4afad3::t_c4dfb7f04dfb65 62-65
+  s_ad2f963c4afad3::t_6f5c03399d5ea1 68-72
+src-tauri/src/claude_code/server.rs
+  s_ad2f963c4afad3::t_5e2b61847383c9 1413-1419
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "f93defaf0487edfe88aa67d5fe22d575dbf3474c",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
