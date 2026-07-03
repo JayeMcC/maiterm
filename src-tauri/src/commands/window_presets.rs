@@ -285,6 +285,25 @@ fn expand_cwds(body: &mut WindowData) {
     });
 }
 
+/// Strip per-tab SSH details on export so a shared setup's SSH tabs re-create as
+/// plain LOCAL terminal tabs (the recipient opens a local shell and SSHs
+/// themselves). An SSH command carries the exporter's `user@host` + a remote
+/// path — neither is portable to another machine/account — so we drop them
+/// rather than ship a tab that connects to someone else's box. Local cwds
+/// (restore_cwd / auto_resume_cwd) are kept (already `~`-relativized).
+fn strip_ssh_tabs(body: &mut WindowData) {
+    for ws in &mut body.workspaces {
+        for pane in &mut ws.panes {
+            for tab in &mut pane.tabs {
+                tab.restore_ssh_command = None;
+                tab.restore_remote_cwd = None;
+                tab.auto_resume_ssh_command = None;
+                tab.auto_resume_remote_cwd = None;
+            }
+        }
+    }
+}
+
 /// De-duplicate an imported preset name against the existing list.
 fn unique_preset_name(existing: &[WindowPreset], base: &str) -> String {
     let base = if base.trim().is_empty() { "Imported setup" } else { base.trim() };
@@ -321,6 +340,7 @@ pub fn export_window_setup(
         .clone();
     let mut body = capture_window_body(&source, &tab_contexts);
     relativize_cwds(&mut body);
+    strip_ssh_tabs(&mut body);
     let envelope = SetupEnvelope {
         version: SETUP_VERSION,
         name: name
