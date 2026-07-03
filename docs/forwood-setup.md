@@ -4,23 +4,47 @@ End-to-end setup so a new employee gets maiTerm running as their local
 dev-container terminal — with the **task runner rail** (fire dev servers, view
 container ports) that replaces VS Code's tasks panel. Follow top to bottom.
 
-The rail is two parts working together:
+The rail is two parts working together, **both in this repo**:
 
 - **maiTerm** (this fork, `JayeMcC/maiterm`) — the terminal app + the rail UI.
-- **`forwood-launcher`** (in `forwood-one-tools`) — the provider the rail runs
-  to list/fire tasks and read container status. The app is forwood-agnostic;
-  all the forwood knowledge lives in the launcher.
+- **`forwood-launcher` + `@forwood/task-engine`** (`scripts/launcher/`,
+  `scripts/task-engine/`) — the provider the rail runs to list/fire tasks and
+  read container status. The app is forwood-agnostic; all the forwood
+  knowledge lives in the launcher.
+
+## 0. One-command setup
+
+Clone this repo (branch **`main`** — stable, what releases cut from; `dev` is
+active development) and run the setup script:
+
+```sh
+git clone -b main git@github.com:JayeMcC/maiterm.git ~/proj/maiterm
+bash ~/proj/maiterm/scripts/forwood-setup.sh
+```
+
+Forwood-internal alternative (same tree, mirrored to Bitbucket):
+
+```sh
+git clone -b Jaye-term git@bitbucket.org:forwood/forwood-one-tools.git ~/proj/maiterm
+bash ~/proj/maiterm/scripts/forwood-setup.sh
+```
+
+The script is idempotent — re-run it any time; completed steps are skipped. It
+installs Node (≥ 22.6) and `@devcontainers/cli` if missing, warns if Docker
+isn't running, installs the latest maiTerm3 release DMG (or `--build` to build
+from the checkout), installs + links `forwood-launcher` onto PATH, verifies,
+and launches the app (`--no-launch` to skip). Sections 1–3 below describe what
+it does, for manual setup or troubleshooting.
 
 ## 1. Prerequisites
 
 | Need | Why | Install |
 |---|---|---|
-| **Homebrew + Node** | The rail runs `forwood-launcher` via your login shell, which needs node on PATH. | `brew install node` |
+| **Homebrew + Node** | The rail runs `forwood-launcher` via your login shell, which needs node ≥ 22.6 on PATH. | `brew install node` (setup script does this) |
 | **Docker Desktop** | Container tasks (API/WEB/DBs) run via `devcontainer exec`; the container section reads live status via `docker`. | Docker Desktop for Mac |
-| **`@devcontainers/cli`** | Host-side container bring-up + `devcontainer exec`. | `npm i -g @devcontainers/cli` |
+| **`@devcontainers/cli`** | Host-side container bring-up + `devcontainer exec`. | `npm i -g @devcontainers/cli` (setup script does this) |
 | **forwood clones** | The repos whose `.vscode/tasks.json` the rail detects (e.g. `~/proj/forwood-one_developing`). | your usual clone setup |
-| **`forwood-one-tools`** | Home of `forwood-launcher`. | already cloned for team tooling |
-| **Xcode CLT + Rust** | Building the Tauri app. | `xcode-select --install`, `rustup` |
+| **Xcode CLT + Rust** | Only for building the app from source (`--build`). | `xcode-select --install`, `rustup` |
 
 ## 2. Install maiTerm
 
@@ -65,8 +89,8 @@ The rail invokes `forwood-launcher` by name through your login shell, so it must
 resolve on PATH:
 
 ```sh
-cd ~/proj/forwood-one-tools/linked-tools/core/scripts/launcher
-npm link
+cd ~/proj/maiterm/scripts/launcher
+npm ci && npm link
 which forwood-launcher   # → /opt/homebrew/bin/forwood-launcher
 ```
 
@@ -104,6 +128,9 @@ switching to a tab in another clone re-targets it.
   task's own context (container shell for container tasks).
 - **Ports** — the Container section shows what's actually listening; click a port
   row to open it in your browser.
+- **Optional global hotkey** — to fire the standalone launcher TUI from outside
+  maiTerm, bind `scripts/launcher/bin/forwood-launcher` to a key combo — see
+  `scripts/launcher/docs/keybind-hammerspoon.lua` for a Hammerspoon example.
 
 ## 6. Updates
 
