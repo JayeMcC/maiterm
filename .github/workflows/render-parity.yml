@@ -1,14 +1,14 @@
-name: Render diagnose (webview-log A/B)
+name: Render parity (debug vs release)
 
-# White-screen investigation, step 2. The parity run proved the debug build
-# renders blank (1 colour) while release renders (125). Prime suspect: the
-# dev-only tauri-plugin-log Webview target floods the renderer during boot and
-# the web content process terminates. This builds ONE debug binary and probes
-# it VISIBLE twice — with the Webview log target on (default) and off
-# (MAITERM_DISABLE_WEBVIEW_LOG=1). If OFF renders and ON doesn't, that's the
-# cause. A release probe stays as the known-good baseline.
+# Regression guard from the white-screen investigation (2026-07-03). Root
+# cause: the dev-only tauri-plugin-log Webview target flooded the renderer at
+# boot → web content process terminated → blank window. Debug ON → 1 colour,
+# OFF → 136, release → 119 (render-parity + render-diagnose runs). Fixed by
+# making that target opt-in (MAITERM_ENABLE_WEBVIEW_LOG). This guard rebuilds
+# BOTH profiles and asserts each renders a non-blank window, so the class
+# (a build-profile-specific blank) can't regress unseen.
 #
-# CI-only (visible windows steal focus). Auto-runs when the harness changes.
+# CI-only (visible windows steal focus — see LOCAL-FOCUS-AVOIDANCE-HISTORY.md).
 
 on:
   workflow_dispatch:
@@ -22,10 +22,9 @@ on:
       - 'src-tauri/src/lib.rs'
 
 jobs:
-  render-diagnose:
+  render-parity:
     runs-on: macos-latest
     timeout-minutes: 45
-
     steps:
       - uses: actions/checkout@v6
       - name: Install Rust
@@ -47,49 +46,30 @@ jobs:
 
       - name: Build DEBUG binary
         run: npx tauri build --debug --no-bundle
-
-      - name: Probe DEBUG — webview-log ON (default)
+      - name: Probe DEBUG render
         working-directory: tests/e2e
-        continue-on-error: true
-        run: npx tsx harness/render-probe.ts "${GITHUB_WORKSPACE}/src-tauri/target/debug/aiterm" debug-webviewlog-ON | tee /tmp/on.txt
+        run: npx tsx harness/render-probe.ts "${GITHUB_WORKSPACE}/src-tauri/target/debug/aiterm" debug | tee /tmp/debug.txt
 
-      - name: Probe DEBUG — webview-log OFF
-        working-directory: tests/e2e
-        continue-on-error: true
-        env:
-          MAITERM_DISABLE_WEBVIEW_LOG: '1'
-        run: npx tsx harness/render-probe.ts "${GITHUB_WORKSPACE}/src-tauri/target/debug/aiterm" debug-webviewlog-OFF | tee /tmp/off.txt
-
-      - name: Build RELEASE binary (baseline)
+      - name: Build RELEASE binary
         run: npx tauri build --no-bundle
-      - name: Probe RELEASE (baseline)
+      - name: Probe RELEASE render
         working-directory: tests/e2e
-        continue-on-error: true
-        run: npx tsx harness/render-probe.ts "${GITHUB_WORKSPACE}/src-tauri/target/release/aiterm" release | tee /tmp/rel.txt
+        run: npx tsx harness/render-probe.ts "${GITHUB_WORKSPACE}/src-tauri/target/release/aiterm" release | tee /tmp/release.txt
 
-      - name: Conclude
+      - name: Summary
+        if: always()
         run: |
-          echo "## Webview-log A/B" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Render parity" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          cat /tmp/on.txt /tmp/off.txt /tmp/rel.txt >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/debug.txt /tmp/release.txt 2>/dev/null >> "$GITHUB_STEP_SUMMARY" || true
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          cat /tmp/on.txt /tmp/off.txt /tmp/rel.txt
-          if grep -q 'rendered=true' /tmp/off.txt && grep -q 'rendered=false' /tmp/on.txt; then
-            echo "CONCLUSION: Webview log target is the cause — OFF renders, ON is blank."
-          elif grep -q 'rendered=true' /tmp/on.txt; then
-            echo "CONCLUSION: debug renders even with webview-log ON — methodology fix changed the result; not the log target."
-          else
-            echo "CONCLUSION: webview-log OFF still blank — cause is elsewhere (level flood, devtools, or timing)."
-          fi
 
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: render-diagnose-artifacts
+          name: render-parity-artifacts
           path: |
-            /tmp/on.txt
-            /tmp/off.txt
-            /tmp/rel.txt
-            ~/Library/Logs/com.aiterm.dev2/
+            /tmp/debug.txt
+            /tmp/release.txt
           if-no-files-found: ignore

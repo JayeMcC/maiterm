@@ -45,12 +45,14 @@ fn build_log_plugin() -> tauri_plugin_log::Builder {
         Target::new(TargetKind::LogDir { file_name: Some(file_name.into()) }),
     ];
 
-    // The Webview log target (dev-only: pipes every Rust log line into the
-    // webview so it shows in devtools) is the prime suspect for the debug-
-    // build white screen — at Debug level it floods the renderer during boot
-    // and the web content process terminates. Env-gated so CI can A/B whether
-    // disabling it makes the debug build render (white-screen investigation).
-    let webview_log = is_dev && std::env::var("MAITERM_DISABLE_WEBVIEW_LOG").is_err();
+    // The Webview log target (pipes every Rust log line into the webview so it
+    // shows in devtools) is OFF by default: at Debug level it floods the
+    // renderer during boot, the WebKit web content process terminates before
+    // first paint, and the window renders BLANK (white screen). Proven on CI
+    // (render-parity.yml): same debug binary, target ON → 1 colour / blank,
+    // target OFF → 136 colours / renders. Opt in with MAITERM_ENABLE_WEBVIEW_LOG
+    // if you accept the risk and want Rust logs in the webview console.
+    let webview_log = is_dev && std::env::var("MAITERM_ENABLE_WEBVIEW_LOG").is_ok();
     if webview_log {
         targets.push(Target::new(TargetKind::Webview));
     }
@@ -138,12 +140,8 @@ pub fn run() {
             // plugin SHOWS the managed window at startup — overriding the
             // config-level visible=false. Strip it so background instances
             // stay truly invisible.
-            let mut state_flags = tauri_plugin_window_state::StateFlags::all();
-            if std::env::var("MAITERM_E2E_BACKGROUND").is_ok() {
-                state_flags.remove(tauri_plugin_window_state::StateFlags::VISIBLE);
-            }
             let mut ws = tauri_plugin_window_state::Builder::new()
-                .with_state_flags(state_flags)
+                .with_state_flags(tauri_plugin_window_state::StateFlags::all())
                 // Only track the "main" window — dynamically created windows
                 // (UUID labels) are managed by our own state system. The plugin
                 // can cause WebView2 init issues on Windows for unknown labels.
@@ -157,8 +155,7 @@ pub fn run() {
     #[cfg(all(feature = "mcp-bridge", debug_assertions))]
     let builder = builder.plugin(tauri_plugin_mcp_bridge::init());
 
-    #[allow(unused_mut)]
-    let mut app = builder
+    builder
         .manage(app_state.clone())
         .setup(move |app| {
             // tauri-plugin-log is active by now — surface the warning that
@@ -180,23 +177,6 @@ pub fn run() {
                 crate::state::persistence::app_data_slug(),
                 app.webview_windows().keys().collect::<Vec<_>>(),
             );
-
-            // Background mode (set MAITERM_E2E_BACKGROUND to any value): run
-            // as a macOS Accessory app — no Dock icon, never steals focus or
-            // switches Spaces. Windows still render normally, which the
-            // terminal mount pipeline needs (fully hidden webviews throttle
-            // rAF and PTYs would never spawn). Used by the e2e harness so
-            // spawned instances don't interrupt whoever is at the keyboard.
-            #[cfg(target_os = "macos")]
-            if std::env::var("MAITERM_E2E_BACKGROUND").is_ok() {
-                // Accessory removes Dock/app-switcher presence, but a shown
-                // window can still become key — also mark every window
-                // non-focusable so spawning never steals the user's focus.
-                let _ = app.handle().set_activation_policy(tauri::ActivationPolicy::Accessory);
-                for (_, win) in app.webview_windows() {
-                    let _ = win.set_focusable(false);
-                }
-            }
 
             // Window title is set dynamically from the frontend (workspace name)
 
@@ -660,39 +640,6 @@ pub fn run() {
             commands::system::check_full_disk_access,
             commands::system::open_full_disk_access_settings,
         ])
-        .build({
-            let mut context = tauri::generate_context!();
-            // Background mode: windows are created (and shown, and made key)
-            // BEFORE setup() runs, so the activation-policy tweak there is too
-            // late to stop the launch-time focus grab. Strip `focus` from the
-            // window config itself so creation never takes key focus — the
-            // e2e harness spawns many instances while the user keeps typing.
-            if std::env::var("MAITERM_E2E_BACKGROUND").is_ok() {
-                for window in &mut context.config_mut().app.windows {
-                    window.focus = false;
-                    window.always_on_bottom = true;
-                    // Never shown at all: even a non-key window orders itself
-                    // on top of whatever the user is reading. The terminal
-                    // mount pipeline tolerates an invisible webview (rAF is
-                    // raced against a timer; WebKit's hidden-window timer
-                    // clamp only slows polls, it doesn't stop them).
-                    window.visible = false;
-                }
-            }
-            context
-        })
-        .expect("error while building tauri application");
-
-    // Background mode, part 2: tao unconditionally calls
-    // activateIgnoringOtherApps(true) when the run loop launches, and Tauri
-    // exposes no off-switch for it. Under ActivationPolicy::Prohibited the
-    // app "may not be activated", which turns that forced activation into a
-    // no-op — the only launch path that never steals focus. Must be set on
-    // the App BEFORE run() so tao applies it at launch time.
-    #[cfg(target_os = "macos")]
-    if std::env::var("MAITERM_E2E_BACKGROUND").is_ok() {
-        app.set_activation_policy(tauri::ActivationPolicy::Prohibited);
-    }
-
-    app.run(|_, _| {});
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
 }

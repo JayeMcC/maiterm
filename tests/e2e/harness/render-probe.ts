@@ -16,13 +16,12 @@ if (!binary) {
   process.exit(2);
 }
 
-// visible: true — a render check on an invisible (background) window is
-// meaningless. Pass through the webview-log A/B env if the workflow set it.
+// Pass through the webview-log opt-in env if the workflow set it (A/B).
 const passEnv: Record<string, string> = {};
-if (process.env.MAITERM_DISABLE_WEBVIEW_LOG) {
-  passEnv.MAITERM_DISABLE_WEBVIEW_LOG = process.env.MAITERM_DISABLE_WEBVIEW_LOG;
+if (process.env.MAITERM_ENABLE_WEBVIEW_LOG) {
+  passEnv.MAITERM_ENABLE_WEBVIEW_LOG = process.env.MAITERM_ENABLE_WEBVIEW_LOG;
 }
-const handle = await spawnMaiterm({ binary, timeoutMs: 90_000, visible: true, env: passEnv });
+const handle = await spawnMaiterm({ binary, timeoutMs: 90_000, env: passEnv });
 await new Promise((r) => setTimeout(r, 6000));
 try {
   const res = checkRendered();

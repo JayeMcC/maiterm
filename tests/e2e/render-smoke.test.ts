@@ -20,9 +20,9 @@ const RUN = !!BIN && !!process.env.CI;
   let handle: MaitermHandle;
 
   beforeAll(async () => {
-    // VISIBLE spawn — a render check on an invisible (background) window is
-    // meaningless. Hermetic HOME so it doesn't touch the runner's profile.
-    handle = await spawnMaiterm({ binary: BIN!, timeoutMs: 90_000, visible: true });
+    // Plain visible spawn (CI-only) — a render check needs real paint.
+    // Hermetic HOME so it doesn't touch the runner's profile.
+    handle = await spawnMaiterm({ binary: BIN!, timeoutMs: 90_000 });
     // Give the Svelte shell time to mount + paint the first frame.
     await new Promise((r) => setTimeout(r, 6000));
   }, 120_000);
