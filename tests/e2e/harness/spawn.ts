@@ -55,6 +55,11 @@ export async function spawnMaiterm(
      * mkdtemp HOME is created and removed on kill().
      */
     home?: string;
+    /**
+     * Spawn a VISIBLE window (omit MAITERM_E2E_BACKGROUND). Only for render
+     * checks on CI — a visible window steals focus, so never locally.
+     */
+    visible?: boolean;
   } = { binary: '' },
 ): Promise<MaitermHandle> {
   if (!opts.binary) throw new Error('spawnMaiterm: binary path is required');
@@ -72,6 +77,11 @@ export async function spawnMaiterm(
   const lockDir = join(home, '.claude', 'ide');
 
   const beforeLocks = snapshotLocks(lockDir);
+  // Background mode (default) makes the window invisible so focus is never
+  // stolen — correct for the MCP/PTY tests. But a render check on an
+  // invisible window is meaningless, so render probes pass `visible: true`
+  // (CI-only — a visible window would steal focus locally).
+  const backgroundEnv = opts.visible ? {} : { MAITERM_E2E_BACKGROUND: '1' };
   const proc = spawn(opts.binary, [], {
     stdio: ['ignore', 'pipe', 'pipe'],
     env: {
@@ -79,9 +89,7 @@ export async function spawnMaiterm(
       HOME: home,
       XDG_CONFIG_HOME: join(home, '.config'),
       XDG_DATA_HOME: join(home, '.local', 'share'),
-      // macOS Accessory activation: the spawned instance renders in the
-      // background without stealing focus from whoever is at the keyboard.
-      MAITERM_E2E_BACKGROUND: '1',
+      ...backgroundEnv,
       ...(opts.env ?? {}),
     },
     detached: false,

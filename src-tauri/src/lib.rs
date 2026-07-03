@@ -45,7 +45,13 @@ fn build_log_plugin() -> tauri_plugin_log::Builder {
         Target::new(TargetKind::LogDir { file_name: Some(file_name.into()) }),
     ];
 
-    if is_dev {
+    // The Webview log target (dev-only: pipes every Rust log line into the
+    // webview so it shows in devtools) is the prime suspect for the debug-
+    // build white screen — at Debug level it floods the renderer during boot
+    // and the web content process terminates. Env-gated so CI can A/B whether
+    // disabling it makes the debug build render (white-screen investigation).
+    let webview_log = is_dev && std::env::var("MAITERM_DISABLE_WEBVIEW_LOG").is_err();
+    if webview_log {
         targets.push(Target::new(TargetKind::Webview));
     }
 

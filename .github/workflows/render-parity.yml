@@ -1,13 +1,14 @@
-name: Render parity (debug vs release)
+name: Render diagnose (webview-log A/B)
 
-# Experiment for the white-screen investigation: the debug build renders a
-# blank window (render-smoke caught "1 distinct colour" on CI, matching the
-# user's local white screen), while the daily-driver was a RELEASE build. This
-# builds BOTH on the same runner and screenshots each so we can compare — if
-# release renders and debug doesn't, the hypothesis is confirmed and it also
-# proves the detector isn't just capturing a blank CI desktop.
+# White-screen investigation, step 2. The parity run proved the debug build
+# renders blank (1 colour) while release renders (125). Prime suspect: the
+# dev-only tauri-plugin-log Webview target floods the renderer during boot and
+# the web content process terminates. This builds ONE debug binary and probes
+# it VISIBLE twice — with the Webview log target on (default) and off
+# (MAITERM_DISABLE_WEBVIEW_LOG=1). If OFF renders and ON doesn't, that's the
+# cause. A release probe stays as the known-good baseline.
 #
-# CI-only (visible windows steal focus). Manual + on-demand via label.
+# CI-only (visible windows steal focus). Auto-runs when the harness changes.
 
 on:
   workflow_dispatch:
@@ -17,32 +18,29 @@ on:
       - '.github/workflows/render-parity.yml'
       - 'tests/e2e/harness/render-probe.ts'
       - 'tests/e2e/harness/render-check.ts'
+      - 'tests/e2e/harness/spawn.ts'
+      - 'src-tauri/src/lib.rs'
 
 jobs:
-  render-parity:
+  render-diagnose:
     runs-on: macos-latest
     timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v6
-
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-
       - name: Install Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
-
       - name: Install frontend dependencies
         run: npm ci
-
       - name: Install E2E dependencies
         working-directory: tests/e2e
         run: npm install --no-audit --no-fund
@@ -50,58 +48,48 @@ jobs:
       - name: Build DEBUG binary
         run: npx tauri build --debug --no-bundle
 
-      - name: Probe DEBUG render
-        id: debug
+      - name: Probe DEBUG — webview-log ON (default)
         working-directory: tests/e2e
         continue-on-error: true
-        run: |
-          set -o pipefail
-          npx tsx harness/render-probe.ts "${GITHUB_WORKSPACE}/src-tauri/target/debug/aiterm" debug | tee /tmp/debug-result.txt
+        run: npx tsx harness/render-probe.ts "${GITHUB_WORKSPACE}/src-tauri/target/debug/aiterm" debug-webviewlog-ON | tee /tmp/on.txt
 
-      - name: Build RELEASE binary
+      - name: Probe DEBUG — webview-log OFF
+        working-directory: tests/e2e
+        continue-on-error: true
+        env:
+          MAITERM_DISABLE_WEBVIEW_LOG: '1'
+        run: npx tsx harness/render-probe.ts "${GITHUB_WORKSPACE}/src-tauri/target/debug/aiterm" debug-webviewlog-OFF | tee /tmp/off.txt
+
+      - name: Build RELEASE binary (baseline)
         run: npx tauri build --no-bundle
-
-      - name: Probe RELEASE render
-        id: release
+      - name: Probe RELEASE (baseline)
         working-directory: tests/e2e
         continue-on-error: true
-        run: |
-          set -o pipefail
-          npx tsx harness/render-probe.ts "${GITHUB_WORKSPACE}/src-tauri/target/release/aiterm" release | tee /tmp/release-result.txt
+        run: npx tsx harness/render-probe.ts "${GITHUB_WORKSPACE}/src-tauri/target/release/aiterm" release | tee /tmp/rel.txt
 
-      - name: Compare and conclude
+      - name: Conclude
         run: |
-          echo "## Render parity result" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Webview-log A/B" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          cat /tmp/debug-result.txt /tmp/release-result.txt >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/on.txt /tmp/off.txt /tmp/rel.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          DBG=$(grep -o 'distinctColors=[0-9A-Z]*' /tmp/debug-result.txt | cut -d= -f2)
-          REL=$(grep -o 'distinctColors=[0-9A-Z]*' /tmp/release-result.txt | cut -d= -f2)
-          echo "debug=$DBG release=$REL"
-          # The experiment's conclusion: RELEASE must render. If release is also
-          # blank, the whole approach (or CI capture) is suspect — fail loudly.
-          if grep -q 'rendered=true' /tmp/release-result.txt; then
-            echo "✓ release renders — hypothesis supported (debug: $DBG colours, release: $REL colours)"
+          cat /tmp/on.txt /tmp/off.txt /tmp/rel.txt
+          if grep -q 'rendered=true' /tmp/off.txt && grep -q 'rendered=false' /tmp/on.txt; then
+            echo "CONCLUSION: Webview log target is the cause — OFF renders, ON is blank."
+          elif grep -q 'rendered=true' /tmp/on.txt; then
+            echo "CONCLUSION: debug renders even with webview-log ON — methodology fix changed the result; not the log target."
           else
-            echo "✗ release did NOT render — inconclusive / detector or CI-capture issue"
-            exit 1
+            echo "CONCLUSION: webview-log OFF still blank — cause is elsewhere (level flood, devtools, or timing)."
           fi
-
-      - name: Capture both screens
-        if: always()
-        run: |
-          mkdir -p artifacts
-          screencapture -x -t png artifacts/screen-final.png || true
 
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: render-parity-artifacts
+          name: render-diagnose-artifacts
           path: |
-            /tmp/debug-result.txt
-            /tmp/release-result.txt
+            /tmp/on.txt
+            /tmp/off.txt
+            /tmp/rel.txt
             ~/Library/Logs/com.aiterm.dev2/
-            ~/Library/Logs/com.aiterm.app2/
-            artifacts/
           if-no-files-found: ignore
