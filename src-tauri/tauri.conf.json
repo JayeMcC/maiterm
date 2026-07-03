@@ -52,8 +52,8 @@
   },
   "plugins": {
     "updater": {
-      "endpoints": ["https://updates.maiterm.dev/latest.json?v={{current_version}}&t={{target}}&a={{arch}}", "https://github.com/Flexmark-Intl/maiterm/releases/latest/download/latest.json"],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZCNEZDRjQxRDBDMzZDRTYKUldUbWJNUFFRYzlQYTJSTEJWT1g1a3hrUTRPL0JyT3NmM3JqNUVhWjQ3Y1k3TnhwSHZhK3F4S2gK"
+      "endpoints": ["https://github.com/JayeMcC/maiterm/releases/latest/download/latest.json"],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJFNUEwMjQzRTIyNUM0M0MKUldROHhDWGlRd0phdmt4dDBSYTNVQzcvdnFNdytJQTZ6Y2dwZG45dVRJLzdDZUdiTyt1QUNsVDcK"
     }
   }
 }
