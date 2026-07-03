@@ -32,6 +32,9 @@ if git rev-parse "v$VERSION" >/dev/null 2>&1; then
 fi
 
 # Bump the version value in place (regex, so file formatting is preserved).
+# All THREE manifests must move together: package.json + tauri.conf.json drive
+# the frontend/bundle version, and Cargo.toml drives the Rust version string
+# (CARGO_PKG_VERSION → the [BOOT] banner + the MCP lockfile ideVersion).
 node -e '
 const fs = require("fs");
 const v = process.argv[1];
@@ -39,9 +42,15 @@ for (const f of ["package.json", "src-tauri/tauri.conf.json"]) {
   const s = fs.readFileSync(f, "utf8").replace(/("version":\s*")\d+\.\d+\.\d+(")/, `$1${v}$2`);
   fs.writeFileSync(f, s);
 }
+// Cargo.toml [package] version (first line-anchored `version = "x.y.z"`).
+{
+  const f = "src-tauri/Cargo.toml";
+  const s = fs.readFileSync(f, "utf8").replace(/(^version\s*=\s*")\d+\.\d+\.\d+(")/m, `$1${v}$2`);
+  fs.writeFileSync(f, s);
+}
 ' "$VERSION"
 
-git add package.json src-tauri/tauri.conf.json
+git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml
 git commit -m "chore(release): v$VERSION"
 git tag "v$VERSION"
 

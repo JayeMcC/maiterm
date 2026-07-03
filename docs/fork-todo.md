@@ -45,6 +45,19 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
   `APPLE_CERTIFICATE` / `APPLE_ID` / `APPLE_PASSWORD` / `APPLE_TEAM_ID` secrets
   and the notarize+staple step to `release.yml`. Purely additive on Layer 1.
 
+## In-app integrations
+- [ ] **Point the Report Bug / Feature Request buttons at the fork.** The in-app
+  buttons should open issues against **`JayeMcC/maiterm`** (our version), not
+  upstream `Flexmark-Intl/maiterm`. Find the button handlers (likely a settings
+  or help menu → `issues/new` URL) and swap the repo slug; align with the
+  `maiterm-issue` skill, which already targets the fork.
+- [ ] **AI-agent feature parity: Cursor + Claude Code.** Today the terminal
+  integrates Claude Code (the `maiterm` MCP server, `claudeCode.svelte.ts`).
+  Extend the same first-class integration to the **Cursor API** and the
+  **`cursor-agent` CLI** so both agent backends get parity (session detection,
+  status indicators, notes/bridge, tab context) — not just Claude Code. Larger
+  feature; scope a design pass first.
+
 ## Fork issues (GitHub)
 - [ ] **#6** — allow read-only MCP introspection (`getTabContext`/
   `listWorkspaces`) without `initSession` for token-authenticated clients.
