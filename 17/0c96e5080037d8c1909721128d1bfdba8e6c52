@@ -1,0 +1,138 @@
+scripts/launcher/src/__tests__/fire-mode.test.ts
+  s_ef2c94701ed321::t_486256a3a356c6 84-87
+  s_ef2c94701ed321::t_ec3f116dcd89e6 81-83
+  s_ef2c94701ed321::t_ec5f7e2b89b345 88-90
+  s_ef2c94701ed321::t_359c48e085af5c 1-80,91-117
+scripts/task-engine/src/__tests__/resolve-dir.test.ts
+  s_ef2c94701ed321::t_009a563e2f3edc 7-8
+  s_ef2c94701ed321::t_f2fe119953ce7c 4-6
+  s_ef2c94701ed321::t_403d10541851eb 9-11
+  s_ef2c94701ed321::t_269dc75b41dfff 1-3,12-74
+scripts/launcher/README.md
+  s_ef2c94701ed321::t_44ec395c4824ad 3
+  s_ef2c94701ed321::t_ebac7bd3ffa4c6 1-2
+  s_ef2c94701ed321::t_53dd275e9dd2d0 4-6
+  s_ef2c94701ed321::t_6f2f1bbf504ebb 7-82
+docs/adr/0005-task-engine-and-dispatchers.md
+  s_ef2c94701ed321::t_a1ce415cdbd293 3-10
+  s_ef2c94701ed321::t_fc9c11cc0bea0b 1-2
+  s_ef2c94701ed321::t_4934cbf39c2589 11-13
+  s_ef2c94701ed321::t_f64dcfb19079d2 14-23
+scripts/launcher/docs/keybind-hammerspoon.lua
+  s_ef2c94701ed321::t_b0360978b6403b 14
+  s_ef2c94701ed321::t_5a2a050f44b33d 11-13
+  s_ef2c94701ed321::t_8f2e825ddaf1e1 15-17
+  s_ef2c94701ed321::t_ffd9ecedb7ee8d 1-10,18-52
+docs/adr/0006-maiterm-hotbar-provider-contract.md
+  s_ef2c94701ed321::t_a7197fd13b0bc2 1-13
+scripts/launcher/.gitignore
+  s_ef2c94701ed321::t_6d65e63cdb44b5 1
+scripts/launcher/bin/forwood-launcher
+  s_ef2c94701ed321::t_a176f8f6148aaa 1-19
+scripts/launcher/package-lock.json
+  s_ef2c94701ed321::t_a9035cef9c66d5 1-2412
+scripts/launcher/package.json
+  s_ef2c94701ed321::t_d9a39c820fa626 1-33
+scripts/launcher/src/__tests__/clone-resolver.test.ts
+  s_ef2c94701ed321::t_8837cdc15ee49f 1-146
+scripts/launcher/src/__tests__/container-status.test.ts
+  s_ef2c94701ed321::t_05c3e1fee23aba 1-127
+scripts/launcher/src/__tests__/forwards.test.ts
+  s_ef2c94701ed321::t_76a76ad4879759 1-128
+scripts/launcher/src/__tests__/list-mode.test.ts
+  s_ef2c94701ed321::t_1f98a9d350b04f 1-78
+scripts/launcher/src/__tests__/task-menu.test.tsx
+  s_ef2c94701ed321::t_4fef40ebc293df 1-90
+scripts/launcher/src/app.tsx
+  s_ef2c94701ed321::t_fb3dd6c6125eff 1-135
+scripts/launcher/src/clone-resolver.ts
+  s_ef2c94701ed321::t_86694f5d6812dc 1-130
+scripts/launcher/src/container-status.ts
+  s_ef2c94701ed321::t_b8bf8944081e57 1-277
+scripts/launcher/src/fire-mode.ts
+  s_ef2c94701ed321::t_4f6b845e895bc2 1-110
+scripts/launcher/src/forwards.ts
+  s_ef2c94701ed321::t_999278e9dbad25 1-151
+scripts/launcher/src/index.tsx
+  s_ef2c94701ed321::t_cecdb682441d1f 1-97
+scripts/launcher/src/list-mode.ts
+  s_ef2c94701ed321::t_5772a17463d2bd 1-57
+scripts/launcher/src/modes.ts
+  s_ef2c94701ed321::t_de34a1d441fc3f 1-69
+scripts/launcher/src/task-menu.tsx
+  s_ef2c94701ed321::t_dfd889ed531bc3 1-79
+scripts/launcher/tsconfig.json
+  s_ef2c94701ed321::t_a971039265bf56 1-23
+scripts/launcher/vitest.config.ts
+  s_ef2c94701ed321::t_766e1e11f4c2f6 1-8
+scripts/task-engine/.gitignore
+  s_ef2c94701ed321::t_e819185ff07af0 1
+scripts/task-engine/README.md
+  s_ef2c94701ed321::t_5cc9d8632c667f 1-92
+scripts/task-engine/package-lock.json
+  s_ef2c94701ed321::t_35648448bb4fbc 1-2501
+scripts/task-engine/package.json
+  s_ef2c94701ed321::t_d1e781d687b13f 1-28
+scripts/task-engine/src/__tests__/cli.test.ts
+  s_ef2c94701ed321::t_429872638c83bf 1-302
+scripts/task-engine/src/__tests__/dispatchers-maiterm.test.ts
+  s_ef2c94701ed321::t_79765e265b79df 1-356
+scripts/task-engine/src/__tests__/dispatchers-tmux.test.ts
+  s_ef2c94701ed321::t_ba884eebd73cc4 1-225
+scripts/task-engine/src/__tests__/execution-context.test.ts
+  s_ef2c94701ed321::t_8f50748e4805f9 1-91
+scripts/task-engine/src/__tests__/graph.test.ts
+  s_ef2c94701ed321::t_9b476f0ec63aa5 1-109
+scripts/task-engine/src/__tests__/index.test.ts
+  s_ef2c94701ed321::t_8b77d8e2c777f9 1-59
+scripts/task-engine/src/__tests__/lockfile.test.ts
+  s_ef2c94701ed321::t_227d4f429358bc 1-113
+scripts/task-engine/src/__tests__/reader.test.ts
+  s_ef2c94701ed321::t_48980dbe083492 1-27
+scripts/task-engine/src/__tests__/resolve-context.test.ts
+  s_ef2c94701ed321::t_4a3be771c5b369 1-48
+scripts/task-engine/src/__tests__/variables.test.ts
+  s_ef2c94701ed321::t_4e3bbb32e793ce 1-110
+scripts/task-engine/src/cli.ts
+  s_ef2c94701ed321::t_7088409da16a79 1-183
+scripts/task-engine/src/dispatchers/lockfile.ts
+  s_ef2c94701ed321::t_aa10de44b8f029 1-79
+scripts/task-engine/src/dispatchers/maiterm-connect.ts
+  s_ef2c94701ed321::t_fa803e2db50609 1-81
+scripts/task-engine/src/dispatchers/maiterm.ts
+  s_ef2c94701ed321::t_68e307a8dcb8e4 1-267
+scripts/task-engine/src/dispatchers/tmux.ts
+  s_ef2c94701ed321::t_81f4fbdf65dd2f 1-139
+scripts/task-engine/src/graph.ts
+  s_ef2c94701ed321::t_3fedb61e7c0075 1-118
+scripts/task-engine/src/index.ts
+  s_ef2c94701ed321::t_b9866022b1beaa 1-132
+scripts/task-engine/src/reader.ts
+  s_ef2c94701ed321::t_1aad72ee5b473c 1-37
+scripts/task-engine/src/resolve-dir.ts
+  s_ef2c94701ed321::t_f72463c23164dc 1-52
+scripts/task-engine/src/types.ts
+  s_ef2c94701ed321::t_9b4dd10ada9085 1-109
+scripts/task-engine/src/variables.ts
+  s_ef2c94701ed321::t_f05867081835ec 1-132
+scripts/task-engine/tsconfig.json
+  s_ef2c94701ed321::t_b23b0ba4a93aa9 1-25
+scripts/task-engine/vitest.config.ts
+  s_ef2c94701ed321::t_b0035539e1117d 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "170c96e5080037d8c1909721128d1bfdba8e6c52",
+  "prompts": {},
+  "sessions": {
+    "s_ef2c94701ed321": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fa8cb8b7-5b19-4d5b-88ac-0421f5efd53f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
