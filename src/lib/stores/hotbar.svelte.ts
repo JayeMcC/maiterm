@@ -11,6 +11,7 @@
  * `refresh`); this store holds state + logic so it stays testable and doesn't
  * need `$effect.root` at module scope.
  */
+import { open as shellOpen } from '@tauri-apps/plugin-shell';
 import { findMarkersUpward, runRailProvider } from '$lib/tauri/commands';
 
 /**
@@ -37,12 +38,49 @@ const PROVIDERS: RailProvider[] = [
   },
 ];
 
-const MARKERS = PROVIDERS.map((p) => p.marker);
+/**
+ * The container section (ADR 0006): detected by `.devcontainer/devcontainer.json`,
+ * populated by the `--container-status` provider mode. Live ports, unpublished
+ * in-container listeners you can forward, and active sidecar forwards.
+ */
+const CONTAINER_PROVIDER = {
+  marker: '.devcontainer/devcontainer.json',
+  program: 'forwood-launcher',
+  statusArgs: ['--container-status', '--dir', '{dir}'],
+  forwardArgs: ['--forward', '{port}', '--dir', '{dir}'],
+  unforwardArgs: ['--unforward', '{port}', '--dir', '{dir}'],
+};
+
+const MARKERS = [...PROVIDERS.map((p) => p.marker), CONTAINER_PROVIDER.marker];
 
 export interface RailItem {
   label: string;
   group: string | null;
   executionContext: 'host' | 'container' | null;
+}
+
+export interface PublishedPort {
+  service: string;
+  containerPort: number;
+  hostPort: number;
+  listening: boolean;
+}
+export interface ContainerListener {
+  containerPort: number;
+  process: string | null;
+  forwardable: boolean;
+}
+export interface SidecarForward {
+  port: number;
+  containerName: string;
+  running: boolean;
+}
+export interface ContainerStatus {
+  state: 'up' | 'down' | 'runtime-unavailable';
+  repoRoot: string | null;
+  ports: PublishedPort[];
+  listeners: ContainerListener[];
+  forwards: SidecarForward[];
 }
 
 export interface RailSection {
@@ -64,6 +102,12 @@ function createHotbarStore() {
   let collapsed = $state(false);
   let lastDir = $state<string | null>(null);
 
+  // Container section state.
+  let containerDir = $state<string | null>(null);
+  let containerStatus = $state<ContainerStatus | null>(null);
+  let containerError = $state<string | null>(null);
+  let containerBusy = $state<number | null>(null); // port currently forwarding/stopping
+
   async function refresh(cwd: string | null | undefined): Promise<void> {
     const dir = cwd ?? null;
     if (dir === lastDir) return; // active tab's cwd unchanged
@@ -71,12 +115,26 @@ function createHotbarStore() {
 
     if (!dir) {
       sections = [];
+      containerDir = null;
+      containerStatus = null;
       return;
     }
 
     loading = true;
     try {
       const found = await findMarkersUpward(dir, MARKERS);
+
+      // Container section: detect .devcontainer, then pull live status.
+      const containerHit = found.find((m) => m.marker === CONTAINER_PROVIDER.marker);
+      if (containerHit) {
+        containerDir = containerHit.root;
+        await refreshContainerStatus();
+      } else {
+        containerDir = null;
+        containerStatus = null;
+        containerError = null;
+      }
+
       const next: RailSection[] = [];
       for (const provider of PROVIDERS) {
         const hit = found.find((m) => m.marker === provider.marker);
@@ -145,6 +203,68 @@ function createHotbarStore() {
     }
   }
 
+  /** Pull live container status for the detected devcontainer dir. Cheap
+   *  enough to poll while the rail is open (the component drives the cadence). */
+  async function refreshContainerStatus(): Promise<void> {
+    if (!containerDir) return;
+    try {
+      const res = await runRailProvider(
+        CONTAINER_PROVIDER.program,
+        substitute(CONTAINER_PROVIDER.statusArgs, { dir: containerDir }),
+        containerDir,
+        15,
+        true,
+      );
+      if (res.exitCode !== 0) {
+        containerError = res.stderr.trim() || `container-status exited ${res.exitCode}`;
+      } else {
+        containerStatus = JSON.parse(res.stdout) as ContainerStatus;
+        containerError = null;
+      }
+    } catch (e) {
+      containerError = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  async function forwardPort(port: number): Promise<void> {
+    await runForwardCmd(CONTAINER_PROVIDER.forwardArgs, port);
+  }
+  async function unforwardPort(port: number): Promise<void> {
+    await runForwardCmd(CONTAINER_PROVIDER.unforwardArgs, port);
+  }
+  async function runForwardCmd(args: string[], port: number): Promise<void> {
+    if (!containerDir) return;
+    containerBusy = port;
+    try {
+      const res = await runRailProvider(
+        CONTAINER_PROVIDER.program,
+        substitute(args, { dir: containerDir, port: String(port) }),
+        containerDir,
+        30,
+        true,
+      );
+      if (res.exitCode !== 0) {
+        containerError = res.stderr.trim() || `forward exited ${res.exitCode}`;
+      } else {
+        containerError = null;
+      }
+    } catch (e) {
+      containerError = e instanceof Error ? e.message : String(e);
+    } finally {
+      containerBusy = null;
+      await refreshContainerStatus();
+    }
+  }
+
+  /** Open a published port in the default browser (host localhost). */
+  async function openPort(hostPort: number): Promise<void> {
+    try {
+      await shellOpen(`http://localhost:${hostPort}`);
+    } catch {
+      /* opener unavailable — ignore */
+    }
+  }
+
   return {
     get sections() {
       return sections;
@@ -156,13 +276,29 @@ function createHotbarStore() {
       return collapsed;
     },
     get visible() {
-      return sections.length > 0;
+      return sections.length > 0 || containerStatus != null;
+    },
+    get containerStatus() {
+      return containerStatus;
+    },
+    get containerError() {
+      return containerError;
+    },
+    get containerBusy() {
+      return containerBusy;
+    },
+    get hasContainer() {
+      return containerDir != null;
     },
     toggleCollapsed() {
       collapsed = !collapsed;
     },
     refresh,
+    refreshContainerStatus,
     fire,
+    forwardPort,
+    unforwardPort,
+    openPort,
   };
 }
 

@@ -11,7 +11,25 @@
     void hotbarStore.refresh(cwd);
   });
 
+  // Poll container status only while the rail is open and a devcontainer is
+  // detected — live truth (ports come/go, forwards start/stop) without cost
+  // when the rail is folded or there's no container.
+  $effect(() => {
+    if (hotbarStore.collapsed || !hotbarStore.hasContainer) return;
+    const id = setInterval(() => void hotbarStore.refreshContainerStatus(), 4000);
+    return () => clearInterval(id);
+  });
+
   const open = $derived(hotbarStore.visible && !hotbarStore.collapsed);
+
+  let forwardInput = $state('');
+  function submitForward() {
+    const port = Number(forwardInput.trim());
+    if (Number.isInteger(port) && port > 0 && port <= 65535) {
+      void hotbarStore.forwardPort(port);
+      forwardInput = '';
+    }
+  }
 </script>
 
 <!-- Folds away entirely (width 0) when no section is detected; a thin strip
@@ -53,6 +71,62 @@
             {/if}
           </section>
         {/each}
+
+        {#if hotbarStore.hasContainer}
+          {@const cs = hotbarStore.containerStatus}
+          <section class="rail-section">
+            <header class="section-head">
+              Container
+              {#if cs}
+                <span class="state state-{cs.state}">{cs.state}</span>
+              {/if}
+            </header>
+
+            {#if hotbarStore.containerError}
+              <p class="section-error" title={hotbarStore.containerError}>{hotbarStore.containerError}</p>
+            {/if}
+
+            {#if cs && cs.state === 'up'}
+              {#if cs.ports.length > 0}
+                <div class="port-list">
+                  {#each cs.ports as p (p.hostPort)}
+                    <button class="port-row" title="Open http://localhost:{p.hostPort}" onclick={() => hotbarStore.openPort(p.hostPort)}>
+                      <span class="dot" class:live={p.listening}></span>
+                      <span class="port-label">{p.service}</span>
+                      <span class="port-num">:{p.hostPort}</span>
+                    </button>
+                  {/each}
+                </div>
+              {/if}
+
+              {#each cs.listeners.filter((l) => l.forwardable) as l (l.containerPort)}
+                <div class="fwd-row">
+                  <span class="port-num">:{l.containerPort}</span>
+                  <span class="fwd-note">in-container</span>
+                  <button class="fwd-btn" disabled={hotbarStore.containerBusy === l.containerPort} onclick={() => hotbarStore.forwardPort(l.containerPort)}>Forward</button>
+                </div>
+              {/each}
+
+              {#each cs.forwards as f (f.port)}
+                <div class="fwd-row">
+                  <span class="dot" class:live={f.running}></span>
+                  <span class="port-num">:{f.port}</span>
+                  <span class="fwd-note">forwarded</span>
+                  <button class="fwd-btn stop" disabled={hotbarStore.containerBusy === f.port} onclick={() => hotbarStore.unforwardPort(f.port)}>Stop</button>
+                </div>
+              {/each}
+
+              <div class="fwd-row manual">
+                <input class="fwd-input" type="text" inputmode="numeric" placeholder="port…" bind:value={forwardInput} onkeydown={(e) => e.key === 'Enter' && submitForward()} />
+                <button class="fwd-btn" onclick={submitForward}>Forward</button>
+              </div>
+            {:else if cs && cs.state === 'down'}
+              <p class="section-empty">Container down — spin up dev servers</p>
+            {:else if cs && cs.state === 'runtime-unavailable'}
+              <p class="section-empty">Docker not running</p>
+            {/if}
+          </section>
+        {/if}
       </div>
     {/if}
   </div>
@@ -159,5 +233,106 @@
     font-size: 11px;
     color: var(--text-muted, #777);
     margin: 2px 0;
+  }
+
+  .state {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+  }
+  .state-up {
+    background: var(--success-bg, #1f3a24);
+    color: var(--success, #6bd08a);
+  }
+  .state-down {
+    background: var(--warn-bg, #3a2f1f);
+    color: var(--warn, #d0a86b);
+  }
+  .state-runtime-unavailable {
+    background: var(--error-bg, #3a1f1f);
+    color: var(--error-color, #e06c75);
+  }
+  .port-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .port-row,
+  .fwd-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .port-row {
+    text-align: left;
+    padding: 3px 6px;
+    border: none;
+    background: none;
+    color: var(--text-color, #ddd);
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .port-row:hover {
+    background: var(--button-hover-bg, #303030);
+  }
+  .fwd-row {
+    padding: 3px 6px;
+  }
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--text-muted, #555);
+    flex: 0 0 auto;
+  }
+  .dot.live {
+    background: var(--success, #6bd08a);
+  }
+  .port-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .port-num {
+    color: var(--text-muted, #9a9a9a);
+    font-variant-numeric: tabular-nums;
+  }
+  .fwd-note {
+    flex: 1;
+    font-size: 10px;
+    color: var(--text-muted, #777);
+  }
+  .fwd-btn {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color, #333);
+    background: var(--button-bg, #242424);
+    color: var(--text-color, #ddd);
+    cursor: pointer;
+  }
+  .fwd-btn:hover:not(:disabled) {
+    background: var(--button-hover-bg, #303030);
+  }
+  .fwd-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .fwd-btn.stop {
+    border-color: var(--error-color, #6b3333);
+  }
+  .fwd-input {
+    flex: 1;
+    min-width: 0;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color, #333);
+    background: var(--input-bg, #1e1e1e);
+    color: var(--text-color, #ddd);
   }
 </style>
