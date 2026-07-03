@@ -3,13 +3,10 @@
 Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
 
 ## Sync
-- [ ] **Bring in latest changes from upstream `Flexmark-Intl/maiterm` main.**
-  The fork's updater already *consumes* upstream releases (pubkey is
-  Flexmark's), but the source tree hasn't been merged forward. Add the
-  upstream remote, fetch, merge/rebase `main` onto upstream `main`, resolve
-  fork-specific conflicts (channel configs, `app_data_slug`, the rail, the
-  `[BOOT]`/log-target changes, CI workflows), re-run the CI suite, then
-  re-promote to the fork's `main`.
+- **Done (2026-07-03): merged upstream through v1.19.0.** 23 conflicts resolved
+  (fork identity + features preserved; upstream's agent-mesh rework, mailink,
+  session-restore, tab-liveness brought in). CI green (build + e2e + render);
+  promoted to main + the Jaye-term mirror. Re-run this when upstream advances.
 
 ## Stability
 - **Won't do — sluggish under high CPU load.** Reassessed 2026-07-03: the latest
@@ -71,20 +68,13 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
     integration vs the `cursor-agent` CLI covered here — confirm intent.
 
 ## Features
-- [ ] **Export / import window setup as JSON.** Serialize the current window
-  arrangement — windows → panes → tabs, split layout, terminals + editors, and
-  each tab's intent (name, task/cwd) — to a portable JSON blob, and re-create
-  that structure on import. Use case: share a layout ("here's the setup I use")
-  with someone running the same terminal. Add **Export setup to JSON** (current
-  window, or a saved preset) + **Import setup from JSON**.
-  - Build on the existing window-presets infra (`commands::window_presets`, the
-    preset save/manage modals) — a preset already captures a window arrangement;
-    this adds a portable serialize/deserialize on top.
-  - Decide portable vs machine-specific: keep layout + tab names + task/cwd
-    *intent*; strip or relativize machine-specific bits (absolute cwd paths,
-    ptyIds, live PTY state) so it re-creates cleanly on a different machine.
-  - On import, spawn fresh terminals/editors per the tree rather than trying to
-    restore live process state.
+- **Done: export / import window setup as JSON.** `export_window_setup` /
+  `import_window_setup` (built on window-presets): serialize the current window
+  arrangement to a portable JSON, re-create it on import. Machine state stripped
+  (ptyIds/scrollback/bridges), local cwds `~`-relativized, and SSH tabs stripped
+  to local terminals so a shared setup never drags the exporter's `user@host`
+  onto someone else's machine. UI: "Import setup…" / "Export current setup…" in
+  the Presets Manager (native file dialogs).
 
 ## maiLink / mobile
 - **Blocked — no mobile app.** Verified 2026-07-03: the maiLink phone app is NOT
