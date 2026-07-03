@@ -5,10 +5,16 @@
   // Detection is driven by the ACTIVE tab's working directory. last_cwd is the
   // reactive field the workspaces store keeps in sync from OSC 7 (falling back
   // to the tab's restore cwd). The store dedupes unchanged dirs.
+  // Re-target on every active-tab change (switching tabs OR workspaces). Reads
+  // the tab identity + pty so the store can resolve the REAL process cwd
+  // (OSC-independent) rather than trusting last_cwd, which goes stale on idle
+  // tabs whose prompt doesn't emit OSC 7.
   $effect(() => {
     const tab = workspacesStore.activeTab;
-    const cwd = tab?.last_cwd ?? tab?.restore_cwd ?? null;
-    void hotbarStore.refresh(cwd);
+    const tabId = tab?.id ?? null;
+    const ptyId = tab?.pty_id ?? null;
+    const fallback = tab?.last_cwd ?? tab?.restore_cwd ?? null;
+    void hotbarStore.refreshForTab(tabId, ptyId, fallback);
   });
 
   // Poll container status only while the rail is open and a devcontainer is
