@@ -1,0 +1,19 @@
+linked-tools/core/scripts/launcher/bin/forwood-launcher
+  s_ad2f963c4afad3::t_4283408a88ca74 8-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "172acd354e3a17feb55581ca56eedb290da5cb9c",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
