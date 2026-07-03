@@ -1,0 +1,40 @@
+tests/utils/extract-manual-test-requirements.test.ts
+  s_356dd0b6dcdade::t_7003323597d125 9
+tests/utils/audit-not-covered.test.ts
+  s_356dd0b6dcdade::t_207e7787ae6ba4 13
+tests/nodes/review-dispatch-source-grep.test.ts
+  s_356dd0b6dcdade::t_4c88dc86f312c7 189
+tests/nodes/review-compose-scenarios.test.ts
+  s_356dd0b6dcdade::t_e2b14528311657 65,166-173
+tests/fixtures/llm-cassettes/f17c22296fee93e12539dcecb4628aeb464c95af8d609889cdc589d59dc0dc4d.json
+  s_356dd0b6dcdade::t_dcdabb1413314f 1-6,8
+  s_356dd0b6dcdade::t_172f26bf8d827b 7
+tests/utils/classify-diff-file.test.ts
+  s_356dd0b6dcdade::t_7003323597d125 10
+tests/utils/llm-cassettes.test.ts
+  s_356dd0b6dcdade::t_dcdabb1413314f 36-37
+  s_356dd0b6dcdade::t_8f20e90cf3c413 29-31,96-103
+tests/fixtures/llm-cassettes/ca1ed6b507b5a91ff42457be59214f1183e86d95c07a010b50d4d978a8e5566e.json
+  s_356dd0b6dcdade::t_dcdabb1413314f 1-6,8
+  s_356dd0b6dcdade::t_7c605e98b35213 7
+tests/nodes/review-compose-tests-pass-isolation.test.ts
+  s_356dd0b6dcdade::t_252457c01d7949 84-88,102,203-205
+tests/utils/extract-addendum-keys.test.ts
+  s_356dd0b6dcdade::t_7003323597d125 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "c247984a307449e197d1eca03444400299069bd4",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
