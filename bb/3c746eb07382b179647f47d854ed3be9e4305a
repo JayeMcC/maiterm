@@ -1,0 +1,23 @@
+scripts/release.sh
+  s_ad2f963c4afad3::t_e178b685a3e6e4 35-37,45-50,53
+docs/fork-todo.md
+  s_ad2f963c4afad3::t_ac3f7ef487a7f0 48-60
+src-tauri/Cargo.toml
+  s_ad2f963c4afad3::t_d677bc58fed935 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "bb3c746eb07382b179647f47d854ed3be9e4305a",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
