@@ -1,0 +1,21 @@
+.agents/rules/20-workflow/fix-pr-topology.md
+  s_356dd0b6dcdade::t_e05d38d124fc8c 1-198
+CONTEXT.md
+  s_356dd0b6dcdade::t_f2348320e3b28d 569-576
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "16ecf654f130a2a24c8430e0181dc06621e47722",
+  "prompts": {},
+  "sessions": {
+    "s_356dd0b6dcdade": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ba1f31-2fde-4ec8-a7fb-61f854aa0c27",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
