@@ -1,0 +1,20 @@
+linked-tools/core/scripts/launcher/src/container-status.ts
+  s_ad2f963c4afad3::t_860239c17063eb 249
+  s_ad2f963c4afad3::t_6e48219247f578 37-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "30a7990804833a3720e69348567516c4e3d086ef",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
