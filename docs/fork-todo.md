@@ -51,12 +51,18 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
 ## In-app integrations
 - **Done:** Report Bug / Feature Request buttons (WorkspaceSidebar footer) now
   open issues against `JayeMcC/maiterm` instead of upstream.
-- [ ] **AI-agent feature parity: Cursor + Claude Code.** Today the terminal
-  integrates Claude Code (the `maiterm` MCP server, `claudeCode.svelte.ts`).
-  Extend the same first-class integration to the **Cursor API** and the
-  **`cursor-agent` CLI** so both agent backends get parity (session detection,
-  status indicators, notes/bridge, tab context) — not just Claude Code. Larger
-  feature; scope a design pass first.
+- **Design pass done → see `docs/cursor-parity-design.md`.** Cursor is a 4th
+  `AgentRuntime` (Codex is the template); the MCP server already accepts
+  `cursor-agent` via `Authorization: Bearer` with no changes. Three plug-in
+  points (liveness match list, a `CursorRegistrar` → `~/.cursor/mcp.json`, a
+  `~/.cursor/hooks.json` → `/hooks?runtime=cursor` + dormancy reaper).
+  - [ ] **Phase 1 — tools + presence** (small): MCP connect + liveness detection
+    → cursor-agent gets all terminal tools + shows as a running agent.
+  - [ ] **Phase 2 — status dots** (medium): hooks + dormancy reaper → working/idle.
+  - [ ] **Phase 3 — gaps**: "waiting for permission" dot is blocked on Cursor CLI
+    hooks maturing (the CLI reliably fires only shell-execution hooks today).
+  - **Open:** "Cursor API" (cloud/background-agents) is a separate, out-of-scope
+    integration vs the `cursor-agent` CLI covered here — confirm intent.
 
 ## Features
 - [ ] **Export / import window setup as JSON.** Serialize the current window
