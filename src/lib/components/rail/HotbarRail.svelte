@@ -221,7 +221,8 @@
     color: var(--text-color, #ddd);
   }
   .chevron {
-    font-size: 9px;
+    font-size: 12px;
+    line-height: 1;
     transition: transform 0.12s ease;
   }
   .chevron.collapsed {
