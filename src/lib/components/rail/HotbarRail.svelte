@@ -28,6 +28,12 @@
 
   const open = $derived(hotbarStore.visible && !hotbarStore.collapsed);
 
+  /** Clone/repo the section targets — the last path segment (e.g.
+   *  `forwood-one_developing`), so you can see which stack the tasks fire at. */
+  function targetName(dir: string): string {
+    return dir.split('/').filter(Boolean).pop() ?? dir;
+  }
+
   let forwardInput = $state('');
   function submitForward() {
     const port = Number(forwardInput.trim());
@@ -59,6 +65,7 @@
               <span class="chevron" class:collapsed={sectionCollapsed}>▾</span>
               {section.provider.label}
             </button>
+            <div class="section-target" title={section.dir}>{targetName(section.dir)}</div>
 
             {#if !sectionCollapsed}
               {#if section.error}
@@ -230,6 +237,15 @@
     font-size: 12px;
     line-height: 1;
     transition: transform 0.12s ease;
+  }
+  .section-target {
+    font-size: 11px;
+    color: var(--accent, #4a9eff);
+    margin: 0 0 5px 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
   }
   .chevron.collapsed {
     transform: rotate(-90deg);
