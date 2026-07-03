@@ -26,6 +26,9 @@ Thumbs.db
 *~
 .idea/
 .vscode/
+# task-engine test fixtures are .vscode/tasks.json trees — keep them tracked.
+!scripts/task-engine/src/__tests__/fixtures/**/.vscode/
+!scripts/task-engine/src/__tests__/fixtures/**/.vscode/**
 
 # Notes (not for repo)
 TAURI_MCP_NOTES.md
@@ -44,10 +47,8 @@ TAURI_MCP_NOTES.md
 /scripts/cli-llm-cassette.mjs
 /scripts/cli-llm.mjs
 /scripts/forwood-seed-entities.mjs
-/scripts/launcher
 /scripts/meridian
 /scripts/run-silent.sh
-/scripts/task-engine
 /scripts/test
 # skill-library routing marker rides along inside dir symlinks — never track it downstream.
 **/DESTINATION.md

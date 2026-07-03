@@ -1,0 +1,38 @@
+// JSONC fixture: comments + trailing commas should both parse cleanly.
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "API",
+      "type": "shell",
+      "command": "bash ${workspaceFolder}/.vscode/scripts/tasks/dev-api.sh",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "API_PORT": "${env:API_PORT}"
+        }
+      },
+      "presentation": {
+        "group": "API",
+        "panel": "dedicated",
+        "reveal": "always",
+        "close": false,
+      },
+    },
+    {
+      "label": "WEB",
+      "type": "shell",
+      "command": "bash ${workspaceFolder}/.vscode/scripts/tasks/dev-web.sh",
+      "presentation": {
+        "group": "WEB",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Hidden helper",
+      "type": "shell",
+      "command": "echo hidden",
+      "hide": true
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Require devcontainer",
+      "type": "shell",
+      "command": "echo dc-ok"
+    },
+    {
+      "label": "API",
+      "type": "shell",
+      "command": "echo api",
+      "presentation": { "group": "API", "panel": "dedicated" }
+    },
+    {
+      "label": "WEB",
+      "type": "shell",
+      "command": "echo web",
+      "presentation": { "group": "WEB", "panel": "dedicated" }
+    },
+    {
+      "label": "Kill all",
+      "type": "shell",
+      "command": "echo kill"
+    },
+    {
+      "label": "Branch change setup",
+      "type": "shell",
+      "command": "echo branch-change"
+    },
+    {
+      "label": "Spin up dev servers",
+      "dependsOn": ["Require devcontainer", "API", "WEB"],
+      "dependsOrder": "parallel"
+    },
+    {
+      "label": "Kill all, branch setup, spin up dev",
+      "dependsOn": ["Kill all", "Branch change setup", "Spin up dev servers"],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "Cycle root",
+      "dependsOn": ["Cycle child"]
+    },
+    {
+      "label": "Cycle child",
+      "dependsOn": ["Cycle root"]
+    }
+  ]
+}

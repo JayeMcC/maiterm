@@ -1,0 +1,29 @@
+// Fixture for per-context ${workspaceFolder} resolution (PLAN-15):
+// one gate, one container-context task, one host-context task, one composite.
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Require devcontainer",
+      "type": "shell",
+      "command": "bash ${workspaceFolder}/.vscode/scripts/tasks/require-devcontainer.sh",
+      "presentation": { "reveal": "silent", "panel": "shared" }
+    },
+    {
+      "label": "Server",
+      "type": "shell",
+      "command": "bash ${workspaceFolder}/run-server.sh",
+      "dependsOn": ["Require devcontainer"],
+      "presentation": { "panel": "dedicated", "group": "Server" }
+    },
+    {
+      "label": "Browser",
+      "type": "shell",
+      "command": "bash ${workspaceFolder}/open-browser.sh"
+    },
+    {
+      "label": "Both",
+      "dependsOn": ["Server", "Browser"]
+    }
+  ]
+}

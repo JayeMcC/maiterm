@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Thin shim so the launcher's TSX entrypoint runs through tsx (Node's
+# native --strip-types covers .ts but not .tsx — JSX needs a real
+# transformer). Resolves tsx + the entry relative to this script so
+# the launcher works whether invoked from PATH, a symlink, or directly.
+
+set -e
+# Resolve the symlink chain first: when this shim is `npm link`ed onto PATH
+# (e.g. /opt/homebrew/bin/forwood-launcher → this file), BASH_SOURCE is the
+# symlink, so `dirname/..` would point at the link's dir, not the launcher
+# package. Follow links to the real file before computing DIR.
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  LINKDIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ "$SOURCE" != /* ]] && SOURCE="$LINKDIR/$SOURCE"
+done
+DIR="$(cd -P "$(dirname "$SOURCE")/.." && pwd)"
+exec "$DIR/node_modules/.bin/tsx" "$DIR/src/index.tsx" "$@"

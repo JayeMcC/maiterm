@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "lintBranchTarget",
+      "type": "promptString",
+      "description": "Target branch",
+      "default": "${env:FORWOOD_ONE_BASE_BRANCH}"
+    },
+    {
+      "id": "hardSnapshotTarget",
+      "type": "pickString",
+      "options": ["developing", "reviewing", "experimenting"],
+      "default": "developing"
+    }
+  ],
+  "tasks": [
+    {
+      "label": "Lint branch diff",
+      "type": "shell",
+      "command": "lint --base ${input:lintBranchTarget}"
+    },
+    {
+      "label": "Hard snapshot",
+      "type": "shell",
+      "command": "snapshot --target ${input:hardSnapshotTarget}"
+    }
+  ]
+}

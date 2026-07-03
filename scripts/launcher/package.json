@@ -1,0 +1,33 @@
+{
+  "name": "@forwood/launcher",
+  "version": "0.1.0",
+  "private": true,
+  "description": "One-shot Ink-based TUI that lists tasks from a clone's .vscode/tasks.json and dispatches them via @forwood/task-engine's maiTerm dispatcher (spawns named maiTerm tabs over MCP). Host-side; lifetime is cold-start → menu → fire → exit. Bound to a maiTerm key combo at install time.",
+  "type": "module",
+  "main": "./src/index.tsx",
+  "bin": {
+    "forwood-launcher": "./bin/forwood-launcher"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "start": "./bin/forwood-launcher"
+  },
+  "dependencies": {
+    "@forwood/task-engine": "file:../task-engine",
+    "ink": "^6.0.0",
+    "react": "^19.0.0",
+    "tsx": "^4.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "ink-testing-library": "^4.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=22.6"
+  }
+}
