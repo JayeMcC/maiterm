@@ -1,0 +1,254 @@
+imported/README.md
+  s_b3990b1a33a9cd::t_fba215546802ea 25-28
+  s_b3990b1a33a9cd::t_471f58f6907b14 22-24
+Brewfile
+  s_f1e7fe5402b249::t_f08359449d5925 1
+imported/builderio/.agents/skills/adding-a-skill/SKILL.md
+  s_b3990b1a33a9cd::t_f26a6ad09054aa 1-128
+imported/builderio/.agents/skills/adding-a-skill/agents/openai.yaml
+  s_b3990b1a33a9cd::t_4f7218abec7f14 1-4
+imported/builderio/.claude-plugin/plugin.json
+  s_b3990b1a33a9cd::t_8dbf45ea0432c8 1-14
+imported/builderio/.codex-plugin/plugin.json
+  s_b3990b1a33a9cd::t_61a53134e7ebce 1-28
+imported/builderio/.github/workflows/ci.yml
+  s_b3990b1a33a9cd::t_2321e707535d99 1-27
+imported/builderio/.github/workflows/update-agent-native-plan-skills.yml
+  s_b3990b1a33a9cd::t_3d0c73a4c95875 1-137
+imported/builderio/LICENSE
+  s_b3990b1a33a9cd::t_28f3fc17f7c2df 1-21
+imported/builderio/README.md
+  s_b3990b1a33a9cd::t_39692fb91cf14e 1-192
+imported/builderio/package.json
+  s_b3990b1a33a9cd::t_33df9c55a9db21 1-12
+imported/builderio/scripts/sync-agent-native-plan-skills.mjs
+  s_b3990b1a33a9cd::t_6d89f052293baf 1-165
+imported/builderio/skills/agent-watchdog/README.md
+  s_b3990b1a33a9cd::t_168676df1e6ca4 1-43
+imported/builderio/skills/agent-watchdog/SKILL.md
+  s_b3990b1a33a9cd::t_502635b6301b79 1-110
+imported/builderio/skills/agent-watchdog/agents/openai.yaml
+  s_b3990b1a33a9cd::t_db192fe3995a98 1-4
+imported/builderio/skills/efficient-fable/README.md
+  s_b3990b1a33a9cd::t_68ace589d647e4 1-75
+imported/builderio/skills/efficient-fable/SKILL.md
+  s_b3990b1a33a9cd::t_55ab3f87e268e6 1-95
+imported/builderio/skills/efficient-fable/assets/fable-orchestrator.excalidraw
+  s_b3990b1a33a9cd::t_a9de54b28ec1cb 1-833
+imported/builderio/skills/efficient-frontier/README.md
+  s_b3990b1a33a9cd::t_f867f1a4db718f 1-53
+imported/builderio/skills/efficient-frontier/SKILL.md
+  s_b3990b1a33a9cd::t_5273660e98ac2f 1-73
+imported/builderio/skills/plan-arbiter/README.md
+  s_b3990b1a33a9cd::t_7b8a5b2f36f185 1-41
+imported/builderio/skills/plan-arbiter/SKILL.md
+  s_b3990b1a33a9cd::t_b4547482fc72fd 1-114
+imported/builderio/skills/plan-arbiter/agents/openai.yaml
+  s_b3990b1a33a9cd::t_0ba6f068663504 1-4
+imported/builderio/skills/plow-ahead/README.md
+  s_b3990b1a33a9cd::t_f0143d74defbba 1-42
+imported/builderio/skills/plow-ahead/SKILL.md
+  s_b3990b1a33a9cd::t_64847d9b51aba2 1-104
+imported/builderio/skills/plow-ahead/agents/openai.yaml
+  s_b3990b1a33a9cd::t_c52e005f7e661b 1-4
+imported/builderio/skills/quick-recap/README.md
+  s_b3990b1a33a9cd::t_d0e27ebb477972 1-55
+imported/builderio/skills/quick-recap/SKILL.md
+  s_b3990b1a33a9cd::t_cc48c6d954dad9 1-54
+imported/builderio/skills/read-the-damn-docs/README.md
+  s_b3990b1a33a9cd::t_e6edd1c21f9943 1-54
+imported/builderio/skills/read-the-damn-docs/SKILL.md
+  s_b3990b1a33a9cd::t_0c6ad84e34e99c 1-126
+imported/builderio/skills/read-the-damn-docs/agents/openai.yaml
+  s_b3990b1a33a9cd::t_e8d1b73ac8a36f 1-4
+imported/builderio/skills/stay-within-limits/README.md
+  s_b3990b1a33a9cd::t_7076ebacfd018f 1-61
+imported/builderio/skills/stay-within-limits/SKILL.md
+  s_b3990b1a33a9cd::t_166442cddde17d 1-83
+imported/builderio/skills/visual-plan/README.md
+  s_b3990b1a33a9cd::t_3ce9891f87d522 1-92
+imported/builderio/skills/visual-plan/SKILL.md
+  s_b3990b1a33a9cd::t_a65afcc1b778e6 1-489
+imported/builderio/skills/visual-plan/references/canvas.md
+  s_b3990b1a33a9cd::t_585c097cba3eff 1-104
+imported/builderio/skills/visual-plan/references/document-quality.md
+  s_b3990b1a33a9cd::t_036a789d1d7da7 1-169
+imported/builderio/skills/visual-plan/references/exemplar.md
+  s_b3990b1a33a9cd::t_566be652179281 1-62
+imported/builderio/skills/visual-plan/references/wireframe.md
+  s_b3990b1a33a9cd::t_1d43c6163122e7 1-261
+imported/builderio/skills/visual-recap/README.md
+  s_b3990b1a33a9cd::t_b237d6d6d816ea 1-103
+imported/builderio/skills/visual-recap/SKILL.md
+  s_b3990b1a33a9cd::t_c18e52df98f4e4 1-578
+imported/builderio/skills/visual-recap/references/wireframe.md
+  s_b3990b1a33a9cd::t_c1fc7f46e6e294 1-261
+imported/office-365-admin-pack/bamboohr/SKILL.md
+  s_a870e9944a40a4::t_9e6117d16e8e96 1-76
+imported/office-365-admin-pack/bamboohr/scripts/bhr-cookie.sh
+  s_a870e9944a40a4::t_19d5f3b6f9ccea 1-7
+imported/office-365-admin-pack/bamboohr/scripts/bhr-get.sh
+  s_a870e9944a40a4::t_aacfb4dd826ab6 1-9
+imported/office-365-admin-pack/bamboohr/scripts/read-assessment.sh
+  s_a870e9944a40a4::t_90fe8d2d9cd4ec 1-22
+imported/office-365-admin-pack/harvest/SKILL.md
+  s_a870e9944a40a4::t_902db512b5788f 1-151
+imported/office-365-admin-pack/mail-triage/SKILL.md
+  s_a870e9944a40a4::t_de8cd44a618fd1 1-83
+imported/office-365-admin-pack/mail-triage/scripts/fetch-recent.sh
+  s_a870e9944a40a4::t_acc38370e3f10b 1-26
+imported/office-365-admin-pack/marp/skill.md
+  s_a870e9944a40a4::t_9c260f949776a4 1-242
+imported/office-365-admin-pack/marp/templates/architecture.md
+  s_a870e9944a40a4::t_783f018e1db9da 1-89
+imported/office-365-admin-pack/marp/templates/one-pager.md
+  s_a870e9944a40a4::t_7902beb1db1b3e 1-60
+imported/office-365-admin-pack/marp/templates/sprint-review.md
+  s_a870e9944a40a4::t_72c35a335e99f0 1-74
+imported/office-365-admin-pack/marp/templates/standup.md
+  s_a870e9944a40a4::t_2a30d4ae00d257 1-32
+imported/office-365-admin-pack/meeting-digest/SKILL.md
+  s_a870e9944a40a4::t_d4744a710d7d68 1-114
+imported/office-365-admin-pack/meeting-digest/scripts/fetch-transcripts.py
+  s_a870e9944a40a4::t_0fc02da2c24978 1-64
+imported/office-365-admin-pack/meeting-digest/scripts/parse-vtt.py
+  s_a870e9944a40a4::t_123e1a10691e74 1-43
+imported/office-365-admin-pack/microsoft-calendar/SKILL.md
+  s_a870e9944a40a4::t_0abfe9f735d322 1-119
+imported/office-365-admin-pack/microsoft-calendar/scripts/create-event.sh
+  s_a870e9944a40a4::t_499e8f23fb3a83 1-97
+imported/office-365-admin-pack/microsoft-calendar/scripts/get-event.sh
+  s_a870e9944a40a4::t_f3ab4e6e771ec9 1-65
+imported/office-365-admin-pack/microsoft-calendar/scripts/list-events.sh
+  s_a870e9944a40a4::t_18823a0417a8cd 1-93
+imported/office-365-admin-pack/microsoft-mail/SKILL.md
+  s_a870e9944a40a4::t_6a6766c97e97f4 1-178
+imported/office-365-admin-pack/microsoft-mail/scripts/create-rule.sh
+  s_a870e9944a40a4::t_11607aac50afeb 1-185
+imported/office-365-admin-pack/microsoft-mail/scripts/delete-rule.sh
+  s_a870e9944a40a4::t_3ca68852f10b9e 1-44
+imported/office-365-admin-pack/microsoft-mail/scripts/download-attachments.sh
+  s_a870e9944a40a4::t_ca2a4835e87e6b 1-86
+imported/office-365-admin-pack/microsoft-mail/scripts/get-message.sh
+  s_a870e9944a40a4::t_d8f65b0d7e1640 1-75
+imported/office-365-admin-pack/microsoft-mail/scripts/list-rules.sh
+  s_a870e9944a40a4::t_a5165ecc989b69 1-75
+imported/office-365-admin-pack/microsoft-mail/scripts/search.sh
+  s_a870e9944a40a4::t_c55aad8d6fa2cb 1-95
+imported/office-365-admin-pack/microsoft-mail/scripts/send-message.sh
+  s_a870e9944a40a4::t_63f4fd8bed1ec1 1-95
+imported/office-365-admin-pack/microsoft-teams/SKILL.md
+  s_a870e9944a40a4::t_79eb5da064c3f7 1-100
+imported/office-365-admin-pack/microsoft-teams/scripts/get-channel-messages.sh
+  s_a870e9944a40a4::t_c2e1a5f0f26ab6 1-70
+imported/office-365-admin-pack/microsoft-teams/scripts/get-chat-messages.sh
+  s_a870e9944a40a4::t_f8becc9098e5de 1-62
+imported/office-365-admin-pack/microsoft-teams/scripts/list-channels.sh
+  s_a870e9944a40a4::t_77f7fe928d4802 1-36
+imported/office-365-admin-pack/microsoft-teams/scripts/list-chats.sh
+  s_a870e9944a40a4::t_b78031aeb618ad 1-75
+imported/office-365-admin-pack/microsoft-teams/scripts/list-teams.sh
+  s_a870e9944a40a4::t_0e854ae6d187ad 1-31
+imported/office-365-admin-pack/obsidian/SKILL.md
+  s_a870e9944a40a4::t_0a1e9fe89023e0 1-59
+imported/office-365-admin-pack/obsidian/commands.md
+  s_a870e9944a40a4::t_f787f528d8590a 1-217
+imported/office-365-admin-pack/obsidian/gotchas.md
+  s_a870e9944a40a4::t_c845627d722787 1-174
+imported/office-365-admin-pack/obsidian/vault-patterns.md
+  s_a870e9944a40a4::t_ab7b530d46f9c9 1-274
+imported/office-365-admin-pack/session-handoff/SKILL.md
+  s_a870e9944a40a4::t_26e664674952f7 1-163
+imported/office-365-admin-pack/wiki-compiler/SKILL.md
+  s_a870e9944a40a4::t_44b9f6854d0e9f 1-163
+imported/office-365-admin-pack/wiki-compiler/templates/article-template.md
+  s_a870e9944a40a4::t_f80958b5f61f25 1-44
+imported/office-365-admin-pack/wiki-compiler/templates/index-template.md
+  s_a870e9944a40a4::t_81bac8ff177400 1-28
+imported/office-365-admin-pack/wiki-compiler/templates/schema-template.md
+  s_a870e9944a40a4::t_ea5cad13f0c15a 1-41
+imported/timesheet/.gitignore
+  s_98ff873870882c::t_e6840aba55f70c 1-28
+imported/timesheet/pyproject.toml
+  s_98ff873870882c::t_2b7b44f6ae598c 1-39
+imported/timesheet/timesheet/__init__.py
+  s_98ff873870882c::t_dacac9b0c57e3d 1-3
+imported/timesheet/timesheet/cli.py
+  s_98ff873870882c::t_431c2eddb53abc 1-460
+imported/timesheet/timesheet/cluster.py
+  s_98ff873870882c::t_39bbc64029960c 1-329
+imported/timesheet/timesheet/collectors/bitbucket.py
+  s_98ff873870882c::t_c95af1b43b22d1 1-324
+imported/timesheet/timesheet/collectors/git_local.py
+  s_98ff873870882c::t_175ec335d3af71 1-149
+imported/timesheet/timesheet/collectors/jira.py
+  s_98ff873870882c::t_e120faa9dd164f 1-153
+imported/timesheet/timesheet/collectors/outlook.py
+  s_98ff873870882c::t_568323ef02f024 1-214
+imported/timesheet/timesheet/collectors/slack.py
+  s_98ff873870882c::t_0e0dc589d2addc 1-147
+imported/timesheet/timesheet/config.py
+  s_98ff873870882c::t_5d4f379582b27c 1-108
+imported/timesheet/timesheet/enrichment.py
+  s_98ff873870882c::t_7d937855815e61 1-117
+imported/timesheet/timesheet/harvest.py
+  s_98ff873870882c::t_6a0702f88a390f 1-140
+imported/timesheet/timesheet/mapper.py
+  s_98ff873870882c::t_3f778ddeacb0af 1-212
+imported/timesheet/timesheet/models.py
+  s_98ff873870882c::t_905b859fba16e3 1-43
+imported/timesheet/timesheet/push.py
+  s_98ff873870882c::t_683385b633e83a 1-130
+imported/timesheet/timesheet/resolve.py
+  s_98ff873870882c::t_3fc9ad3e9f9394 1-125
+imported/timesheet/timesheet/review.py
+  s_98ff873870882c::t_7b087f950042cc 1-260
+imported/timesheet/timesheet/slack_login.py
+  s_98ff873870882c::t_fed13fba358d53 1-328
+imported/timesheet/timesheet/util.py
+  s_98ff873870882c::t_d593d1489e1aa1 1-65
+imported/timesheet/timesheet/writer.py
+  s_98ff873870882c::t_2b3d7ebf2af562 1-264
+imported/timesheet/uv.lock
+  s_98ff873870882c::t_9c4c24e3ef793b 1-904
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "dfb9d42545ba70b556f21ce7dc722089280eb60c",
+  "prompts": {},
+  "sessions": {
+    "s_98ff873870882c": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "621fd1b5-523f-41ec-ae7f-7b949233ef2c",
+        "model": "unknown"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_a870e9944a40a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "12dc673c-5c5a-4a0e-8c13-0a5a7a6c6ba0",
+        "model": "unknown"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_b3990b1a33a9cd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5897bc7-e7f5-459a-899b-17bc453341da",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_f1e7fe5402b249": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eee48de2-e845-46e7-818b-f14dd12c000b",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
