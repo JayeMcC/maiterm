@@ -1,0 +1,181 @@
+src/lib/components/terminal/TerminalPane.svelte
+  s_ad2f963c4afad3::t_ee40d5ffb8e88a 617-621
+  s_ad2f963c4afad3::t_08476fcce6e6a3 1887
+  s_86d01cdecdba50::t_7571a6d1d01cbe 63
+src/routes/+page.svelte
+  s_ad2f963c4afad3::t_a0e6f1bc02fd6e 304
+  s_ad2f963c4afad3::t_0cc201c5404da2 350-358
+  s_ad2f963c4afad3::t_3e0ee28b97b135 301-303
+  s_ad2f963c4afad3::t_b4df95c9a492af 305-307
+src-tauri/src/lib.rs
+  s_ad2f963c4afad3::t_64010fe04a1854 31
+  s_ad2f963c4afad3::t_c56a30173aef99 3,94-97,361-369,518,557,593-599,623-624,670-686
+src/lib/components/editor/EditorPane.svelte
+  s_ad2f963c4afad3::t_54daba94288899 26-27
+  s_242f84a526bfa7::t_d4d3f6a9ba395f 32-34,398-465,1505-1529,1576-1584,1651-1652
+src/routes/preferences/+page.svelte
+  s_ad2f963c4afad3::t_f44f898fbd8f3e 22-24
+  s_242f84a526bfa7::t_192afc3c5f08fe 27,32,109-200,1854-1858,1861-1864,1871,1874,1880-1883,1890,1893,1899-1902,1917-2045,2239-2284,2627-2807
+src/lib/tauri/commands.ts
+  s_ad2f963c4afad3::t_62381ea79f6a6c 8-9
+  s_86d01cdecdba50::t_6b47d1912d5921 164-176,245-252,472-504,639-648
+src/lib/stores/preferences.svelte.ts
+  s_ad2f963c4afad3::t_e3338d56a473fc 245-253,657,662,667
+  s_ad2f963c4afad3::t_ee9e5abc35623a 654-656
+  s_ad2f963c4afad3::t_929b2eb9c04b64 658-661
+  s_ad2f963c4afad3::t_382ddd949fc3e1 663-666
+  s_ad2f963c4afad3::t_c85858e8ab2785 668
+  s_242f84a526bfa7::t_ddc93ccbc051d8 64-66,80-82,368-370,384-386,647-653,729-730,732,737,821-823,837-839,897-899
+CHANGELOG.md
+  s_ad2f963c4afad3::t_52dea9520e21fd 3-18
+docs/mailink-protocol.md
+  s_ad2f963c4afad3::t_88334ef6a30ff8 1-818
+package-lock.json
+  s_ad2f963c4afad3::t_3a18ecfa1c496c 3,9,55-56,4017-4022
+scripts/deploy-local-build.sh
+  s_ad2f963c4afad3::t_5de180d1b0b3e5 1-119
+src-tauri/Cargo.lock
+  s_ad2f963c4afad3::t_fdab4ee5d82b67 45,49,62-63,65,68,190-198,371-392,448-469,769-770,834-842,872-881,905,918,1572-1587,1813,1816,1826,1830,2005-2023,2175,2220,2224,2600-2609,2779-2784,3618-3627,3942-3997,4110-4122,4220,4223,4232,4235,4398-4399,4420-4428,4435,4445,4472,4578,5139-5159,5181,6612-6621,6922-6932,7470-7478
+src-tauri/capabilities/default.json
+  s_ad2f963c4afad3::t_1f7b663bdb817d 15
+src-tauri/resources/maiterm-skill/bin/setup-statusline.sh
+  s_ad2f963c4afad3::t_e0a1e59b56bfd6 29
+src-tauri/resources/maiterm-skill/bin/statusline-command.sh
+  s_ad2f963c4afad3::t_912d48a42661e0 4-6,53-55
+src-tauri/src/claude_code/codex.rs
+  s_ad2f963c4afad3::t_58970ff3ec0617 399-401
+src-tauri/src/claude_code/lockfile.rs
+  s_ad2f963c4afad3::t_e86b73c1226484 285
+src-tauri/src/claude_code/protocol.rs
+  s_ad2f963c4afad3::t_0003f0b9ee4040 596-597
+src-tauri/src/claude_code/server.rs
+  s_ad2f963c4afad3::t_0cf64634d120f3 1231,1261,1718,1857,1913-1919,1949,1953-1966
+src-tauri/src/commands/editor.rs
+  s_ad2f963c4afad3::t_c4a1675df02c54 288-412
+src-tauri/src/commands/mailink.rs
+  s_ad2f963c4afad3::t_82f1d660f94c67 1-92
+src-tauri/src/commands/ssh_tunnel.rs
+  s_ad2f963c4afad3::t_a4b383b4a2728e 55-66,356-360
+src-tauri/src/commands/terminal.rs
+  s_ad2f963c4afad3::t_88eeb9f677323b 278-293,544-553,556
+src-tauri/src/commands/window.rs
+  s_ad2f963c4afad3::t_12756ba11c99b1 486-488,520
+src-tauri/src/commands/workspace.rs
+  s_ad2f963c4afad3::t_addd121ace77a4 39-72,74-81,95,100,639-649,763-815,1084-1088,1681-1769
+src-tauri/src/mailink/mod.rs
+  s_ad2f963c4afad3::t_b8b3347f955c64 1-1919
+src-tauri/src/mailink/transcript.rs
+  s_ad2f963c4afad3::t_c93e9120a08b22 1-578
+src-tauri/src/pty/manager.rs
+  s_ad2f963c4afad3::t_8106bf0969535a 12,21-112,522,529,576,582-596,868-893
+src-tauri/src/pty/mod.rs
+  s_ad2f963c4afad3::t_0cc44c0b652190 3-6
+src-tauri/src/state/agent_runtime.rs
+  s_ad2f963c4afad3::t_321f24e74f8069 193-201,204-207
+src-tauri/src/state/mod.rs
+  s_ad2f963c4afad3::t_5bf1413aa2e684 11
+src-tauri/src/state/persistence.rs
+  s_ad2f963c4afad3::t_26d773268c1cfd 5,642-704
+src-tauri/src/state/scrollback_db.rs
+  s_ad2f963c4afad3::t_885b42e8b27cd3 77-120
+src-tauri/src/state/workspace.rs
+  s_ad2f963c4afad3::t_8d4ae05d4c32ef 316-327,433-437,564-569,652-653,655,659,663,1035-1082,1160-1163,1204-1205,1244-1245,1284-1285,1315
+src-tauri/src/terminal/handle.rs
+  s_ad2f963c4afad3::t_ee442324e95afe 38-45,74-75
+src/lib/components/MeshCockpit.svelte
+  s_ad2f963c4afad3::t_e491b442f4ecc6 23,31,35,39,46-49,51,55,71,86,101,109,125-127,156-157,170-171,174-176,211,216,261,274,276-278,280-282,284-285,287-289,292-294,296-297,305,307-310,312-338,340-341,343-349,351-357,359-370,372,375-382
+src/lib/components/MeshSetupModal.svelte
+  s_ad2f963c4afad3::t_ca4db27eadfa0d 7,20,30-57,60,64-65,77-78,82,90-92,100-109,119-121,126,147-148,160-161,167,188,192-197,203-204,214,243,258,278,282,289,291,311-320,322-335,337-339,341-343,345-354
+src/lib/components/SessionRestoreModal.svelte
+  s_ad2f963c4afad3::t_779e3cda191b68 1-160
+src/lib/components/terminal/NotesPanel.svelte
+  s_ad2f963c4afad3::t_6c4537980ce3f5 458-465
+src/lib/stores/agentMesh.svelte.ts
+  s_ad2f963c4afad3::t_2c1fc67bb757ec 13,38-41,45,50-51,78,169-171,213,228,254-257,266-271,298,341,347,364-366,399-401,408,416,533,544,613,619-620,632,640-641,686
+src/lib/stores/agentState.svelte.ts
+  s_ad2f963c4afad3::t_c157ce566852bc 67-75,370-376
+src/lib/stores/sshMcpBridge.svelte.ts
+  s_ad2f963c4afad3::t_de62abaf96f544 164,289-294,385-389
+src/lib/tauri/types.ts
+  s_ad2f963c4afad3::t_f62f1534366868 70-74,137-138,258-289
+update-worker/README.md
+  s_ad2f963c4afad3::t_eb608ee2ffbe99 54-111
+update-worker/wrangler.toml
+  s_ad2f963c4afad3::t_1d85b61cce625f 22-31
+website/astro.config.mjs
+  s_ad2f963c4afad3::t_fa9c9a611c47f1 44
+website/src/content/docs/features/agents.md
+  s_ad2f963c4afad3::t_c36c004b9a5d57 160-163
+website/src/content/docs/features/mailink.md
+  s_ad2f963c4afad3::t_33adcb02f9ab30 1-70
+website/src/content/docs/features/mesh-workspace.md
+  s_ad2f963c4afad3::t_5363e59ca494e0 8-20,32,34-36,38,46
+website/src/content/docs/features/terminal.md
+  s_ad2f963c4afad3::t_a2bc88a5ac7e50 16,53
+website/src/content/docs/features/workspaces.md
+  s_ad2f963c4afad3::t_ae2512ab247b79 22
+website/src/content/docs/index.mdx
+  s_ad2f963c4afad3::t_fc19be672eda6a 37-97,119-122
+website/src/styles/custom.css
+  s_ad2f963c4afad3::t_fd7d0bbe13599d 45-147
+package.json
+  s_ad2f963c4afad3::t_901ef0ff98022d 3,89-90
+src-tauri/Cargo.toml
+  s_ad2f963c4afad3::t_bad952809c0623 3,41-48
+src-tauri/src/claude_code/CLAUDE.md
+  s_1e21848c7d1730::t_aace707108c5aa 27-74
+src-tauri/src/commands/mod.rs
+  s_ad2f963c4afad3::t_fc9894d5ac488f 3
+src-tauri/src/state/app_state.rs
+  s_1e21848c7d1730::t_5de3623c0f3736 82-85,148-164,200-204
+src-tauri/tauri.conf.json
+  s_ad2f963c4afad3::t_685e0705756557 4
+src/lib/components/terminal/TerminalTabs.svelte
+  s_86d01cdecdba50::t_7c010b17634962 967-997,1002
+src/lib/stores/claudeCode.svelte.ts
+  s_242f84a526bfa7::t_6527b1e7d245b0 150,153,156,159,621-634,1029-1030,1046-1047,1062-1063,1084-1089,1094-1095
+src/lib/stores/workspaces.svelte.ts
+  s_242f84a526bfa7::t_8b0e0eb33c3ec2 567-574,864-869,873-875,877-883,895-902,904,906-910,912-922,925-955,958-959,1185-1206,1361-1389
+update-worker/src/worker.js
+  s_1e21848c7d1730::t_086263ad7fd0fe 132-394,398-413
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "24fa4ded143c1008724b75f46c53949e4fb69974",
+  "prompts": {},
+  "sessions": {
+    "s_1e21848c7d1730": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a771e02815622e728",
+        "model": "unknown"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_242f84a526bfa7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa3019d713492c75d",
+        "model": "unknown"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_86d01cdecdba50": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ab64a048c72fe76c6",
+        "model": "unknown"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
