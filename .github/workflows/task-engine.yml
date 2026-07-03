@@ -1,0 +1,51 @@
+name: Task engine + launcher
+
+on:
+  push:
+    branches: ['main', 'dev', 'feature/**']
+    paths:
+      - 'scripts/task-engine/**'
+      - 'scripts/launcher/**'
+      - '.github/workflows/task-engine.yml'
+  workflow_dispatch:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            scripts/task-engine/package-lock.json
+            scripts/launcher/package-lock.json
+
+      - name: task-engine deps
+        working-directory: scripts/task-engine
+        run: npm ci
+
+      - name: task-engine typecheck
+        working-directory: scripts/task-engine
+        run: npm run typecheck
+
+      - name: task-engine tests
+        working-directory: scripts/task-engine
+        run: npm test
+
+      - name: launcher deps
+        working-directory: scripts/launcher
+        run: npm ci
+
+      - name: launcher typecheck
+        working-directory: scripts/launcher
+        run: npm run typecheck
+
+      - name: launcher tests
+        working-directory: scripts/launcher
+        run: npm test
