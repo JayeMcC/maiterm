@@ -74,6 +74,16 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
   - On import, spawn fresh terminals/editors per the tree rather than trying to
     restore live process state.
 
+## maiLink / mobile
+- [ ] **Set up WireGuard for mobile control (out-of-house).** maiLink's data
+  channel is LAN or **WireGuard** (the cloud relay is only a content-free push
+  doorbell — never sees terminal content). Install + configure a WireGuard VPN
+  back to the home network so the phone can reach maiTerm when away, then pair
+  the maiLink mobile app. Goal: control some things from the phone; **likely to
+  expand maiLink functionality** (more than the current chat/approvals companion
+  surface) once it's usable end-to-end. Setup is a user/network task; the fork
+  side is already merged (upstream maiLink).
+
 ## UI
 - **Done: tab close (×) button no longer hidden by long names.** `.tab-name`
   now `flex: 1 1 auto; min-width: 0` so it truncates with its ellipsis, and

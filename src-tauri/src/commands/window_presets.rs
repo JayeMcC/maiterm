@@ -221,3 +221,152 @@ pub fn rename_window_preset(
     save_state(&data_clone)?;
     Ok(())
 }
+
+// ── Portable export / import (share a window setup as JSON) ──────────────────
+
+const SETUP_VERSION: u32 = 1;
+
+/// Portable window-setup envelope. Wraps a captured (machine-state-stripped)
+/// window body + metadata. Local cwds are relativized to `~` on export and
+/// expanded on import so a setup shared between users with the same relative
+/// layout re-creates cleanly.
+#[derive(serde::Serialize, serde::Deserialize)]
+struct SetupEnvelope {
+    #[serde(rename = "maitermSetup")]
+    version: u32,
+    name: String,
+    #[serde(rename = "exportedAt", default)]
+    exported_at: String,
+    window: WindowData,
+}
+
+fn home_dir() -> Option<String> {
+    std::env::var("HOME").ok().filter(|h| !h.is_empty())
+}
+
+/// Apply `f` to every tab's LOCAL `restore_cwd`. Remote cwds and ssh commands
+/// are left untouched — host/account-specific, not meaningfully portable.
+fn map_local_cwds(body: &mut WindowData, f: &dyn Fn(&str) -> String) {
+    for ws in &mut body.workspaces {
+        for pane in &mut ws.panes {
+            for tab in &mut pane.tabs {
+                if let Some(cwd) = tab.restore_cwd.as_deref() {
+                    tab.restore_cwd = Some(f(cwd));
+                }
+            }
+        }
+    }
+}
+
+fn relativize_cwds(body: &mut WindowData) {
+    let Some(home) = home_dir() else { return };
+    let prefix = format!("{home}/");
+    map_local_cwds(body, &|p| {
+        if p == home {
+            "~".to_string()
+        } else if let Some(rest) = p.strip_prefix(&prefix) {
+            format!("~/{rest}")
+        } else {
+            p.to_string()
+        }
+    });
+}
+
+fn expand_cwds(body: &mut WindowData) {
+    let Some(home) = home_dir() else { return };
+    map_local_cwds(body, &|p| {
+        if p == "~" {
+            home.clone()
+        } else if let Some(rest) = p.strip_prefix("~/") {
+            format!("{home}/{rest}")
+        } else {
+            p.to_string()
+        }
+    });
+}
+
+/// De-duplicate an imported preset name against the existing list.
+fn unique_preset_name(existing: &[WindowPreset], base: &str) -> String {
+    let base = if base.trim().is_empty() { "Imported setup" } else { base.trim() };
+    let taken = |n: &str| existing.iter().any(|p| p.name.eq_ignore_ascii_case(n));
+    if !taken(base) {
+        return base.to_string();
+    }
+    for i in 2.. {
+        let candidate = format!("{base} ({i})");
+        if !taken(&candidate) {
+            return candidate;
+        }
+    }
+    unreachable!()
+}
+
+/// Export the current window's arrangement as a portable JSON string. Reuses the
+/// preset-capture path (drops pty_id, scrollback, bridges, …), relativizes local
+/// cwds, and wraps in a versioned envelope for sharing.
+#[tauri::command]
+pub fn export_window_setup(
+    window: tauri::Window,
+    state: State<'_, Arc<AppState>>,
+    tab_contexts: Vec<TabContext>,
+    name: Option<String>,
+    path: String,
+) -> Result<(), String> {
+    let label = window.label().to_string();
+    let source = state
+        .app_data
+        .read()
+        .window(&label)
+        .ok_or_else(|| format!("Window '{label}' not found"))?
+        .clone();
+    let mut body = capture_window_body(&source, &tab_contexts);
+    relativize_cwds(&mut body);
+    let envelope = SetupEnvelope {
+        version: SETUP_VERSION,
+        name: name
+            .map(|n| n.trim().to_string())
+            .filter(|n| !n.is_empty())
+            .unwrap_or_else(|| "maiTerm setup".into()),
+        exported_at: iso_now(),
+        window: body,
+    };
+    let json = serde_json::to_string_pretty(&envelope).map_err(|e| e.to_string())?;
+    std::fs::write(&path, json).map_err(|e| format!("Failed to write {path}: {e}"))
+}
+
+/// Import a setup JSON string as a new window preset. Expands cwds to the local
+/// home and de-dupes the name; the caller then `open_window_preset`s it to spawn
+/// the arrangement (which mints fresh workspace/pane/tab IDs).
+#[tauri::command]
+pub fn import_window_setup(
+    state: State<'_, Arc<AppState>>,
+    path: String,
+) -> Result<WindowPreset, String> {
+    let json = std::fs::read_to_string(&path).map_err(|e| format!("Failed to read {path}: {e}"))?;
+    let mut envelope: SetupEnvelope =
+        serde_json::from_str(&json).map_err(|e| format!("Invalid setup JSON: {e}"))?;
+    if envelope.version != SETUP_VERSION {
+        return Err(format!(
+            "Unsupported setup version {} (this build expects {})",
+            envelope.version, SETUP_VERSION
+        ));
+    }
+    expand_cwds(&mut envelope.window);
+
+    let (preset, data_clone) = {
+        let mut app_data = state.app_data.write();
+        let name = unique_preset_name(&app_data.window_presets, &envelope.name);
+        let now = iso_now();
+        let preset = WindowPreset {
+            id: uuid::Uuid::new_v4().to_string(),
+            name,
+            created_at: now.clone(),
+            updated_at: now,
+            window: envelope.window,
+        };
+        app_data.window_presets.push(preset.clone());
+        (preset, app_data.clone())
+    };
+    save_state(&data_clone)?;
+    Ok(preset)
+}

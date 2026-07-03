@@ -613,6 +613,8 @@ pub fn run() {
             commands::window_presets::open_window_preset,
             commands::window_presets::delete_window_preset,
             commands::window_presets::rename_window_preset,
+            commands::window_presets::export_window_setup,
+            commands::window_presets::import_window_setup,
             commands::editor::read_file,
             commands::editor::read_file_base64,
             commands::editor::write_file,

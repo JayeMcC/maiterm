@@ -593,6 +593,18 @@ export async function renameWindowPreset(presetId: string, newName: string): Pro
   return invoke('rename_window_preset', { presetId, newName });
 }
 
+/** Export the current window's arrangement to `path` as a portable setup JSON
+ *  (layout + tabs + cwd intent, machine state stripped, local cwds → ~). */
+export async function exportWindowSetup(tabContexts: TabContext[], path: string, name?: string): Promise<void> {
+  return invoke('export_window_setup', { tabContexts, name: name ?? null, path });
+}
+
+/** Import a setup JSON file at `path` as a new window preset (cwds expanded to
+ *  local home); returns the stored preset so the caller can openWindowPreset it. */
+export async function importWindowSetup(path: string): Promise<WindowPreset> {
+  return invoke('import_window_setup', { path });
+}
+
 // Editor commands
 export interface ReadFileResult {
   content: string;

@@ -5,6 +5,8 @@
   import { error as logError } from '@tauri-apps/plugin-log';
   import Button from '$lib/components/ui/Button.svelte';
   import IconButton from '$lib/components/ui/IconButton.svelte';
+  import { save as saveDialog, open as openDialog } from '@tauri-apps/plugin-dialog';
+  import { workspacesStore } from '$lib/stores/workspaces.svelte';
 
   interface Props {
     open: boolean;
@@ -77,6 +79,41 @@
     } catch (e) {
       logError(`openWindowPreset failed: ${e}`);
       dispatch('Open failed', String(e), 'error');
+    }
+  }
+
+  // Export the CURRENT window's arrangement to a shareable JSON file.
+  async function handleExportSetup() {
+    try {
+      const path = await saveDialog({
+        title: 'Export window setup',
+        defaultPath: 'maiterm-setup.json',
+        filters: [{ name: 'maiTerm setup', extensions: ['json'] }],
+      });
+      if (!path) return; // cancelled
+      await workspacesStore.exportCurrentWindowSetup(path);
+      dispatch('Setup exported', `Saved ${path.split('/').pop()}`, 'success');
+    } catch (e) {
+      logError(`exportWindowSetup failed: ${e}`);
+      dispatch('Export failed', String(e), 'error');
+    }
+  }
+
+  // Import a setup JSON file → new preset → open it.
+  async function handleImportSetup() {
+    try {
+      const path = await openDialog({
+        title: 'Import window setup',
+        multiple: false,
+        filters: [{ name: 'maiTerm setup', extensions: ['json'] }],
+      });
+      if (!path || typeof path !== 'string') return; // cancelled
+      const preset = await workspacesStore.importSetupAndOpen(path);
+      dispatch('Setup imported', `Opening "${preset.name}"…`, 'success');
+      onclose();
+    } catch (e) {
+      logError(`importWindowSetup failed: ${e}`);
+      dispatch('Import failed', String(e), 'error');
     }
   }
 
@@ -214,6 +251,9 @@
       </div>
 
       <div class="footer">
+        <Button variant="secondary" onclick={handleImportSetup}>Import setup…</Button>
+        <Button variant="secondary" onclick={handleExportSetup}>Export current setup…</Button>
+        <span style="flex:1"></span>
         <Button variant="secondary" onclick={onclose}>Close</Button>
       </div>
     </div>
@@ -339,6 +379,8 @@
 
   .footer {
     display: flex;
+    align-items: center;
+    gap: 8px;
     justify-content: flex-end;
     padding: 12px 16px;
     border-top: 1px solid var(--bg-light);

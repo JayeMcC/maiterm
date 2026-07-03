@@ -2105,6 +2105,21 @@ function createWorkspacesStore() {
       return commands.saveWindowPreset(name, tabContexts, overwrite);
     },
 
+    /** Export the current window's arrangement to `path` as a portable setup
+     *  JSON (shareable — machine state stripped, local cwds relativized to ~). */
+    async exportCurrentWindowSetup(path: string, name?: string) {
+      const tabContexts = await this._gatherCurrentWindowTabContexts(false);
+      return commands.exportWindowSetup(tabContexts, path, name);
+    },
+
+    /** Import a setup JSON file and spawn a window from it. Adds a preset (so it
+     *  stays available) and opens it immediately. Returns the created preset. */
+    async importSetupAndOpen(path: string) {
+      const preset = await commands.importWindowSetup(path);
+      await commands.openWindowPreset(preset.id);
+      return preset;
+    },
+
     toggleNotes(tabId: string) {
       const isOpen = !notesVisible.has(tabId);
       if (isOpen) {
