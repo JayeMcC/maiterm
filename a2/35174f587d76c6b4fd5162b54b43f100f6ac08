@@ -1,0 +1,27 @@
+src/lib/stores/hotbar.svelte.ts
+  s_ad2f963c4afad3::t_ab898c8b33616f 41-54,62-84
+  s_ad2f963c4afad3::t_90482a3ef2fd96 14
+  s_ad2f963c4afad3::t_0e605da8083dd2 206-267,279-291,297,299-301
+  s_ad2f963c4afad3::t_6848a40ef6f7e5 105-110,118-119,126-137
+  s_ad2f963c4afad3::t_e2decc4cbb5b27 85
+src/lib/components/rail/HotbarRail.svelte
+  s_ad2f963c4afad3::t_62c943134c3883 14-22,24-32
+  s_ad2f963c4afad3::t_765cca7b5a203f 74-129
+  s_ad2f963c4afad3::t_bf1e00bfa2eb0f 237-337
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "a235174f587d76c6b4fd5162b54b43f100f6ac08",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
