@@ -22,6 +22,7 @@
   import Tooltip from '$lib/components/Tooltip.svelte';
   import TabListMenu from './TabListMenu.svelte';
   import ContextMenu from '$lib/components/ContextMenu.svelte';
+  import { writeText as clipboardWriteText } from '@tauri-apps/plugin-clipboard-manager';
 
   interface Props {
     workspaceId: string;
@@ -993,6 +994,16 @@
           action: () => workspacesStore.moveTabToPane(workspaceId, pane.id, tabId, p.id),
         });
       }
+    }
+
+    // Editor tabs (incl. markdown): copy the file's absolute path to the clipboard.
+    const menuTab = pane.tabs.find((t) => t.id === tabId);
+    const filePath = menuTab?.tab_type === 'editor' ? (menuTab.editor_file?.file_path ?? null) : null;
+    if (filePath) {
+      items.unshift(
+        { label: 'Copy full file path', action: () => void clipboardWriteText(filePath) },
+        { label: '', separator: true, action: () => {} },
+      );
     }
     return items;
   }
