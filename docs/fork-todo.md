@@ -33,6 +33,15 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
 - [ ] **Click-to-open protocol** — ports open via `http://`; WEB `:5173` is
   HTTPS. Add a protocol heuristic (or per-port config).
 
+## Updater
+- [ ] **Retire the dead Tauri-installer UI.** The updater store now checks the
+  `Jaye-term` branch via `git ls-remote` and prompts via toast → Bitbucket
+  (no upstream, no auto-install). The old banner + What's-New modal +
+  install/restart flow in `WorkspaceSidebar.svelte` are kept as inert stubs
+  (`showBanner === false`). A cleanup pass could delete that UI and the stub
+  store methods (`currentUpdate`/`downloadAndInstall`/`recheckForNewer`/
+  `switchToUpdate`/`fetchReleaseNotes`/`restart`) outright.
+
 ## Fork issues (GitHub)
 - [ ] **#6** — allow read-only MCP introspection (`getTabContext`/
   `listWorkspaces`) without `initSession` for token-authenticated clients.
