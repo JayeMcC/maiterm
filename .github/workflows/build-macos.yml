@@ -60,8 +60,9 @@ jobs:
         run: npx tauri build --target universal-apple-darwin ${{ steps.channel.outputs.tauri_config_flag }}
         env:
           MAITERM_CHANNEL: ${{ steps.channel.outputs.channel == 'dev' && 'dev' || '' }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # No TAURI_SIGNING_* — the fork consumes upstream (Flexmark-signed)
+          # updates and does not publish its own, so bundle.createUpdaterArtifacts
+          # is false and no updater tarball is produced or signed.
 
       - name: Upload .dmg
         uses: actions/upload-artifact@v7
@@ -69,12 +70,3 @@ jobs:
           name: ${{ steps.channel.outputs.product }}-${{ steps.version.outputs.version }}-macos-dmg
           path: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
           if-no-files-found: error
-
-      - name: Upload updater artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ steps.channel.outputs.product }}-${{ steps.version.outputs.version }}-macos-updater
-          path: |
-            src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz
-            src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz.sig
-          if-no-files-found: warn
