@@ -87,14 +87,17 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
     restore live process state.
 
 ## maiLink / mobile
-- [ ] **Set up WireGuard for mobile control (out-of-house).** maiLink's data
-  channel is LAN or **WireGuard** (the cloud relay is only a content-free push
-  doorbell — never sees terminal content). Install + configure a WireGuard VPN
-  back to the home network so the phone can reach maiTerm when away, then pair
-  the maiLink mobile app. Goal: control some things from the phone; **likely to
-  expand maiLink functionality** (more than the current chat/approvals companion
-  surface) once it's usable end-to-end. Setup is a user/network task; the fork
-  side is already merged (upstream maiLink).
+- **Blocked — no mobile app.** Verified 2026-07-03: the maiLink phone app is NOT
+  publicly available — not in `Flexmark-Intl` or `JayeMcC` orgs, not findable on
+  GitHub, and `maiterm.dev/features/mailink` has no download/TestFlight/repo link
+  (only iPhone screenshots). It's a private/unreleased Capacitor codebase ("the
+  maiLink agent owns this"). The desktop side is merged and works, but there's
+  no client to pair, so this is parked until the app is available.
+  - If we ever want it without the app: the wire protocol is fully specced in
+    `docs/mailink-protocol.md` → build the Capacitor client from scratch (a real
+    separate project).
+  - Interim for phone control today (no maiLink): WireGuard tunnel home + a phone
+    SSH/tmux client (Blink/Termius) — a full remote terminal, not just chat.
 
 ## UI
 - **Done: tab close (×) button no longer hidden by long names.** `.tab-name`
