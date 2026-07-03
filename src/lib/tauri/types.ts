@@ -67,6 +67,11 @@ export interface Tab {
   agent_bridge?: AgentBridge | null;
   /** Which AI agent runtime this tab is running; detected at initSession. */
   runtime?: AgentRuntime | null;
+  /** maiLink: when true, this tab is exposed to the maiLink mobile companion as a chat. */
+  mailink_native?: boolean;
+  /** maiLink exception: when true, hold this tab back from maiLink even while the
+   *  "make all tabs available" preference is on (ignored in designate-only mode). */
+  mailink_excluded?: boolean;
 }
 
 export interface Pane {
@@ -129,6 +134,8 @@ export interface Workspace {
   workspace_notes: WorkspaceNote[];
   /** Mesh Workspace flag — every agent tab here is bridged N:M. */
   bridge_all?: boolean;
+  /** maiLink flag — every agent tab in this workspace is exposed to maiLink as a chat. */
+  mailink_native?: boolean;
   /** Topic threads (empty for normal workspaces). */
   mesh_topics?: MeshTopic[];
   archived_tabs: Tab[];
@@ -248,6 +255,38 @@ export interface Preferences {
   mesh_hard_cap: number;
   /** Mesh Workspace per-topic TTL in minutes (0 = disabled) — time backstop. */
   mesh_topic_ttl_minutes: number;
+  /** maiLink: master switch for the mobile-companion LAN bridge (off by default). */
+  mailink_enabled?: boolean;
+  /** maiLink: when true (default), every agent tab is available to paired phones minus
+   *  per-tab opt-outs; when false, only tabs the user designates are available. */
+  mailink_expose_all?: boolean;
+  /** maiLink doorbell: OPTIONAL override for the shared push relay (self-hosters). Empty ⇒ built-in default. */
+  mailink_relay_url?: string | null;
+}
+
+/** QR payload a phone scans to pair (docs/mailink-protocol.md §3.2). The phone dials
+ *  `https://host:port` pinning `fp`, then POSTs `code` to `/mailink/v1/pair`. */
+export interface MailinkPairingPayload {
+  v: number;
+  host: string;
+  port: number;
+  fp: string;
+  code: string;
+  name: string;
+}
+
+/** A paired maiLink device, sanitized for the Preferences list (no token hash / capability). */
+export interface MailinkDevice {
+  id: string;
+  name: string;
+  /** Push sender the relay uses: "apns" | "fcm" (absent until the phone registers for push). */
+  push_platform?: string | null;
+  /** APNs environment / FCM hint: "sandbox" | "production". */
+  push_env?: string | null;
+  /** True once the device registered both a push token and a relay capability (doorbell-ready). */
+  has_push: boolean;
+  created_at: number;
+  last_seen_at: number;
 }
 
 export interface WindowData {

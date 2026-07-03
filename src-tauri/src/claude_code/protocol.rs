@@ -593,6 +593,8 @@ pub fn initialize_response(client_protocol_version: Option<&str>) -> Value {
         "instructions": format!(
             "You are running inside a maiTerm terminal tab. At the start of every session (new, resume, compact, clear), \
              you MUST call initSession with your tab ID (from $AITERM_TAB_ID or SessionStart hook context) before responding to the user. \
+             You may run this call in parallel with your other opening tool calls (e.g. reading files) to save a round-trip — \
+             but do NOT batch it with other maiterm tool calls, which would race the registration and can target the wrong tab. \
              This registers your session so all tool calls automatically target the correct tab. \
              IMPORTANT: You MUST use tools from the '{}' MCP server ONLY. Do NOT use tools from any other maiterm MCP server. \
              IMPORTANT: Always call initSession when requested via /maiterm init, even if you believe it was already called. \

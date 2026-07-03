@@ -1,5 +1,6 @@
 pub mod claude_code;
 pub mod editor;
+pub mod mailink;
 pub mod rail;
 pub mod scheduler;
 pub mod ssh_tunnel;

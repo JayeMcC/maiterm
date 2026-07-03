@@ -42,3 +42,106 @@
   border-radius: 0.4rem !important;
   overflow: hidden;
 }
+
+/* Landing-page release spotlights */
+.spotlight {
+  margin: 2.5rem 0;
+  padding: 1.75rem 1.75rem 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--sl-color-accent) 40%, transparent);
+  border-radius: 0.6rem;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--sl-color-accent) 9%, var(--sl-color-bg)) 0%,
+    var(--sl-color-bg) 65%
+  );
+}
+
+.sl-markdown-content .spotlight h2 {
+  margin-top: 0.35rem;
+}
+
+.sl-markdown-content .spotlight .spotlight-eyebrow {
+  margin: 0;
+  font-size: var(--sl-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sl-color-accent);
+}
+
+.sl-markdown-content .spotlight .spotlight-cta {
+  margin-top: 1.25rem;
+  font-weight: 600;
+}
+
+@media (max-width: 50rem) {
+  .spotlight {
+    padding: 1.25rem 1rem 1rem;
+  }
+}
+
+/* Product screenshots (synthetic gpt-image-2 renders, no real content) */
+
+/* Clear floated figures at each section boundary */
+.sl-markdown-content h2 { clear: both; }
+
+/* Phone shots placed beside the feature they illustrate */
+.sl-markdown-content .phone-figure {
+  max-width: 230px;
+  margin: 0.5rem auto 1.25rem;
+  text-align: center;
+}
+.sl-markdown-content .phone-figure img {
+  width: 100%;
+  height: auto;
+  border-radius: 1.1rem;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
+}
+.sl-markdown-content .phone-figure figcaption {
+  margin-top: 0.55rem;
+  font-size: var(--sl-text-xs);
+  line-height: 1.45;
+  color: var(--sl-color-gray-3);
+}
+@media (min-width: 50rem) {
+  .sl-markdown-content .phone-figure.float-right { float: right; margin: 0.35rem 0 1rem 1.75rem; }
+  .sl-markdown-content .phone-figure.float-left { float: left; margin: 0.35rem 1.75rem 1rem 0; }
+}
+
+/* Two phones side by side (landing spotlight) */
+.sl-markdown-content .phone-pair {
+  display: flex;
+  gap: 1.25rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 1.5rem 0 0.25rem;
+}
+.sl-markdown-content .phone-pair img {
+  width: 208px;
+  max-width: 44%;
+  height: auto;
+  border-radius: 1.1rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.16);
+}
+
+/* Mesh cockpit product shot */
+.sl-markdown-content .mesh-figure {
+  max-width: 380px;
+  margin: 1.5rem auto 0.5rem;
+  text-align: center;
+}
+@media (min-width: 50rem) {
+  .sl-markdown-content .mesh-figure.float-right { float: right; margin: 0.35rem 0 1rem 1.75rem; }
+  .sl-markdown-content .mesh-figure.float-left { float: left; margin: 0.35rem 1.75rem 1rem 0; }
+}
+.sl-markdown-content .mesh-figure img {
+  width: 100%;
+  height: auto;
+  border-radius: 0.7rem;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.22);
+}
+.sl-markdown-content .mesh-figure figcaption {
+  margin-top: 0.55rem;
+  font-size: var(--sl-text-xs);
+  color: var(--sl-color-gray-3);
+}

@@ -964,14 +964,42 @@
 
   function tabMenuItems(tabId: string) {
     const onlyTab = pane.tabs.length === 1;
-    const ws = workspacesStore.workspaces.find((w) => w.id === workspaceId);
-    const otherPanes = (ws?.panes ?? []).filter((p) => p.id !== pane.id);
-    const isPinned = !!pane.tabs.find((t) => t.id === tabId)?.pinned;
-    const items: Array<{ label: string; action: () => void; disabled?: boolean; separator?: boolean }> = [
+    const ws = workspacesStore.workspaces.find(w => w.id === workspaceId);
+    const otherPanes = (ws?.panes ?? []).filter(p => p.id !== pane.id);
+    const tabObj = pane.tabs.find(t => t.id === tabId);
+    const isPinned = !!tabObj?.pinned;
+    const isTerminalTab = (tabObj?.tab_type ?? 'terminal') === 'terminal';
+    const isAgentTab = !!tabObj?.runtime;
+    const exposeAll = preferencesStore.mailinkExposeAll;
+    const isExcluded = !!tabObj?.mailink_excluded;
+    const isNative = !!tabObj?.mailink_native;
+    type MenuItem = { label: string; action: () => void; disabled?: boolean; separator?: boolean };
+    // maiLink availability item (docs/mailink-protocol.md). Two modes:
+    //  · expose-all (default): agent tabs are available automatically — offer to hold one back.
+    //    (A downed agent keeps its runtime, so it stays available for auto-resume from the phone.)
+    //  · designate-only: user hand-picks tabs — offer to add/remove (works for plain shells too).
+    let mailinkItem: MenuItem | null = null;
+    if (isTerminalTab) {
+      if (exposeAll) {
+        if (isAgentTab) {
+          mailinkItem = {
+            label: isExcluded ? 'Make available in maiLink' : 'Make unavailable in maiLink',
+            action: () => workspacesStore.setTabMailinkExcluded(workspaceId, pane.id, tabId, !isExcluded),
+          };
+        }
+      } else {
+        mailinkItem = {
+          label: isNative ? 'Make unavailable in maiLink' : 'Make available in maiLink',
+          action: () => workspacesStore.setTabMailinkNative(workspaceId, pane.id, tabId, !isNative),
+        };
+      }
+    }
+    const items: Array<MenuItem> = [
       {
         label: isPinned ? 'Unpin tab' : 'Pin tab',
         action: () => workspacesStore.setTabPinned(workspaceId, pane.id, tabId, !isPinned),
       },
+      ...(mailinkItem ? [mailinkItem] : []),
       { label: '', separator: true, action: () => {} },
       {
         label: 'Move to New Split Right',

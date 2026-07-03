@@ -313,6 +313,18 @@ pub struct Tab {
     /// stage. Drives per-runtime resume command, fork capability, and bridge adapter.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub runtime: Option<crate::state::AgentRuntime>,
+    /// maiLink: when true, this tab is exposed to the maiLink mobile companion as a
+    /// "chat" (listed, streamable, remotely promptable). Opt-in per tab; also implied
+    /// for every agent tab when its workspace has `mailink_native = true`. See
+    /// docs/mailink-protocol.md.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub mailink_native: bool,
+    /// maiLink exception: when true, this tab is held back from maiLink even while the
+    /// "make all tabs available in maiLink" preference is on. Only meaningful in that
+    /// expose-all mode; ignored in "only tabs I designate" mode (which uses
+    /// `mailink_native` instead). See docs/mailink-protocol.md.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub mailink_excluded: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -418,6 +430,11 @@ pub struct Workspace {
     /// (N:M). Membership IS the roster. See docs/mesh-workspace.md.
     #[serde(default)]
     pub bridge_all: bool,
+    /// maiLink flag: when true, every agent tab in this workspace is exposed to the
+    /// maiLink mobile companion as a chat (a workspace-wide shortcut for per-tab
+    /// `Tab.mailink_native`). See docs/mailink-protocol.md.
+    #[serde(default)]
+    pub mailink_native: bool,
     /// Topic threads for a Mesh Workspace (empty for normal workspaces). Modeled on
     /// workspace_notes (a persisted Vec).
     #[serde(default)]
@@ -544,6 +561,12 @@ pub struct AppData {
     pub sidebar_collapsed: Option<bool>,
     #[serde(default)]
     pub preferences: Preferences,
+    /// One-time marker for the tab-liveness reconcile (clears the stale `pty_id`
+    /// high-watermark and stamps proper `suspended_at` on tabs that weren't
+    /// actually running). Once set, `pty_id` is authoritative and steady-state
+    /// restore never consults scrollback timestamps again.
+    #[serde(default)]
+    pub tab_liveness_reconciled: bool,
 }
 
 impl AppData {
@@ -626,16 +649,18 @@ fn default_notify_min_duration() -> u32 {
     5
 }
 
+// Mesh loop-control limits default to 0 = OFF. By default a Mesh Workspace flows freely
+// (no pause/backstop); a user can opt into any of the three caps in Preferences → Mesh.
 fn default_mesh_soft_cap() -> u32 {
-    12
+    0
 }
 
 fn default_mesh_hard_cap() -> u32 {
-    40
+    0
 }
 
 fn default_mesh_topic_ttl_minutes() -> u32 {
-    30
+    0
 }
 
 fn default_notification_mode() -> String {
@@ -1007,6 +1032,54 @@ pub struct Preferences {
     /// (since creation or last resume) force-pauses — the away-from-keyboard time backstop.
     #[serde(default = "default_mesh_topic_ttl_minutes")]
     pub mesh_topic_ttl_minutes: u32,
+    /// maiLink: master switch for the mobile-companion LAN bridge. When false (default),
+    /// the maiLink listener is not started and no device can connect. See
+    /// docs/mailink-protocol.md.
+    #[serde(default)]
+    pub mailink_enabled: bool,
+    /// maiLink exposure default: when true (default), every *agent* tab is available to
+    /// paired phones as a chat, minus per-tab opt-outs (`Tab.mailink_excluded`). When
+    /// false, only tabs the user explicitly designates (`Tab.mailink_native` or
+    /// `Workspace.mailink_native`) are available. See docs/mailink-protocol.md.
+    #[serde(default = "default_true")]
+    pub mailink_expose_all: bool,
+    /// maiLink: paired mobile devices (each holds a revocable bearer token). See
+    /// docs/mailink-protocol.md §2.3/§3.
+    #[serde(default)]
+    pub mailink_devices: Vec<MailinkDevice>,
+    /// maiLink doorbell: OPTIONAL override for the shared push relay (self-hosters only). Empty ⇒
+    /// use the built-in default (the Flexmark-operated worker). The doorbell is multi-tenant and
+    /// needs NO per-user secret — each phone mints its own capability. See docs/mailink-protocol.md §6.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mailink_relay_url: Option<String>,
+}
+
+/// A paired maiLink mobile device. The bearer token is stored hashed (never raw); deleting
+/// the record instantly revokes the device.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MailinkDevice {
+    pub id: String,
+    pub name: String,
+    /// SHA-256 hex of the device's bearer token (never store the raw token).
+    pub token_hash: String,
+    /// Device's push token (APNs or FCM), set via /push-register after pairing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub push_token: Option<String>,
+    /// Which push sender the relay uses for this device.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub push_platform: Option<String>,
+    /// APNs environment / FCM project hint ("sandbox" | "production").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub push_env: Option<String>,
+    /// Per-device doorbell capability the phone minted from the shared relay
+    /// (HMAC of the relay's CAP_SECRET over platform:push_token). The desktop presents this on
+    /// every /push so the multi-tenant relay accepts the wake without a per-user shared key.
+    /// See docs/mailink-protocol.md §6.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub push_cap: Option<String>,
+    pub created_at: i64,
+    #[serde(default)]
+    pub last_seen_at: i64,
 }
 
 impl Default for Preferences {
@@ -1084,6 +1157,10 @@ impl Default for Preferences {
             mesh_soft_cap: default_mesh_soft_cap(),
             mesh_hard_cap: default_mesh_hard_cap(),
             mesh_topic_ttl_minutes: default_mesh_topic_ttl_minutes(),
+            mailink_enabled: false,
+            mailink_expose_all: true,
+            mailink_devices: Vec::new(),
+            mailink_relay_url: None,
         }
     }
 }
@@ -1124,6 +1201,8 @@ impl Tab {
             import_highlight: false,
             agent_bridge: None,
             runtime: None,
+            mailink_native: false,
+            mailink_excluded: false,
         }
     }
 
@@ -1162,6 +1241,8 @@ impl Tab {
             import_highlight: false,
             agent_bridge: None,
             runtime: None,
+            mailink_native: false,
+            mailink_excluded: false,
         }
     }
 
@@ -1200,6 +1281,8 @@ impl Tab {
             import_highlight: false,
             agent_bridge: None,
             runtime: None,
+            mailink_native: false,
+            mailink_excluded: false,
         }
     }
 }
@@ -1229,6 +1312,7 @@ impl Workspace {
             split_root: Some(SplitNode::Leaf { pane_id }),
             workspace_notes: Vec::new(),
             bridge_all: false,
+            mailink_native: false,
             mesh_topics: Vec::new(),
             archived_tabs: Vec::new(),
             import_highlight: false,

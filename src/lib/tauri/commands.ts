@@ -5,6 +5,8 @@ import type {
   DiffContext,
   DuplicateWorkspaceResult,
   EditorFileInfo,
+  MailinkDevice,
+  MailinkPairingPayload,
   MeshTopic,
   Pane,
   Preferences,
@@ -159,6 +161,19 @@ export async function terminalBracketedPaste(ptyId: string): Promise<boolean> {
   return invoke('terminal_bracketed_paste', { ptyId });
 }
 
+/** Liveness signals for the mesh readiness check. `agent_running` = a claude/codex/gemini
+ *  process is alive in the tab's LOCAL process tree (ground truth for local agents).
+ *  `ssh_foreground` = the tty's foreground job is an ssh session (a live remote session —
+ *  the remote agent lives past the hop, so this stands in for it). Either being true means
+ *  the tab needs only `/maiterm init`, not a full ssh+resume replay. */
+export interface AgentLiveness {
+  agent_running: boolean;
+  ssh_foreground: boolean;
+}
+export async function getAgentLiveness(ptyId: string): Promise<AgentLiveness> {
+  return invoke('get_agent_liveness', { ptyId });
+}
+
 export async function serializeTerminal(ptyId: string): Promise<number[]> {
   return invoke('serialize_terminal', { ptyId });
 }
@@ -225,6 +240,14 @@ export async function getSavedScrollbackText(tabId: string, lineCount: number): 
 
 export async function getSavedTerminalSize(tabId: string): Promise<[number, number] | null> {
   return invoke('get_saved_terminal_size', { tabId });
+}
+
+/** Bulk-mark terminal tabs as properly suspended (clears stale pty_id, stamps
+ *  suspended_at). `suspendedAt` is the last-active time for the idle age; pass
+ *  null to use now. Used by "suspend other tabs" so it can't leave a stale
+ *  pty_id (which would relapse the live-tab high-watermark). */
+export async function markTabsSuspended(updates: { tab_id: string; suspended_at: string | null }[]): Promise<void> {
+  return invoke('mark_tabs_suspended', { updates });
 }
 
 // Workspace commands
@@ -446,6 +469,39 @@ export async function setWorkspaceBridgeAll(workspaceId: string, enabled: boolea
   return invoke('set_workspace_bridge_all', { workspaceId, enabled });
 }
 
+// maiLink companion commands (docs/mailink-protocol.md)
+export async function setTabMailinkNative(workspaceId: string, paneId: string, tabId: string, mailinkNative: boolean): Promise<void> {
+  return invoke('set_tab_mailink_native', { workspaceId, paneId, tabId, mailinkNative });
+}
+
+export async function setTabMailinkExcluded(workspaceId: string, paneId: string, tabId: string, excluded: boolean): Promise<void> {
+  return invoke('set_tab_mailink_excluded', { workspaceId, paneId, tabId, excluded });
+}
+
+export async function setWorkspaceMailinkNative(workspaceId: string, enabled: boolean): Promise<void> {
+  return invoke('set_workspace_mailink_native', { workspaceId, enabled });
+}
+
+/** Persist the maiLink bridge enable flag AND start/stop the live listener (no restart needed). */
+export async function mailinkSetEnabled(enabled: boolean): Promise<void> {
+  return invoke('mailink_set_enabled', { enabled });
+}
+
+/** Mint a one-time pairing code; returns the QR payload the phone scans (120s TTL, single use). */
+export async function mailinkCreatePairing(): Promise<MailinkPairingPayload> {
+  return invoke('mailink_create_pairing');
+}
+
+/** List paired maiLink devices (sanitized — no token hash / relay capability). */
+export async function mailinkListDevices(): Promise<MailinkDevice[]> {
+  return invoke('mailink_list_devices');
+}
+
+/** Unpair a device: its bearer token stops working and the doorbell stops ringing it. */
+export async function mailinkRemoveDevice(deviceId: string): Promise<void> {
+  return invoke('mailink_remove_device', { deviceId });
+}
+
 export async function setWorkspaceMeshTopics(workspaceId: string, topics: MeshTopic[]): Promise<void> {
   return invoke('set_workspace_mesh_topics', { workspaceId, topics });
 }
@@ -578,6 +634,16 @@ export async function scpWriteFile(sshCommand: string, remotePath: string, conte
 
 export async function saveClipboardImage(dataBase64: string, ext?: string): Promise<string> {
   return invoke('save_clipboard_image', { dataBase64, ext });
+}
+
+/** Reveal a local file in the OS file manager (Finder/Explorer/file browser). */
+export async function revealInFileManager(path: string): Promise<void> {
+  return invoke('reveal_in_file_manager', { path });
+}
+
+/** SCP a remote file into the local Downloads directory; returns the saved path. */
+export async function downloadRemoteFile(sshCommand: string, remotePath: string): Promise<string> {
+  return invoke('download_remote_file', { sshCommand, remotePath });
 }
 
 export async function scpUploadFiles(sshCommand: string, localPaths: string[], remoteDir: string, uploadId: string): Promise<void> {

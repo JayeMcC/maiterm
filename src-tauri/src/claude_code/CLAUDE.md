@@ -24,54 +24,54 @@ Claude Code CLI ←→ WebSocket/SSE ←→ axum server (Rust) ←→ Tauri even
 
 ## Tools Exposed
 
-| Tool                | Description                                                                                                                                                            |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| initSession         | **REQUIRED first call.** Registers tab ID + session ID → enables auto-inject of tabId on all subsequent calls                                                          |
-| getOpenEditors      | List open editor tabs (path, language, dirty state)                                                                                                                    |
-| getWorkspaceFolders | Workspace root paths                                                                                                                                                   |
-| getDiagnostics      | App version, tab/PTY counts, WebGL status, FPS, memory/CPU, performance metrics                                                                                        |
-| checkDocumentDirty  | Check if file has unsaved changes                                                                                                                                      |
-| saveDocument        | Save file to disk                                                                                                                                                      |
-| getCurrentSelection | Active editor selection + cursor                                                                                                                                       |
-| getLatestSelection  | Most recent selection in any tab                                                                                                                                       |
-| openFile            | Open file in editor tab (with optional line/text selection)                                                                                                            |
-| openDiff            | Show side-by-side diff for review (blocking)                                                                                                                           |
-| showDiff            | Open read-only diff tab comparing file to a git ref (default HEAD)                                                                                                     |
-| closeAllDiffTabs    | Close all pending diff tabs                                                                                                                                            |
-| listWindows         | List all maiTerm windows with IDs, labels, and workspace summaries                                                                                                     |
-| listWorkspaces      | List all workspaces with panes, tabs, archived tab count (IDs, display names, types, active state, notes, Claude state)                                                |
-| switchTab           | Navigate to a tab by ID (auto-resolves workspace/pane)                                                                                                                 |
-| getTabNotes         | Read notes for a tab (optional tabId, defaults to active)                                                                                                              |
-| setTabNotes         | Write/clear notes for a tab                                                                                                                                            |
-| editTabNotes        | Precision edit: find old_string in notes, replace with new_string (must match uniquely)                                                                                |
-| listWorkspaceNotes  | List workspace-level notes (IDs, previews, timestamps)                                                                                                                 |
-| readWorkspaceNote   | Read full content of a workspace note                                                                                                                                  |
-| writeWorkspaceNote  | Create or update a workspace note                                                                                                                                      |
-| deleteWorkspaceNote | Delete a workspace note                                                                                                                                                |
-| moveNote            | Move note between tab and workspace (with conflict detection)                                                                                                          |
-| getTabContext       | Get recent terminal output/editor content for tab discovery                                                                                                            |
-| openNotesPanel      | Open/close/toggle the notes panel for the active tab                                                                                                                   |
-| setNotesScope       | Switch notes panel between 'tab' and 'workspace' views                                                                                                                 |
-| getActiveTab        | Get the currently active workspace, pane, and tab info                                                                                                                 |
-| setTriggerVariable  | Set/clear a trigger variable (e.g. claudeSessionId) for a tab                                                                                                          |
-| getTriggerVariables | Read all trigger variables for a tab                                                                                                                                   |
-| setAutoResume       | Enable/disable auto-resume with optional command/cwd/ssh overrides                                                                                                     |
-| getAutoResume       | Get current auto-resume configuration for a tab                                                                                                                        |
-| findNotes           | Search all tabs and workspaces for notes, returns previews                                                                                                             |
-| sendNotification    | Send in-app toast notification (title, body, type)                                                                                                                     |
-| readLogs            | Read recent maiTerm log entries (filterable by level, search string)                                                                                                   |
-| getPreferences      | Return current preferences with metadata (filterable by query)                                                                                                         |
-| setPreference       | Update a single preference by key                                                                                                                                      |
-| createBackup        | Create gzip-compressed backup of entire maiTerm state                                                                                                                  |
-| getClaudeSessions   | All active Claude sessions across tabs (state, tool, model, cwd) — multi-agent coordination                                                                            |
-| listArchivedTabs    | List archived (suspended) tabs with names, dates, restore context                                                                                                      |
-| restoreArchivedTab  | Restore an archived tab back into the active workspace                                                                                                                 |
-| sendToBridgedAgent  | Send a message to a peer agent. 1:1 bridge: omit recipient/topic. Mesh Workspace: recipient (role/handle) + topic required. Async — reply arrives as a new prompt turn |
-| getBridgedAgent     | Report whether this tab is bridged and, if so, the partner's label/cwd (in a mesh, returns the roster)                                                                 |
-| listBridgedPeers    | Mesh only: roster of reachable peers — handle (tabId), role, cwd, purpose, live                                                                                        |
-| listTopics          | Mesh only: conversation topics — id, label, state, owner, participants, turn count                                                                                     |
-| startTopic          | Mesh only: start/reuse a topic (caller becomes owner); returns the topic id                                                                                            |
-| completeTopic       | Mesh only: owner marks a topic complete; signals participants, rejects further sends                                                                                   |
+| Tool | Description |
+|------|-------------|
+| initSession | **REQUIRED first call.** Registers tab ID + session ID → enables auto-inject of tabId on all subsequent calls. Safe to run in parallel with non-maiterm opening tool calls (file reads, grep) to save a round-trip — but never batched with other maiterm calls, which would race the registration |
+| getOpenEditors | List open editor tabs (path, language, dirty state) |
+| getWorkspaceFolders | Workspace root paths |
+| getDiagnostics | App version, tab/PTY counts, WebGL status, FPS, memory/CPU, performance metrics |
+| checkDocumentDirty | Check if file has unsaved changes |
+| saveDocument | Save file to disk |
+| getCurrentSelection | Active editor selection + cursor |
+| getLatestSelection | Most recent selection in any tab |
+| openFile | Open file in editor tab (with optional line/text selection) |
+| openDiff | Show side-by-side diff for review (blocking) |
+| showDiff | Open read-only diff tab comparing file to a git ref (default HEAD) |
+| closeAllDiffTabs | Close all pending diff tabs |
+| listWindows | List all maiTerm windows with IDs, labels, and workspace summaries |
+| listWorkspaces | List all workspaces with panes, tabs, archived tab count (IDs, display names, types, active state, notes, Claude state) |
+| switchTab | Navigate to a tab by ID (auto-resolves workspace/pane) |
+| getTabNotes | Read notes for a tab (optional tabId, defaults to active) |
+| setTabNotes | Write/clear notes for a tab |
+| editTabNotes | Precision edit: find old_string in notes, replace with new_string (must match uniquely) |
+| listWorkspaceNotes | List workspace-level notes (IDs, previews, timestamps) |
+| readWorkspaceNote | Read full content of a workspace note |
+| writeWorkspaceNote | Create or update a workspace note |
+| deleteWorkspaceNote | Delete a workspace note |
+| moveNote | Move note between tab and workspace (with conflict detection) |
+| getTabContext | Get recent terminal output/editor content for tab discovery |
+| openNotesPanel | Open/close/toggle the notes panel for the active tab |
+| setNotesScope | Switch notes panel between 'tab' and 'workspace' views |
+| getActiveTab | Get the currently active workspace, pane, and tab info |
+| setTriggerVariable | Set/clear a trigger variable (e.g. claudeSessionId) for a tab |
+| getTriggerVariables | Read all trigger variables for a tab |
+| setAutoResume | Enable/disable auto-resume with optional command/cwd/ssh overrides |
+| getAutoResume | Get current auto-resume configuration for a tab |
+| findNotes | Search all tabs and workspaces for notes, returns previews |
+| sendNotification | Send in-app toast notification (title, body, type) |
+| readLogs | Read recent maiTerm log entries (filterable by level, search string) |
+| getPreferences | Return current preferences with metadata (filterable by query) |
+| setPreference | Update a single preference by key |
+| createBackup | Create gzip-compressed backup of entire maiTerm state |
+| getClaudeSessions | All active Claude sessions across tabs (state, tool, model, cwd) — multi-agent coordination |
+| listArchivedTabs | List archived (suspended) tabs with names, dates, restore context |
+| restoreArchivedTab | Restore an archived tab back into the active workspace |
+| sendToBridgedAgent | Send a message to a peer agent. 1:1 bridge: omit recipient/topic. Mesh Workspace: recipient (role/handle) + topic required. Async — reply arrives as a new prompt turn |
+| getBridgedAgent | Report whether this tab is bridged and, if so, the partner's label/cwd (in a mesh, returns the roster) |
+| listBridgedPeers | Mesh only: roster of reachable peers — handle (tabId), role, cwd, purpose, live |
+| listTopics | Mesh only: conversation topics — id, label, state, owner, participants, turn count |
+| startTopic | Mesh only: start/reuse a topic (caller becomes owner); returns the topic id |
+| completeTopic | Mesh only: owner marks a topic complete; signals participants, rejects further sends |
 
 ## Agent Bridge (agent-to-agent bridge)
 

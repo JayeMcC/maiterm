@@ -1,5 +1,6 @@
 mod claude_code;
 mod commands;
+mod mailink;
 mod pty;
 mod state;
 mod terminal;
@@ -27,7 +28,7 @@ pub fn app_display_name() -> &'static str {
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 use state::{load_state, save_state, AppState, WindowData, Workspace};
-use state::persistence::{arm_running_marker, load_memory_trend, log_previous_run_status, migrate_app_data, migrate_fork_data_dir, migrate_scrollback_to_db};
+use state::persistence::{arm_running_marker, load_memory_trend, log_previous_run_status, migrate_app_data, migrate_fork_data_dir, migrate_scrollback_to_db, reconcile_tab_liveness};
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
 use tauri::menu::{AboutMetadata, MenuBuilder, MenuItem, SubmenuBuilder};
@@ -90,7 +91,10 @@ pub fn run() {
         *data = load_state();
         migrate_app_data(&mut data);
         migrate_scrollback_to_db(&mut data, &app_state.scrollback_db);
-        // Flush the cleaned JSON (scrollback stripped) to disk
+        // One-time: clear the stale pty_id high-watermark so restore can trust
+        // pty_id as "live at last shutdown" instead of inferring from timestamps.
+        reconcile_tab_liveness(&mut data, &app_state.scrollback_db);
+        // Flush the cleaned JSON (scrollback stripped + liveness reconciled) to disk
         let _ = save_state(&data);
 
         // Sweep scrollback DB for rows whose tab no longer exists in state —
@@ -354,6 +358,15 @@ pub fn run() {
                 });
             }
 
+            // maiLink mobile-companion LAN bridge (docs/mailink-protocol.md): a separate,
+            // opt-in TLS listener — only started when the user has enabled it. Kept distinct
+            // from the localhost-only Claude-Code server above.
+            if app_state.app_data.read().preferences.mailink_enabled {
+                if let Err(e) = mailink::start(&app_state) {
+                    log::error!("[maiLink] {e}");
+                }
+            }
+
             // Background tasks owned by Rust (independent of any webview's
             // event loop). See commands/scheduler.rs for the rationale.
             commands::scheduler::spawn_backup_scheduler(app_state.clone());
@@ -502,6 +515,7 @@ pub fn run() {
             commands::terminal::get_terminal_scrollback_info,
             commands::terminal::search_terminal,
             commands::terminal::terminal_bracketed_paste,
+            commands::terminal::get_agent_liveness,
             commands::terminal::serialize_terminal,
             commands::terminal::restore_terminal_scrollback,
             commands::terminal::resize_terminal_grid,
@@ -540,6 +554,7 @@ pub fn run() {
             commands::workspace::set_active_tab,
             commands::workspace::set_tab_pty_id,
             commands::workspace::suspend_tab,
+            commands::workspace::mark_tabs_suspended,
             commands::workspace::set_tab_pinned,
             commands::workspace::set_sidebar_width,
             commands::workspace::set_sidebar_collapsed,
@@ -575,6 +590,13 @@ pub fn run() {
             commands::workspace::delete_workspace_note,
             commands::workspace::set_workspace_bridge_all,
             commands::workspace::set_workspace_mesh_topics,
+            commands::workspace::set_tab_mailink_native,
+            commands::workspace::set_tab_mailink_excluded,
+            commands::workspace::set_workspace_mailink_native,
+            commands::mailink::mailink_create_pairing,
+            commands::mailink::mailink_set_enabled,
+            commands::mailink::mailink_list_devices,
+            commands::mailink::mailink_remove_device,
             commands::window::get_window_data,
             commands::window::create_window,
             commands::window::duplicate_window,
@@ -598,6 +620,8 @@ pub fn run() {
             commands::editor::scp_read_file_base64,
             commands::editor::scp_write_file,
             commands::editor::save_clipboard_image,
+            commands::editor::reveal_in_file_manager,
+            commands::editor::download_remote_file,
             commands::editor::scp_upload_files,
             commands::editor::cancel_scp_upload,
             commands::editor::create_editor_tab,
@@ -643,6 +667,21 @@ pub fn run() {
             commands::system::check_full_disk_access,
             commands::system::open_full_disk_access_settings,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            // Native quit paths — Dock → Quit, `osascript … to quit`, logout/
+            // restart — bypass the menu "Quit" → quit-requested → exit_app flow,
+            // so historically the running marker was never cleared (making every
+            // clean native quit look like a crash next launch) and MCP/PTY/tunnel
+            // cleanup never ran. Converge them on the shared shutdown path here.
+            // Idempotent with exit_app via the guard in run_shutdown_cleanup.
+            if let tauri::RunEvent::ExitRequested { .. } = event {
+                if let Some(state) = app_handle.try_state::<Arc<AppState>>() {
+                    commands::workspace::run_shutdown_cleanup(&state);
+                } else {
+                    state::persistence::clear_running_marker();
+                }
+            }
+        });
 }

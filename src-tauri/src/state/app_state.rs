@@ -79,6 +79,10 @@ pub struct AgentSessionInfo {
     pub state: AgentSessionState,
     /// Current tool being executed (set by PreToolUse, cleared by PostToolUse/Stop)
     pub tool_name: Option<String>,
+    /// Structured content of an open AskUserQuestion: the raw `tool_input` captured from the
+    /// PreToolUse hook (its `questions[]` drive the maiLink structured PendingPrompt). Set when
+    /// AskUserQuestion starts, cleared when it completes (PostToolUse) or the turn stops.
+    pub pending_question: Option<serde_json::Value>,
     /// Model used in this session (set by SessionStart)
     pub model: Option<String>,
     /// MCP connection ID that called initSession for this session.
@@ -141,6 +145,23 @@ pub struct AppState {
     /// Each entry is `(target_window_label_or_None, payload_value)`. Flushed
     /// in FIFO order from `mark_frontend_ready`.
     pub pending_frontend_emits: parking_lot::Mutex<Vec<(Option<String>, serde_json::Value)>>,
+    // maiLink: outstanding one-time pairing codes → expiry instant (docs/mailink-protocol.md §3.2)
+    pub mailink_pairing_codes: RwLock<HashMap<String, Instant>>,
+    // maiLink: the live listener's (fingerprint, port), set when the bridge starts so the
+    // pairing-code command can build the QR payload without re-reading the cert. None ⇒ the
+    // listener is not running (boot-with-bridge-off, or toggled off at runtime).
+    pub mailink_info: RwLock<Option<(String, u16)>>,
+    // maiLink: graceful-shutdown handle for the running axum listener, so a runtime disable can
+    // stop it (the bridge can be toggled on/off without an app restart).
+    pub mailink_shutdown: RwLock<Option<axum_server::Handle>>,
+    // maiLink doorbell coverage: count of live WS connections. >0 ⇒ a phone is connected and
+    // receiving events directly, so the push doorbell is suppressed.
+    pub mailink_ws_count: std::sync::atomic::AtomicUsize,
+    // maiLink doorbell coverage: millis-since-epoch of the last WS disconnect. A foregrounded
+    // phone's WS can blip (drop+reconnect) in well under a second; without a grace window that
+    // momentary count==0 lets an attention transition ring the doorbell spuriously. The doorbell
+    // treats a tab as covered for a short grace after this instant even at count==0. 0 ⇒ never dropped.
+    pub mailink_ws_last_drop_ms: AtomicU64,
 }
 
 impl AppState {
@@ -176,6 +197,11 @@ impl AppState {
             pending_agent_sessions: RwLock::new(Vec::new()),
             frontend_ready: std::sync::atomic::AtomicBool::new(false),
             pending_frontend_emits: parking_lot::Mutex::new(Vec::new()),
+            mailink_pairing_codes: RwLock::new(HashMap::new()),
+            mailink_info: RwLock::new(None),
+            mailink_shutdown: RwLock::new(None),
+            mailink_ws_count: std::sync::atomic::AtomicUsize::new(0),
+            mailink_ws_last_drop_ms: AtomicU64::new(0),
         }
     }
 

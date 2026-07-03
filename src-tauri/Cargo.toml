@@ -1,6 +1,6 @@
 [package]
 name = "aiterm"
-version = "1.18.1"
+version = "1.19.0"
 description = "A Tauri-based terminal organizer"
 authors = ["you"]
 license = "LicenseRef-Proprietary"
@@ -38,6 +38,14 @@ tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "time", "
 tokio-tungstenite = "0.26"
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 axum = { version = "0.8", features = ["ws"] }
+# maiLink mobile-companion LAN bridge (docs/mailink-protocol.md): self-signed TLS via rcgen,
+# served over axum-server; rustls pinned to the ring provider (installed at listener start).
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+rcgen = "0.13"
+sha2 = "0.10"
+# maiLink doorbell: POST the content-free wake to the push relay (Cloudflare worker).
+reqwest = { version = "0.13", features = ["json"] }
 rand = "0.8"
 libc = "0.2"
 # macOS backend MUST be FSEvents, not kqueue. We watch a file's PARENT directory

@@ -19,13 +19,17 @@
     previewImport,
     checkFullDiskAccess,
     openFullDiskAccessSettings,
+    mailinkCreatePairing,
+    mailinkListDevices,
+    mailinkRemoveDevice,
   } from '$lib/tauri/commands';
   import type { ImportPreview } from '$lib/tauri/commands';
+  import qrcode from 'qrcode-generator';
   import ImportPreviewModal from '$lib/components/ImportPreviewModal.svelte';
   import { open as dialogOpen, save as dialogSave } from '@tauri-apps/plugin-dialog';
 
   import { error as logError } from '@tauri-apps/plugin-log';
-  import type { ShellInfo } from '$lib/tauri/types';
+  import type { ShellInfo, MailinkDevice, MailinkPairingPayload } from '$lib/tauri/types';
   import { tick, onMount } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { slide } from 'svelte/transition';
@@ -101,6 +105,98 @@
   $effect(() => {
     localStorage.setItem('prefs-section', activeSection);
   });
+
+  // ─── maiLink pairing & paired devices ──────────────────────────────────────
+  let mailinkDevices = $state<MailinkDevice[]>([]);
+  let mailinkDevicesLoaded = $state(false);
+  let pairing = $state<MailinkPairingPayload | null>(null);
+  let pairingQrSvg = $state('');
+  let pairingError = $state('');
+  let pairingRemaining = $state(0); // seconds left on the one-time code (0 = expired)
+  let pairingBusy = $state(false);
+  let revokeConfirmId = $state<string | null>(null);
+
+  async function loadMailinkDevices() {
+    try {
+      mailinkDevices = await mailinkListDevices();
+    } catch (e) {
+      logError(`[maiLink] list devices failed: ${e}`);
+    } finally {
+      mailinkDevicesLoaded = true;
+    }
+  }
+
+  // Refresh the device list whenever the maiLink section is open and the bridge is enabled.
+  $effect(() => {
+    if (activeSection === 'claude_code' && preferencesStore.mailinkEnabled) {
+      void loadMailinkDevices();
+    }
+  });
+
+  async function startPairing() {
+    pairingBusy = true;
+    pairingError = '';
+    try {
+      const payload = await mailinkCreatePairing();
+      const qr = qrcode(0, 'M');
+      qr.addData(JSON.stringify(payload));
+      qr.make();
+      pairingQrSvg = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
+      pairing = payload;
+      pairingRemaining = 120; // matches the backend code TTL
+    } catch (e) {
+      pairingError = `${e}`;
+      logError(`[maiLink] create pairing failed: ${e}`);
+    } finally {
+      pairingBusy = false;
+    }
+  }
+
+  function closePairing() {
+    pairing = null;
+    pairingQrSvg = '';
+    // A scan may have completed while the modal was open — refresh so the new device shows.
+    void loadMailinkDevices();
+  }
+
+  function onPairingBackdropClick(e: MouseEvent) {
+    if (e.target === e.currentTarget) closePairing();
+  }
+  function onPairingKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') closePairing();
+  }
+
+  // Tick the code countdown. Depends only on `pairing`, so it starts on open and the cleanup
+  // clears it on close; reads of pairingRemaining happen inside the timer (untracked).
+  $effect(() => {
+    if (!pairing) return;
+    const t = setInterval(() => {
+      pairingRemaining = Math.max(0, pairingRemaining - 1);
+      if (pairingRemaining <= 0) clearInterval(t);
+    }, 1000);
+    return () => clearInterval(t);
+  });
+
+  async function revokeDevice(id: string) {
+    try {
+      await mailinkRemoveDevice(id);
+      revokeConfirmId = null;
+      await loadMailinkDevices();
+    } catch (e) {
+      logError(`[maiLink] remove device failed: ${e}`);
+    }
+  }
+
+  function devicePlatformLabel(d: MailinkDevice): string {
+    if (!d.push_platform) return 'no push registered';
+    const base = d.push_platform === 'apns' ? 'iOS' : d.push_platform === 'fcm' ? 'Android' : d.push_platform;
+    return d.push_env ? `${base} · ${d.push_env}` : base;
+  }
+
+  function fmtDeviceTime(ms: number): string {
+    if (!ms) return '—';
+    try { return new Date(ms).toLocaleString(); } catch { return '—'; }
+  }
 
   const sections = [
     { id: 'appearance' as const, label: 'Appearance' },
@@ -1755,43 +1851,55 @@
 
         <h3 class="section-heading" style="margin-top: 20px;">Mesh Workspace</h3>
         <p class="section-desc">
-          Loop control for Mesh Workspaces, where every agent talks to every other over topic threads. A topic pauses at the soft cap (resume or complete it from the cockpit, ⌘⇧M); the hard ceiling
-          and time limit are backstops so an unwatched ping-pong can't run unbounded.
+          Loop control for Mesh Workspaces, where every agent talks to every other over
+          topic threads. All three limits default to <strong>0 = off</strong>, so a mesh
+          flows freely. Turn one on only if you want maiTerm to pause an unwatched
+          ping-pong: a topic pauses at the soft cap (resume or complete it from the cockpit,
+          ⌘⇧M), while the hard ceiling and time limit are absolute backstops.
         </p>
         <div class="setting">
-          <label for="mesh-soft-cap">Soft turn cap (per topic)</label>
+          <div>
+            <label for="mesh-soft-cap">Soft turn cap (per topic)</label>
+            <p class="setting-hint">{preferencesStore.meshSoftCap === 0 ? 'Off — topics never pause on turn count.' : `Pause a topic after ${preferencesStore.meshSoftCap} turns; resume adds another ${preferencesStore.meshSoftCap}.`}</p>
+          </div>
           <div class="number-input-wrapper">
             <button class="number-btn" onclick={() => preferencesStore.setMeshSoftCap(preferencesStore.meshSoftCap - 1)}>−</button>
             <input
               type="number"
               id="mesh-soft-cap"
               class="number-input"
-              min="1"
+              min="0"
               max="1000"
               value={preferencesStore.meshSoftCap}
-              onchange={(e) => preferencesStore.setMeshSoftCap(parseInt(e.currentTarget.value) || 12)}
+              onchange={(e) => preferencesStore.setMeshSoftCap(parseInt(e.currentTarget.value) || 0)}
             />
             <button class="number-btn" onclick={() => preferencesStore.setMeshSoftCap(preferencesStore.meshSoftCap + 1)}>+</button>
           </div>
         </div>
         <div class="setting">
-          <label for="mesh-hard-cap">Hard turn ceiling (per topic)</label>
+          <div>
+            <label for="mesh-hard-cap">Hard turn ceiling (per topic)</label>
+            <p class="setting-hint">{preferencesStore.meshHardCap === 0 ? 'Off — no absolute turn ceiling.' : `Hard stop at ${preferencesStore.meshHardCap} turns; a resume can't lift it (complete the topic).`}</p>
+          </div>
           <div class="number-input-wrapper">
             <button class="number-btn" onclick={() => preferencesStore.setMeshHardCap(preferencesStore.meshHardCap - 5)}>−</button>
             <input
               type="number"
               id="mesh-hard-cap"
               class="number-input"
-              min="1"
+              min="0"
               max="10000"
               value={preferencesStore.meshHardCap}
-              onchange={(e) => preferencesStore.setMeshHardCap(parseInt(e.currentTarget.value) || 40)}
+              onchange={(e) => preferencesStore.setMeshHardCap(parseInt(e.currentTarget.value) || 0)}
             />
             <button class="number-btn" onclick={() => preferencesStore.setMeshHardCap(preferencesStore.meshHardCap + 5)}>+</button>
           </div>
         </div>
         <div class="setting">
-          <label for="mesh-ttl">Topic time limit (minutes, 0 = off)</label>
+          <div>
+            <label for="mesh-ttl">Topic time limit (minutes)</label>
+            <p class="setting-hint">{preferencesStore.meshTopicTtlMinutes === 0 ? 'Off — topics never pause on age.' : `Pause a topic ${preferencesStore.meshTopicTtlMinutes} min after it starts (or its last resume).`}</p>
+          </div>
           <div class="number-input-wrapper">
             <button class="number-btn" onclick={() => preferencesStore.setMeshTopicTtlMinutes(preferencesStore.meshTopicTtlMinutes - 5)}>−</button>
             <input
@@ -1806,6 +1914,135 @@
             <button class="number-btn" onclick={() => preferencesStore.setMeshTopicTtlMinutes(preferencesStore.meshTopicTtlMinutes + 5)}>+</button>
           </div>
         </div>
+
+        <h3 class="section-heading" style="margin-top: 20px;">maiLink Mobile Companion</h3>
+        <p class="section-desc">
+          maiLink is a phone app that lets you answer your agents (approve a permission, reply to
+          a question, nudge one forward) and drive them — over your local network or a
+          WireGuard tunnel, with no cloud in the data path. By default every agent tab is available;
+          use “Tab availability” below to switch to opt-in, and each tab’s right-click menu to make
+          an individual tab available or unavailable. See <code>docs/mailink-protocol.md</code>.
+        </p>
+
+        <div class="setting" style="align-items: flex-start;">
+          <div>
+            <label for="mailink-enabled">Enable maiLink bridge</label>
+            <p class="setting-hint">
+              Starts the on-device LAN bridge that paired phones connect to. Off by default; no
+              device can connect until you enable it and pair one (below).
+            </p>
+          </div>
+          <button
+            id="mailink-enabled"
+            class="toggle"
+            class:active={preferencesStore.mailinkEnabled}
+            onclick={() => preferencesStore.setMailinkEnabled(!preferencesStore.mailinkEnabled)}
+            aria-pressed={preferencesStore.mailinkEnabled}
+            aria-label="Toggle maiLink bridge"
+          >
+            <span class="toggle-knob"></span>
+          </button>
+        </div>
+
+        {#if preferencesStore.mailinkEnabled}
+          <h3 class="section-heading" style="margin-top: 20px;">Tab availability</h3>
+          <p class="section-desc">
+            maiLink only ever surfaces agent tabs (Claude, Codex, …) — never plain shells. A tab
+            whose agent has stopped (network drop, quit) stays available so you can auto-resume it
+            from your phone.
+          </p>
+
+          <div class="setting" style="align-items: flex-start;">
+            <div>
+              <label for="mailink-expose-all">Make all tabs available in maiLink</label>
+              <p class="setting-hint">
+                On by default: every agent tab is available, except ones you mark “Make unavailable
+                in maiLink” from the tab’s right-click menu. Turn this off to make maiLink opt-in —
+                then only tabs (or whole workspaces) you explicitly mark “Make available in maiLink”
+                appear on your phone.
+              </p>
+            </div>
+            <button
+              id="mailink-expose-all"
+              class="toggle"
+              class:active={preferencesStore.mailinkExposeAll}
+              onclick={() => preferencesStore.setMailinkExposeAll(!preferencesStore.mailinkExposeAll)}
+              aria-pressed={preferencesStore.mailinkExposeAll}
+              aria-label="Toggle make all tabs available in maiLink"
+            >
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
+
+          <h3 class="section-heading" style="margin-top: 20px;">Doorbell (push wake)</h3>
+          <p class="section-desc">
+            When a designated chat needs you and no phone is actively connected, maiTerm sends a
+            <em>content-free</em> wake to your paired phones — only the tab name and kind travel,
+            never terminal content. The phone wakes and pulls the real content over your
+            LAN/WireGuard link. This works automatically once you pair a phone and allow its
+            notifications; there’s nothing to configure.
+          </p>
+
+          <div class="setting" style="flex-direction: column; align-items: stretch; gap: 6px;">
+            <label for="mailink-relay-url">Custom relay URL <span style="opacity:0.6;">(optional, advanced)</span></label>
+            <input
+              id="mailink-relay-url"
+              type="text"
+              class="pattern-input"
+              value={preferencesStore.mailinkRelayUrl}
+              placeholder="https://updates.maiterm.dev/push  (default)"
+              onchange={(e) => preferencesStore.setMailinkRelayUrl(e.currentTarget.value)}
+            />
+            <p class="setting-hint">
+              Leave empty to use the built-in shared relay. Only set this if you self-host your own
+              push relay. No secret is needed here — each phone mints its own device capability when
+              it pairs.
+            </p>
+          </div>
+
+          <h3 class="section-heading" style="margin-top: 20px;">Paired devices</h3>
+          <p class="section-desc">
+            Phones paired to this Mac. Pairing shows a one-time QR the maiLink app scans; the
+            code expires in two minutes and works once. Revoke a device to stop it connecting and
+            ringing.
+          </p>
+
+          <div class="mailink-devices">
+            {#if mailinkDevicesLoaded && mailinkDevices.length === 0}
+              <p class="setting-hint" style="margin: 0 0 4px;">No devices paired yet.</p>
+            {/if}
+            {#each mailinkDevices as d (d.id)}
+              <div class="mailink-device">
+                <div class="mailink-device-main">
+                  <span class="mailink-device-name">{d.name}</span>
+                  <span class="mailink-device-meta">
+                    {devicePlatformLabel(d)}
+                    {#if d.has_push}<span class="mailink-badge">doorbell ready</span>{/if}
+                  </span>
+                  <span class="mailink-device-sub">
+                    paired {fmtDeviceTime(d.created_at)}{#if d.last_seen_at} · last seen {fmtDeviceTime(d.last_seen_at)}{/if}
+                  </span>
+                </div>
+                {#if revokeConfirmId === d.id}
+                  <div class="mailink-confirm">
+                    <span class="confirm-delete-label">Unpair?</span>
+                    <button class="confirm-delete-btn confirm-yes" onclick={() => revokeDevice(d.id)}>Unpair</button>
+                    <button class="confirm-delete-btn confirm-no" onclick={() => (revokeConfirmId = null)}>Cancel</button>
+                  </div>
+                {:else}
+                  <button class="mailink-revoke-btn" onclick={() => (revokeConfirmId = d.id)}>Revoke</button>
+                {/if}
+              </div>
+            {/each}
+          </div>
+
+          <button class="mailink-pair-btn" onclick={startPairing} disabled={pairingBusy}>
+            {pairingBusy ? 'Generating…' : 'Pair a phone'}
+          </button>
+          {#if pairingError}
+            <p class="setting-hint" style="color: var(--red, #f7768e);">{pairingError}</p>
+          {/if}
+        {/if}
       {:else if activeSection === 'backup'}
         <h3 class="section-heading">Backup Options</h3>
         <p class="section-desc">These settings apply to both manual exports and scheduled backups.</p>
@@ -1998,6 +2235,52 @@
     window.location.reload();
   }}
 />
+
+{#if pairing}
+  <div
+    class="pairing-backdrop"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Pair a phone"
+    tabindex="-1"
+    onclick={onPairingBackdropClick}
+    onkeydown={onPairingKeydown}
+  >
+    <div class="pairing-modal">
+      <h2 class="pairing-title">Scan with maiLink</h2>
+      <p class="pairing-sub">Open maiLink on your phone and scan this code to pair it with this Mac.</p>
+
+      <div class="pairing-qr">
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+        {@html pairingQrSvg}
+        {#if pairingRemaining <= 0}
+          <div class="pairing-expired">
+            <span>Code expired</span>
+          </div>
+        {/if}
+      </div>
+
+      <div class="pairing-meta">
+        <div class="pairing-code">{pairing.code}</div>
+        <div class="pairing-host">{pairing.host}:{pairing.port}</div>
+        {#if pairingRemaining > 0}
+          <div class="pairing-timer">Expires in {pairingRemaining}s</div>
+        {:else}
+          <div class="pairing-timer expired">Expired — generate a new code</div>
+        {/if}
+      </div>
+
+      <div class="pairing-actions">
+        {#if pairingRemaining <= 0}
+          <button class="mailink-pair-btn" onclick={startPairing} disabled={pairingBusy}>
+            {pairingBusy ? 'Generating…' : 'New code'}
+          </button>
+        {/if}
+        <button class="pairing-done-btn" onclick={closePairing}>Done</button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
   .window {
@@ -2340,6 +2623,187 @@
   .confirm-no:hover {
     background: var(--fg-dim);
   }
+
+  /* maiLink paired-devices list + pairing modal */
+  .mailink-devices {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .mailink-device {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 10px;
+    border: 1px solid var(--bg-light);
+    border-radius: 6px;
+    background: var(--bg-dark);
+  }
+  .mailink-device-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .mailink-device-name {
+    font-size: 0.923rem;
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .mailink-device-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.846rem;
+    color: var(--fg-dim);
+  }
+  .mailink-device-sub {
+    font-size: 0.77rem;
+    color: var(--fg-dim);
+    opacity: 0.8;
+  }
+  .mailink-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--green, #9ece6a) 22%, transparent);
+    color: var(--green, #9ece6a);
+  }
+  .mailink-revoke-btn {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.846rem;
+    cursor: pointer;
+    background: var(--bg-light);
+    color: var(--fg);
+    border: none;
+  }
+  .mailink-revoke-btn:hover {
+    background: var(--red, #f7768e);
+    color: var(--bg-dark);
+  }
+  .mailink-confirm {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .mailink-pair-btn {
+    margin-top: 12px;
+    padding: 7px 16px;
+    border-radius: 6px;
+    font-size: 0.923rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--accent);
+    color: var(--bg-dark);
+    border: none;
+  }
+  .mailink-pair-btn:hover { opacity: 0.9; }
+  .mailink-pair-btn:disabled { opacity: 0.55; cursor: default; }
+
+  .pairing-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .pairing-modal {
+    background: var(--bg-medium);
+    border: 1px solid var(--bg-light);
+    border-radius: 12px;
+    padding: 24px;
+    width: 340px;
+    max-width: calc(100vw - 40px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+  }
+  .pairing-title {
+    margin: 0;
+    font-size: 1.15rem;
+    color: var(--fg);
+  }
+  .pairing-sub {
+    margin: 6px 0 16px;
+    font-size: 0.846rem;
+    color: var(--fg-dim);
+    text-align: center;
+  }
+  .pairing-qr {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    padding: 12px;
+    background: #ffffff;
+    border-radius: 8px;
+    box-sizing: border-box;
+  }
+  .pairing-qr :global(svg) {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .pairing-expired {
+    position: absolute;
+    inset: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.86);
+    color: #1a1b26;
+    font-weight: 700;
+    border-radius: 4px;
+  }
+  .pairing-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    margin-top: 14px;
+  }
+  .pairing-code {
+    font-family: var(--font-mono, monospace);
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--fg);
+  }
+  .pairing-host {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.8rem;
+    color: var(--fg-dim);
+  }
+  .pairing-timer {
+    margin-top: 4px;
+    font-size: 0.8rem;
+    color: var(--fg-dim);
+  }
+  .pairing-timer.expired { color: var(--red, #f7768e); }
+  .pairing-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 18px;
+  }
+  .pairing-done-btn {
+    padding: 7px 18px;
+    border-radius: 6px;
+    font-size: 0.923rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--bg-light);
+    color: var(--fg);
+    border: none;
+  }
+  .pairing-done-btn:hover { background: var(--fg-dim); }
 
   .pattern-actions {
     display: flex;

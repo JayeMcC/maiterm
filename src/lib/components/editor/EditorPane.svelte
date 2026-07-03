@@ -23,10 +23,15 @@
     watchRemoteFile,
     unwatchRemoteFile,
     getRemoteFileMtime,
+    revealInFileManager,
+    downloadRemoteFile,
   } from '$lib/tauri/commands';
   import { loadLanguageExtension, detectLanguageFromContent, isImageFile, getImageMimeType, isPdfFile, isMarkdownFile } from '$lib/utils/languageDetect';
   import { marked } from 'marked';
   import { open as shellOpen } from '@tauri-apps/plugin-shell';
+  import { writeText as clipboardWriteText, writeImage as clipboardWriteImage } from '@tauri-apps/plugin-clipboard-manager';
+  import { Image as TauriImage } from '@tauri-apps/api/image';
+  import { toastStore } from '$lib/stores/toasts.svelte';
   import { buildEditorExtension } from '$lib/utils/editorTheme';
   import { getTheme } from '$lib/themes';
   import { preferencesStore } from '$lib/stores/preferences.svelte';
@@ -388,6 +393,74 @@
     const img = e.target as HTMLImageElement;
     imageNaturalWidth = img.naturalWidth;
     imageNaturalHeight = img.naturalHeight;
+  }
+
+  // ── File toolbar actions (shared by the image and PDF viewers) ──────────
+
+  /** Platform-appropriate label for the "reveal in file manager" action. */
+  const revealLabel = (() => {
+    const ua = navigator.userAgent;
+    if (ua.includes('Mac')) return 'Show in Finder';
+    if (ua.includes('Win')) return 'Show in Explorer';
+    return 'Show in file manager';
+  })();
+
+  /** The path most useful to copy — the remote path for SSH files, else the local path. */
+  function displayPath(): string {
+    return editorFile.is_remote ? (editorFile.remote_path ?? editorFile.file_path) : editorFile.file_path;
+  }
+
+  async function copyFilePath() {
+    const path = displayPath();
+    try {
+      await clipboardWriteText(path);
+      toastStore.addToast('Path copied', path, 'success');
+    } catch (e) {
+      logError(`[EditorPane] copy path failed: ${e}`);
+      toastStore.addToast('Copy failed', String(e), 'error');
+    }
+  }
+
+  /** Copy the image bitmap (full resolution, regardless of zoom) to the OS clipboard. */
+  async function copyImageToClipboard() {
+    if (!imageEl || imageNaturalWidth === 0 || imageNaturalHeight === 0) return;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = imageNaturalWidth;
+      canvas.height = imageNaturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas 2D context unavailable');
+      ctx.drawImage(imageEl, 0, 0);
+      const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const img = await TauriImage.new(new Uint8Array(data.buffer), canvas.width, canvas.height);
+      await clipboardWriteImage(img);
+      toastStore.addToast('Image copied', 'Copied to clipboard', 'success');
+    } catch (e) {
+      logError(`[EditorPane] copy image failed: ${e}`);
+      toastStore.addToast('Copy failed', String(e), 'error');
+    }
+  }
+
+  async function showInFileManager() {
+    try {
+      await revealInFileManager(editorFile.file_path);
+    } catch (e) {
+      logError(`[EditorPane] reveal in file manager failed: ${e}`);
+      toastStore.addToast('Reveal failed', String(e), 'error');
+    }
+  }
+
+  /** Pull a remote file down to the local Downloads directory via SCP. */
+  async function downloadToDownloads() {
+    if (!editorFile.is_remote || !editorFile.remote_ssh_command || !editorFile.remote_path) return;
+    try {
+      toastStore.addToast('Downloading…', editorFile.remote_path, 'info');
+      const dest = await downloadRemoteFile(editorFile.remote_ssh_command, editorFile.remote_path);
+      toastStore.addToast('Downloaded', dest, 'success');
+    } catch (e) {
+      logError(`[EditorPane] download failed: ${e}`);
+      toastStore.addToast('Download failed', String(e), 'error');
+    }
   }
 
   let pdfTextLayerRefs = $state<HTMLDivElement[]>([]);
@@ -1429,6 +1502,31 @@
   });
 </script>
 
+<!-- Shared file-action buttons for the image and PDF viewer toolbars. -->
+{#snippet fileToolbarActions()}
+  <IconButton tooltip="Copy path" style="width:22px;height:20px;border-radius:3px" onclick={copyFilePath}>
+    <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round">
+      <rect x="4" y="2.5" width="8" height="11" rx="1.3" />
+      <path d="M6 2.5 V2.2 a1 1 0 0 1 1-1 h2 a1 1 0 0 1 1 1 v.3" />
+    </svg>
+  </IconButton>
+  {#if isLocalFile}
+    <IconButton tooltip={revealLabel} style="width:22px;height:20px;border-radius:3px" onclick={showInFileManager}>
+      <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round">
+        <path d="M1.75 4.5 a1 1 0 0 1 1-1 h2.7 l1.4 1.5 h6.4 a1 1 0 0 1 1 1 v5.8 a1 1 0 0 1 -1 1 H2.75 a1 1 0 0 1 -1 -1 Z" />
+      </svg>
+    </IconButton>
+  {:else}
+    <IconButton tooltip="Download to Downloads" style="width:22px;height:20px;border-radius:3px" onclick={downloadToDownloads}>
+      <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 2 V9.2" />
+        <path d="M5 6.4 L8 9.4 L11 6.4" />
+        <path d="M2.8 11.5 v1 a1 1 0 0 0 1 1 h8.4 a1 1 0 0 0 1 -1 v-1" />
+      </svg>
+    </IconButton>
+  {/if}
+{/snippet}
+
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="editor-container" class:hidden={!visible} bind:this={containerRef} onmousedowncapture={focusPane}>
   {#if loading}
@@ -1475,6 +1573,15 @@
             <path d="M8 1.75 A6.25 6.25 0 0 1 8 14.25 Z" fill="currentColor" />
           </svg>
         </IconButton>
+        <span class="info-sep"></span>
+        <IconButton tooltip="Copy image" style="width:22px;height:20px;border-radius:3px" onclick={copyImageToClipboard}>
+          <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round">
+            <rect x="2" y="3" width="12" height="10" rx="1.5" />
+            <circle cx="5.5" cy="6.5" r="1.1" />
+            <path d="M2.5 11.5 L6 8 l2.2 2.2 2.5 -2.8 2.8 3.1" />
+          </svg>
+        </IconButton>
+        {@render fileToolbarActions()}
       </div>
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -1541,6 +1648,8 @@
             >+</IconButton
           >
         </div>
+        <span class="info-sep"></span>
+        {@render fileToolbarActions()}
       </div>
       <div class="pdf-scroll" bind:this={pdfScrollEl} onscroll={handlePdfScroll}>
         {#each Array(pdfPageCount) as _, i (i)}

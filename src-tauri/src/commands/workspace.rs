@@ -36,10 +36,49 @@ fn migrate_imported_scrollback(data: &mut crate::state::AppData, db: &Scrollback
 #[tauri::command]
 pub fn exit_app(app: tauri::AppHandle, state: State<'_, Arc<AppState>>) {
     log::info!("exit_app called — cleaning up and terminating process");
-    // Mark this run as having exited cleanly. If the process dies before
-    // reaching this line, the marker stays on disk and the next run flags
-    // previous_run_crashed=true in diagnostics.
+    run_shutdown_cleanup(&state);
+
+    // Spawn a watchdog: if the main exit doesn't complete within 2s
+    // (e.g. PTY threads stuck on Windows), force-terminate the process.
+    let app_clone = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        log::warn!("Force-exiting after 2s timeout");
+        app_clone.exit(0);
+    });
+
+    app.exit(0);
+}
+
+/// Shutdown cleanup shared by every exit path: the frontend-invoked `exit_app`
+/// (menu "Quit" → `quit-requested` → frontend save → this command) AND the
+/// native-quit `RunEvent::ExitRequested` handler in `lib.rs` (Dock → Quit,
+/// `osascript … to quit`, logout/restart — none of which reach `on_menu_event`).
+///
+/// Idempotent: a one-shot guard runs the body at most once, so the menu path
+/// (whose `app.exit` also produces a RunEvent) never double-cleans.
+///
+/// Clearing the running marker here is what stops a *clean* native quit from
+/// being reported as `previous_run.crashed` on the next launch — the previous
+/// code only cleared it from `exit_app`, which native quits bypass entirely.
+pub fn run_shutdown_cleanup(state: &Arc<AppState>) {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static DONE: AtomicBool = AtomicBool::new(false);
+    if DONE.swap(true, Ordering::SeqCst) {
+        return;
+    }
+
+    // Clear the crash marker FIRST: even if a later step stalls, a graceful
+    // quit must never look like a crash.
     crate::state::persistence::clear_running_marker();
+
+    // Final state flush. Periodic autosave covers most of it, but a native
+    // quit skips the frontend's on-quit save, so persist current app_data now.
+    let data_clone = state.app_data.read().clone();
+    if let Err(e) = save_state(&data_clone) {
+        log::warn!("Final state save on shutdown failed: {}", e);
+    }
+
     // Shut down the Claude Code MCP server gracefully (releases the port)
     if let Some(tx) = state.mcp_shutdown.lock().take() {
         let _ = tx.send(true);
@@ -53,24 +92,13 @@ pub fn exit_app(app: tauri::AppHandle, state: State<'_, Arc<AppState>>) {
     }
 
     // Kill all SSH MCP tunnels
-    crate::commands::ssh_tunnel::kill_all_tunnels(&state);
+    crate::commands::ssh_tunnel::kill_all_tunnels(state);
 
     // Kill all remaining PTYs so their threads can exit cleanly
     let pty_ids: Vec<String> = state.pty_registry.read().keys().cloned().collect();
     for id in &pty_ids {
-        let _ = crate::pty::kill_pty(&state, id);
+        let _ = crate::pty::kill_pty(state, id);
     }
-
-    // Spawn a watchdog: if the main exit doesn't complete within 2s
-    // (e.g. PTY threads stuck on Windows), force-terminate the process.
-    let app_clone = app.clone();
-    std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_secs(2));
-        log::warn!("Force-exiting after 2s timeout");
-        app_clone.exit(0);
-    });
-
-    app.exit(0);
 }
 
 #[tauri::command]
@@ -608,6 +636,17 @@ pub fn suspend_workspace(window: tauri::Window, state: State<'_, Arc<AppState>>,
     let win = app_data.window_mut(&label).ok_or("Window not found")?;
     let ws = win.workspaces.iter_mut().find(|w| w.id == workspace_id).ok_or("Workspace not found")?;
     ws.suspended = true;
+    // Give the workspace's live terminal tabs their proper suspended status — the
+    // frontend already killed the PTYs, so leaving pty_id set would relapse the
+    // high-watermark and make these tabs read as "live" on the next restart.
+    for pane in ws.panes.iter_mut() {
+        for tab in pane.tabs.iter_mut() {
+            if matches!(tab.tab_type, TabType::Terminal) && tab.pty_id.is_some() {
+                tab.pty_id = None;
+                tab.suspended_at = Some(iso_now());
+            }
+        }
+    }
     save_state(&app_data)?;
     Ok(())
 }
@@ -719,6 +758,59 @@ pub fn suspend_tab(
     let data_clone = app_data.clone();
     drop(app_data);
     save_state(&data_clone)
+}
+
+/// One tab's new suspended state for `mark_tabs_suspended`.
+#[derive(serde::Deserialize)]
+pub struct TabSuspendMark {
+    pub tab_id: String,
+    /// Last-active time (ISO 8601) to record as the suspend age; None → now.
+    pub suspended_at: Option<String>,
+}
+
+/// Bulk-mark terminal tabs as properly suspended: clear the stale `pty_id` and
+/// stamp `suspended_at`. Session restore calls this for tabs that weren't
+/// genuinely live at the last shutdown, so the on-disk active-vs-suspended state
+/// stops lying (a tab keeps its `pty_id` forever unless explicitly suspended).
+/// Window-scoped and idempotent; only the listed terminal tabs are touched.
+#[tauri::command]
+pub fn mark_tabs_suspended(
+    window: tauri::Window,
+    state: State<'_, Arc<AppState>>,
+    updates: Vec<TabSuspendMark>,
+) -> Result<(), String> {
+    if updates.is_empty() {
+        return Ok(());
+    }
+    let marks: HashMap<String, Option<String>> =
+        updates.into_iter().map(|u| (u.tab_id, u.suspended_at)).collect();
+
+    let label = window.label().to_string();
+    let mut app_data = state.app_data.write();
+    let win = app_data.window_mut(&label).ok_or("Window not found")?;
+
+    let mut changed = false;
+    for ws in win.workspaces.iter_mut() {
+        for pane in ws.panes.iter_mut() {
+            for tab in pane.tabs.iter_mut() {
+                if !matches!(tab.tab_type, TabType::Terminal) {
+                    continue;
+                }
+                if let Some(ts) = marks.get(&tab.id) {
+                    tab.pty_id = None;
+                    tab.suspended_at = Some(ts.clone().unwrap_or_else(iso_now));
+                    changed = true;
+                }
+            }
+        }
+    }
+
+    if changed {
+        let data_clone = app_data.clone();
+        drop(app_data);
+        save_state(&data_clone)?;
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -989,6 +1081,11 @@ pub fn set_preferences(app: tauri::AppHandle, state: State<'_, Arc<AppState>>, m
             app_data.preferences.shell_integration_default_migrated;
         preferences.restore_session_default_migrated =
             app_data.preferences.restore_session_default_migrated;
+        // maiLink paired devices are backend-owned: the listener's /pair and
+        // /push-register handlers mutate them at runtime. The client payload omits the
+        // list, so a wholesale replace here would wipe every paired phone on any
+        // unrelated preference change. Preserve the stored value.
+        preferences.mailink_devices = app_data.preferences.mailink_devices.clone();
         app_data.preferences = preferences.clone();
         app_data.clone()
     };
@@ -1579,6 +1676,95 @@ pub fn set_workspace_bridge_all(
     };
     save_state(&data_clone)?;
     Ok(())
+}
+
+/// Toggle a single tab's maiLink-native designation (whether it appears as a chat in the
+/// maiLink mobile companion). Per-tab opt-in; orthogonal to the workspace-wide flag. See
+/// docs/mailink-protocol.md.
+#[tauri::command]
+pub fn set_tab_mailink_native(
+    window: tauri::Window,
+    state: State<'_, Arc<AppState>>,
+    workspace_id: String,
+    pane_id: String,
+    tab_id: String,
+    mailink_native: bool,
+) -> Result<(), String> {
+    let label = window.label().to_string();
+    let mut app_data = state.app_data.write();
+    let win = app_data.window_mut(&label).ok_or("Window not found")?;
+    let workspace = win.workspaces.iter_mut()
+        .find(|w| w.id == workspace_id)
+        .ok_or("Workspace not found")?;
+    let pane = workspace.panes.iter_mut()
+        .find(|p| p.id == pane_id)
+        .ok_or("Pane not found")?;
+    let tab = pane.tabs.iter_mut()
+        .find(|t| t.id == tab_id)
+        .ok_or("Tab not found")?;
+
+    tab.mailink_native = mailink_native;
+
+    let data_clone = app_data.clone();
+    drop(app_data);
+    save_state(&data_clone)
+}
+
+/// Toggle a workspace-wide maiLink-native designation: every agent tab in the workspace is
+/// exposed to maiLink as a chat. See docs/mailink-protocol.md.
+#[tauri::command]
+pub fn set_workspace_mailink_native(
+    window: tauri::Window,
+    state: State<'_, Arc<AppState>>,
+    workspace_id: String,
+    enabled: bool,
+) -> Result<(), String> {
+    let label = window.label().to_string();
+    let data_clone = {
+        let mut app_data = state.app_data.write();
+        let win = app_data.window_mut(&label).ok_or("Window not found")?;
+        let workspace = win
+            .workspaces
+            .iter_mut()
+            .find(|w| w.id == workspace_id)
+            .ok_or("Workspace not found")?;
+        workspace.mailink_native = enabled;
+        app_data.clone()
+    };
+    save_state(&data_clone)?;
+    Ok(())
+}
+
+/// Toggle a per-tab maiLink exception: when true, hold this tab back from maiLink even while
+/// the "make all tabs available in maiLink" preference is on. Ignored in designate-only mode
+/// (which uses `mailink_native`). See docs/mailink-protocol.md.
+#[tauri::command]
+pub fn set_tab_mailink_excluded(
+    window: tauri::Window,
+    state: State<'_, Arc<AppState>>,
+    workspace_id: String,
+    pane_id: String,
+    tab_id: String,
+    excluded: bool,
+) -> Result<(), String> {
+    let label = window.label().to_string();
+    let mut app_data = state.app_data.write();
+    let win = app_data.window_mut(&label).ok_or("Window not found")?;
+    let workspace = win.workspaces.iter_mut()
+        .find(|w| w.id == workspace_id)
+        .ok_or("Workspace not found")?;
+    let pane = workspace.panes.iter_mut()
+        .find(|p| p.id == pane_id)
+        .ok_or("Pane not found")?;
+    let tab = pane.tabs.iter_mut()
+        .find(|t| t.id == tab_id)
+        .ok_or("Tab not found")?;
+
+    tab.mailink_excluded = excluded;
+
+    let data_clone = app_data.clone();
+    drop(app_data);
+    save_state(&data_clone)
 }
 
 /// Replace a mesh workspace's topic registry wholesale. The frontend `agentMesh` store is
