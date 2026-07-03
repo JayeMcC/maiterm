@@ -1,0 +1,21 @@
+docs/cursor-parity-design.md
+  s_ad2f963c4afad3::t_c3c26e04c13d47 1-77
+docs/fork-todo.md
+  s_ad2f963c4afad3::t_af3bc45e6a345d 54-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "12ed74b063041d22d09a0bf765c69bc4d75dcdf7",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
