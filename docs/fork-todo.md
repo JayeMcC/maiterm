@@ -26,12 +26,14 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
   Map the container path → the host clone (docker inspection; disambiguate
   which container, since `/workspaces/website` is shared across
   developing/reviewing/experimenting).
-- [ ] **Provider config → preference** — the provider command is hardcoded
-  (`forwood-launcher`) in `hotbar.svelte.ts`. Graduate to a real preference so
-  the rail is a generic, user-configurable "contextual action rail" (ADR-0006
-  ideal; upstreamable).
-- [ ] **Click-to-open protocol** — ports open via `http://`; WEB `:5173` is
-  HTTPS. Add a protocol heuristic (or per-port config).
+- **Done: Provider config.** Rail providers now come from
+  `~/.config/maiterm/rail.json` (merged over the forwood defaults; new
+  `read_rail_config` command) — the rail is a generic, configurable action rail.
+- **Done: Click-to-open protocol.** The launcher emits a per-port `scheme`
+  (Vite WEB `:5173` = https); the rail opens `<scheme>://localhost:<port>`.
+- **Done: dev-server tab lifecycle.** Idempotent container fire (converges
+  in-container whether started on host or in-container; no double-container);
+  keep-alive drops into a live shell at the project root on exit.
 
 ## Updater
 - **Done (Layer 1):** signed updater feed on the fork's GitHub Releases. Own
@@ -54,6 +56,13 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
   **`cursor-agent` CLI** so both agent backends get parity (session detection,
   status indicators, notes/bridge, tab context) — not just Claude Code. Larger
   feature; scope a design pass first.
+
+## UI
+- [ ] **Tab close (×) button hidden when the name is too long.** When a pane
+  has multiple tabs and not enough width for them all to fit, a long tab name
+  expands and pushes the close button out of view. Reserve fixed space for the
+  × (and/or truncate the name with ellipsis) so it stays visible regardless of
+  name length or tab count. (`TerminalTabs.svelte` tab layout — flex sizing.)
 
 ## Fork issues (GitHub)
 - [ ] **#6** — allow read-only MCP introspection (`getTabContext`/
