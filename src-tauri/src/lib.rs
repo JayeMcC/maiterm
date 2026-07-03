@@ -610,6 +610,8 @@ pub fn run() {
             commands::editor::git_show_file,
             commands::editor::is_directory,
             commands::editor::ssh_is_directory,
+            commands::rail::find_markers_upward,
+            commands::rail::run_rail_provider,
             commands::editor::list_files,
             commands::editor::ssh_list_files,
             commands::claude_code::claude_code_respond,

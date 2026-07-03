@@ -45,6 +45,9 @@ export default [
       globals: {
         ...globals.browser,
         ...globals.node,
+        // Build-identity constants injected by vite.config.ts `define`.
+        __APP_VERSION__: 'readonly',
+        __GIT_SHA__: 'readonly',
       },
     },
     rules: {

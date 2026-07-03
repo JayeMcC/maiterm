@@ -9,6 +9,7 @@
   import WorkspaceSidebar from '$lib/components/workspace/WorkspaceSidebar.svelte';
   import SplitContainer from '$lib/components/pane/SplitContainer.svelte';
   import MeshStageView from '$lib/components/MeshStageView.svelte';
+  import HotbarRail from '$lib/components/rail/HotbarRail.svelte';
   import TerminalPane from '$lib/components/terminal/TerminalPane.svelte';
   import EditorPane from '$lib/components/editor/EditorPane.svelte';
   import DiffPane from '$lib/components/editor/DiffPane.svelte';
@@ -437,6 +438,7 @@
           {/each}
         </div>
       </main>
+      <HotbarRail />
     {/if}
   </div>
 </div>

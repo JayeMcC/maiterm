@@ -803,3 +803,34 @@ export async function checkFullDiskAccess(): Promise<boolean> {
 export async function openFullDiskAccessSettings(): Promise<void> {
   return invoke('open_full_disk_access_settings');
 }
+
+// --- Hotbar rail (PLAN-15 stream 3) ---
+
+export interface DetectedMarker {
+  marker: string;
+  root: string;
+  path: string;
+}
+
+/** Walk up from `startDir` looking for each marker file; returns the innermost
+ *  owner for each that matched (absent markers are omitted). */
+export async function findMarkersUpward(startDir: string, markers: string[]): Promise<DetectedMarker[]> {
+  return invoke('find_markers_upward', { startDir, markers });
+}
+
+export interface ProviderResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+}
+
+/** Run a one-shot provider command (e.g. the task-list / container-status CLI)
+ *  and capture stdout/stderr/exit code. Bounded by `timeoutSecs` (default 15). */
+export async function runRailProvider(
+  program: string,
+  args: string[],
+  cwd?: string,
+  timeoutSecs?: number,
+): Promise<ProviderResult> {
+  return invoke('run_rail_provider', { program, args, cwd: cwd ?? null, timeoutSecs: timeoutSecs ?? null });
+}
