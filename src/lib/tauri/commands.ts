@@ -825,12 +825,21 @@ export interface ProviderResult {
 }
 
 /** Run a one-shot provider command (e.g. the task-list / container-status CLI)
- *  and capture stdout/stderr/exit code. Bounded by `timeoutSecs` (default 15). */
+ *  and capture stdout/stderr/exit code. Bounded by `timeoutSecs` (default 15).
+ *  `loginShell` runs it via `$SHELL -lc` so a GUI-launched app inherits the
+ *  user's real PATH (node, homebrew, user bins) — needed for the launcher. */
 export async function runRailProvider(
   program: string,
   args: string[],
   cwd?: string,
   timeoutSecs?: number,
+  loginShell?: boolean,
 ): Promise<ProviderResult> {
-  return invoke('run_rail_provider', { program, args, cwd: cwd ?? null, timeoutSecs: timeoutSecs ?? null });
+  return invoke('run_rail_provider', {
+    program,
+    args,
+    cwd: cwd ?? null,
+    timeoutSecs: timeoutSecs ?? null,
+    loginShell: loginShell ?? false,
+  });
 }

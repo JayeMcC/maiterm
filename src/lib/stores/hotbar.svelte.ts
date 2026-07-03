@@ -87,6 +87,8 @@ function createHotbarStore() {
             provider.program,
             substitute(provider.listArgs, { dir: hit.root }),
             hit.root,
+            15,
+            true, // login shell — GUI app needs the user's PATH to find the launcher
           );
           if (res.exitCode !== 0) {
             section.error = res.stderr.trim() || `provider exited ${res.exitCode}`;
@@ -126,6 +128,7 @@ function createHotbarStore() {
         substitute(section.provider.fireArgs, { dir: section.dir, label: item.label }),
         section.dir,
         30,
+        true, // login shell
       );
       if (res.exitCode !== 0) {
         patchSection(marker, { error: res.stderr.trim() || `fire exited ${res.exitCode}` });

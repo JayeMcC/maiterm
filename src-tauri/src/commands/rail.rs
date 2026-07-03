@@ -69,18 +69,42 @@ pub struct ProviderResult {
     pub exit_code: i32,
 }
 
+/// POSIX single-quote a token (wrap in '…', escape embedded ' as '\'' ).
+fn sh_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "'\\''"))
+}
+
 /// Run a one-shot provider command and capture its output. NOT a PTY — this is
 /// for machine-readable provider calls (list/status) and fire-and-report
 /// buttons, bounded by a timeout so a hung provider can't wedge the rail.
+///
+/// `login_shell`: a GUI-launched app inherits a minimal PATH (no homebrew, no
+/// node, no user bins), so a bare provider name won't resolve. With
+/// `login_shell = true` the command runs via `$SHELL -lc '<quoted>'`, which
+/// sources the user's login profile and gets their real dev environment.
 #[command]
 pub async fn run_rail_provider(
     program: String,
     args: Vec<String>,
     cwd: Option<String>,
     timeout_secs: Option<u64>,
+    login_shell: Option<bool>,
 ) -> Result<ProviderResult, String> {
-    let mut cmd = tokio::process::Command::new(&program);
-    cmd.args(&args);
+    let mut cmd = if login_shell.unwrap_or(false) {
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".into());
+        let mut line = sh_quote(&program);
+        for a in &args {
+            line.push(' ');
+            line.push_str(&sh_quote(a));
+        }
+        let mut c = tokio::process::Command::new(shell);
+        c.arg("-lc").arg(line);
+        c
+    } else {
+        let mut c = tokio::process::Command::new(&program);
+        c.args(&args);
+        c
+    };
     if let Some(dir) = cwd.as_ref() {
         cmd.current_dir(dir);
     }
