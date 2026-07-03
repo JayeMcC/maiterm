@@ -1,0 +1,107 @@
+name: Render parity (debug vs release)
+
+# Experiment for the white-screen investigation: the debug build renders a
+# blank window (render-smoke caught "1 distinct colour" on CI, matching the
+# user's local white screen), while the daily-driver was a RELEASE build. This
+# builds BOTH on the same runner and screenshots each so we can compare — if
+# release renders and debug doesn't, the hypothesis is confirmed and it also
+# proves the detector isn't just capturing a blank CI desktop.
+#
+# CI-only (visible windows steal focus). Manual + on-demand via label.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['dev']
+    paths:
+      - '.github/workflows/render-parity.yml'
+      - 'tests/e2e/harness/render-probe.ts'
+      - 'tests/e2e/harness/render-check.ts'
+
+jobs:
+  render-parity:
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install E2E dependencies
+        working-directory: tests/e2e
+        run: npm install --no-audit --no-fund
+
+      - name: Build DEBUG binary
+        run: npx tauri build --debug --no-bundle
+
+      - name: Probe DEBUG render
+        id: debug
+        working-directory: tests/e2e
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          npx tsx harness/render-probe.ts "${GITHUB_WORKSPACE}/src-tauri/target/debug/aiterm" debug | tee /tmp/debug-result.txt
+
+      - name: Build RELEASE binary
+        run: npx tauri build --no-bundle
+
+      - name: Probe RELEASE render
+        id: release
+        working-directory: tests/e2e
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          npx tsx harness/render-probe.ts "${GITHUB_WORKSPACE}/src-tauri/target/release/aiterm" release | tee /tmp/release-result.txt
+
+      - name: Compare and conclude
+        run: |
+          echo "## Render parity result" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/debug-result.txt /tmp/release-result.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          DBG=$(grep -o 'distinctColors=[0-9A-Z]*' /tmp/debug-result.txt | cut -d= -f2)
+          REL=$(grep -o 'distinctColors=[0-9A-Z]*' /tmp/release-result.txt | cut -d= -f2)
+          echo "debug=$DBG release=$REL"
+          # The experiment's conclusion: RELEASE must render. If release is also
+          # blank, the whole approach (or CI capture) is suspect — fail loudly.
+          if grep -q 'rendered=true' /tmp/release-result.txt; then
+            echo "✓ release renders — hypothesis supported (debug: $DBG colours, release: $REL colours)"
+          else
+            echo "✗ release did NOT render — inconclusive / detector or CI-capture issue"
+            exit 1
+          fi
+
+      - name: Capture both screens
+        if: always()
+        run: |
+          mkdir -p artifacts
+          screencapture -x -t png artifacts/screen-final.png || true
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-parity-artifacts
+          path: |
+            /tmp/debug-result.txt
+            /tmp/release-result.txt
+            ~/Library/Logs/com.aiterm.dev2/
+            ~/Library/Logs/com.aiterm.app2/
+            artifacts/
+          if-no-files-found: ignore
