@@ -1,0 +1,21 @@
+src/lib/components/rail/HotbarRail.svelte
+  s_ad2f963c4afad3::t_036b2694550bb6 68
+  s_ad2f963c4afad3::t_3e6d7328bc49c5 31-36
+  s_ad2f963c4afad3::t_acb6d42e85318b 241-249
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "77a2e456066030e2652f08dbba4b80c10f56dc4b",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
