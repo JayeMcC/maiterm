@@ -45,6 +45,7 @@ TAURI_MCP_NOTES.md
 /scripts/cli-llm.mjs
 /scripts/forwood-seed-entities.mjs
 /scripts/launcher
+/scripts/meridian
 /scripts/run-silent.sh
 /scripts/task-engine
 /scripts/test
