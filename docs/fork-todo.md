@@ -58,6 +58,22 @@ Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
   status indicators, notes/bridge, tab context) — not just Claude Code. Larger
   feature; scope a design pass first.
 
+## Features
+- [ ] **Export / import window setup as JSON.** Serialize the current window
+  arrangement — windows → panes → tabs, split layout, terminals + editors, and
+  each tab's intent (name, task/cwd) — to a portable JSON blob, and re-create
+  that structure on import. Use case: share a layout ("here's the setup I use")
+  with someone running the same terminal. Add **Export setup to JSON** (current
+  window, or a saved preset) + **Import setup from JSON**.
+  - Build on the existing window-presets infra (`commands::window_presets`, the
+    preset save/manage modals) — a preset already captures a window arrangement;
+    this adds a portable serialize/deserialize on top.
+  - Decide portable vs machine-specific: keep layout + tab names + task/cwd
+    *intent*; strip or relativize machine-specific bits (absolute cwd paths,
+    ptyIds, live PTY state) so it re-creates cleanly on a different machine.
+  - On import, spawn fresh terminals/editors per the tree rather than trying to
+    restore live process state.
+
 ## UI
 - **Done: tab close (×) button no longer hidden by long names.** `.tab-name`
   now `flex: 1 1 auto; min-width: 0` so it truncates with its ellipsis, and
