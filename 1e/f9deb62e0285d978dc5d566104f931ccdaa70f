@@ -1,0 +1,82 @@
+linked-tools/core/scripts/meridian/README.md
+  s_c586f16f73bc3e::t_d5b4a07159419f 1-82
+.gitignore
+  s_d68799056db508::t_fd3b7401826aed 662-666
+  s_c586f16f73bc3e::t_404e47472ddbba 217,255-265,418,444,474-475,479-482,486-488,490-491,495-496,534,536,540,543,546,589,592,598-599,609
+.agents/skills/meridian-admin
+  s_c586f16f73bc3e::t_d4e9df80315ddb 1
+.agents/skills/meridian-analytics
+  s_c586f16f73bc3e::t_13d77a56257b6d 1
+.agents/skills/meridian-cicd
+  s_c586f16f73bc3e::t_64f80947972a9c 1
+.agents/skills/meridian-core
+  s_c586f16f73bc3e::t_4aed2c97c4dddb 1
+.agents/skills/meridian-data-fixer
+  s_c586f16f73bc3e::t_329317dd0ed128 1
+.agents/skills/meridian-environments
+  s_c586f16f73bc3e::t_d356529ebbd9aa 1
+.agents/skills/meridian-executions
+  s_c586f16f73bc3e::t_dd477c86550834 1
+.agents/skills/meridian-quality-gates
+  s_c586f16f73bc3e::t_b17be5fc0c923b 1
+.agents/skills/meridian-releases
+  s_c586f16f73bc3e::t_f68c2686d273ba 1
+.agents/skills/meridian-reporting
+  s_c586f16f73bc3e::t_5f0be29ddc4741 1
+.agents/skills/meridian-settings
+  s_c586f16f73bc3e::t_12aadb4f4d5477 1
+.cursorignore
+  s_c586f16f73bc3e::t_f3b002099aa031 180,218-228,381,407,437-438,442-445,449-451,453-454,458-459,497,499,503,506,509,552,555,561-562,572
+.env.example
+  s_c586f16f73bc3e::t_369af025546519 62-68
+linked-tools/core/.agents/skills/meridian-admin/SKILL.md
+  s_c586f16f73bc3e::t_dc5f031b1bc93a 1
+linked-tools/core/.agents/skills/meridian-analytics/SKILL.md
+  s_c586f16f73bc3e::t_4e45762b69e506 1
+linked-tools/core/.agents/skills/meridian-cicd/SKILL.md
+  s_c586f16f73bc3e::t_37ceb2ad3a2864 1
+linked-tools/core/.agents/skills/meridian-core/SKILL.md
+  s_c586f16f73bc3e::t_a249eda1ddfb11 1
+linked-tools/core/.agents/skills/meridian-data-fixer/SKILL.md
+  s_c586f16f73bc3e::t_49dc772fdd3c2e 1
+linked-tools/core/.agents/skills/meridian-environments/SKILL.md
+  s_c586f16f73bc3e::t_b7a3240e1a2523 1
+linked-tools/core/.agents/skills/meridian-executions/SKILL.md
+  s_c586f16f73bc3e::t_0b69d185e48b1b 1
+linked-tools/core/.agents/skills/meridian-quality-gates/SKILL.md
+  s_c586f16f73bc3e::t_baf4eab8638708 1
+linked-tools/core/.agents/skills/meridian-releases/SKILL.md
+  s_c586f16f73bc3e::t_12521ad4261b90 1
+linked-tools/core/.agents/skills/meridian-reporting/SKILL.md
+  s_c586f16f73bc3e::t_ef5f87d057e405 1
+linked-tools/core/.agents/skills/meridian-settings/SKILL.md
+  s_c586f16f73bc3e::t_1ecfa375b3c129 1
+linked-tools/core/scripts/meridian/meridian-mcp-server.mjs
+  s_c586f16f73bc3e::t_4a9e535cc254b6 1-26784
+scripts/meridian
+  s_c586f16f73bc3e::t_297da2ea9889ee 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "1ef9deb62e0285d978dc5d566104f931ccdaa70f",
+  "prompts": {},
+  "sessions": {
+    "s_c586f16f73bc3e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "058b44b2-75f5-49f1-a841-5d707157b4e6",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_d68799056db508": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "647c6832-5706-45ac-929e-c54d4f67a87f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
