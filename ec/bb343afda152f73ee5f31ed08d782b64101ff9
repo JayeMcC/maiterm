@@ -1,0 +1,20 @@
+docs/fork-todo.md
+  s_ad2f963c4afad3::t_8affc8ee582c83 1-13,22-40
+  s_ad2f963c4afad3::t_efc72eb777184c 14-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "ecbb343afda152f73ee5f31ed08d782b64101ff9",
+  "prompts": {},
+  "sessions": {
+    "s_ad2f963c4afad3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2969b19a-9b61-48b0-969b-22b3deccde8b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
