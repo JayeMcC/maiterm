@@ -3,7 +3,7 @@ title: maiLink Companion
 description: A phone companion that connects directly to maiTerm on your own computer — LAN-only, encrypted, no cloud — so you can watch and steer your agents from anywhere in the house.
 ---
 
-maiLink is a companion app for your phone that connects **directly to maiTerm running on your own computer**. When an agent needs you — a permission prompt, a question, or it just finished — maiLink rings your phone; you read enough context to decide, and answer from wherever you are. You can also open any reachable agent as a chat and drive it proactively, unprompted.
+maiLink is a companion app for your phone that connects **directly to maiTerm running on your own computer**. When an agent needs you — a permission prompt, a question, or it just finished — maiLink rings your phone; you read enough context to decide, and answer from wherever you are. You can also open any reachable agent as a chat and drive it proactively, unprompted. The ring fires only when an agent actually crosses into needing you, so merely opening the app or restoring a session never pushes a phantom "finished."
 
 maiLink is not a terminal. It renders a distilled chat transcript of an agent session and injects your replies back into it — the session itself never leaves your machine.
 
@@ -46,9 +46,9 @@ Every paired phone appears in the **Paired devices** list with its name and plat
   <figcaption>Answer an agent's question — or interrupt it — without walking to your desk.</figcaption>
 </figure>
 
-- **Watch live transcripts.** Each agent's conversation streams to the phone per turn — a distilled chat view, not a terminal scrape. The thread shows the agent's model and a live context-window gauge, and a compaction shows up as a divider in the thread so you know when the agent's context was condensed.
-- **Answer questions.** When an agent asks a structured question (`AskUserQuestion`), it arrives as an interactive card — single-select, multi-select, and "Other" free-text answers all work from the phone.
-- **Approve permissions.** Permission prompts arrive the same way; approve or deny without walking to your desk.
+- **Watch live transcripts.** Each agent's conversation streams to the phone per turn — a distilled chat view, not a terminal scrape — whether the agent runs locally, over SSH, or is a Codex session. The thread shows the agent's model and a live context-window gauge, and a compaction shows up as a divider in the thread so you know when the agent's context was condensed. Agent-to-agent [mesh](/features/mesh-workspace/) and [bridge](/features/agent-bridge/) chatter is filtered out so your thread stays a conversation, and a fan-out of subagents shows each one's task instead of a run of identical chips.
+- **Answer questions.** When an agent asks a structured question (`AskUserQuestion`), it arrives as an interactive card — single-select, multi-select, and "Other" free-text answers all work from the phone. The card's countdown reflects whether your Claude Code build actually expires an unanswered question — newer builds leave them open by default, so a live question never looks falsely expired.
+- **Approve permissions.** Permission prompts arrive the same way, and the card names exactly what you're approving — `Bash(rm -rf ./dist) — approve?`, not just the tool name — so you decide with the full picture. Codex prompts work too: maiLink sends the keystroke that matches Codex's own variable-length approval list, so your choice can't land on the wrong option.
 - **Reply and interrupt.** Send a free-form message to a running agent, or interrupt it mid-turn — just like pressing `Esc` at the terminal.
 - **Send images.** Snap a photo or pick a screenshot and send it to a local Claude Code session; it lands as an attachment the agent can view.
 - **Resume a stopped agent.** A tab whose agent has ended (network drop, quit) stays reachable, so you can auto-resume it from your phone.

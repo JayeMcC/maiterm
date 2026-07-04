@@ -32,7 +32,7 @@ use crate::state::app_state::AgentSessionState;
 use crate::state::workspace::TabType;
 use crate::state::{AgentRuntime, AppState, MailinkDevice};
 
-mod transcript;
+pub(crate) mod transcript;
 
 /// Default LAN port. The pairing QR carries the actual host:port, so this is just a
 /// sensible default until a `mailink_port` preference is wired (P2b).
@@ -85,6 +85,22 @@ const WS_COVERAGE_GRACE_MS: u64 = 3000;
 /// live now, OR one disconnected within the grace window (`last_drop_ms == 0` means never dropped).
 fn ws_covered(live: bool, last_drop_ms: u64, now_ms: u64) -> bool {
     live || (last_drop_ms != 0 && now_ms.saturating_sub(last_drop_ms) < WS_COVERAGE_GRACE_MS)
+}
+
+/// The per-tab attention signature the WS/doorbell tickers diff: chat state PLUS the open-prompt
+/// kind (the `prompt` field build_chats computes). Including the prompt kind means an
+/// AskUserQuestion that opens without moving `state` (no coincident permission notification)
+/// still registers as a transition — and a permission that resolves straight into a question
+/// re-fires rather than being masked by the unchanged state.
+fn attn_key(state: &str, prompt: Option<&str>) -> String {
+    format!("{state}|{}", prompt.unwrap_or(""))
+}
+
+/// Whether an `attn_key` means "the agent wants a human": an open permission/question prompt, or
+/// a finished turn waiting on input.
+fn is_attn(key: &str) -> bool {
+    let (state, prompt) = key.split_once('|').unwrap_or((key, ""));
+    state == "permission" || state == "idle" || prompt == "question"
 }
 
 /// `~/Library/Application Support/<slug>/mailink/` (or the OS equivalent).
@@ -466,7 +482,7 @@ async fn post_respond(
         return Err(StatusCode::NOT_FOUND);
     }
     let current = current_prompt(&s.app, &tab_id);
-    let (kind, cur_id) = match current {
+    let (kind, cur_id, runtime) = match current {
         Some(p) => p,
         None => return Ok(Json(json!({ "ok": false, "reason": "stale" }))),
     };
@@ -477,9 +493,10 @@ async fn post_respond(
     }
     let pty = pty_for_tab(&s.app, &tab_id).ok_or(StatusCode::CONFLICT)?;
     match kind {
-        // permission menu: a single numeric keystroke selects the option (no bracketed paste)
+        // permission menu: a single keystroke selects the option (no bracketed paste);
+        // the key is runtime-specific — see permission_key.
         "permission" => {
-            let key = permission_key(body.choice.as_deref().unwrap_or(""));
+            let key = permission_key(runtime, body.choice.as_deref().unwrap_or(""));
             crate::pty::write_pty(&s.app, &pty, key.as_bytes())
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         }
@@ -688,11 +705,11 @@ async fn ws_event_loop(mut socket: WebSocket, s: ApiState) {
     // initial snapshot: one chat_state per chat
     for c in build_chats(&s.app) {
         let tab = c["tabId"].as_str().unwrap_or_default().to_string();
-        let st = c["state"].as_str().unwrap_or_default().to_string();
+        let key = attn_key(c["state"].as_str().unwrap_or_default(), c["prompt"].as_str());
         if socket.send(Message::Text(chat_state_event(&c).to_string().into())).await.is_err() {
             return;
         }
-        last.insert(tab, st);
+        last.insert(tab, key);
     }
 
     let mut ticker = tokio::time::interval(std::time::Duration::from_millis(1500));
@@ -713,22 +730,27 @@ async fn ws_event_loop(mut socket: WebSocket, s: ApiState) {
                 for c in &chats {
                     let tab = c["tabId"].as_str().unwrap_or_default().to_string();
                     let st = c["state"].as_str().unwrap_or_default().to_string();
+                    let key = attn_key(&st, c["prompt"].as_str());
                     current_ids.insert(tab.clone());
-                    let prev = last.get(&tab);
+                    let prev = last.get(&tab).cloned();
                     if prev.is_none() {
                         roster_changed = true;
                     }
-                    if prev != Some(&st) {
+                    if prev.as_deref() != Some(key.as_str()) {
                         if socket.send(Message::Text(chat_state_event(c).to_string().into())).await.is_err() {
                             return;
                         }
-                        if st == "permission" || st == "idle" {
+                        // Attention only on an OBSERVED transition into an attention state. A tab
+                        // that merely APPEARS in the roster already idle (exposure toggled on, a
+                        // restore) must not announce "finished" — prev must exist and not already
+                        // have been attention-worthy.
+                        if prev.as_deref().is_some_and(|p| !is_attn(p)) && is_attn(&key) {
                             let ev = attention_event(&s.app, &tab, &st, c["title"].as_str().unwrap_or_default());
                             if socket.send(Message::Text(ev.to_string().into())).await.is_err() {
                                 return;
                             }
                         }
-                        last.insert(tab, st);
+                        last.insert(tab, key);
                     }
                 }
                 // drop tabs that disappeared from the designated set
@@ -802,16 +824,16 @@ async fn stream_new_messages(
     mtimes: &mut HashMap<String, u64>,
 ) -> Result<(), ()> {
     for t in designated_tabs(app) {
-        let Some(sid) = resolved_session_id_for_tab(app, &t.tab_id) else { continue };
+        let Some((rt, sid)) = resolved_session_for_tab(app, &t.tab_id) else { continue };
         // mtime gate: an unchanged transcript means no new turns, so skip the tail re-parse.
-        if let Some(mt) = transcript::session_jsonl_mtime(&sid) {
+        if let Some(mt) = transcript::mtime_for(rt, &sid) {
             if mtimes.get(&t.tab_id) == Some(&mt) {
                 continue;
             }
             mtimes.insert(t.tab_id.clone(), mt);
         }
         // Same call GET uses (limit 40, Marker) so streamed ids are byte-identical to the REST path.
-        let Some(turns) = transcript::turns_for_session(&sid, 40, transcript::ToolRender::Marker)
+        let Some(turns) = transcript::turns_for(rt, &sid, 40, transcript::ToolRender::Marker)
         else {
             continue;
         };
@@ -1113,28 +1135,62 @@ async fn drive_question_answers(
     Ok(())
 }
 
-/// The tab's currently-open prompt, as (kind, prompt_id). Mirrors what `build_chat_detail`
-/// synthesizes, so `/respond`'s stale-guard agrees with what the client was shown.
-fn current_prompt(app: &AppState, tab_id: &str) -> Option<(&'static str, String)> {
+/// The tab's currently-open prompt, as (kind, prompt_id, runtime). Mirrors what
+/// `build_chat_detail` synthesizes, so `/respond`'s stale-guard agrees with what the client was
+/// shown; the runtime picks the keystroke dialect for the answer injection.
+fn current_prompt(app: &AppState, tab_id: &str) -> Option<(&'static str, String, AgentRuntime)> {
     let states = session_states(app);
-    let (st, _rt, tool) = states.get(tab_id)?;
+    let (st, rt, tool) = states.get(tab_id)?;
     // AskUserQuestion first: it coincides with a permission_prompt state (see build_chat_detail),
     // but the open ask is the structured question — the stale-guard must agree with what was shown.
     if tool.as_deref() == Some("AskUserQuestion") {
-        Some(("question", format!("q_{tab_id}")))
+        Some(("question", question_prompt_id(app, tab_id), *rt))
     } else if map_state(*st) == "permission" {
-        Some(("permission", format!("p_{tab_id}")))
+        Some(("permission", format!("p_{tab_id}"), *rt))
     } else {
         None
     }
 }
 
-/// Map a permission `choice` to the TUI keystroke. Standard Claude menu is 1=yes,
-/// 2=yes+don't-ask, 3=no. A bare digit passes through; an unknown label defaults to deny.
-/// (Fragile by nature — depends on the runtime's current affordance; the robust path is a
-/// free-text /message. See docs §5.)
-fn permission_key(choice: &str) -> String {
+/// Per-ASK prompt id for an open AskUserQuestion: `q_<tab>_<asked_at>`. The capture timestamp
+/// makes successive asks on one tab distinct, so a late `/respond` against an EXPIRED ask
+/// (Claude auto-resolves after ~60s) can never pass the stale-guard and answer a newer
+/// question that opened meanwhile. Opaque to the app — it just echoes it.
+fn question_prompt_id(app: &AppState, tab_id: &str) -> String {
+    let at = pending_question_at_for_tab(app, tab_id).unwrap_or(0);
+    format!("q_{tab_id}_{at}")
+}
+
+/// Map a permission `choice` to the runtime's TUI keystroke. (Fragile by nature — depends on
+/// the runtime's current affordance; the robust path is a free-text /message. See docs §5.)
+///
+///   * Claude: a fixed numeric menu — 1=yes, 2=yes+don't-ask, 3=no. A bare digit passes
+///     through; an unknown label defaults to deny.
+///   * Codex: the approval overlay is a VARIABLE-length list (2–5 options: approve /
+///     approve-for-prefix / approve-for-session / network-amendment / deny / decline
+///     depending on the request), where digit keys select by POSITION — so Claude's "3"
+///     could land on a "Yes, and don't ask again…" row. Codex's default keymap letter
+///     shortcuts are stable regardless of option count (codex-rs tui/src/keymap.rs):
+///     y=approve, a=approve-for-session, n=decline ("No, and tell Codex what to do
+///     differently" — the analogue of Claude's option 3). Digits from the phone are
+///     translated to those letters, never passed through.
+///   * Gemini: no hook registrar yet, so a Gemini session can't reach the permission
+///     state — falls to the Claude arm as a placeholder.
+fn permission_key(runtime: AgentRuntime, choice: &str) -> String {
     let c = choice.trim();
+    if runtime == AgentRuntime::Codex {
+        let key = match c {
+            "1" => "y",
+            "2" => "a",
+            "3" => "n",
+            _ => match c.to_lowercase().as_str() {
+                "yes" | "approve" | "allow" => "y",
+                "yes, don't ask again" | "yes, and don't ask again" | "always" => "a",
+                _ => "n", // safe default: decline (returns control to the human)
+            },
+        };
+        return key.to_string();
+    }
     if c.len() == 1 && c.chars().next().is_some_and(|ch| ch.is_ascii_digit()) {
         return c.to_string();
     }
@@ -1293,35 +1349,41 @@ fn pty_for_tab(app: &AppState, tab_id: &str) -> Option<String> {
     app.tab_pty_map.read().get(tab_id).cloned()
 }
 
-/// The session id whose transcript we read for a tab. If a tab has more than one tracked session
-/// (e.g. after a resume minted a new id), prefer the most attention-worthy — consistent with how
-/// `session_states` picks the tab's displayed state.
-fn session_id_for_tab(app: &AppState, tab_id: &str) -> Option<String> {
+/// The (runtime, session id) whose transcript we read for a tab. If a tab has more than one
+/// tracked session (e.g. after a resume minted a new id), prefer the most attention-worthy —
+/// consistent with how `session_states` picks the tab's displayed state.
+fn live_session_for_tab(app: &AppState, tab_id: &str) -> Option<(AgentRuntime, String)> {
     let sessions = app.agent_sessions.read();
     sessions
         .iter()
         .filter(|(_, s)| s.tab_id == tab_id)
         .max_by_key(|(_, s)| rank(s.state))
-        .map(|(id, _)| id.clone())
+        .map(|(id, s)| (s.runtime, id.clone()))
 }
 
-/// The tab's persisted resume session id — the runtime's `*SessionId` trigger variable that the
-/// auto-resume command interpolates (`claude --resume %claudeSessionId`). Used to resolve a
-/// transcript for an agent that has auto-resumed but NOT yet re-run initSession: in that window
-/// `agent_sessions` has no live entry, so without this the phone falls back to a raw terminal
-/// scrape (wide, unwrapped) or empty, and the app shows stale/duplicated detail. Claude only.
-fn persisted_session_id_for_tab(app: &AppState, tab_id: &str) -> Option<String> {
+/// The tab's persisted resume session id — the runtime's `<runtime>SessionId` trigger variable
+/// that the auto-resume command interpolates (`claude --resume %claudeSessionId`,
+/// `codex resume %codexSessionId`). Used to resolve a transcript for an agent that has
+/// auto-resumed but NOT yet re-registered: in that window `agent_sessions` has no live entry, so
+/// without this the phone falls back to a raw terminal scrape (wide, unwrapped) or empty, and
+/// the app shows stale/duplicated detail.
+fn persisted_session_for_tab(app: &AppState, tab_id: &str) -> Option<(AgentRuntime, String)> {
     let data = app.app_data.read();
     for win in &data.windows {
         for ws in &win.workspaces {
             for pane in &ws.panes {
                 for tab in &pane.tabs {
                     if tab.id == tab_id {
+                        // None → Claude (matches designated_tabs' default): tabs persisted by
+                        // app versions predating Tab.runtime can still carry claudeSessionId.
+                        let rt = tab.runtime.unwrap_or_default();
+                        let var = crate::state::agent_runtime::descriptor(rt).session_id_var;
                         return tab
                             .trigger_variables
-                            .get("claudeSessionId")
+                            .get(var)
                             .cloned()
-                            .filter(|s| !s.is_empty());
+                            .filter(|s| !s.is_empty())
+                            .map(|sid| (rt, sid));
                     }
                 }
             }
@@ -1330,14 +1392,14 @@ fn persisted_session_id_for_tab(app: &AppState, tab_id: &str) -> Option<String> 
     None
 }
 
-/// Session id for reading a tab's transcript: the LIVE session if one is registered, else the
-/// PERSISTED resume id (covers the resume-before-initSession window after an app relaunch).
-fn resolved_session_id_for_tab(app: &AppState, tab_id: &str) -> Option<String> {
-    session_id_for_tab(app, tab_id).or_else(|| persisted_session_id_for_tab(app, tab_id))
+/// (runtime, session id) for reading a tab's transcript: the LIVE session if one is registered,
+/// else the PERSISTED resume id (covers the resume-before-initSession window after a relaunch).
+fn resolved_session_for_tab(app: &AppState, tab_id: &str) -> Option<(AgentRuntime, String)> {
+    live_session_for_tab(app, tab_id).or_else(|| persisted_session_for_tab(app, tab_id))
 }
 
 /// The captured AskUserQuestion `tool_input` for a tab (most attention-worthy session), if an
-/// elicitation is currently open. Mirrors how `session_id_for_tab` resolves the tab's session.
+/// elicitation is currently open. Mirrors how `live_session_for_tab` resolves the tab's session.
 fn pending_question_for_tab(app: &AppState, tab_id: &str) -> Option<Value> {
     let sessions = app.agent_sessions.read();
     sessions
@@ -1345,6 +1407,94 @@ fn pending_question_for_tab(app: &AppState, tab_id: &str) -> Option<Value> {
         .filter(|(_, s)| s.tab_id == tab_id)
         .max_by_key(|(_, s)| rank(s.state))
         .and_then(|(_, s)| s.pending_question.clone())
+}
+
+/// Unix-ms when the tab's open AskUserQuestion was captured. Display-only on the phone
+/// ("asked 2m ago"); expiry is derived from `question_expires_at`, never from this.
+fn pending_question_at_for_tab(app: &AppState, tab_id: &str) -> Option<i64> {
+    let sessions = app.agent_sessions.read();
+    sessions
+        .iter()
+        .filter(|(_, s)| s.tab_id == tab_id)
+        .max_by_key(|(_, s)| rank(s.state))
+        .and_then(|(_, s)| s.pending_question_at)
+}
+
+/// Millis until an unanswered AskUserQuestion auto-resolves, given the session's Claude Code
+/// version and the user's `askUserQuestionTimeout` setting — `None` when the ask waits
+/// indefinitely. The timer's history (verified against the CC changelog AND a sweep of every
+/// local ask's resolution latency by version, 2026-07-03):
+///   - < 2.1.198: no timer ever (asks observed answered hours later).
+///   - 2.1.198–2.1.199: hard-coded 60s auto-resolve, non-configurable.
+///   - ≥ 2.1.200: opt-in via `askUserQuestionTimeout` in ~/.claude/settings.json (USER scope
+///     only): "never" (default) | "60s" | "5m" | "10m". Parsed generically (`<n>s`/`<n>m`) so a
+///     future value like "2m" still works.
+/// Unknown version ⇒ None: a missing countdown on an ask that does expire degrades safely
+/// (stale-guard + composer fallback), while a false countdown expires a live question — the
+/// strictly worse failure.
+pub(crate) fn ask_deadline_ms(version: Option<&str>, setting: Option<&str>) -> Option<i64> {
+    let v = parse_cc_version(version?)?;
+    if v < (2, 1, 198) {
+        return None;
+    }
+    if v < (2, 1, 200) {
+        return Some(60_000);
+    }
+    let s = setting?.trim().to_ascii_lowercase();
+    let (num, unit) = s.split_at(s.len().checked_sub(1)?);
+    let n: i64 = num.parse().ok().filter(|n| *n > 0)?;
+    match unit {
+        "s" => Some(n * 1_000),
+        "m" => Some(n * 60_000),
+        _ => None, // "never" and anything unrecognized
+    }
+}
+
+/// "2.1.200" → (2, 1, 200). Tolerates a suffix on the patch part ("2.2.0-beta1").
+fn parse_cc_version(s: &str) -> Option<(u64, u64, u64)> {
+    let mut it = s.split('.').map(|p| {
+        p.chars()
+            .take_while(|c| c.is_ascii_digit())
+            .collect::<String>()
+            .parse::<u64>()
+            .ok()
+    });
+    Some((it.next()??, it.next()??, it.next()??))
+}
+
+/// The user's `askUserQuestionTimeout` from `~/.claude/settings.json` — the only scope Claude
+/// Code reads that key from (not project/local settings). `None` when unset or unreadable.
+fn ask_timeout_setting() -> Option<String> {
+    let path = dirs::home_dir()?.join(".claude").join("settings.json");
+    let v: Value = serde_json::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
+    v.get("askUserQuestionTimeout")
+        .and_then(|s| s.as_str())
+        .map(String::from)
+}
+
+/// Absolute unix-ms deadline of the tab's open AskUserQuestion, when one applies to this
+/// session's CC build + settings. `None` ⇒ the ask waits indefinitely (the phone must show no
+/// countdown). Claude-only: codex/gemini have no AskUserQuestion.
+fn question_expires_at(app: &AppState, tab_id: &str) -> Option<i64> {
+    let at = pending_question_at_for_tab(app, tab_id)?;
+    let (rt, sid) = resolved_session_for_tab(app, tab_id)?;
+    if !matches!(rt, AgentRuntime::Claude) {
+        return None;
+    }
+    let ver = transcript::claude_session_version(&sid);
+    let deadline = ask_deadline_ms(ver.as_deref(), ask_timeout_setting().as_deref())?;
+    Some(at + deadline)
+}
+
+/// The compact argument label of the tab's current tool (e.g. the Bash command awaiting
+/// approval), resolved like `pending_question_for_tab`. Feeds the permission card text.
+fn tool_detail_for_tab(app: &AppState, tab_id: &str) -> Option<String> {
+    let sessions = app.agent_sessions.read();
+    sessions
+        .iter()
+        .filter(|(_, s)| s.tab_id == tab_id)
+        .max_by_key(|(_, s)| rank(s.state))
+        .and_then(|(_, s)| s.tool_detail.clone())
 }
 
 /// Map Claude's AskUserQuestion `tool_input` into the mailink-protocol §12.1 AskQuestion[] shape
@@ -1365,10 +1515,17 @@ fn map_ask_questions(tool_input: &Value) -> Option<Value> {
                 .map(|opts| {
                     opts.iter()
                         .map(|o| {
-                            json!({
+                            let mut opt = json!({
                                 "label": o.get("label").and_then(|v| v.as_str()).unwrap_or(""),
                                 "description": o.get("description").and_then(|v| v.as_str()),
-                            })
+                            });
+                            // Newer Claude Code asks attach a per-option `preview` (ASCII
+                            // mockup / code snippet). Additive passthrough — the app can
+                            // render it in the card whenever it wants to.
+                            if let Some(p) = o.get("preview").and_then(|v| v.as_str()) {
+                                opt["preview"] = json!(p);
+                            }
+                            opt
                         })
                         .collect()
                 })
@@ -1385,29 +1542,31 @@ fn map_ask_questions(tool_input: &Value) -> Option<Value> {
     Some(json!(out))
 }
 
-/// Build the chat transcript: per-turn source markdown from the Claude session JSONL when we can
-/// find it, otherwise the old single-system-turn terminal scrape (other runtimes / robustness).
-fn build_transcript(app: &AppState, tab_id: &str, runtime: &str, now: u64) -> Vec<Value> {
-    if runtime == "claude" {
-        // Resolve via the LIVE session, or (post-relaunch, pre-initSession) the persisted resume
-        // id — so a dormant/resuming agent still shows its real distilled conversation, keyed to
-        // THIS tab, instead of a raw terminal scrape or empty (which the app rendered as
-        // stale/duplicated "all agents look the same" detail).
-        if let Some(sid) = resolved_session_id_for_tab(app, tab_id) {
-            if let Some(turns) =
-                transcript::turns_for_session(&sid, 40, transcript::ToolRender::Marker)
-            {
-                if !turns.is_empty() {
-                    return turns;
-                }
+/// Build the chat transcript: per-turn source markdown from the session's transcript file
+/// (Claude JSONL / Codex rollout) when we can find it, otherwise a single-system-turn scrape of
+/// the tab's own live terminal (SSH tabs — whose transcripts live on the remote host — pruned
+/// local sessions, Gemini, plain shells).
+fn build_transcript(app: &AppState, tab_id: &str, now: u64) -> Vec<Value> {
+    // Resolve via the LIVE session, or (post-relaunch, pre-initSession) the persisted resume
+    // id — so a dormant/resuming agent still shows its real distilled conversation, keyed to
+    // THIS tab, instead of a raw terminal scrape or empty (which the app rendered as
+    // stale/duplicated "all agents look the same" detail).
+    if let Some((rt, sid)) = resolved_session_for_tab(app, tab_id) {
+        if let Some(turns) = transcript::turns_for(rt, &sid, 40, transcript::ToolRender::Marker) {
+            if !turns.is_empty() {
+                return turns;
             }
         }
-        // No JSONL resolvable → empty, NOT the raw terminal scrape: the scrape is wide,
-        // unwrapped, and easily misread as another agent's content on a phone.
-        return Vec::new();
     }
-    // Non-Claude runtimes (no JSONL distillation): distilled recent terminal text as a single
-    // system turn. Uses the LIVE tab→pty map, not the persisted tab.pty_id which can be stale.
+    // No transcript file resolvable — Claude included. This is the NORMAL case for every SSH
+    // tab (the session runs on the remote host, so its JSONL lives in the REMOTE
+    // ~/.claude/projects — most of Darryl's fleet) and for old local sessions Claude Code has
+    // pruned (cleanupPeriodDays). Field bug 2026-07-03: Claude used to return empty here "to
+    // avoid a scrape being misread", which blanked MOST of the inbox; the scrape is this tab's
+    // own live PTY content (keyed via the LIVE tab→pty map, not the stale persisted tab.pty_id),
+    // so showing it as a single system turn is strictly better than nothing. Dormant tabs have
+    // no live PTY and still come back empty — the app renders its "no messages captured yet"
+    // empty-state for those.
     let recent = pty_for_tab(app, tab_id)
         .and_then(|p| crate::commands::terminal::recent_text(app, &p, 40).ok())
         .unwrap_or_default();
@@ -1454,6 +1613,22 @@ fn context_limit_for(model_id: &str) -> u64 {
     }
 }
 
+/// Normalize a model id to a friendly display string, per runtime. Claude ids go through
+/// `display_model` ("claude-opus-4-8[1m]" → "Opus 4.8"); Codex ids just get the family
+/// capitalized ("gpt-5.5" → "GPT-5.5", "gpt-5-codex" → "GPT-5-codex"); anything else passes
+/// through as-is.
+fn display_model_for(rt: AgentRuntime, model_id: &str) -> String {
+    match rt {
+        AgentRuntime::Claude => display_model(model_id),
+        AgentRuntime::Codex | AgentRuntime::Gemini | AgentRuntime::Cursor => {
+            match model_id.strip_prefix("gpt") {
+                Some(rest) => format!("GPT{rest}"),
+                None => model_id.to_string(),
+            }
+        }
+    }
+}
+
 /// Normalize a Claude model id to a friendly display string: "claude-opus-4-8[1m]" → "Opus 4.8".
 /// Strips the provider prefix and 1M marker, title-cases the family, and dot-joins the version.
 fn display_model(model_id: &str) -> String {
@@ -1480,15 +1655,18 @@ fn display_model(model_id: &str) -> String {
 }
 
 /// Per-agent telemetry (mailink-protocol §12.1 `meta`): model display name + context gauge, read
-/// from the Claude transcript JSONL (the SessionStart hook's model is often null). Live/persisted
-/// session id so it also resolves during the resume-before-init window. `effort` is intentionally
-/// omitted — it's only in Claude Code's statusLine payload, which maiTerm doesn't receive. None for
-/// non-Claude tabs (no Claude JSONL) or before the first assistant turn.
+/// from the session's transcript file — Claude JSONL `message.usage` (the SessionStart hook's
+/// model is often null), or a Codex rollout's `token_count`/`turn_context` (which state the
+/// window and model directly). Live/persisted session id so it also resolves during the
+/// resume-before-init window. `effort` is intentionally omitted — it's only in Claude Code's
+/// statusLine payload, which maiTerm doesn't receive. None for Gemini tabs (no transcript
+/// source) or before the first assistant turn.
 fn build_meta(app: &AppState, tab_id: &str) -> Option<Value> {
-    let sid = resolved_session_id_for_tab(app, tab_id)?;
-    let meta = transcript::session_meta(&sid)?;
+    let (rt, sid) = resolved_session_for_tab(app, tab_id)?;
+    let meta = transcript::meta_for(rt, &sid)?;
     let model_id = meta.model_id.as_deref().unwrap_or("");
-    let limit = context_limit_for(model_id);
+    // Codex rollouts carry the window; Claude's is derived from the model id.
+    let limit = meta.context_window.unwrap_or_else(|| context_limit_for(model_id));
     let pct = ((meta.context_tokens as f64 / limit as f64) * 100.0)
         .round()
         .clamp(0.0, 100.0) as u64;
@@ -1498,7 +1676,7 @@ fn build_meta(app: &AppState, tab_id: &str) -> Option<Value> {
         "contextPct": pct,
     });
     if !model_id.is_empty() {
-        m["model"] = json!(display_model(model_id));
+        m["model"] = json!(display_model_for(rt, model_id));
     }
     Some(m)
 }
@@ -1531,8 +1709,8 @@ fn scrollback_times(app: &AppState) -> HashMap<String, u64> {
 /// on a pure resume. (mtime is still the right change-gate for WS streaming, where "anything
 /// appended → re-scan" is the intended semantics — see stream_new_messages.)
 fn last_activity_ts(app: &AppState, tab_id: &str, scrollback: &HashMap<String, u64>, now: u64) -> u64 {
-    resolved_session_id_for_tab(app, tab_id)
-        .and_then(|sid| transcript::session_last_turn_ts(&sid))
+    resolved_session_for_tab(app, tab_id)
+        .and_then(|(rt, sid)| transcript::last_turn_ts_for(rt, &sid))
         .or_else(|| scrollback.get(tab_id).copied())
         .unwrap_or(now)
 }
@@ -1549,12 +1727,24 @@ fn build_chats(app: &AppState) -> Vec<Value> {
                 None => ("dormant", runtime_key(t.runtime), None),
             };
             let ask_open = tool.as_deref() == Some("AskUserQuestion");
+            // The kind of prompt currently open, if any. An open AskUserQuestion outranks the
+            // (usually coincident) permission state — mirrors build_chat_detail/attention_event.
+            let prompt_kind = if ask_open {
+                Some("question")
+            } else if state == "permission" {
+                Some("permission")
+            } else {
+                None
+            };
             let mut chat = json!({
                 "tabId": t.tab_id,
                 "title": t.title,
                 "workspace": t.workspace,
                 "runtime": runtime,
                 "state": state,
+                // Additive field: lets clients (and our own tickers) see prompt-kind changes
+                // that don't move `state` — e.g. an AskUserQuestion opening at state=="active".
+                "prompt": prompt_kind,
                 // ask_open guards the case where a build leaves an open AskUserQuestion at
                 // state=="active" — it still needs to surface as unread in the inbox.
                 "unread": ask_open || state == "permission" || state == "idle",
@@ -1582,7 +1772,7 @@ fn build_chat_detail(app: &AppState, tab_id: &str) -> Option<Value> {
     // Per-turn source markdown from the session transcript (Claude) so the phone's GFM renderer
     // lights up; falls back to the distilled terminal scrape for other runtimes / when no
     // transcript is found. See mailink/transcript.rs.
-    let transcript = build_transcript(app, tab_id, runtime, now);
+    let transcript = build_transcript(app, tab_id, now);
 
     let mut detail = json!({
         "tabId": meta.tab_id,
@@ -1590,7 +1780,11 @@ fn build_chat_detail(app: &AppState, tab_id: &str) -> Option<Value> {
         "workspace": meta.workspace,
         "runtime": runtime,
         "state": state,
-        "unread": state == "permission" || state == "idle",
+        // Same rule as build_chats: an open AskUserQuestion is unread even if a build leaves
+        // the session state at "active".
+        "unread": tool.as_deref() == Some("AskUserQuestion")
+            || state == "permission"
+            || state == "idle",
         "lastActivityTs": last_activity,
         "transcript": transcript,
     });
@@ -1616,7 +1810,8 @@ fn build_chat_detail(app: &AppState, tab_id: &str) -> Option<Value> {
     // validation (docs §12.3).
     if tool.as_deref() == Some("AskUserQuestion") {
         let mut pp = json!({
-            "prompt_id": format!("q_{tab_id}"),
+            // Per-ask id (q_<tab>_<asked_at>) — must agree with current_prompt's stale-guard.
+            "prompt_id": question_prompt_id(app, tab_id),
             "thread_id": tab_id,
             "kind": "question",
             "respondable": true,
@@ -1625,14 +1820,28 @@ fn build_chat_detail(app: &AppState, tab_id: &str) -> Option<Value> {
             Some(qs) => { pp["questions"] = qs; }
             None => { pp["text"] = json!("The agent is asking a question — see the terminal for details."); }
         }
+        // asked_at is display-only on the phone ("asked 2m ago"). expires_at is AUTHORITATIVE
+        // for expiry: present only when this session's CC build + settings actually auto-resolve
+        // the ask (see ask_deadline_ms); absent ⇒ the app shows NO countdown and the question is
+        // answerable until the prompt clears. The real deadline is sent un-buffered — the app
+        // closes the tappable window at expires_at − 5s (keystroke-inject headroom) itself.
+        if let Some(at) = pending_question_at_for_tab(app, tab_id) {
+            pp["asked_at"] = json!(at);
+            if let Some(exp) = question_expires_at(app, tab_id) {
+                pp["expires_at"] = json!(exp);
+            }
+        }
         detail["pendingPrompt"] = pp;
     } else if state == "permission" {
         // A real permission prompt (some other tool, e.g. Bash). Synthesized: the hook carries no
-        // structured options; that numeric-keystroke respond path is proven, so respondable now.
-        let text = tool
-            .as_deref()
-            .map(|t| format!("{t} — approve?"))
-            .unwrap_or_else(|| "Permission requested".to_string());
+        // structured options; that keystroke respond path is proven, so respondable now. The
+        // compact tool_detail (captured from the PreToolUse / Codex PermissionRequest tool_input)
+        // shows WHAT is being approved, e.g. "Bash(rm -rf ./dist) — approve?".
+        let text = match (tool.as_deref(), tool_detail_for_tab(app, tab_id).as_deref()) {
+            (Some(t), Some(d)) => format!("{t}({d}) — approve?"),
+            (Some(t), None) => format!("{t} — approve?"),
+            _ => "Permission requested".to_string(),
+        };
         detail["pendingPrompt"] = json!({
             "prompt_id": format!("p_{tab_id}"),
             "thread_id": tab_id,
@@ -1707,8 +1916,10 @@ const DEFAULT_MAILINK_RELAY_URL: &str = "https://updates.maiterm.dev/push";
 /// §6. No-op while no such device exists.
 async fn doorbell_loop(app: Arc<AppState>) {
     let client = reqwest::Client::new();
+    // tab_id → last observed attn_key. Rings only on an OBSERVED transition into attention:
+    // the first sighting of a tab (loop start, roster add) just baselines, so an
+    // already-idle tab that gets exposed doesn't push a phantom "finished".
     let mut last: HashMap<String, String> = HashMap::new();
-    let mut primed = false;
     let mut ticker = tokio::time::interval(std::time::Duration::from_millis(2000));
     loop {
         ticker.tick().await;
@@ -1742,23 +1953,24 @@ async fn doorbell_loop(app: Arc<AppState>) {
         let mut current = std::collections::HashSet::new();
         for c in &chats {
             let tab = c["tabId"].as_str().unwrap_or_default().to_string();
-            let st = c["state"].as_str().unwrap_or_default().to_string();
+            let key = attn_key(
+                c["state"].as_str().unwrap_or_default(),
+                c["prompt"].as_str(),
+            );
             let title = c["title"].as_str().unwrap_or_default().to_string();
             current.insert(tab.clone());
-            let prev = last.get(&tab).cloned();
-            last.insert(tab.clone(), st.clone());
+            let prev = last.insert(tab.clone(), key.clone());
 
-            // Fire only on a fresh transition into attention, after priming, while uncovered.
-            if !primed || covered {
+            // Fire only on an observed transition into attention, while uncovered. First
+            // sighting (prev None) baselines silently — see `last` above.
+            if covered {
                 continue;
             }
-            let is_attn = st == "permission" || st == "idle";
-            let was_attn = matches!(prev.as_deref(), Some("permission") | Some("idle"));
-            if is_attn && !was_attn {
+            if prev.as_deref().is_some_and(|p| !is_attn(p)) && is_attn(&key) {
                 // Distinguish an open AskUserQuestion (state coincides with "permission") from a
                 // real approval prompt so the push line/route matches what the card will show.
                 let kind = match current_prompt(&app, &tab) {
-                    Some(("question", _)) => "question",
+                    Some(("question", _, _)) => "question",
                     Some(_) => "permission",
                     None => "idle_done",
                 };
@@ -1766,7 +1978,6 @@ async fn doorbell_loop(app: Arc<AppState>) {
             }
         }
         last.retain(|k, _| current.contains(k));
-        primed = true;
     }
 }
 
@@ -1903,6 +2114,69 @@ mod tests {
         assert_eq!(context_limit_for("claude-opus-4-8-1m"), 1_000_000);
         assert_eq!(context_limit_for("claude-opus-4-8"), 1_000_000);
         assert_eq!(context_limit_for("claude-sonnet-4-5"), 200_000);
+    }
+
+    #[test]
+    fn attn_key_transitions_cover_question_without_state_change() {
+        // Plain states.
+        assert!(!is_attn(&attn_key("active", None)));
+        assert!(!is_attn(&attn_key("dormant", None)));
+        assert!(is_attn(&attn_key("permission", Some("permission"))));
+        assert!(is_attn(&attn_key("idle", None)));
+        // The case the state-only diff missed: an AskUserQuestion opening while the session
+        // state stays "active" (no coincident permission notification).
+        assert!(is_attn(&attn_key("active", Some("question"))));
+        // And the key CHANGES for that transition, so the tickers see it.
+        assert_ne!(attn_key("active", None), attn_key("active", Some("question")));
+        // permission → permission+question changes the key but stays attention-worthy
+        // (no re-ring for the same underlying ask).
+        assert_ne!(
+            attn_key("permission", Some("permission")),
+            attn_key("permission", Some("question"))
+        );
+        assert!(is_attn(&attn_key("permission", Some("question"))));
+    }
+
+    #[test]
+    fn permission_key_is_runtime_specific() {
+        use AgentRuntime::*;
+        // Claude: fixed numeric menu; bare digits pass through; unknown label → deny (3).
+        assert_eq!(permission_key(Claude, "Yes"), "1");
+        assert_eq!(permission_key(Claude, "yes, don't ask again"), "2");
+        assert_eq!(permission_key(Claude, "No"), "3");
+        assert_eq!(permission_key(Claude, "2"), "2");
+        assert_eq!(permission_key(Claude, "whatever"), "3");
+        // Codex: stable letter shortcuts (y/a/n) — digits are POSITIONAL in codex's
+        // variable-length overlay and must never pass through raw.
+        assert_eq!(permission_key(Codex, "Yes"), "y");
+        assert_eq!(permission_key(Codex, "approve"), "y");
+        assert_eq!(permission_key(Codex, "Yes, don't ask again"), "a");
+        assert_eq!(permission_key(Codex, "always"), "a");
+        assert_eq!(permission_key(Codex, "No"), "n");
+        assert_eq!(permission_key(Codex, "1"), "y");
+        assert_eq!(permission_key(Codex, "2"), "a");
+        assert_eq!(permission_key(Codex, "3"), "n");
+        assert_eq!(permission_key(Codex, "5"), "n"); // unknown digit → safe decline
+        assert_eq!(permission_key(Codex, "whatever"), "n");
+    }
+
+    #[test]
+    fn ask_deadline_is_version_and_setting_gated() {
+        // The 60s timer existed ONLY in CC 2.1.198–2.1.199.
+        assert_eq!(ask_deadline_ms(Some("2.1.197"), None), None);
+        assert_eq!(ask_deadline_ms(Some("2.1.198"), None), Some(60_000));
+        assert_eq!(ask_deadline_ms(Some("2.1.199"), Some("never")), Some(60_000)); // setting didn't exist yet
+        // ≥ 2.1.200: opt-in via askUserQuestionTimeout; default (unset/"never") = no deadline.
+        assert_eq!(ask_deadline_ms(Some("2.1.200"), None), None);
+        assert_eq!(ask_deadline_ms(Some("2.1.200"), Some("never")), None);
+        assert_eq!(ask_deadline_ms(Some("2.1.200"), Some("60s")), Some(60_000));
+        assert_eq!(ask_deadline_ms(Some("2.1.201"), Some("5m")), Some(300_000));
+        assert_eq!(ask_deadline_ms(Some("2.2.0"), Some("10m")), Some(600_000));
+        assert_eq!(ask_deadline_ms(Some("2.2.0-beta1"), Some("garbage")), None);
+        // Unknown version ⇒ no deadline (a false countdown expires a live question — worse
+        // than a missing one, which degrades to stale-guard + composer fallback).
+        assert_eq!(ask_deadline_ms(None, Some("60s")), None);
+        assert_eq!(ask_deadline_ms(Some("weird"), Some("60s")), None);
     }
 
     #[test]

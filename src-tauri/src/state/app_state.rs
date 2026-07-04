@@ -79,10 +79,19 @@ pub struct AgentSessionInfo {
     pub state: AgentSessionState,
     /// Current tool being executed (set by PreToolUse, cleared by PostToolUse/Stop)
     pub tool_name: Option<String>,
+    /// Compact primary-argument label for the current tool (e.g. `rm -rf ./dist` for Bash),
+    /// extracted from the PreToolUse `tool_input` (or a Codex PermissionRequest, which carries
+    /// tool_name/tool_input directly). Lets the maiLink permission card show WHAT is being
+    /// approved, not just which tool. Cleared with tool_name.
+    pub tool_detail: Option<String>,
     /// Structured content of an open AskUserQuestion: the raw `tool_input` captured from the
     /// PreToolUse hook (its `questions[]` drive the maiLink structured PendingPrompt). Set when
     /// AskUserQuestion starts, cleared when it completes (PostToolUse) or the turn stops.
     pub pending_question: Option<serde_json::Value>,
+    /// Unix-ms when `pending_question` was captured. Claude Code auto-resolves an unanswered
+    /// AskUserQuestion after ~60s ("user may be away"), so the phone needs the ask's age to
+    /// show/expire its answer card. Set/cleared with pending_question.
+    pub pending_question_at: Option<i64>,
     /// Model used in this session (set by SessionStart)
     pub model: Option<String>,
     /// MCP connection ID that called initSession for this session.

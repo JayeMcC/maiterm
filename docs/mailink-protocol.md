@@ -349,6 +349,10 @@ interface ChatDetail extends Chat {
     kind: 'permission' | 'question';
     text: string;
     options?: string[];     // e.g. ["Yes","Yes, don't ask again","No"]; absent ⇒ free-text only
+    asked_at?: number;      // question only: unix ms the ask opened — DISPLAY-ONLY ("asked 2m ago")
+    expires_at?: number;    // question only, AUTHORITATIVE: unix ms the ask will auto-resolve.
+                            // Sent only when the CC build+settings actually expire it (§11);
+                            // absent ⇒ no countdown, answerable until the prompt clears.
   };
 }
 // msg_id identity guarantee: the id POST /message returns IS the id later emitted on the
@@ -369,6 +373,18 @@ shortcut; this guarantees it can't corrupt a TUI mid-prompt.
 - **Free-text message / proactive command** (`POST .../message {text, submit:true}`):
   bracketed-paste `text`, settle, send `\r`. If the tab is busy/dormant it **queues** and
   flushes on the next `Stop`/re-init (same as bridge messages). Returns `queued|delivered`.
+- **Image attachment** (`POST .../message {text?, images:[{data,ext}]}`): the desktop writes each
+  image to a temp file named **`maiterm-mailink-<uuid>.<ext>`** (`mod.rs:974`, via `temp_dir()`)
+  and injects the file path(s) followed by `text` on the same rails — the "raw-path inject". Claude
+  Code does **not** reliably convert a programmatically-typed path into a native `[Image #N]` chip
+  (that's a paste/drag heuristic in the interactive composer), so the path usually stays literal in
+  the persisted user turn as `<path…> <caption>`. **The `maiterm-mailink-` filename stem is a shared
+  cross-repo contract**: the desktop distiller strips a leading run of these paths from the echoed
+  user turn (`transcript.rs` `strip_leading_image_refs`, keyed on that marker) so the persisted echo
+  is the bare caption, and the app's `captionFromEcho` strips the same marker for its optimistic
+  live bubble — so echo == caption on both the live send and thread re-open. A leading path is only
+  stripped if it carries the marker, so ordinary messages that mention a path are untouched. **If the
+  temp-file stem ever changes, both sides must change together.**
 - **Answer a permission/question** (`POST .../respond {choice, prompt_id}`): Claude's TUI
   answers permission with a numeric/selection keystroke (e.g. `1`=yes, `2`=yes+don't-ask,
   `3`/Esc=no). The desktop maps `choice` → the correct keystroke for that runtime and injects
@@ -630,6 +646,57 @@ so the contract is exercised, not just asserted.
   divider. Same commit drops the injected post-compaction summary (a `user` entry with
   `isCompactSummary:true`, ~12k chars) that `is_system_noise` didn't catch and was leaking as a giant fake
   user message. Adds `fmt_tokens_k` (776k / 1.2M rounding).
+- **Codex + agent-prompts pass — DONE** (2026-07-02, four commits):
+  - **Runtime-aware `/respond` keystrokes.** Codex's approval overlay is a *variable-length*
+    list (2–5 options) where digits select by POSITION — Claude's fixed `1/2/3` could land
+    "No" on a "Yes, and don't ask again…" row. Codex answers now inject its stable default
+    letter shortcuts (`y`=approve, `a`=approve-for-session, `n`=decline, per codex-rs
+    `tui/src/keymap.rs`); digits from the phone are translated, never passed through. Claude
+    keeps the numeric menu.
+  - **Codex per-turn transcripts + meta.** `~/.codex/sessions/**/rollout-*-<sid>.jsonl`
+    (append-only across resumes; located newest-first, path-cached) distills
+    `response_item`s: assistant `output_text`→`agent`, genuine user `input_text`→`user`
+    (`<tagged>` scaffolding dropped), `function_call`/`custom_tool_call`→`tool` chips
+    (`msg_id` = `cx<line>[:<block>]`, stable for stream/GET dedup). `meta` reads the last
+    `token_count` — `last_token_usage.total_tokens` over the stated `model_context_window`
+    (exactly codex-rs's own gauge; the `total_token_usage` running sum exceeds the window on
+    long sessions) — and `turn_context.model`. Session resolution is runtime-aware
+    (`codexSessionId` covers the resume-before-init window), so WS streaming, detail, gauge,
+    and recency all work for Codex like Claude. Gemini still falls back to the scrape.
+  - **Permission cards show WHAT is being approved.** Sessions capture a compact
+    `tool_detail` from the PreToolUse `tool_input` (refreshed from Codex's
+    `PermissionRequest`, which carries `tool_name`/`tool_input` on the event) → synthesized
+    text is now e.g. `Bash(rm -rf ./dist) — approve?`.
+  - **Attention/doorbell transition semantics.** Both tickers diff `state|prompt-kind` (chats
+    gain an additive `prompt: "question"|"permission"|null` field) and fire only when a
+    *previously-observed* tab transitions INTO attention — a tab merely appearing in the
+    roster already idle (exposure toggled, restore) no longer pushes a phantom "finished",
+    and an AskUserQuestion opening without a coincident permission notification now rings.
+    Chat detail's `unread` counts an open ask like the inbox does.
+  - **Bridge/mesh envelope filtering.** `⟦AGENT-BRIDGE⟧`/`⟦MESH⟧`/`⟦TOPIC COMPLETE⟧`
+    injections are delivered as real user prompts and were rendering as giant fake "user"
+    messages flooding every mesh participant's thread — now dropped by the transcript noise
+    filter (and excluded from last-turn recency).
+  - **The 60s ask deadline (field bug, 2026-07-02; expiry contract revised 2026-07-03).**
+    Claude Code fires NO notification hook for an AskUserQuestion (anthropics/claude-code#13830)
+    — state stays `active`. The prompt-kind transition above closes that signaling gap;
+    `pendingPrompt` gains additive **`asked_at`** (unix ms, stamped at PreToolUse),
+    `questions[].options[]` pass through Claude's per-option `preview`, and the transcript
+    chip reads `AskUserQuestion(<first question>)` so an expired ask still shows what was
+    asked. Late answers fall back to a free-text `/message`.
+    **Expiry**: the 60s auto-resolve existed ONLY in CC 2.1.198–2.1.199 (hard-coded); 2.1.200
+    made it **opt-in** via `askUserQuestionTimeout` in `~/.claude/settings.json` (user scope
+    only: `"never"` default | `"60s"` | `"5m"` | `"10m"`; multiple-choice questions only —
+    permission prompts never auto-resolve). So `pendingPrompt` carries an additive
+    **`expires_at`** (absolute unix ms of the actual auto-resolve moment, un-buffered) and it
+    is **authoritative**: the desktop emits it only when the session's CC build + settings
+    actually expire the ask (version gate read from the session JSONL's per-entry `version`
+    field + the settings key — `ask_deadline_ms` in `mailink/mod.rs`). **Absent ⇒ the app
+    shows NO countdown** and the question stays answerable until the prompt clears. The app
+    closes its tappable window at `expires_at − 5000` (keystroke-inject headroom) and then
+    routes to the composer; `asked_at` is display-only ("asked 2m ago") — the app derives no
+    deadline from it. Unknown version ⇒ no `expires_at` (a false countdown expires a live
+    question; a missing one degrades safely to stale-guard + composer fallback).
 - **Two findings (notes, not blockers):** (1) `/message` bracketed-paste is correct for an
   agent TUI but leaks into a bare shell — fine for the intended use; (2) the *first*
   permission (for `initSession` itself) can't be tab-attributed since the session→tab mapping
@@ -807,12 +874,15 @@ export interface WsAttentionEvent {
   `RespondRequest.answers[]` aligned to `questions[]`, each `{selected: string[], other?: string}`.
   No rename needed app-side — §12.1 is canonical. (`/respond` write path for questions is the
   remaining desktop item: translate `answers[]` → the TUI selection, then flip `respondable:true`.)
-- **meta (per-agent telemetry) — IMPLEMENTED (Claude):** `model` + `contextPct`/`contextUsed`/
-  `contextLimit` are read from the Claude session transcript JSONL (`mailink/transcript.rs`
-  `session_meta`) — the last line carrying `message.usage`, summed
-  `input_tokens + cache_read_input_tokens + cache_creation_input_tokens`, over a model-dependent
-  limit (1,000,000 for `[1m]`/`-1m` model ids, else 200,000). `model` is normalized from the JSONL
-  `message.model` id (the SessionStart hook's model is usually null). Emitted on the `/chats`
-  object, in `chat_detail`, and on the WS `chat_state` event (so the gauge steps live per turn).
-  `effort` is omitted (only in Claude Code's statusLine payload, not received). Non-Claude tabs get
-  no `meta` (no Claude JSONL) — Codex/Gemini token sourcing is a later add.
+- **meta (per-agent telemetry) — IMPLEMENTED (Claude + Codex):** `model` + `contextPct`/
+  `contextUsed`/`contextLimit`, read from the session's transcript file
+  (`mailink/transcript.rs`, dispatched by runtime):
+  - *Claude*: the last JSONL line carrying `message.usage`, summed
+    `input_tokens + cache_read_input_tokens + cache_creation_input_tokens`, over a
+    model-dependent limit (1,000,000 for `[1m]`/`-1m` model ids, else 200,000). `model`
+    normalized from `message.model` ("claude-opus-4-8" → "Opus 4.8").
+  - *Codex*: the rollout's last `token_count` — `last_token_usage.total_tokens` over the
+    stated `model_context_window` — and `turn_context.model` ("gpt-5.5" → "GPT-5.5").
+  Emitted on the `/chats` object, in `chat_detail`, and on the WS `chat_state` event (so the
+  gauge steps live per turn). `effort` is omitted (only in Claude Code's statusLine payload,
+  not received). Gemini tabs get no `meta` (no transcript source yet).
