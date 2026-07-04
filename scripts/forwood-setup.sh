@@ -91,6 +91,8 @@ installed_version() {
   defaults read "${APP_PATH}/Contents/Info" CFBundleShortVersionString 2>/dev/null || true
 }
 if [ "$BUILD_FROM_SOURCE" = "1" ]; then
+  xcode-select -p >/dev/null 2>&1 || die "--build needs the Xcode Command Line Tools: xcode-select --install"
+  command -v cargo >/dev/null 2>&1 || die "--build needs Rust: brew install rustup && rustup-init -y, then re-run (or drop --build to install the release DMG)"
   ( cd "$REPO_ROOT" && run "npm ci (app)" npm ci )
   # install-local.sh builds, copies to /Applications, and re-signs (mandatory —
   # a plain copy of a local build breaks the signature → white screen).
