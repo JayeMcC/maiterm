@@ -774,9 +774,20 @@ export interface Turn {
   thread_id: string;
   author?: Participant;         // absent => the human/user
   role: 'agent' | 'user' | 'tool' | 'system';
-  text: string;                 // source markdown
+  kind?: 'terminal_snapshot';   // present ONLY on the raw-scrape fallback (see below); absent => distilled turn
+  text: string;                 // source markdown (for kind:"terminal_snapshot", raw newline-delimited grid text, NOT markdown)
   ts: number;
 }
+
+// kind:"terminal_snapshot" — emitted for Claude/SSH tabs with no locatable LOCAL JSONL (the session
+// runs on a remote host, or the local session was pruned). It is a single system turn holding a raw
+// scrape of the tab's live terminal grid (last ~40 rows, newline-delimited, may contain TUI chrome),
+// with a STABLE msg_id (`ctx_<tabId>`) that is re-scraped on every GET. Render it preformatted
+// (white-space: pre-wrap; overflow-wrap: break-word), badged as a live terminal snapshot, and treat
+// it as ONE replaceable block — not appended history. Older clients can sniff the `ctx_` msg_id
+// prefix for the same signal. Dormant tabs (no live PTY) omit it entirely → empty transcript →
+// "no messages captured yet". True per-turn history for SSH tabs is a future item (fetch remote JSONL
+// over the SSH bridge).
 
 export interface AskOption { label: string; description?: string; }
 export interface AskQuestion {

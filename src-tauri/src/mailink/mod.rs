@@ -1571,9 +1571,16 @@ fn build_transcript(app: &AppState, tab_id: &str, now: u64) -> Vec<Value> {
         .unwrap_or_default();
     let mut out = Vec::new();
     if !recent.trim().is_empty() {
+        // `kind: "terminal_snapshot"` is an explicit signal to the phone renderer: this is a raw
+        // scrape of the live terminal grid (newline-delimited, may contain TUI chrome), NOT a
+        // distilled conversation turn — render it preformatted (pre-wrap + break-word), badged as
+        // a live snapshot, and treat it as a single replaceable block (stable msg_id, re-scraped
+        // every GET) rather than appended history. The `ctx_` msg_id prefix carries the same
+        // signal for older clients that sniff it.
         out.push(json!({
             "msg_id": format!("ctx_{tab_id}"),
             "role": "system",
+            "kind": "terminal_snapshot",
             "text": recent,
             "ts": now,
         }));
