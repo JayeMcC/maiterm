@@ -88,6 +88,22 @@ pub fn get_pty_info(
 }
 
 #[tauri::command]
+pub fn get_tmux_state(
+    state: State<'_, Arc<AppState>>,
+    pty_id: String,
+) -> Result<pty::TmuxState, String> {
+    pty::get_tmux_state(&*state, &pty_id)
+}
+
+#[tauri::command]
+pub fn detach_tmux_client(
+    state: State<'_, Arc<AppState>>,
+    pty_id: String,
+) -> Result<(), String> {
+    pty::detach_tmux_client(&*state, &pty_id)
+}
+
+#[tauri::command]
 pub fn list_live_ptys(state: State<'_, Arc<AppState>>) -> Vec<String> {
     pty::list_live_ptys(&*state)
 }

@@ -507,6 +507,8 @@ pub fn run() {
             commands::terminal::resize_terminal,
             commands::terminal::kill_terminal,
             commands::terminal::get_pty_info,
+            commands::terminal::get_tmux_state,
+            commands::terminal::detach_tmux_client,
             commands::terminal::list_live_ptys,
             commands::terminal::read_clipboard_file_paths,
             commands::terminal::detect_windows_shells,

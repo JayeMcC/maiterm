@@ -955,6 +955,17 @@ fn is_ssh_command(cmd: &str) -> bool {
 /// must NOT make the shell look remote. Only the actual foreground job counts.
 #[cfg(unix)]
 fn get_foreground_command(shell_pid: u32) -> Option<String> {
+    let cmd = get_foreground_leader(shell_pid)?;
+    // Only report ssh when the foreground job leader itself is ssh. Subprocesses
+    // an app spawns under the hood share its pgid but aren't what the user is
+    // interacting with.
+    if is_ssh_command(&cmd) { Some(cmd) } else { None }
+}
+
+/// Raw foreground job leader command on the shell's tty.
+/// None = the shell itself is the foreground job (idle at its prompt).
+#[cfg(unix)]
+fn get_foreground_leader(shell_pid: u32) -> Option<String> {
     // macOS BSD ps uses -x (show processes without controlling terminal)
     // Linux procps uses -e (select all processes) for equivalent behavior
     #[cfg(target_os = "macos")]
@@ -1014,13 +1025,83 @@ fn get_foreground_command(shell_pid: u32) -> Option<String> {
     let tpgid = shell_row.tpgid as u32;
     let leader = rows.iter().find(|r| r.pid == tpgid)?;
 
-    // Only report ssh when the foreground job leader itself is ssh. Subprocesses
-    // an app spawns under the hood share its pgid but aren't what the user is
-    // interacting with.
-    if is_ssh_command(&leader.cmd) {
-        Some(leader.cmd.clone())
+    Some(leader.cmd.clone())
+}
+
+/// tmux toggle support: whether the tab's foreground job is a tmux client, and
+/// whether the shell is idle at its prompt (safe to type a command into).
+#[derive(serde::Serialize, Clone)]
+pub struct TmuxState {
+    pub in_tmux: bool,
+    pub shell_idle: bool,
+}
+
+fn is_tmux_cmd(cmd: &str) -> bool {
+    let argv0 = cmd.split_whitespace().next().unwrap_or(cmd);
+    std::path::Path::new(argv0)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or(argv0)
+        == "tmux"
+}
+
+pub fn get_tmux_state(state: &Arc<AppState>, pty_id: &str) -> Result<TmuxState, String> {
+    let pid = {
+        let registry = state.pty_registry.read();
+        let handle = registry.get(pty_id).ok_or("PTY not found")?;
+        handle.child_pid.ok_or("No child PID")?
+    };
+    let leader = get_foreground_leader(pid);
+    let leader_is_tmux = leader.as_deref().map(is_tmux_cmd).unwrap_or(false);
+    // Layered detection — the foreground check alone misses attachments made
+    // by other means: a tab whose pty child IS tmux (spawned attached), or a
+    // client sitting elsewhere in the tab's tree (e.g. backgrounded).
+    let child_is_tmux = || {
+        std::process::Command::new("ps")
+            .args(["-o", "comm=", "-p", &pid.to_string()])
+            .output()
+            .ok()
+            .map(|o| is_tmux_cmd(String::from_utf8_lossy(&o.stdout).trim()))
+            .unwrap_or(false)
+    };
+    let in_tmux = leader_is_tmux || child_is_tmux() || agent_process_alive(pid, &["tmux"]);
+    Ok(TmuxState {
+        in_tmux,
+        shell_idle: leader.is_none(),
+    })
+}
+
+/// Detach any tmux client attached on this tab's tty. Command-based rather
+/// than keystroke injection (no reliance on the prefix binding), so it works
+/// regardless of what's running inside the session or how it was attached.
+pub fn detach_tmux_client(state: &Arc<AppState>, pty_id: &str) -> Result<(), String> {
+    let pid = {
+        let registry = state.pty_registry.read();
+        let handle = registry.get(pty_id).ok_or("PTY not found")?;
+        handle.child_pid.ok_or("No child PID")?
+    };
+    let out = std::process::Command::new("ps")
+        .args(["-o", "tty=", "-p", &pid.to_string()])
+        .output()
+        .map_err(|e| e.to_string())?;
+    let tty = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if tty.is_empty() || tty == "??" {
+        return Err("no controlling tty for this tab".into());
+    }
+    // GUI-app PATH lacks Homebrew; probe the usual installs before trusting PATH.
+    let tmux = ["/opt/homebrew/bin/tmux", "/usr/local/bin/tmux"]
+        .iter()
+        .find(|p| std::path::Path::new(p).exists())
+        .copied()
+        .unwrap_or("tmux");
+    let out = std::process::Command::new(tmux)
+        .args(["detach-client", "-t", &format!("/dev/{tty}")])
+        .output()
+        .map_err(|e| format!("tmux not runnable: {e}"))?;
+    if out.status.success() {
+        Ok(())
     } else {
-        None
+        Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
     }
 }
 

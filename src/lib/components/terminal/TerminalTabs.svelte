@@ -2,6 +2,8 @@
   import { tick, onDestroy, untrack } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import type { Tab, Pane } from '$lib/tauri/types';
+  import { detachTmuxClient, getTmuxState, writeTerminal } from '$lib/tauri/commands';
+  import { toastStore } from '$lib/stores/toasts.svelte';
   import { workspacesStore } from '$lib/stores/workspaces.svelte';
   import { activityStore } from '$lib/stores/activity.svelte';
   import { terminalsStore } from '$lib/stores/terminals.svelte';
@@ -468,6 +470,37 @@
   async function handleSuspendTab(tabId: string, e: MouseEvent) {
     e.stopPropagation();
     await workspacesStore.suspendTab(workspaceId, pane.id, tabId);
+  }
+
+  // Toggle the tab in/out of a tmux session. Out: `tmux detach-client -t
+  // /dev/<tty>` on the backend — no keystrokes, so it works with any prefix
+  // binding, whatever is running inside, and however the attachment was made
+  // (detection covers foreground client, tmux-as-pty-child, and clients
+  // elsewhere in the tab's tree). In: only when the shell is idle at its
+  // prompt, type `tmux new-session -A` (attach-if-exists, so re-toggling
+  // reattaches the same session) — never inject text into a running process.
+  async function handleToggleTmux(tabId: string, e: MouseEvent) {
+    e.stopPropagation();
+    const tab = pane.tabs.find((t) => t.id === tabId);
+    if (!tab?.pty_id) return;
+    try {
+      const st = await getTmuxState(tab.pty_id);
+      if (st.in_tmux) {
+        await detachTmuxClient(tab.pty_id);
+      } else if (st.shell_idle) {
+        const name = `mt-${tabId.slice(0, 8)}`;
+        const cmd = `tmux new-session -A -s ${name} -c "$PWD"\n`;
+        await writeTerminal(tab.pty_id, Array.from(new TextEncoder().encode(cmd)));
+      } else {
+        toastStore.addToast(
+          'tmux toggle blocked',
+          'A process is running in the foreground — exit it (or detach manually) first.',
+          'info',
+        );
+      }
+    } catch (err) {
+      toastStore.addToast('tmux toggle failed', String(err), 'error');
+    }
   }
 
   async function handleTogglePin(tabId: string, e: MouseEvent) {
@@ -1217,7 +1250,7 @@
             class:never-visible={preferencesStore.tabButtonStyle === 'never'}
             class:triple-action={isEditor || isDiff}
             class:quadruple-action={!isEditor && !isDiff && !hasRunningPty}
-            class:quintuple-action={hasRunningPty}
+            class:sextuple-action={hasRunningPty}
           >
             <IconButton tooltip={tab.pinned ? 'Unpin tab' : 'Pin tab'} style="width:22px;height:18px;border-radius:3px" onclick={(e) => handleTogglePin(tab.id, e)}
               ><span class="pin-action" class:pinned={tab.pinned}><Icon name="pin" size={11} /></span></IconButton
@@ -1228,6 +1261,7 @@
                 ><Icon name="duplicate" size={11} /></IconButton
               >
               {#if terminalsStore.get(tab.id)}
+                <IconButton tooltip="Toggle tmux (attach/detach)" style="width:22px;height:18px;border-radius:3px" onclick={(e) => handleToggleTmux(tab.id, e)}><Icon name="tmux" size={11} /></IconButton>
                 <IconButton tooltip="Suspend tab" style="width:22px;height:18px;border-radius:3px" onclick={(e) => handleSuspendTab(tab.id, e)}><Icon name="pause" size={11} /></IconButton>
               {/if}
             {/if}
@@ -1682,8 +1716,8 @@
     width: 88px;
   }
 
-  .tab:hover .tab-actions.quintuple-action {
-    width: 110px;
+  .tab:hover .tab-actions.sextuple-action {
+    width: 132px;
   }
 
   .tab-actions.always-visible {
@@ -1701,8 +1735,8 @@
     width: 88px;
   }
 
-  .tab-actions.always-visible.quintuple-action {
-    width: 110px;
+  .tab-actions.always-visible.sextuple-action {
+    width: 132px;
   }
 
   /* modifier mode: suppress normal hover reveal */
@@ -1727,8 +1761,8 @@
     width: 88px;
   }
 
-  .tab:hover .tab-actions.modifier-active.quintuple-action {
-    width: 110px;
+  .tab:hover .tab-actions.modifier-active.sextuple-action {
+    width: 132px;
   }
 
   .tab:hover .tab-actions.never-visible {

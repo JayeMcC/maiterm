@@ -118,6 +118,16 @@ export async function writeTerminal(ptyId: string, data: number[]): Promise<void
   return invoke('write_terminal', { ptyId, data });
 }
 
+/** tmux toggle support: is the tab attached to tmux / is the shell idle at its prompt. */
+export async function getTmuxState(ptyId: string): Promise<{ in_tmux: boolean; shell_idle: boolean }> {
+  return invoke('get_tmux_state', { ptyId });
+}
+
+/** Detach any tmux client on this tab's tty (command-based; prefix-independent). */
+export async function detachTmuxClient(ptyId: string): Promise<void> {
+  return invoke('detach_tmux_client', { ptyId });
+}
+
 export async function resizeTerminal(ptyId: string, cols: number, rows: number): Promise<void> {
   return invoke('resize_terminal', { ptyId, cols, rows });
 }

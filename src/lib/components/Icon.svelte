@@ -12,6 +12,7 @@
     | 'bug'
     | 'lightbulb'
     | 'pause'
+    | 'tmux'
     | 'bolt'
     | 'resume'
     | 'pdf'
@@ -104,6 +105,10 @@
   >
 {:else if name === 'pause'}
   <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="2" width="3.5" height="12" rx="0.75" /><rect x="9.5" y="2" width="3.5" height="12" rx="0.75" /></svg>
+{:else if name === 'tmux'}
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+    ><rect x="1.75" y="2" width="12.5" height="12" rx="1.5" /><line x1="8" y1="2" x2="8" y2="14" /><line x1="1.75" y1="11" x2="8" y2="11" /></svg
+  >
 {:else if name === 'bolt'}
   <svg width={size} height={size} viewBox="0 0 640 640" fill="currentColor"
     ><path
