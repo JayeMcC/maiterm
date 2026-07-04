@@ -22,6 +22,9 @@ pub struct TerminalFrame {
     pub alternate_screen: bool,
     /// Whether there is an active selection
     pub has_selection: bool,
+    /// Whether the app enabled the kitty keyboard protocol (any progressive
+    /// enhancement flag) — such apps can receive Super-modified keys like Cmd+C.
+    pub kitty_keyboard: bool,
 }
 
 /// Extract the visible viewport from a Term and produce an ANSI string.
@@ -40,6 +43,7 @@ pub fn render_viewport<T: EventListener>(
     let cursor_visible = content.mode.contains(TermMode::SHOW_CURSOR);
     let display_offset = content.display_offset;
     let alternate_screen = content.mode.contains(TermMode::ALT_SCREEN);
+    let kitty_keyboard = content.mode.intersects(TermMode::KITTY_KEYBOARD_PROTOCOL);
     let total_lines = term.grid().total_lines();
     // Prefer the externally-managed selection over term.selection
     let selection_range: Option<SelectionRange> = ext_selection
@@ -179,6 +183,7 @@ pub fn render_viewport<T: EventListener>(
         total_lines,
         alternate_screen,
         has_selection: selection_range.is_some(),
+        kitty_keyboard,
     }
 }
 

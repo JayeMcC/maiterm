@@ -339,6 +339,7 @@ export interface TerminalFrame {
   total_lines: number;
   alternate_screen: boolean;
   has_selection: boolean;
+  kitty_keyboard: boolean;
 }
 
 export interface ScrollInfo {

@@ -144,6 +144,7 @@
   let isAutoResume = $derived((autoResumeEnabled ?? true) && !!(autoResumeSshCommand || autoResumeCwd || autoResumeCommand));
   let resizePtyTimeout: ReturnType<typeof setTimeout> | undefined;
   let lastFrameAlternateScreen = false;
+  let lastFrameKittyKeyboard = false; // app enabled the kitty keyboard protocol
   // Scrollback scrollbar state
   let scrollDisplayOffset = $state(0);
   let scrollTotalLines = $state(0);
@@ -206,6 +207,7 @@
   function applyFrame(frame: TerminalFrame) {
     terminal.write(new Uint8Array(frame.ansi));
     hasRustSelection = frame.has_selection;
+    lastFrameKittyKeyboard = frame.kitty_keyboard;
     updateScrollbar(frame.display_offset, frame.total_lines);
   }
 
@@ -521,6 +523,7 @@
     unlistenOutput = await listen<TerminalFrame>(`term-frame-${ptyId}`, (event) => {
       const frame = event.payload;
       lastFrameAlternateScreen = frame.alternate_screen;
+      lastFrameKittyKeyboard = frame.kitty_keyboard;
       scrollTotalLines = frame.total_lines;
       scrollViewportRows = terminal.rows;
 
@@ -858,7 +861,11 @@
       }
     }
 
-    // Cmd+C: copy if selection, SIGINT if not. Cmd+V: paste into PTY.
+    // Cmd+C: copy the maiTerm selection if there is one; otherwise deliver a
+    // real Cmd+C to apps that speak the kitty keyboard protocol (CSI 99;9u —
+    // Claude Code etc. copy their own in-app selection on it). Never translated
+    // to ^C, so a stray copy chord can't interrupt the foreground process.
+    // Cmd+V: paste into PTY.
     terminal.attachCustomKeyEventHandler((e: KeyboardEvent) => {
       if (e.type !== 'keydown') return true;
 
@@ -873,8 +880,9 @@
                 .catch(() => {});
             })
             .catch((e) => logError(String(e)));
-        } else {
-          writeTerminal(ptyId, [0x03]).catch((e) => logError(String(e)));
+        } else if (lastFrameKittyKeyboard) {
+          // ESC [ 9 9 ; 9 u — 'c' (99) with the Super modifier (1 + 8)
+          writeTerminal(ptyId, [0x1b, 0x5b, 0x39, 0x39, 0x3b, 0x39, 0x75]).catch((e) => logError(String(e)));
         }
         return false;
       }
