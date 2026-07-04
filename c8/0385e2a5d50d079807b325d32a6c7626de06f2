@@ -1,0 +1,50 @@
+src-tauri/src/pty/manager.rs
+  s_7a47166f6b3be8::t_474d295ef7f858 958-968
+  s_7a47166f6b3be8::t_beef8605552376 1028-1038,1048-1054,1068-1071
+  s_7a47166f6b3be8::t_eae37866ffa8ce 1039-1047,1055-1067,1072-1102,1104
+src-tauri/src/pty/mod.rs
+  s_7a47166f6b3be8::t_efae8c58c27938 4-5
+src-tauri/src/lib.rs
+  s_7a47166f6b3be8::t_018ed48794c103 510
+  s_7a47166f6b3be8::t_4812b6c60d8ab0 511
+src/lib/tauri/commands.ts
+  s_7a47166f6b3be8::t_4a13b9b09f24e4 122-123,129-130
+  s_7a47166f6b3be8::t_8c8142b5b92280 121,124-128
+src/lib/components/terminal/TerminalTabs.svelte
+  s_7a47166f6b3be8::t_912f018a3f34cc 475-481,489
+  s_7a47166f6b3be8::t_90e69cab10152f 482-488,490-505
+  s_7a47166f6b3be8::t_b39833baa43353 6
+  s_7a47166f6b3be8::t_8e7b9ca09ecf92 5
+  s_7a47166f6b3be8::t_0737162538192b 1264
+  s_ef2c94701ed321::t_b538428bb3795c 1253,1719-1720,1738-1739,1764-1765
+src-tauri/src/commands/terminal.rs
+  s_7a47166f6b3be8::t_8ef44b8d325120 99-105
+  s_7a47166f6b3be8::t_c69bc5c83f3008 90-98
+src/lib/components/Icon.svelte
+  s_7a47166f6b3be8::t_e0699c1b6862c2 15
+  s_7a47166f6b3be8::t_7005f0f435a150 108-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "c80385e2a5d50d079807b325d32a6c7626de06f2",
+  "prompts": {},
+  "sessions": {
+    "s_7a47166f6b3be8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01c83f60-ea75-45d2-9682-f9202cd6ae5a",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    },
+    "s_ef2c94701ed321": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fa8cb8b7-5b19-4d5b-88ac-0421f5efd53f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
