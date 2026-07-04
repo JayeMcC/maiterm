@@ -160,7 +160,7 @@ run "forwood-launcher responds" forwood-launcher --help
 
 echo
 ok "setup complete — ${APP_NAME} $(installed_version), launcher on PATH"
-echo "  Next: open a maiTerm tab and cd into a forwood clone (e.g. ~/proj/forwood-one_developing) — the task rail appears on the right."
+echo "  Next: open a maiTerm tab and cd into a forwood clone (wherever yours live) — the task rail appears on the right."
 echo "  First launch self-registers maiTerm's Claude Code wiring (MCP server, hooks, /maiterm skill) — nothing manual."
 if [ "$LAUNCH_APP" = "1" ]; then
   open -a "$APP_NAME" || warn "could not launch ${APP_NAME} — open it from /Applications"

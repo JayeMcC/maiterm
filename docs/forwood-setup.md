@@ -15,19 +15,29 @@ The rail is two parts working together, **both in this repo**:
 ## 0. One-command setup
 
 Clone this repo (branch **`main`** — stable, what releases cut from; `dev` is
-active development) and run the setup script:
+active development) **anywhere you like** and run the setup script — it
+resolves every path from its own checkout location, and the rail finds your
+forwood clones from each tab's cwd, so no particular directory layout is
+required:
 
 ```sh
-git clone -b main git@github.com:JayeMcC/maiterm.git ~/proj/maiterm
-bash ~/proj/maiterm/scripts/forwood-setup.sh
+git clone -b main git@github.com:JayeMcC/maiterm.git maiterm
+bash maiterm/scripts/forwood-setup.sh
 ```
 
 Forwood-internal alternative (same tree, mirrored to Bitbucket):
 
 ```sh
-git clone -b Jaye-term git@bitbucket.org:forwood/forwood-one-tools.git ~/proj/maiterm
-bash ~/proj/maiterm/scripts/forwood-setup.sh
+git clone -b Jaye-term git@bitbucket.org:forwood/forwood-one-tools.git maiterm
+bash maiterm/scripts/forwood-setup.sh
 ```
+
+Docs below use `~/proj/...` in examples — that's a convention, not a
+requirement. The one place a root directory matters is *name-based* clone
+lookup (`forwood-launcher --clone developing` or `$FORWOOD_CLONE`), which
+resolves against `$PROJ_ROOT` (default `~/proj`) — set `PROJ_ROOT` if your
+clones live elsewhere, or just rely on the rail's cwd detection, which needs
+no configuration.
 
 The script is idempotent — re-run it any time; completed steps are skipped. It
 installs Node (≥ 22.6) and `@devcontainers/cli` if missing, warns if Docker
@@ -43,7 +53,7 @@ it does, for manual setup or troubleshooting.
 | **Homebrew + Node** | The rail runs `forwood-launcher` via your login shell, which needs node ≥ 22.6 on PATH. | `brew install node` (setup script does this) |
 | **Docker Desktop** | Container tasks (API/WEB/DBs) run via `devcontainer exec`; the container section reads live status via `docker`. | Docker Desktop for Mac |
 | **`@devcontainers/cli`** | Host-side container bring-up + `devcontainer exec`. | `npm i -g @devcontainers/cli` (setup script does this) |
-| **forwood clones** | The repos whose `.vscode/tasks.json` the rail detects (e.g. `~/proj/forwood-one_developing`). | your usual clone setup |
+| **forwood clones** | The repos whose `.vscode/tasks.json` the rail detects — anywhere on disk; detection walks up from the tab's cwd. | your usual clone setup |
 | **Xcode CLT + Rust** | Only for building the app from source (`--build`). | `xcode-select --install`, `rustup` |
 
 ## 2. Install maiTerm
