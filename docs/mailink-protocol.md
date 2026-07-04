@@ -349,6 +349,10 @@ interface ChatDetail extends Chat {
     kind: 'permission' | 'question';
     text: string;
     options?: string[];     // e.g. ["Yes","Yes, don't ask again","No"]; absent ⇒ free-text only
+    asked_at?: number;      // question only: unix ms the ask opened — DISPLAY-ONLY ("asked 2m ago")
+    expires_at?: number;    // question only, AUTHORITATIVE: unix ms the ask will auto-resolve.
+                            // Sent only when the CC build+settings actually expire it (§11);
+                            // absent ⇒ no countdown, answerable until the prompt clears.
   };
 }
 // msg_id identity guarantee: the id POST /message returns IS the id later emitted on the
@@ -673,16 +677,26 @@ so the contract is exercised, not just asserted.
     injections are delivered as real user prompts and were rendering as giant fake "user"
     messages flooding every mesh participant's thread — now dropped by the transcript noise
     filter (and excluded from last-turn recency).
-  - **The 60s ask deadline (field bug, 2026-07-02).** Current Claude Code fires NO
-    notification hook for an AskUserQuestion (anthropics/claude-code#13830) — state stays
-    `active` — and AUTO-RESOLVES an unanswered ask after ~60s (undocumented,
-    non-configurable; #73394/#30740). Pre-deploy that made asks invisible on the phone until
-    expired. The prompt-kind transition above closes the signaling gap; additionally
-    `pendingPrompt` gains additive **`asked_at`** (unix ms, stamped at PreToolUse) so the app
-    can count down / expire the card, `questions[].options[]` pass through Claude's new
-    per-option `preview`, and the transcript chip reads `AskUserQuestion(<first question>)`
-    so an expired ask still shows what was asked. Late answers should fall back to a
-    free-text `/message`.
+  - **The 60s ask deadline (field bug, 2026-07-02; expiry contract revised 2026-07-03).**
+    Claude Code fires NO notification hook for an AskUserQuestion (anthropics/claude-code#13830)
+    — state stays `active`. The prompt-kind transition above closes that signaling gap;
+    `pendingPrompt` gains additive **`asked_at`** (unix ms, stamped at PreToolUse),
+    `questions[].options[]` pass through Claude's per-option `preview`, and the transcript
+    chip reads `AskUserQuestion(<first question>)` so an expired ask still shows what was
+    asked. Late answers fall back to a free-text `/message`.
+    **Expiry**: the 60s auto-resolve existed ONLY in CC 2.1.198–2.1.199 (hard-coded); 2.1.200
+    made it **opt-in** via `askUserQuestionTimeout` in `~/.claude/settings.json` (user scope
+    only: `"never"` default | `"60s"` | `"5m"` | `"10m"`; multiple-choice questions only —
+    permission prompts never auto-resolve). So `pendingPrompt` carries an additive
+    **`expires_at`** (absolute unix ms of the actual auto-resolve moment, un-buffered) and it
+    is **authoritative**: the desktop emits it only when the session's CC build + settings
+    actually expire the ask (version gate read from the session JSONL's per-entry `version`
+    field + the settings key — `ask_deadline_ms` in `mailink/mod.rs`). **Absent ⇒ the app
+    shows NO countdown** and the question stays answerable until the prompt clears. The app
+    closes its tappable window at `expires_at − 5000` (keystroke-inject headroom) and then
+    routes to the composer; `asked_at` is display-only ("asked 2m ago") — the app derives no
+    deadline from it. Unknown version ⇒ no `expires_at` (a false countdown expires a live
+    question; a missing one degrades safely to stale-guard + composer fallback).
 - **Two findings (notes, not blockers):** (1) `/message` bracketed-paste is correct for an
   agent TUI but leaks into a bare shell — fine for the intended use; (2) the *first*
   permission (for `initSession` itself) can't be tab-attributed since the session→tab mapping
