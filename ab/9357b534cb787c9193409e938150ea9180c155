@@ -1,0 +1,23 @@
+docs/forwood-setup.md
+  s_ef2c94701ed321::t_23d062ff494577 56
+  s_ef2c94701ed321::t_0d856f43adbc73 18-21,24-25,31-32,35-40
+  s_ef2c94701ed321::t_bee631aff267ce 41
+scripts/forwood-setup.sh
+  s_ef2c94701ed321::t_09dd9bb30e2530 163
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "ab9357b534cb787c9193409e938150ea9180c155",
+  "prompts": {},
+  "sessions": {
+    "s_ef2c94701ed321": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fa8cb8b7-5b19-4d5b-88ac-0421f5efd53f",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jaye McCracken <jaye.mccracken@forwoodsafety.com>"
+    }
+  }
+}
