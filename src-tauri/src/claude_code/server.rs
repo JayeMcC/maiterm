@@ -293,7 +293,7 @@ pub async fn serve_server(app_handle: AppHandle, state: Arc<AppState>, setup: Se
                 _ = ticker.tick() => {
                     let prefs = reassert_state.app_data.read().preferences.clone();
                     for r in registrar::enabled_registrars(&prefs) {
-                        r.reassert_if_drifted(reassert_port, &reassert_auth);
+                        r.reassert_if_drifted(reassert_port, &reassert_auth, &prefs);
                     }
                 }
                 res = reassert_shutdown.changed() => {

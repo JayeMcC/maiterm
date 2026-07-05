@@ -254,23 +254,10 @@ fn hook_url_marker(port: u16) -> String {
     format!("http://127.0.0.1:{}/hooks", port)
 }
 
-/// Write Claude Code hooks into ~/.claude/settings.json.
-///
-/// Registers:
-/// - SessionStart (command) — reads $AITERM_TAB_ID, POSTs to our server, injects tab ID context
-/// - SessionEnd, Notification, Stop (http) — lightweight event notifications
-///
-/// We identify our entries by matching the hook URL, so we don't clobber user hooks.
-fn write_hook_settings(port: u16, auth: &str) -> Result<(), String> {
-    let path = claude_user_settings_path().ok_or("Could not determine home directory")?;
-
-    let mut settings: serde_json::Value = if path.exists() {
-        let raw = fs::read_to_string(&path).map_err(|e| format!("Cannot read settings: {}", e))?;
-        serde_json::from_str(&raw).unwrap_or(serde_json::json!({}))
-    } else {
-        serde_json::json!({})
-    };
-
+/// Build the hook entries we register, keyed by event name. Shared by
+/// `write_hook_settings` (install) and `hooks_are_current` (reassert drift
+/// check) so the two can never disagree about what "our hooks" look like.
+fn build_our_hooks(port: u16, auth: &str) -> serde_json::Value {
     let hooks_url = hook_url_marker(port);
 
     // SessionStart command hook: reads session_id from stdin JSON, echoes tab ID + session ID
@@ -300,7 +287,7 @@ You MUST immediately call the {mcp_key} initSession tool with this tabId and ses
         }])
     };
 
-    let our_hooks = serde_json::json!({
+    serde_json::json!({
         "SessionStart": [
             // Command hook: echo tab ID into Claude's context + background curl for tab mapping
             {
@@ -330,7 +317,28 @@ You MUST immediately call the {mcp_key} initSession tool with this tabId and ses
         "PreToolUse": http_hook(&hooks_url),
         "PostToolUse": http_hook(&hooks_url),
         "PreCompact": http_hook(&hooks_url)
-    });
+    })
+}
+
+/// Write Claude Code hooks into ~/.claude/settings.json.
+///
+/// Registers:
+/// - SessionStart (command) — reads $AITERM_TAB_ID, POSTs to our server, injects tab ID context
+/// - SessionEnd, Notification, Stop, UserPromptSubmit, PreToolUse, PostToolUse, PreCompact (http)
+///
+/// We identify our entries by matching the hook URL, so we don't clobber user hooks.
+fn write_hook_settings(port: u16, auth: &str) -> Result<(), String> {
+    let path = claude_user_settings_path().ok_or("Could not determine home directory")?;
+
+    let mut settings: serde_json::Value = if path.exists() {
+        let raw = fs::read_to_string(&path).map_err(|e| format!("Cannot read settings: {}", e))?;
+        serde_json::from_str(&raw).unwrap_or(serde_json::json!({}))
+    } else {
+        serde_json::json!({})
+    };
+
+    let hooks_url = hook_url_marker(port);
+    let our_hooks = build_our_hooks(port, auth);
 
     // Sweep: remove any maiTerm hook entries whose port has no live lockfile.
     // This catches orphans from crashes where cleanup never ran.
@@ -419,6 +427,58 @@ You MUST immediately call the {mcp_key} initSession tool with this tabId and ses
 
     log::info!("Registered Claude Code hooks in ~/.claude/settings.json (port {})", port);
     Ok(())
+}
+
+/// True when every hook entry we'd write for (port, auth) is already present
+/// in ~/.claude/settings.json and our URL pattern is in allowedHttpHookUrls.
+/// serde_json object equality is key-order independent, so a CLI rewrite that
+/// only reorders keys won't read as drift.
+fn hooks_are_current(path: &std::path::Path, port: u16, auth: &str) -> bool {
+    let Ok(raw) = fs::read_to_string(path) else { return false };
+    let Ok(settings) = serde_json::from_str::<serde_json::Value>(&raw) else { return false };
+
+    let expected = build_our_hooks(port, auth);
+    let Some(hooks) = settings.get("hooks").and_then(|v| v.as_object()) else { return false };
+    let all_present = expected.as_object().unwrap().iter().all(|(event, ours)| {
+        let Some(arr) = hooks.get(event).and_then(|v| v.as_array()) else { return false };
+        ours.as_array().unwrap().iter().all(|entry| arr.contains(entry))
+    });
+    if !all_present {
+        return false;
+    }
+
+    // Claude refuses HTTP hooks whose URL isn't allowlisted, so a missing
+    // pattern is drift even when the hook entries themselves survived.
+    let pattern = format!("http://127.0.0.1:{}/*", port);
+    settings
+        .get("allowedHttpHookUrls")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().any(|v| v.as_str() == Some(&pattern)))
+        .unwrap_or(false)
+}
+
+/// Re-assert our hooks in ~/.claude/settings.json *only if they have drifted*.
+/// Same rationale as `ensure_mcp_settings`: settings.json is co-owned (the
+/// `claude` CLI rewrites it, and an SSH-bridge setup script that lands in a
+/// local shell clobbers it with remote-tunnel ports) — without this, every
+/// hook dials a dead port until the next app restart, killing session
+/// tracking, Claude state indicators, and notifications. Called on the same
+/// timer as the MCP re-assert. Returns `Ok(true)` when a repair was written.
+pub fn ensure_hook_settings(port: u16, auth: &str) -> Result<bool, String> {
+    let path = claude_user_settings_path().ok_or("Could not determine home directory")?;
+
+    // Cheap read-only check: skip the write (and its disk churn) when our
+    // entries are already present and correct.
+    if hooks_are_current(&path, port, auth) {
+        return Ok(false);
+    }
+
+    write_hook_settings(port, auth)?;
+    log::info!(
+        "Re-asserted Claude Code hooks in ~/.claude/settings.json (port {}) — entries were missing or had drifted",
+        port
+    );
+    Ok(true)
 }
 
 /// Collect ports from all live lockfiles (PIDs that are still running).

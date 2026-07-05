@@ -134,7 +134,7 @@ impl Registrar for CodexRegistrar {
     }
 
     /// Codex never rewrites its own config, so there is nothing to re-assert.
-    fn reassert_if_drifted(&self, _port: u16, _auth: &str) {}
+    fn reassert_if_drifted(&self, _port: u16, _auth: &str, _prefs: &Preferences) {}
 
     fn unregister(&self, _port: u16, _auth: &str) {
         let Some(home) = dirs::home_dir() else {
