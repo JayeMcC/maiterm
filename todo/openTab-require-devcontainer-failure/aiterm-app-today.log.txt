@@ -1,0 +1,482 @@
+[2026-07-06][00:02:26][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][00:18:01][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][00:18:01][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][00:50:19][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][00:50:19][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][01:02:27][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][01:18:02][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][01:18:02][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][01:50:21][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][02:18:02][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][02:18:02][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][02:50:21][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][03:18:04][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][03:18:04][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][03:50:22][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][04:18:04][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][04:18:04][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][04:50:23][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][05:18:05][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][05:18:06][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][05:50:24][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][06:18:07][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][06:18:07][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][06:50:25][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][07:18:07][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][07:18:07][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][07:29:11][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][07:29:11][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][07:29:11][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][07:29:11][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x1073
+[2026-07-06][07:29:11][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][07:29:11][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x1073
+[2026-07-06][07:29:11][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][07:29:11][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (0, 34) 1710x1073
+[2026-07-06][07:29:11][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][07:29:11][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][07:29:12][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][07:29:12][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][07:29:40][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][07:29:40][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][07:29:41][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][07:29:41][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][07:29:41][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=0) at (206, 237) 1200x800
+[2026-07-06][07:29:41][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][07:29:41][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][07:29:41][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][07:29:41][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][07:29:41][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][07:30:07][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][07:30:07][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (0, 34) 1710x1073
+[2026-07-06][07:30:07][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][07:30:07][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x1073
+[2026-07-06][07:30:08][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][07:30:08][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][07:30:08][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][07:30:08][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x1073
+[2026-07-06][07:30:08][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][07:30:08][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][07:50:26][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][08:04:46][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=f1a9f854-09df-4735-8f69-5855fb693682, tab_id=26d4753b-6c59-4a50-b0da-64ef409bba57, cols=190, rows=46
+[2026-07-06][08:04:47][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=dd1067bd-c14e-443f-ac6c-cfd861a562fe, tab_id=14362b22-8f66-42f3-97f5-d49caa285565, cols=190, rows=46
+[2026-07-06][08:04:48][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][08:04:51][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][08:05:03][INFO][aiterm_lib::claude_code::server] Claude hook: session 6f71878d-1aef-44be-b05f-fa6a9d0bdae8 ended (tab None)
+[2026-07-06][08:05:06][INFO][aiterm_lib::claude_code::server] Claude hook: session 282929ac-091d-4eda-a35b-cd37396f7169 ended (tab None)
+[2026-07-06][08:05:22][INFO][aiterm_lib::claude_code::server] Claude hook: session 4a175dbd-378d-452f-bfc9-12d5b02272f5 ended (tab Some("4661ec71-31fb-402a-8906-6b47392a74ff"))
+[2026-07-06][08:05:22][INFO][webview:runCallback@user-script:17:284:15] Claude state: session ended → tab 4661ec71 removed
+[2026-07-06][08:05:22][INFO][webview:runCallback@user-script:41:284:15] Claude state: session ended → tab 4661ec71 removed
+[2026-07-06][08:05:22][INFO][webview:runCallback@user-script:53:284:15] Claude state: session ended → tab 4661ec71 removed
+[2026-07-06][08:05:22][INFO][webview:runCallback@user-script:29:284:15] Claude state: session ended → tab 4661ec71 removed
+[2026-07-06][08:05:22][INFO][webview:runCallback@user-script:5:284:15] Claude state: session ended → tab 4661ec71 removed
+[2026-07-06][08:05:33][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=623008a3-19d8-4f41-a059-6eb2843387d0, tab_id=f45daa1f-d336-4543-adc8-35583fb45b8f, cols=156, rows=36
+[2026-07-06][08:05:34][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=84b94aba-eec6-499e-a136-54ef2559d7bd, tab_id=bd58446b-5d2c-45f3-88f2-44c86c26b930, cols=156, rows=36
+[2026-07-06][08:05:35][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=082491d2-99f4-45c4-9ae8-6a9fe377e516, tab_id=e820dc83-7805-4ef8-9e09-a86791592e60, cols=156, rows=36
+[2026-07-06][08:05:45][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=0f6dd947-1182-464c-9233-1e5497141333, tab_id=06bb868f-a18f-461c-9df9-2fd7c9304f15, cols=125, rows=36
+[2026-07-06][08:05:46][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=feaec156-8d27-4e28-9c04-892b3ee2fc81, tab_id=0b784615-c8eb-4cbc-87e6-7a3fcd0b86b4, cols=125, rows=36
+[2026-07-06][08:05:47][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=170d1c99-54cc-417d-a24a-431c96686524, tab_id=e6301445-7f32-4d4e-9b07-5ee27ad1712b, cols=125, rows=36
+[2026-07-06][08:18:08][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][08:18:08][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][08:29:13][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][08:29:13][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][08:49:52][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=8aa01b0f-e7e2-474e-88b6-3a6acfbf1890, tab_id=3aed9fb9-8716-4119-bafb-0d7dac72defe, cols=190, rows=51
+[2026-07-06][08:50:06][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][08:50:06][INFO][aiterm_lib::claude_code::server] Claude hook: session d446db32-17be-421a-b412-015df4e63cbe ended (tab None)
+[2026-07-06][08:50:27][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][09:18:09][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][09:18:09][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][09:29:14][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][09:29:14][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][09:50:28][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][10:18:10][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][10:18:10][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][10:29:14][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][10:29:14][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][10:50:29][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][11:02:55][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][11:06:18][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:06:18][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][11:06:19][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:06:19][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][11:06:20][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:06:20][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=0) at (206, 237) 1200x800
+[2026-07-06][11:06:20][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:06:20][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][11:06:20][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:06:20][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][11:14:56][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:14:56][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][11:14:58][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:14:58][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (624, 34) 1086x983
+[2026-07-06][11:14:59][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:14:59][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][11:14:59][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:14:59][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][11:14:59][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:14:59][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][11:18:11][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][11:18:11][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][11:22:45][WARN][aiterm_lib::claude_code::server] MCP tool guard: Tab 'e5984be0-0f5b-4957-83f9-34539adea160' does not exist in this maiTerm instance (maiterm). You may be calling the wrong MCP server. Use 'maiterm-dev' tools instead.
+[2026-07-06][11:23:11][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:23:11][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][11:23:11][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:23:11][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][11:23:13][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:23:13][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][11:23:14][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:23:14][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=0) at (206, 237) 1200x800
+[2026-07-06][11:23:14][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:23:14][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][11:29:16][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][11:29:16][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][11:32:52][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:32:52][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (624, 34) 1086x983
+[2026-07-06][11:32:53][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:32:53][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][11:32:53][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:32:53][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][11:32:53][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:32:53][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][11:32:53][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:32:53][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][11:39:23][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:39:23][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][11:39:25][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:39:25][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][11:39:26][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:39:26][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=0) at (206, 237) 1200x800
+[2026-07-06][11:39:26][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:39:26][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][11:39:26][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:39:26][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][11:40:31][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:40:31][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (624, 34) 1086x983
+[2026-07-06][11:40:32][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:40:32][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][11:40:32][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:40:32][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][11:40:32][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:40:32][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][11:40:32][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:40:32][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][11:44:39][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:44:39][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][11:44:40][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:44:40][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][11:44:41][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:44:41][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=0) at (206, 237) 1200x800
+[2026-07-06][11:44:41][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:44:41][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][11:44:41][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:44:41][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][11:48:20][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:48:20][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (624, 34) 1086x983
+[2026-07-06][11:48:20][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:48:20][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][11:48:20][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:48:20][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][11:48:20][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:48:20][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][11:48:20][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:48:20][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][11:50:30][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][11:59:31][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:59:31][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][11:59:32][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:59:32][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=0) at (206, 237) 1200x800
+[2026-07-06][11:59:32][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:59:32][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][11:59:32][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:59:32][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][11:59:32][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:59:32][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][12:01:14][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:01:14][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (624, 34) 1086x983
+[2026-07-06][12:01:14][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:01:14][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][12:01:14][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:01:14][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][12:01:14][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:01:14][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][12:01:14][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:01:14][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][12:07:26][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:07:26][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][12:07:26][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:07:26][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][12:07:26][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:07:26][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=0) at (206, 237) 1200x800
+[2026-07-06][12:07:26][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:07:26][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][12:07:26][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:07:26][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][12:09:58][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:09:58][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (624, 34) 1086x983
+[2026-07-06][12:09:59][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:09:59][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][12:09:59][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:09:59][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][12:09:59][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:09:59][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][12:09:59][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:09:59][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][12:18:43][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][12:18:43][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][12:21:50][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:21:50][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][12:21:50][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:21:50][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=0) at (206, 237) 1200x800
+[2026-07-06][12:21:50][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:21:50][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][12:21:50][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:21:50][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][12:21:50][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:21:50][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][12:25:05][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:25:05][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][12:25:05][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:25:05][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][12:25:05][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:25:05][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][12:25:05][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:25:05][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (624, 34) 1086x983
+[2026-07-06][12:25:07][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:25:07][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][12:29:16][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][12:29:16][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][12:50:31][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][12:56:20][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:56:20][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][12:56:20][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:56:20][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=0) at (206, 237) 1200x800
+[2026-07-06][12:56:20][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:56:20][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][12:56:20][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:56:20][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][12:56:20][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:56:20][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][13:03:19][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][13:03:19][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][13:03:20][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][13:03:20][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][13:03:20][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][13:03:20][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][13:03:20][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][13:03:20][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][13:03:20][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][13:03:20][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (624, 34) 1086x983
+[2026-07-06][13:18:43][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][13:18:43][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][13:29:18][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][13:29:18][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][13:36:26][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][13:36:26][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][13:36:26][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][13:36:26][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][13:36:26][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=0) at (206, 237) 1200x800
+[2026-07-06][13:36:26][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][13:36:26][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][13:36:26][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][13:36:26][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][13:36:26][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][13:36:31][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][13:36:32][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][13:36:32][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][13:36:32][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][13:36:32][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][13:36:32][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][13:36:32][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][13:36:32][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][13:36:32][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][13:36:32][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (624, 34) 1086x983
+[2026-07-06][13:50:32][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][14:00:15][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:02:40][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:09:34][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:12:05][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:14:06][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:17:11][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:18:48][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][14:18:48][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][14:20:12][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:29:19][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][14:29:19][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][14:30:04][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:30:04][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=0) at (206, 237) 1200x800
+[2026-07-06][14:30:04][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:30:04][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][14:30:04][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:30:04][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][14:30:05][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:30:05][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][14:30:05][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:30:05][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][14:30:37][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][14:30:37][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][14:30:37][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][14:30:37][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (624, 34) 1086x983
+[2026-07-06][14:30:38][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][14:30:38][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][14:30:38][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][14:30:38][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][14:30:38][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][14:30:38][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][14:41:53][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:41:53][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][14:41:53][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:41:53][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:41:53][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][14:41:53][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:41:53][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][14:41:53][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][14:41:53][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:41:53][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=0) at (206, 237) 1200x800
+[2026-07-06][14:50:33][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][14:56:34][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][14:56:34][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][14:56:35][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][14:56:35][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][14:56:35][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][14:56:35][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][14:56:35][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][14:56:35][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][14:56:35][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][14:56:35][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (624, 34) 1086x983
+[2026-07-06][14:59:41][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:59:41][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][14:59:42][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:59:42][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][14:59:43][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:59:43][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=0) at (206, 237) 1200x800
+[2026-07-06][14:59:43][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:59:43][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][14:59:43][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:59:43][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][15:00:13][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][15:00:13][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][15:00:13][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][15:00:13][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][15:00:13][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][15:00:13][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][15:00:13][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][15:00:13][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][15:00:13][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][15:00:13][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (624, 34) 1086x983
+[2026-07-06][15:18:45][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][15:18:47][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][15:29:20][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][15:29:20][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][15:47:42][INFO][aiterm_lib::claude_code::server] Claude hook: session 396b01d0-db45-468a-8a28-7b1cfd5d9474 ended (tab None)
+[2026-07-06][15:50:34][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][16:10:50][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][16:10:50][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][16:10:50][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][16:10:50][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][16:10:50][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][16:10:50][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][16:10:51][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][16:10:51][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][16:10:52][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][16:10:52][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=0) at (206, 237) 1200x800
+[2026-07-06][16:18:46][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][16:18:48][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][16:27:01][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][16:27:01][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][16:27:01][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][16:27:01][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (624, 34) 1086x983
+[2026-07-06][16:27:02][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][16:27:02][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][16:27:03][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][16:27:03][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][16:27:03][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][16:27:03][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][16:29:21][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][16:29:21][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][16:31:28][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][16:31:28][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=0) at (206, 237) 1200x800
+[2026-07-06][16:31:28][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][16:31:28][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][16:31:28][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][16:31:28][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][16:31:29][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][16:31:29][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][16:31:29][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][16:31:29][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][16:34:49][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][16:34:49][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][16:34:49][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][16:34:49][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (624, 34) 1086x983
+[2026-07-06][16:34:49][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][16:34:49][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][16:34:49][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][16:34:49][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][16:34:49][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][16:34:49][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][16:34:51][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][16:34:51][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][16:34:51][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][16:34:51][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][16:34:54][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][16:34:54][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][16:34:54][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][16:34:54][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (624, 34) 1086x983
+[2026-07-06][16:49:46][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=3c439af1-12dd-40ff-9bdf-c3961d23c2d4, tab_id=9c2499e6-dea5-4768-93db-3571d02a6168, cols=190, rows=46
+[2026-07-06][16:49:49][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][16:49:56][INFO][aiterm_lib::claude_code::server] Claude hook: session 266a3f82-7712-4202-b2bc-7f5cb4c0ba36 ended (tab None)
+[2026-07-06][16:50:35][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][16:51:36][INFO][webview:runCallback@user-script:17:284:15] Agent init: set claudeSessionId for tab 9c2499e6 = dd964273
+[2026-07-06][16:51:36][INFO][webview:runCallback@user-script:53:284:15] Agent init: set claudeSessionId for tab 9c2499e6 = dd964273
+[2026-07-06][16:51:36][INFO][webview:runCallback@user-script:29:284:15] Agent init: set claudeSessionId for tab 9c2499e6 = dd964273
+[2026-07-06][16:51:36][INFO][webview:runCallback@user-script:5:284:15] Agent init: set claudeSessionId for tab 9c2499e6 = dd964273
+[2026-07-06][16:51:36][INFO][webview:runCallback@user-script:41:284:15] Agent init: set claudeSessionId for tab 9c2499e6 = dd964273
+[2026-07-06][16:51:57][INFO][webview:Wt@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:2:32235] Notification (auto/both): Needs permission approval
+[2026-07-06][16:52:11][INFO][aiterm_lib::claude_code::server] Claude hook: session dd964273-0f5d-421c-88f5-84552f1b58ea ended (tab Some("9c2499e6-dea5-4768-93db-3571d02a6168"))
+[2026-07-06][16:52:11][INFO][webview:runCallback@user-script:17:284:15] Claude state: session ended → tab 9c2499e6 removed
+[2026-07-06][16:52:11][INFO][webview:runCallback@user-script:41:284:15] Claude state: session ended → tab 9c2499e6 removed
+[2026-07-06][16:52:11][INFO][webview:runCallback@user-script:29:284:15] Claude state: session ended → tab 9c2499e6 removed
+[2026-07-06][16:52:11][INFO][webview:runCallback@user-script:5:284:15] Claude state: session ended → tab 9c2499e6 removed
+[2026-07-06][16:52:11][INFO][webview:runCallback@user-script:53:284:15] Claude state: session ended → tab 9c2499e6 removed
+[2026-07-06][16:52:25][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][17:04:21][INFO][aiterm_lib::claude_code::server] Claude hook: session dd964273-0f5d-421c-88f5-84552f1b58ea ended (tab None)
+[2026-07-06][17:08:54][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][17:08:54][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][17:08:54][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][17:08:54][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=0) at (206, 237) 1200x800
+[2026-07-06][17:08:55][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][17:08:55][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][17:08:56][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][17:08:56][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][17:08:56][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][17:08:56][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][17:09:03][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][17:09:03][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][17:09:03][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][17:09:03][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][17:09:04][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][17:09:04][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][17:09:04][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][17:09:04][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][17:09:07][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][17:09:07][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (624, 34) 1086x983
+[2026-07-06][17:13:47][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][17:13:47][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (255, 34) 1200x800
+[2026-07-06][17:13:47][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][17:13:47][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][17:13:47][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=0) at (206, 237) 1200x800
+[2026-07-06][17:13:47][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][17:13:47][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][17:13:47][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][17:13:48][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][17:13:48][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][17:14:02][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][17:14:02][INFO][aiterm_lib::commands::window] Restored geometry for 'window-b5499524-096f-4a73-bc23-0dc649a56e6d' (monitors=1) at (624, 34) 1086x983
+[2026-07-06][17:14:02][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][17:14:02][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (156, 217) 1442x800
+[2026-07-06][17:14:02][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][17:14:02][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f06837b2-871c-4cb5-9072-c2ba8c2c3ed9' (monitors=1) at (206, 149) 1200x800
+[2026-07-06][17:14:02][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][17:14:02][INFO][aiterm_lib::commands::window] Restored geometry for 'window-f45585e1-4b9c-4867-adbd-7bdacb3ed7fd' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][17:14:06][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][17:14:06][INFO][aiterm_lib::commands::window] Restored geometry for 'window-11f1ea78-ae2c-44d1-897f-b6670214f72a' (monitors=1) at (0, 34) 1710x983
+[2026-07-06][17:18:47][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0
+[2026-07-06][17:18:49][INFO][webview:y@tauri://localhost/_app/immutable/chunks/kBPOHYd_.js:30:288] Update available: v1.20.0

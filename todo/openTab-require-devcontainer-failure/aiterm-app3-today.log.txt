@@ -1,0 +1,147 @@
+[2026-07-06][07:29:11][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][07:29:11][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
+[2026-07-06][07:29:42][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][07:29:42][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][07:30:08][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][07:30:08][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
+[2026-07-06][08:02:21][INFO][webview:ve@tauri://localhost/_app/immutable/nodes/4.CDCekx5Z.js:788:31542] Auto-reloaded /Users/jayemccracken/proj/forwood-one-tests_reviewing/test-scripts/results/EAP-3031/2026-07-04/jira-review-comment.md
+[2026-07-06][08:03:18][INFO][webview:ve@tauri://localhost/_app/immutable/nodes/4.CDCekx5Z.js:788:31542] Auto-reloaded /Users/jayemccracken/proj/forwood-one-tests_reviewing/test-scripts/results/EAP-3028/2026-07-04/jira-review-comment.md
+[2026-07-06][08:03:50][INFO][webview:ve@tauri://localhost/_app/immutable/nodes/4.CDCekx5Z.js:788:31542] Auto-reloaded /Users/jayemccracken/proj/forwood-one-tests_reviewing/test-scripts/results/EAP-3035/2026-07-04/jira-review-comment.md
+[2026-07-06][08:04:23][INFO][webview:ve@tauri://localhost/_app/immutable/nodes/4.CDCekx5Z.js:788:31542] Auto-reloaded /Users/jayemccracken/proj/forwood-one-tests_reviewing/test-scripts/results/EAP-3038/2026-07-04/jira-review-comment.md
+[2026-07-06][08:04:48][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][08:04:51][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][08:04:56][INFO][webview:ve@tauri://localhost/_app/immutable/nodes/4.CDCekx5Z.js:788:31542] Auto-reloaded /Users/jayemccracken/proj/forwood-one-tests_reviewing/test-scripts/results/EAP-3040/2026-07-04/jira-review-comment.md
+[2026-07-06][08:05:03][INFO][aiterm_lib::claude_code::server] Claude hook: session 6f71878d-1aef-44be-b05f-fa6a9d0bdae8 ended (tab None)
+[2026-07-06][08:05:06][INFO][aiterm_lib::claude_code::server] Claude hook: session 282929ac-091d-4eda-a35b-cd37396f7169 ended (tab None)
+[2026-07-06][08:05:22][INFO][aiterm_lib::claude_code::server] Claude hook: session 4a175dbd-378d-452f-bfc9-12d5b02272f5 ended (tab None)
+[2026-07-06][08:50:06][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][08:50:06][INFO][aiterm_lib::claude_code::server] Claude hook: session d446db32-17be-421a-b412-015df4e63cbe ended (tab None)
+[2026-07-06][10:55:27][INFO][aiterm_lib::claude_code::server] MCP initialize: client='@forwood/task-engine' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][10:55:27][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (1079cfc9-583d-49fb-8d9a-53827ba2282c)
+[2026-07-06][10:55:27][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=16dc82f8-402b-466a-a2f6-53c0d9902392, tab_id=9c771d27-fa3b-4296-b118-a6a7b2b97b30, cols=93, rows=41
+[2026-07-06][10:55:27][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (3d77ee93-b812-4eef-a093-99bb317b3f3a)
+[2026-07-06][10:55:27][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=f408ad68-f871-4924-bace-0daa8f418e82, tab_id=6a884bb2-fc00-452c-870b-1adec291b522, cols=93, rows=41
+[2026-07-06][10:55:48][INFO][aiterm_lib::claude_code::server] MCP initialize: client='@forwood/task-engine' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][10:55:48][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (89e21ecd-91e6-4f65-8602-f9f5987af9be)
+[2026-07-06][10:55:48][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=f1447e36-101d-4e55-a910-ee589f8d7768, tab_id=b26e0bcc-5a57-4ed0-9572-74c79d2fd841, cols=93, rows=41
+[2026-07-06][10:55:48][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (f06dedc5-89ea-4c9d-be00-ddc7a562d5de)
+[2026-07-06][10:55:49][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (57a06c41-dd8c-49e2-85ad-47b2d370f457)
+[2026-07-06][10:55:50][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (f3b3422b-5400-43b3-b192-fc79bd587ace)
+[2026-07-06][11:02:55][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][11:06:18][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:06:18][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (0, 34) 1710x1073
+[2026-07-06][11:14:57][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:14:57][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
+[2026-07-06][11:23:08][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: getActiveTab (23533243-42d0-45d0-a444-f3bf231dca8c)
+[2026-07-06][11:23:12][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:23:12][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][11:23:18][INFO][webview:runCallback@user-script:5:284:15] Agent init: set claudeSessionId for tab 2d8ec6e1 = 73ba1f31
+[2026-07-06][11:32:52][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:32:52][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
+[2026-07-06][11:39:24][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:39:24][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][11:40:33][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:40:34][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
+[2026-07-06][11:44:40][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:44:40][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][11:48:21][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][11:48:21][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
+[2026-07-06][11:59:34][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][11:59:34][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][12:01:13][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:01:13][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
+[2026-07-06][12:07:24][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:07:24][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][12:09:58][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:09:58][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
+[2026-07-06][12:21:51][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:21:51][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][12:25:06][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][12:25:06][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
+[2026-07-06][12:56:21][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][12:56:21][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][13:03:18][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][13:03:18][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
+[2026-07-06][13:36:27][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][13:36:27][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][13:36:31][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][13:36:31][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
+[2026-07-06][14:00:15][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:02:48][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:09:34][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:12:05][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:14:06][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:17:11][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:20:12][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:30:07][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:30:07][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][14:30:36][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][14:30:36][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
+[2026-07-06][14:31:13][INFO][aiterm_lib::claude_code::server] MCP initialize: client='@forwood/task-engine' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:31:13][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (034b5875-2886-496c-9534-aa4f51738946)
+[2026-07-06][14:31:14][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=97e228ea-6ff1-426f-82a9-d5bed0e556fa, tab_id=6e09b9fb-5f68-4620-8950-2d6723839f83, cols=93, rows=41
+[2026-07-06][14:31:15][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (b24dfcbc-1c68-4dea-8119-10528f215218)
+[2026-07-06][14:31:16][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=d37dc4aa-7360-4ea0-aa93-250bd4135b4d, tab_id=39c1a854-8ea6-4288-8373-cc7f0ebe1d1b, cols=93, rows=41
+[2026-07-06][14:32:10][INFO][aiterm_lib::claude_code::server] MCP initialize: client='@forwood/task-engine' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:32:10][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (4117c568-33e1-485d-b068-28b4abecfb4b)
+[2026-07-06][14:32:10][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (6e30a79b-d24a-4aee-a383-f7219dfeeb3a)
+[2026-07-06][14:32:10][INFO][webview:Gt@tauri://localhost/_app/immutable/chunks/DJQREQSj.js:2:33689] Notification (auto/in-app): "shared" has finished (exit code 130)
+[2026-07-06][14:32:10][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (72da9c3b-a20d-447f-a7da-04bb2be12a4b)
+[2026-07-06][14:32:10][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (6761d763-c7ef-40e5-b010-0c6d43a2be74)
+[2026-07-06][14:34:10][INFO][aiterm_lib::claude_code::server] MCP initialize: client='@forwood/task-engine' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:34:10][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (c0ebb847-faf5-4343-a623-d3d995b1fcda)
+[2026-07-06][14:34:11][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=3f634280-051c-4dff-969f-ba13fe7dd9c1, tab_id=bbe7ad54-ab4c-4a78-a847-d08fd459d1c5, cols=187, rows=43
+[2026-07-06][14:34:12][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (da1dccca-a731-44d7-9022-f49abde97de8)
+[2026-07-06][14:34:14][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=108eeb7c-a15b-44e8-9493-b7075ad44df6, tab_id=7d641cca-4215-465c-945f-0a11d8bf0a62, cols=187, rows=43
+[2026-07-06][14:34:15][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (94b78d21-564d-4f35-974a-ba57fe46769a)
+[2026-07-06][14:34:15][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (83058ddd-6a3f-4367-b783-b4341e38845b)
+[2026-07-06][14:34:38][INFO][aiterm_lib::claude_code::server] MCP initialize: client='@forwood/task-engine' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][14:34:38][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (d592186a-be33-47b1-8f19-c8a119583d67)
+[2026-07-06][14:34:39][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: openTab (dc5e1249-620f-4a27-a3c1-c17c4bc3a7a0)
+[2026-07-06][14:34:40][INFO][webview:Gt@tauri://localhost/_app/immutable/chunks/DJQREQSj.js:2:33689] Notification (auto/in-app): "shared" has finished (exit code 130)
+[2026-07-06][14:34:40][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=71bbfc88-9e21-4cad-86c7-01218d0d35bd, tab_id=3d4efdb1-d85a-4080-b042-01dd15d50199, cols=187, rows=43
+[2026-07-06][14:38:55][INFO][webview:Gt@tauri://localhost/_app/immutable/chunks/DJQREQSj.js:2:33729] Notification (auto/both): Compacting conversation (auto)...
+[2026-07-06][14:41:55][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:41:57][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][14:44:29][ERROR][webview:Ce@tauri://localhost/_app/immutable/nodes/0.CfCpJS5U.js:4:135] [WEBVIEW_ERROR] onerror @ tauri://localhost/_app/immutable/nodes/4.CDCekx5Z.js:766:50072: TypeError: undefined is not an object (evaluating 'this._activeBuffer.lines.get(this._activeBuffer.ybase+this._activeBuffer.y).isWrapped=!1')
+[2026-07-06][14:49:07][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: listBridgedPeers (a4764e89-d0cf-4edb-82db-c158c3dedaaa)
+[2026-07-06][14:56:34][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][14:56:35][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
+[2026-07-06][14:59:44][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][14:59:44][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][15:00:14][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][15:00:14][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
+[2026-07-06][15:06:09][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: writeWorkspaceNote (dd8c8a40-5f88-40e9-aabd-fe47dc803521)
+[2026-07-06][15:09:41][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: writeWorkspaceNote (33f8d21d-77bc-45e6-807b-29809d85afdb)
+[2026-07-06][15:47:42][INFO][aiterm_lib::claude_code::server] Claude hook: session 396b01d0-db45-468a-8a28-7b1cfd5d9474 ended (tab None)
+[2026-07-06][15:52:16][INFO][webview:i@tauri://localhost/_app/immutable/chunks/kCTFfbH_.js:2:1452] Claude Code tool request: writeWorkspaceNote (5b15fe8e-47c0-4ea8-a027-c85b562092e1)
+[2026-07-06][15:56:08][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=cb0fba94-6bda-4425-98cb-2213cfde8e78, tab_id=ae6fb3b2-ae66-41cf-9ecd-1a8c6e216496, cols=187, rows=43
+[2026-07-06][16:10:53][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][16:10:54][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][16:27:06][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][16:27:06][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
+[2026-07-06][16:31:29][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][16:31:29][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][16:34:49][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][16:34:50][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
+[2026-07-06][16:46:41][INFO][aiterm_lib::claude_code::server] MCP initialize: client='@forwood/task-engine' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][16:46:41][WARN][aiterm_lib::claude_code::server] MCP tool guard: Tab '2d8ec6e1-7cdf-42f0-9850-d9d3a57296da' does not exist in this maiTerm instance (maiterm2). You may be calling the wrong MCP server. Use 'maiterm-dev' tools instead.
+[2026-07-06][16:47:06][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=cc791729-dc1b-44f8-9e71-05216de41b0f, tab_id=1cc72d9d-2f45-4ba5-b7db-cc3b53a56a93, cols=187, rows=43
+[2026-07-06][16:47:13][INFO][aiterm_lib::claude_code::server] MCP initialize: client='@forwood/task-engine' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][16:47:13][WARN][aiterm_lib::claude_code::server] MCP tool guard: Tab '2d8ec6e1-7cdf-42f0-9850-d9d3a57296da' does not exist in this maiTerm instance (maiterm2). You may be calling the wrong MCP server. Use 'maiterm-dev' tools instead.
+[2026-07-06][16:47:52][INFO][aiterm_lib::pty::manager] spawn_pty: pty_id=781a1fae-4447-4bef-b34d-5f7b5175f06a, tab_id=76a5633d-8873-4aa5-b8e7-8576c5c707af, cols=187, rows=43
+[2026-07-06][16:48:32][INFO][aiterm_lib::claude_code::server] MCP initialize: client='@forwood/task-engine' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][16:48:32][WARN][aiterm_lib::claude_code::server] MCP tool guard: Tab '2d8ec6e1-7cdf-42f0-9850-d9d3a57296da' does not exist in this maiTerm instance (maiterm2). You may be calling the wrong MCP server. Use 'maiterm-dev' tools instead.
+[2026-07-06][16:49:49][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][16:49:56][INFO][aiterm_lib::claude_code::server] Claude hook: session 266a3f82-7712-4202-b2bc-7f5cb4c0ba36 ended (tab None)
+[2026-07-06][16:52:11][INFO][aiterm_lib::claude_code::server] Claude hook: session dd964273-0f5d-421c-88f5-84552f1b58ea ended (tab None)
+[2026-07-06][16:52:25][INFO][aiterm_lib::claude_code::server] MCP initialize: client='claude-code' detected_runtime=Claude protocol=2025-11-25
+[2026-07-06][17:04:21][INFO][aiterm_lib::claude_code::server] Claude hook: session dd964273-0f5d-421c-88f5-84552f1b58ea ended (tab None)
+[2026-07-06][17:08:54][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][17:08:54][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][17:09:04][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][17:09:04][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
+[2026-07-06][17:13:45][INFO][webview] Monitor count changed: 1 → 0, repositioning window
+[2026-07-06][17:13:45][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=0) at (0, 34) 1710x983
+[2026-07-06][17:14:00][INFO][webview] Monitor count changed: 0 → 1, repositioning window
+[2026-07-06][17:14:00][INFO][aiterm_lib::commands::window] Restored geometry for 'main' (monitors=1) at (0, 34) 1690x963
