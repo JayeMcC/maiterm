@@ -284,11 +284,18 @@ pub fn terminal_bracketed_paste(
 /// true means the tab needs only re-registration (`/maiterm init`), NOT a full
 /// ssh+resume replay (which would inject junk into the running agent / nest ssh).
 #[tauri::command]
-pub fn get_agent_liveness(
+pub async fn get_agent_liveness(
     state: State<'_, Arc<AppState>>,
     pty_id: String,
 ) -> Result<pty::AgentLiveness, String> {
-    pty::get_agent_liveness(&*state, &pty_id)
+    // The probe spawns `ps -x` (full process list) plus lsof/sysinfo scans — all blocking.
+    // A synchronous command runs on Tauri's main event-loop thread, so the mesh readiness
+    // modal's 1s poll loop over every tab would peg the main thread and freeze the whole UI
+    // (pinwheel). Offload the blocking work to the blocking pool so the event loop stays free.
+    let app_state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || pty::get_agent_liveness(&app_state, &pty_id))
+        .await
+        .map_err(|e| format!("liveness probe failed to run: {}", e))?
 }
 
 /// Search the terminal buffer.
