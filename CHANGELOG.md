@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.20.1
+
+- **Fix the UI freezing after opening a mesh workspace.** The readiness modal polls every ambiguous tab once a second to see whether its agent is still alive, and each poll ran a full process scan on the main thread — with dozens of tabs the app beach-balled, and restarting re-triggered it. The probe now runs off the main thread and one process sweep answers the whole poll tick instead of one per tab.
+- **Fix "Too many open files" once you pass roughly 68 open terminals.** macOS starts a GUI app with a 256-descriptor limit and each terminal costs three, so new terminals failed to spawn — usually surfacing as "MCP Bridge Failed". maiTerm now raises the limit at startup, before any terminal can spawn.
+- **Agent hooks repair themselves instead of failing on every event.** If something rewrites `~/.claude/settings.json` — the `claude` CLI, or an overlapping deploy leaving the previous instance's port behind — every hook fired at a dead port (`ECONNREFUSED`) until the next restart, losing session tracking and the state indicators. maiTerm now notices hook entries pointing at ports that are no longer live and repairs them within 30 seconds, including a stale reverse tunnel left behind by another machine's SSH bridge.
+- **Fix the SSH bridge breaking your own `ssh` to the same host.** With `ControlMaster auto` in your SSH config, the bridge's long-lived tunnel took ownership of the shared connection socket, so your own `ssh <host>` was forced to multiplex over it and failed with "Session open refused by peer". Every bridge connection is now fully independent of that socket.
+- Fix "Install MCP for Current User" and "Inject maiTerm Env Vars" running against your local machine when the tab's SSH session had already exited — which clobbered your local Claude config with the remote's settings. Both now check that `ssh` is still in the foreground and tell you instead of writing.
+- In maiLink, a remote or pruned agent tab that falls back to a live terminal snapshot now renders as a preformatted, badged block instead of collapsing into one long overflowing line.
+
 ## v1.20.0
 
 - **Resuming a workspace brings back exactly the agents that were running.** Suspending a workspace now remembers which tabs had a live terminal; resuming it respawns and auto-resumes just those — so a 20-tab workspace that had 3 agents running comes back with those 3 live (with a progress modal for larger resumes), instead of waking tabs you never started or leaving live ones dead.
