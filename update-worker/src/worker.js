@@ -82,25 +82,61 @@ async function handleStats(request, env) {
   if (!env.STATS_KEY || key !== env.STATS_KEY) {
     return new Response("forbidden (use the x-stats-key header)\n", { status: 403 });
   }
-  const [dau, mau, byVersion, byOs] = await Promise.all([
+  // The salt rotates daily, so `uhash` identifies a machine only WITHIN a day.
+  // Therefore the only honest "distinct machine" counts are per-day (the (day,uhash)
+  // PK dedups those). Any COUNT(DISTINCT uhash) spanning multiple days counts
+  // machine-DAYS, not machines, and silently inflates with every daily launch — so
+  // those aggregates are reported under explicit `*_machine_days_*` names, and the
+  // real "how many people" signal comes from avg/peak DAU + the latest-day snapshot.
+  const [dau, dauStats, latest, machineDays, mdByVersion, mdByOs] = await Promise.all([
     env.DB.prepare(
       "SELECT day, COUNT(*) AS users FROM pings GROUP BY day ORDER BY day DESC LIMIT 30"
     ).all(),
     env.DB.prepare(
-      "SELECT COUNT(DISTINCT uhash) AS users FROM pings WHERE day > date('now','-30 days')"
+      "SELECT ROUND(AVG(u),1) AS avg_dau, MAX(u) AS peak_dau, COUNT(*) AS active_days " +
+      "FROM (SELECT day, COUNT(*) AS u FROM pings WHERE day > date('now','-30 days') GROUP BY day)"
+    ).first(),
+    env.DB.prepare("SELECT MAX(day) AS day FROM pings").first(),
+    env.DB.prepare(
+      "SELECT COUNT(DISTINCT uhash) AS n FROM pings WHERE day > date('now','-30 days')"
     ).first(),
     env.DB.prepare(
-      "SELECT version, COUNT(DISTINCT uhash) AS users FROM pings WHERE day > date('now','-30 days') GROUP BY version ORDER BY users DESC"
+      "SELECT version, COUNT(DISTINCT uhash) AS machine_days FROM pings WHERE day > date('now','-30 days') GROUP BY version ORDER BY machine_days DESC"
     ).all(),
     env.DB.prepare(
-      "SELECT os, COUNT(DISTINCT uhash) AS users FROM pings WHERE day > date('now','-30 days') GROUP BY os ORDER BY users DESC"
+      "SELECT os, COUNT(DISTINCT uhash) AS machine_days FROM pings WHERE day > date('now','-30 days') GROUP BY os ORDER BY machine_days DESC"
     ).all(),
   ]);
+
+  const latestDay = latest?.day ?? null;
+  // True distinct-machine breakdown for the most recent day with data (one salt → one
+  // machine per uhash), the honest snapshot of what versions/OSes are actually in use.
+  const [latestByVersion, latestByOs] = latestDay
+    ? await Promise.all([
+        env.DB.prepare(
+          "SELECT version, COUNT(*) AS machines FROM pings WHERE day = ? GROUP BY version ORDER BY machines DESC"
+        ).bind(latestDay).all(),
+        env.DB.prepare(
+          "SELECT os, COUNT(*) AS machines FROM pings WHERE day = ? GROUP BY os ORDER BY machines DESC"
+        ).bind(latestDay).all(),
+      ])
+    : [{ results: [] }, { results: [] }];
+
   return Response.json({
-    mau_30d: mau?.users ?? 0,
+    // Honest "how many people" signal — distinct machines per day, and their avg/peak.
+    avg_dau_30d: dauStats?.avg_dau ?? 0,
+    peak_dau_30d: dauStats?.peak_dau ?? 0,
+    active_days_30d: dauStats?.active_days ?? 0,
     dau_last_30d: dau.results,
-    by_version_30d: byVersion.results,
-    by_os_30d: byOs.results,
+    // True snapshot of versions/OSes actually running, on the latest day with data.
+    latest_day: latestDay,
+    latest_day_by_version: latestByVersion.results,
+    latest_day_by_os: latestByOs.results,
+    // Cumulative machine-DAYS over 30d (NOT distinct machines — inflated by daily
+    // relaunches because the privacy salt rotates daily). Kept for trend context only.
+    machine_days_30d: machineDays?.n ?? 0,
+    by_version_machine_days_30d: mdByVersion.results,
+    by_os_machine_days_30d: mdByOs.results,
   });
 }
 
