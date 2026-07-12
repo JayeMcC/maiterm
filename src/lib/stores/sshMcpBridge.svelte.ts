@@ -256,7 +256,12 @@ function buildSetupScript(
     '__p=$(grep -o \'"serverPort":[0-9]*\' "$__f" 2>/dev/null | grep -o \'[0-9]*\')',
     '__t=$(grep -o \'"authToken":"[^"]*"\' "$__f" 2>/dev/null | cut -d\'"\'  -f4)',
     '[ -n "$__p" ] && [ "$__p" != "' + remotePort + '" ] && {',
-    '__code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 -X POST -H "x-claude-code-ide-authorization: $__t" "http://127.0.0.1:$__p/hooks" 2>/dev/null)',
+    // --max-time bounds the TOTAL request: a zombie reverse-tunnel port (kept
+    // listening by a dead ControlMaster) accepts the TCP connect but never answers,
+    // so --connect-timeout alone lets curl block on the response read forever —
+    // which hangs this whole setup script until ssh_run_setup's 30s timeout, wedging
+    // the bridge in 'failed'. With --max-time it returns 000 → the lock is pruned.
+    '__code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 --max-time 4 -X POST -H "x-claude-code-ide-authorization: $__t" "http://127.0.0.1:$__p/hooks" 2>/dev/null)',
     '[ "$__code" = "000" ] || [ "$__code" = "" ] && rm -f "$__f"',
     '} 2>/dev/null',
     'done',
