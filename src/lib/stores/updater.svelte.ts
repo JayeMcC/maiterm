@@ -160,7 +160,13 @@ function createUpdaterStore() {
     try {
       const monitorCount = await commands.getMonitorCount().catch(() => 1);
       await commands.saveWindowGeometry(monitorCount).catch(() => {});
+      // This window's own terminals (also sets the shutting-down flag that
+      // suppresses per-tab autosave races).
       await terminalsStore.saveAllScrollback();
+      // Every OTHER window's terminals too: terminalsStore is per-webview, so the
+      // call above only covered this window. Rust owns all buffers and flushes
+      // them globally — without this a secondary window returns with blank tabs.
+      await commands.saveAllScrollback().catch((e) => logError(`save_all_scrollback failed: ${e}`));
       await invoke('sync_state');
     } catch (e) {
       logError(`Pre-relaunch state flush failed: ${e instanceof Error ? e.message : String(e)}`);

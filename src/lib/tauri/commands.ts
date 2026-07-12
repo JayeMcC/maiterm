@@ -205,6 +205,13 @@ export async function saveTerminalScrollback(ptyId: string, tabId: string): Prom
   return invoke('save_terminal_scrollback', { ptyId, tabId });
 }
 
+/** Flush scrollback for every live terminal across ALL windows (Rust owns the
+ *  buffers). Returns the number saved. Used before an update relaunch so
+ *  secondary windows don't come back with blank terminals. */
+export async function saveAllScrollback(): Promise<number> {
+  return invoke('save_all_scrollback');
+}
+
 export async function restoreTerminalFromSaved(ptyId: string, tabId: string): Promise<void> {
   return invoke('restore_terminal_from_saved', { ptyId, tabId });
 }

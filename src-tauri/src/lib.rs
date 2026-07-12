@@ -490,6 +490,7 @@ pub fn run() {
             commands::terminal::scroll_selection,
             commands::terminal::get_terminal_recent_text,
             commands::terminal::save_terminal_scrollback,
+            commands::terminal::save_all_scrollback,
             commands::terminal::restore_terminal_from_saved,
             commands::terminal::has_saved_scrollback,
             commands::terminal::get_saved_scrollback_text,
