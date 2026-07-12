@@ -26,10 +26,18 @@ function isNewerVersion(a: string, b: string): boolean {
 
 /** Parse a GitHub release body into changelog items. */
 function parseReleaseBody(body: string): string[] {
-  return body.split('\n')
-    .map(line => line.match(/^- (.+)/))
+  const bullets = body.split('\n')
+    .map(line => line.match(/^\s*[-*] (.+)/))
     .filter((m): m is RegExpMatchArray => m !== null)
     .map(m => m[1].replace(/`([^`]+)`/g, '$1'));
+  if (bullets.length > 0) return bullets;
+  // Fallback: a release body written as bare paragraph(s) with no bullet markers
+  // (e.g. a single-fix release) would otherwise parse to zero items and be dropped
+  // from the What's New modal entirely. Treat each non-empty, non-heading line as an item.
+  return body.split(/\n\s*\n/)
+    .map(p => p.trim().replace(/\s*\n\s*/g, ' '))
+    .filter(p => p.length > 0 && !p.startsWith('#'))
+    .map(p => p.replace(/`([^`]+)`/g, '$1'));
 }
 
 function createUpdaterStore() {
