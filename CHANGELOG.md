@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.20.3
+
+- **Fix an SSH host spamming `export AITERM_TAB_ID=…` into your shell on nearly every command.** When connecting to a remote host whose bridge setup was slow, the setup kept timing out and getting retried on every prompt — and each retry re-injected the tab-ID/port export into your live shell. Two root causes fixed: the environment variables are now injected only once per session, and the stale-lockfile cleanup that ran during setup no longer hangs for 30 seconds on a dead reverse-tunnel port (a leftover port that accepts a connection but never answers), which was what left the bridge stuck retrying in the first place.
+- **Fix a release occasionally showing no notes in the "What's New" window.** A release whose notes were written as a plain paragraph instead of a bulleted list rendered as an empty entry. The window now reads both formats.
+
 ## v1.20.2
 
 - **Fix mesh messages showing the wrong sender.** In a mesh workspace, every `⟦MESH⟧ "Message from …"` line was labeled with the *recipient's* own role name instead of the sender's — so a message from one agent arrived looking like it came from you. The envelope now derives the sender's identity from the sending tab, making a mislabel structurally impossible.
