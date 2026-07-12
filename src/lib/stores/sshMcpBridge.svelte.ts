@@ -33,6 +33,16 @@ let bridgeStates = $state<Map<string, BridgeState>>(new Map());
 const tunnelListeners = new Map<string, UnlistenFn>();
 
 /**
+ * Remote ports for which we've already injected `export AITERM_TAB_ID/PORT` into
+ * the live shell, keyed by tabId. The env vars persist for the whole ssh session,
+ * so injecting once is enough. Without this, a bridge whose remote setup keeps
+ * timing out stays in 'failed' state and the term-title retry loop re-injects the
+ * export line into the user's interactive shell on every prompt — visible spam.
+ * Keyed by port so a genuine reconnect (new tunnel port) re-injects.
+ */
+const injectedEnvPort = new Map<string, number>();
+
+/**
  * Remove bridge state for a tab (internal — no backend call).
  * Used when Rust notifies us the tunnel died.
  */
@@ -40,6 +50,7 @@ function clearBridgeState(tabId: string): void {
   if (!bridgeStates.has(tabId)) return;
   bridgeStates.delete(tabId);
   bridgeStates = new Map(bridgeStates);
+  injectedEnvPort.delete(tabId);
   logInfo(`SSH MCP bridge cleared for tab ${tabId} (tunnel down)`);
 }
 
@@ -363,7 +374,12 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
     // (~1-2s), and the ssh process may have exited in the meantime (quick user
     // disconnect, one-shot command that slipped past the filter, etc.). Writing to a
     // PTY whose foreground is no longer ssh dumps the export into the local shell.
-    if (ptyId) {
+    if (ptyId && injectedEnvPort.get(tabId) === tunnelInfo.remote_port) {
+      // Already injected for this port — a prior attempt's export is still live in
+      // the shell. Re-injecting on every failed-setup retry would spam the user's
+      // interactive session with `export AITERM_TAB_ID=…` lines, once per prompt.
+      logInfo("SSH MCP bridge: env vars already injected for tab " + tabId + " — skipping re-injection");
+    } else if (ptyId) {
       try {
         if (!(await isRemoteShellForeground(ptyId))) {
           logInfo("SSH MCP bridge: skipping env-var injection — ssh no longer foreground for tab " + tabId);
@@ -371,6 +387,7 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
           const envCmd = " export AITERM_TAB_ID=" + tabId + " AITERM_PORT=" + tunnelInfo.remote_port + "\n";
           const bytes = Array.from(new TextEncoder().encode(envCmd));
           await commands.writeTerminal(ptyId, bytes);
+          injectedEnvPort.set(tabId, tunnelInfo.remote_port);
           logInfo("SSH MCP bridge: injected env vars into remote shell for tab " + tabId);
         }
       } catch (e) {
@@ -423,6 +440,7 @@ export async function disableBridge(tabId: string): Promise<void> {
   cleanupListener(tabId);
   bridgeStates.delete(tabId);
   bridgeStates = new Map(bridgeStates);
+  injectedEnvPort.delete(tabId);
 
   try {
     await commands.detachSshTunnel(bridge.hostKey, tabId);
