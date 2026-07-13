@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.20.4
+
+- **Fix secondary windows coming back empty or with stale scrollback after an update or restart.** Two fixes: a window whose active workspace had been suspended now un-suspends and respawns its tabs on load instead of returning blank, and an update relaunch now flushes *every* window's terminal scrollback before restarting — previously only the window you triggered the update from was saved, so other windows lost their buffers.
+- Older "limbo" terminal tabs — ones whose PTY had ended without going through a normal suspend — are now normalized to suspended, so they show a proper "suspended Xd ago" age and are counted correctly in diagnostics instead of as uninitialized.
+
 ## v1.20.3
 
 - **Fix an SSH host spamming `export AITERM_TAB_ID=…` into your shell on nearly every command.** When connecting to a remote host whose bridge setup was slow, the setup kept timing out and getting retried on every prompt — and each retry re-injected the tab-ID/port export into your live shell. Two root causes fixed: the environment variables are now injected only once per session, and the stale-lockfile cleanup that ran during setup no longer hangs for 30 seconds on a dead reverse-tunnel port (a leftover port that accepts a connection but never answers), which was what left the bridge stuck retrying in the first place.
