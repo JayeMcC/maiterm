@@ -53,7 +53,7 @@
   import { isModKey, modSymbol } from '$lib/utils/platform';
   import { buildShellIntegrationSnippet, buildInstallSnippet } from '$lib/utils/shellIntegration';
   import ResizableTextarea from '$lib/components/ResizableTextarea.svelte';
-  import { processOutput, cleanupTab, loadTabVariables, interpolateVariables, getVariables, clearTabVariables, suppressTab, unsuppressTab, replayAutoResume } from '$lib/stores/triggers.svelte';
+  import { processOutput, cleanupTab, loadTabVariables, interpolateVariables, getVariables, clearTabVariables, suppressTab, unsuppressTab, replayAutoResume, onVariablesChange } from '$lib/stores/triggers.svelte';
   import { dispatch } from '$lib/stores/notificationDispatch';
   import { toastStore } from '$lib/stores/toasts.svelte';
   import { getResumeCommand, sessionIdVar } from '$lib/agents/resume';
@@ -371,6 +371,23 @@
       await writeTerminal(ptyId, bytes);
     }
   }
+
+  // Per-terminal status strip: user-facing trigger variables (ticket, stage, …).
+  // Plumbing variables are hidden; claudeAction already renders via the action tag.
+  const HIDDEN_STATUS_VARS = new Set(['claudeAction', 'claudeSessionId', 'codexSessionId', 'geminiSessionId', 'aitermTabId', 'aitermPort', 'aitermExport', 'meshOnboarded']);
+  let statusVars = $state<[string, string][]>([]);
+
+  function refreshStatusVars() {
+    const vars = getVariables(tabId);
+    statusVars = vars ? [...vars.entries()].filter(([name, value]) => !HIDDEN_STATUS_VARS.has(name) && value !== '') : [];
+  }
+
+  $effect(() => {
+    refreshStatusVars();
+    return onVariablesChange((changedTabId) => {
+      if (changedTabId === tabId) refreshStatusVars();
+    });
+  });
 
   // Escape a path for use inside single quotes.
   // Handles ~ by leaving it unquoted so the shell expands it.
@@ -2095,6 +2112,17 @@
       {cs.toolName}{#if cs.toolDetail}: <span class="claude-action-detail">{cs.toolDetail}</span>{/if}
     </div>
   {/if}
+  <!-- Hidden while the search bar is open — it occupies the same corner -->
+  {#if statusVars.length && terminalsStore.searchVisibleFor !== tabId}
+    <div class="status-strip">
+      {#each statusVars as [name, value] (name)}
+        <span class="status-chip" title="{name}: {value}">
+          <span class="status-chip-name">{name}</span>
+          <span class="status-chip-value">{value}</span>
+        </span>
+      {/each}
+    </div>
+  {/if}
   {#if scrollTotalLines > scrollViewportRows}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
@@ -2241,6 +2269,45 @@
     flex-shrink: 0;
     display: flex;
     align-items: center;
+  }
+
+  .status-strip {
+    position: absolute;
+    top: 6px;
+    right: 14px; /* clear the scrollbar track */
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 4px;
+    max-width: 60%;
+    pointer-events: none;
+    z-index: 4;
+  }
+
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--bg-medium);
+    border: 1px solid var(--bg-light);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 0.77rem;
+    line-height: 1;
+    max-width: 220px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .status-chip-name {
+    color: var(--fg-dim);
+    flex-shrink: 0;
+  }
+
+  .status-chip-value {
+    color: var(--fg);
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .claude-action-detail {
