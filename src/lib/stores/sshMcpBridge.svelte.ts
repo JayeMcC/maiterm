@@ -135,8 +135,10 @@ export function isInteractiveSshSession(cmd: string): boolean {
  */
 export async function isRemoteShellForeground(ptyId: string): Promise<boolean> {
   try {
-    const info = await commands.getPtyInfo(ptyId);
-    return !!info.foreground_command && isInteractiveSshSession(info.foreground_command);
+    // Foreground-only probe (no lsof cwd) — this runs right before the env-var
+    // injection, which races the user's first keystrokes at the remote prompt.
+    const cmd = await commands.getPtyForeground(ptyId);
+    return !!cmd && isInteractiveSshSession(cmd);
   } catch {
     return false;
   }
@@ -349,36 +351,26 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
     const tunnelInfo = await commands.startSshTunnel(sshArgs, hostKey, tabId, localPort);
     logInfo(`SSH MCP bridge: tunnel to ${hostKey} on remote port ${tunnelInfo.remote_port}`);
 
-    // Kick off remote setup in parallel with env-var injection below. The injection
-    // only needs remote_port, which we already have — awaiting setup first delays the
-    // export landing in the remote shell by ~0.5-2s, which collides with the user's
-    // first keystrokes. Claude and Codex are SEPARATE background-SSH setups behind
-    // independent gates, so one failing can't break the other.
-    const setupPromises: Promise<void>[] = [];
-    if (claudeOn) {
-      const skillScripts = await commands.getMaitermSkillScripts();
-      const setupScript = buildSetupScript(tunnelInfo.remote_port, authToken, tabId, skillScripts);
-      setupPromises.push(commands.sshRunSetup(sshArgs, setupScript));
-    }
-    if (codexOn) {
-      // No-ops on a remote without the codex CLI. Reuses the local CodexRegistrar's
-      // renderers (config.toml + hooks.json + shim + prompt), pointed at the tunnel port.
-      const codexScript = await commands.buildCodexSetupScript(tunnelInfo.remote_port, authToken, tabId);
-      setupPromises.push(commands.sshRunSetup(sshArgs, codexScript));
-    }
-
     // Set trigger variables so auto-resume commands can interpolate them.
     // %aitermTabId, %aitermPort for individual values, %aitermExport for the full export command.
     setVariable(tabId, 'aitermTabId', tabId);
     setVariable(tabId, 'aitermPort', String(tunnelInfo.remote_port));
     setVariable(tabId, 'aitermExport', `export AITERM_TAB_ID=${tabId} AITERM_PORT=${tunnelInfo.remote_port}`);
 
-    // Inject AITERM_TAB_ID and AITERM_PORT into the remote shell so hooks can read them.
-    // Leading space suppresses shell history (bash HISTCONTROL=ignorespace, zsh HIST_IGNORE_SPACE).
-    // Re-check the foreground process right before writing: tunnel setup is async
-    // (~1-2s), and the ssh process may have exited in the meantime (quick user
-    // disconnect, one-shot command that slipped past the filter, etc.). Writing to a
-    // PTY whose foreground is no longer ssh dumps the export into the local shell.
+    // Inject AITERM_TAB_ID and AITERM_PORT into the remote shell FIRST — before
+    // building or kicking off the remote setup below. The injection only needs
+    // remote_port (already known), so NOTHING else should sit between tunnel-up
+    // and the PTY write: every await in between (getMaitermSkillScripts,
+    // buildCodexSetupScript, and the foreground probe) delays the export landing
+    // at the remote prompt and lets the user's first keystrokes race in front of
+    // it. That race is exactly what building the setup scripts here used to cause.
+    // Leading space suppresses shell history (bash HISTCONTROL=ignorespace, zsh
+    // HIST_IGNORE_SPACE). Re-check the foreground process right before writing:
+    // tunnel setup is async (~1-2s), and the ssh process may have exited in the
+    // meantime (quick user disconnect, one-shot command that slipped past the
+    // filter, etc.). Writing to a PTY whose foreground is no longer ssh dumps the
+    // export into the local shell. The probe is foreground-only (no lsof) to keep
+    // this last gate as thin as possible.
     if (ptyId && injectedEnvPort.get(tabId) === tunnelInfo.remote_port) {
       // Already injected for this port — a prior attempt's export is still live in
       // the shell. Re-injecting on every failed-setup retry would spam the user's
@@ -398,6 +390,23 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
       } catch (e) {
         logError("SSH MCP bridge: failed to inject env vars: " + e);
       }
+    }
+
+    // Now kick off remote setup(s) — these gate the 'connected' status flip but
+    // NOT the interactive experience, so they run after the injection above rather
+    // than in front of it. Claude and Codex are SEPARATE background-SSH setups
+    // behind independent gates, so one failing can't break the other.
+    const setupPromises: Promise<void>[] = [];
+    if (claudeOn) {
+      const skillScripts = await commands.getMaitermSkillScripts();
+      const setupScript = buildSetupScript(tunnelInfo.remote_port, authToken, tabId, skillScripts);
+      setupPromises.push(commands.sshRunSetup(sshArgs, setupScript));
+    }
+    if (codexOn) {
+      // No-ops on a remote without the codex CLI. Reuses the local CodexRegistrar's
+      // renderers (config.toml + hooks.json + shim + prompt), pointed at the tunnel port.
+      const codexScript = await commands.buildCodexSetupScript(tunnelInfo.remote_port, authToken, tabId);
+      setupPromises.push(commands.sshRunSetup(sshArgs, codexScript));
     }
 
     // Wait for remote setup(s) to finish before flipping to 'connected'.

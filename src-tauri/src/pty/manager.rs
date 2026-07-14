@@ -865,6 +865,17 @@ pub fn get_pty_info(state: &Arc<AppState>, pty_id: &str) -> Result<PtyInfo, Stri
     Ok(PtyInfo { cwd, foreground_command })
 }
 
+/// Foreground command only — skips the `lsof` cwd lookup that `get_pty_info`
+/// also does. Used on the SSH-bridge env-injection hot path, where the export
+/// races the user's first keystrokes: the cwd is irrelevant there, so paying for
+/// lsof would only widen that race.
+pub fn get_pty_foreground(state: &Arc<AppState>, pty_id: &str) -> Result<Option<String>, String> {
+    let registry = state.pty_registry.read();
+    let handle = registry.get(pty_id).ok_or("PTY not found")?;
+    let pid = handle.child_pid.ok_or("No child PID")?;
+    Ok(get_foreground_command(pid))
+}
+
 /// Which agent CLIs to look for in a tab's process tree. Union of every runtime's
 /// `agent_process_names` (see `state/agent_runtime.rs`) — kept as a small literal so
 /// the readiness probe needn't know a tab's runtime up front.

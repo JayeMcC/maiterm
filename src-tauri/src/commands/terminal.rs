@@ -88,6 +88,14 @@ pub fn get_pty_info(
 }
 
 #[tauri::command]
+pub fn get_pty_foreground(
+    state: State<'_, Arc<AppState>>,
+    pty_id: String,
+) -> Result<Option<String>, String> {
+    pty::get_pty_foreground(&*state, &pty_id)
+}
+
+#[tauri::command]
 pub fn list_live_ptys(state: State<'_, Arc<AppState>>) -> Vec<String> {
     pty::list_live_ptys(&*state)
 }
