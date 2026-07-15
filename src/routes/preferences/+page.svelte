@@ -1747,6 +1747,23 @@
           </div>
         {/if}
 
+        <h3 class="section-heading">Cursor</h3>
+
+        <div class="setting" style="flex-direction: column; align-items: stretch; gap: 6px;">
+          <label for="cursor-report-apply-command">Report + apply command</label>
+          <p class="setting-hint">
+            Run by the tab bar's report+apply button in a dedicated <code>report-changes</code> tab at the current terminal's cwd. Repeated clicks reuse the tab.
+          </p>
+          <input
+            id="cursor-report-apply-command"
+            type="text"
+            class="pattern-input"
+            value={preferencesStore.cursorReportApplyCommand}
+            placeholder={'cursor-agent --force "report changes, then apply changes"'}
+            onchange={(e) => preferencesStore.setCursorReportApplyCommand(e.currentTarget.value)}
+          />
+        </div>
+
         <h3 class="section-heading">Codex</h3>
 
         <div class="setting" style="align-items: flex-start;">

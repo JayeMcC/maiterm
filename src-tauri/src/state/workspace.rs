@@ -680,6 +680,10 @@ fn default_file_link_action() -> String {
     "modifier_click".to_string()
 }
 
+fn default_cursor_report_apply_command() -> String {
+    "cursor-agent --force \"report changes, then apply changes\"".to_string()
+}
+
 fn default_backup_exclude_scrollback() -> bool {
     true
 }
@@ -992,6 +996,9 @@ pub struct Preferences {
     /// File link click behavior: "click", "modifier_click", "alt_click", "disabled"
     #[serde(default = "default_file_link_action")]
     pub file_link_action: String,
+    /// Command run by the terminal report+apply button, in a tab at the source tab's cwd
+    #[serde(default = "default_cursor_report_apply_command")]
+    pub cursor_report_apply_command: String,
     /// Backup directory path (None = scheduled backups disabled)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub backup_directory: Option<String>,
@@ -1154,6 +1161,7 @@ impl Default for Preferences {
             composer_default_open: true,
             windows_shell: default_windows_shell(),
             file_link_action: default_file_link_action(),
+            cursor_report_apply_command: default_cursor_report_apply_command(),
             backup_directory: None,
             backup_interval: String::new(),
             backup_compress: true,

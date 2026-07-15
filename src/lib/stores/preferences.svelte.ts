@@ -67,6 +67,7 @@ function createPreferencesStore() {
   let composerDefaultOpen = $state(true);
   let windowsShell = $state('powershell');
   let fileLinkAction = $state('modifier_click');
+  let cursorReportApplyCommand = $state('cursor-agent --force "report changes, then apply changes"');
   let backupDirectory = $state<string | null>(null);
   let backupInterval = $state('off');
   let backupExcludeScrollback = $state(true);
@@ -260,6 +261,9 @@ function createPreferencesStore() {
     get fileLinkAction() {
       return fileLinkAction;
     },
+    get cursorReportApplyCommand() {
+      return cursorReportApplyCommand;
+    },
     get backupDirectory() {
       return backupDirectory;
     },
@@ -371,6 +375,7 @@ function createPreferencesStore() {
       composerDefaultOpen = prefs.composer_default_open ?? true;
       windowsShell = prefs.windows_shell ?? 'powershell';
       fileLinkAction = prefs.file_link_action ?? 'modifier_click';
+      cursorReportApplyCommand = prefs.cursor_report_apply_command ?? 'cursor-agent --force "report changes, then apply changes"';
       backupDirectory = prefs.backup_directory ?? null;
       backupInterval = prefs.backup_interval || 'off';
       backupExcludeScrollback = prefs.backup_exclude_scrollback ?? true;
@@ -676,6 +681,11 @@ function createPreferencesStore() {
       await this.save();
     },
 
+    async setCursorReportApplyCommand(value: string) {
+      cursorReportApplyCommand = value;
+      await this.save();
+    },
+
     async setBackupDirectory(value: string | null) {
       backupDirectory = value;
       await this.save();
@@ -824,6 +834,7 @@ function createPreferencesStore() {
       composerDefaultOpen = prefs.composer_default_open ?? true;
       windowsShell = prefs.windows_shell ?? 'powershell';
       fileLinkAction = prefs.file_link_action ?? 'modifier_click';
+      cursorReportApplyCommand = prefs.cursor_report_apply_command ?? 'cursor-agent --force "report changes, then apply changes"';
       backupDirectory = prefs.backup_directory ?? null;
       backupInterval = prefs.backup_interval || 'off';
       backupExcludeScrollback = prefs.backup_exclude_scrollback ?? true;
@@ -900,6 +911,7 @@ function createPreferencesStore() {
         composer_default_open: composerDefaultOpen,
         windows_shell: windowsShell,
         file_link_action: fileLinkAction,
+        cursor_report_apply_command: cursorReportApplyCommand,
         backup_directory: backupDirectory,
         backup_interval: backupInterval === 'off' ? '' : backupInterval,
         backup_exclude_scrollback: backupExcludeScrollback,

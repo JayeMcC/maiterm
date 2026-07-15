@@ -242,6 +242,7 @@ export interface Preferences {
   composer_default_open: boolean;
   windows_shell: string;
   file_link_action: string;
+  cursor_report_apply_command: string;
   backup_directory: string | null;
   backup_interval: string;
   backup_exclude_scrollback: boolean;

@@ -4,6 +4,7 @@
   import type { Tab, Pane } from '$lib/tauri/types';
   import { detachTmuxClient, getTmuxState, writeTerminal } from '$lib/tauri/commands';
   import { toastStore } from '$lib/stores/toasts.svelte';
+  import { runReportAndApply } from '$lib/utils/reportChanges';
   import { workspacesStore } from '$lib/stores/workspaces.svelte';
   import { activityStore } from '$lib/stores/activity.svelte';
   import { terminalsStore } from '$lib/stores/terminals.svelte';
@@ -1310,6 +1311,16 @@
   </div>
 
   {#if pane.active_tab_id}
+    {#if pane.tabs.find((t) => t.id === pane.active_tab_id)?.tab_type === 'terminal'}
+      <IconButton
+        tooltip="Report + apply changes (cursor-agent)"
+        size={26}
+        style="flex-shrink:0;-webkit-app-region:no-drag"
+        onclick={() => runReportAndApply(workspaceId, pane.id, pane.active_tab_id!)}
+      >
+        <Icon name="diff" />
+      </IconButton>
+    {/if}
     <IconButton tooltip="Toggle notes ({modLabel}+E)" size={26} style="margin-right:4px;flex-shrink:0;-webkit-app-region:no-drag" onclick={() => workspacesStore.toggleNotes(pane.active_tab_id!)}>
       <Icon name="notes" />
     </IconButton>
