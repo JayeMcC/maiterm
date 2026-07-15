@@ -68,10 +68,8 @@ buggy/omitted today (Cursor forum). So:
   rename `getClaudeSessions` → runtime-neutral (cosmetic); `AGENT_ENV_MARKERS`
   for `cursor-agent` env vars (clean nested-shell behavior).
 
-## Open question — "Cursor API" vs the CLI
+## Scope — the `cursor-agent` CLI
 
-The original ask named "the Cursor API as well as the `cursor-agent` CLI." This
-design covers the **`cursor-agent` CLI** (the terminal agent — the direct analog
-of Claude Code / Codex). A "Cursor API" (cloud / background-agents) would be a
-*different* integration (not a terminal agent in a tab) and is out of scope here
-unless that's specifically wanted.
+Confirmed 2026-07-03: the target is the **`cursor-agent` CLI** (the terminal
+agent — the direct analog of Claude Code / Codex). The Cursor cloud API /
+background-agents are **out of scope** (not a terminal agent in a tab).
