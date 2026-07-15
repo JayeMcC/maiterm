@@ -6,6 +6,7 @@
 !/scripts/bw-helpers.sh
 !/scripts/cli-catalog.mjs
 !/scripts/cli-llm-cassette.mjs
+!/scripts/cli-llm-governor.mjs
 !/scripts/cli-llm.mjs
 !/scripts/forwood-seed-entities.mjs
 !/scripts/meridian

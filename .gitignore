@@ -45,6 +45,7 @@ TAURI_MCP_NOTES.md
 /scripts/bw-helpers.sh
 /scripts/cli-catalog.mjs
 /scripts/cli-llm-cassette.mjs
+/scripts/cli-llm-governor.mjs
 /scripts/cli-llm.mjs
 /scripts/forwood-seed-entities.mjs
 /scripts/meridian
@@ -53,3 +54,6 @@ TAURI_MCP_NOTES.md
 # skill-library routing marker rides along inside dir symlinks — never track it downstream.
 **/DESTINATION.md
 # END personal-tooling-symlinks
+
+# Vendored cursor-agent skill/command (rsynced from forwood-one-tools) — machine-local, like /.agents
+/.cursor
