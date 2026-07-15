@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.20.5
+
+- **The agent environment variables are now named `MAITERM_*` instead of `AITERM_*`.** The tab-ID and port variables injected into your shells — including the `export MAITERM_TAB_ID=…` line you see when connecting to an SSH host — carried the old `aiterm` name. They're renamed everywhere (local and remote shells, hooks, and the Codex shim) to match the maiTerm branding.
+- **Fix the SSH env-var injection lagging behind your first keystrokes again.** On connecting to a remote host, the tab-ID/port export had crept back to landing at the prompt *after* the remote setup work kicked off, so a fast typist's first characters could race in front of it. The export now fires immediately once the tunnel is up — before any setup — restoring the snappy behavior.
+
 ## v1.20.4
 
 - **Fix secondary windows coming back empty or with stale scrollback after an update or restart.** Two fixes: a window whose active workspace had been suspended now un-suspends and respawns its tabs on load instead of returning blank, and an update relaunch now flushes *every* window's terminal scrollback before restarting — previously only the window you triggered the update from was saved, so other windows lost their buffers.
