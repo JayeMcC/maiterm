@@ -1,7 +1,8 @@
 import type { EditorFileInfo } from '$lib/tauri/types';
-import { detectLanguageFromPath } from './languageDetect';
+import { detectLanguageFromPath, isMarkdownFile } from './languageDetect';
 import { terminalsStore } from '$lib/stores/terminals.svelte';
-import { workspacesStore } from '$lib/stores/workspaces.svelte';
+import { workspacesStore, navigateToTab } from '$lib/stores/workspaces.svelte';
+import { requestMarkdownPreview } from '$lib/stores/editorRegistry.svelte';
 import { getPtyInfo } from '$lib/tauri/commands';
 import { error as logError } from '@tauri-apps/plugin-log';
 
@@ -70,13 +71,30 @@ export async function openFileFromTerminal(workspaceId: string, paneId: string, 
     // ⌘-clicks don't proliferate panes); otherwise split a new one. EditorPane
     // handles loading/errors and renders markdown for .md files.
     const ws = workspacesStore.workspaces.find((w) => w.id === workspaceId);
+    const isMd = isMarkdownFile(resolvedPath);
+
+    // Already open? Focus the existing tab instead of duplicating it — and for
+    // markdown, flip it (back) into preview: a re-⌘-click means "show me the
+    // rendered doc", even if it was toggled to source since.
+    const existing = ws?.panes
+      .flatMap((p) => p.tabs)
+      .find((t) => t.tab_type === 'editor' && t.editor_file?.file_path === resolvedPath);
+    if (existing) {
+      if (isMd) window.dispatchEvent(new CustomEvent('editor-markdown-preview', { detail: { tabId: existing.id } }));
+      await navigateToTab(existing.id);
+      return;
+    }
+
     const editorPane = ws?.panes.find(
       (p) => p.id !== paneId && p.tabs.some((t) => t.tab_type === 'editor'),
     );
     if (editorPane) {
-      await workspacesStore.createEditorTab(workspaceId, editorPane.id, fileName, fileInfo);
+      const tab = await workspacesStore.createEditorTab(workspaceId, editorPane.id, fileName, fileInfo);
+      if (isMd) requestMarkdownPreview(tab.id);
     } else {
-      await workspacesStore.splitPaneWithEditor(workspaceId, paneId, fileInfo);
+      const newPane = await workspacesStore.splitPaneWithEditor(workspaceId, paneId, fileInfo);
+      const editorTab = newPane.tabs.find((t) => t.tab_type === 'editor');
+      if (isMd && editorTab) requestMarkdownPreview(editorTab.id);
     }
   } catch (e) {
     logError(`Failed to open file: ${e}`);

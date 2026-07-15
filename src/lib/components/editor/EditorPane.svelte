@@ -37,7 +37,7 @@
   import { preferencesStore } from '$lib/stores/preferences.svelte';
   import { dispatch } from '$lib/stores/notificationDispatch';
   import { workspacesStore } from '$lib/stores/workspaces.svelte';
-  import { registerEditor, unregisterEditor, setEditorDirty } from '$lib/stores/editorRegistry.svelte';
+  import { registerEditor, unregisterEditor, setEditorDirty, consumeMarkdownPreview } from '$lib/stores/editorRegistry.svelte';
   import { claudeCodeStore } from '$lib/stores/claudeCode.svelte';
   import { EditorSelection } from '@codemirror/state';
   import { countedListen as listen } from '$lib/utils/listenCounter';
@@ -585,6 +585,15 @@
     }
   }
 
+  function handleEditorMarkdownPreview(e: Event) {
+    const detail = (e as CustomEvent).detail;
+    // editorView guard: if the pane is still loading (rapid re-⌘-click), the
+    // pending-preview flag consumed at mount handles it instead.
+    if (detail?.tabId === tabId && isMarkdown && !markdownPreview && editorView) {
+      toggleMarkdownPreview();
+    }
+  }
+
   async function replaceFile() {
     // Load new content in the background before swapping — keeps old content
     // visible so the tab doesn't flash a loading state.
@@ -1121,6 +1130,7 @@
     window.addEventListener('editor-save', handleEditorSave);
     window.addEventListener('editor-reload', handleEditorReload);
     window.addEventListener('editor-replace-file', handleEditorReplaceFile);
+    window.addEventListener('editor-markdown-preview', handleEditorMarkdownPreview);
 
     const filePath = editorFile.remote_path ?? editorFile.file_path;
     const isImage = isImageFile(filePath);
@@ -1398,6 +1408,11 @@
           });
         }
 
+        // Open straight into markdown preview when requested (⌘-click on a .md path)
+        if (isMarkdown && consumeMarkdownPreview(tabId) && !markdownPreview) {
+          toggleMarkdownPreview();
+        }
+
         // Apply pending selection from Claude Code openFile
         const pending = claudeCodeStore.getPendingSelection(tabId);
         if (pending) {
@@ -1452,6 +1467,7 @@
     window.removeEventListener('editor-save', handleEditorSave);
     window.removeEventListener('editor-reload', handleEditorReload);
     window.removeEventListener('editor-replace-file', handleEditorReplaceFile);
+    window.removeEventListener('editor-markdown-preview', handleEditorMarkdownPreview);
     unregisterEditor(tabId);
     if (editorView) {
       editorView.destroy();

@@ -14,6 +14,19 @@ const registry = new Map<string, EditorRegistryEntry>();
 // Reactive set of dirty tab IDs read via `isEditorDirty()` in tab-list templates.
 const dirtyTabs = new SvelteSet<string>();
 
+// Tabs whose EditorPane should open straight into markdown preview
+// (⌘-click on a .md path in a terminal). Consumed once at mount.
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- one-shot flag set, consumed imperatively at mount
+const pendingMarkdownPreview = new Set<string>();
+
+export function requestMarkdownPreview(tabId: string): void {
+  pendingMarkdownPreview.add(tabId);
+}
+
+export function consumeMarkdownPreview(tabId: string): boolean {
+  return pendingMarkdownPreview.delete(tabId);
+}
+
 export function registerEditor(tabId: string, view: EditorView, filePath: string): void {
   registry.set(tabId, { view, filePath, isDirty: false });
 }
