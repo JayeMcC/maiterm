@@ -344,6 +344,31 @@ You MUST immediately call the {mcp_key} initSession tool with this tabId and ses
     })
 }
 
+/// Stable signature of maiTerm's SessionStart *command* hook — the entry that echoes
+/// the tab id and tells the agent to call initSession. This exact phrase appears in
+/// BOTH the current (`MAITERM_`) command and the legacy (`AITERM_`) one, and is far
+/// too specific to collide with a user hook. Matching on content (not the tunnel port
+/// it gates on, nor a URL it doesn't have) is what lets re-install both DEDUP our own
+/// command hook and SWEEP a stale pre-rename hook. The pre-rename hook matters: once a
+/// new-build shell stops exporting `$AITERM_TAB_ID`, that hook's `[ -z "$AITERM_TAB_ID" ]`
+/// fallback fires, sources `~/.aiterm`, and emits a phantom tab id into the agent's
+/// SessionStart context — a failed initSession followed by a recovery dance.
+const MAITERM_CMD_HOOK_MARKER: &str = "initSession tool with this tabId";
+
+/// True when `entry` is one of maiTerm's SessionStart command hooks (any version).
+fn is_our_command_hook(entry: &serde_json::Value) -> bool {
+    if let Some(hooks) = entry.get("hooks").and_then(|v| v.as_array()) {
+        for hook in hooks {
+            if let Some(cmd) = hook.get("command").and_then(|v| v.as_str()) {
+                if cmd.contains(MAITERM_CMD_HOOK_MARKER) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
 /// Write Claude Code hooks into ~/.claude/settings.json.
 ///
 /// Registers:
@@ -415,9 +440,15 @@ fn write_hook_settings(port: u16, auth: &str) -> Result<(), String> {
                     .or_insert(serde_json::json!([]));
 
                 if let Some(arr) = event_array.as_array_mut() {
-                    // Remove any existing maiTerm hook entries (by matching our URL pattern)
+                    // Remove existing maiTerm hook entries before re-adding ours: HTTP
+                    // hooks matching our URL, PLUS any maiTerm SessionStart *command*
+                    // hook. The command hook carries no URL, so URL-matching alone let a
+                    // fresh copy pile up on every re-assert; matching it by signature
+                    // also sweeps stale pre-rename AITERM_ command hooks that gate on a
+                    // dead tunnel port the liveness sweep can't catch (and that source
+                    // ~/.aiterm to emit a phantom tab id into the agent's context).
                     arr.retain(|entry| {
-                        !entry_matches_url(entry, &hooks_url)
+                        !entry_matches_url(entry, &hooks_url) && !is_our_command_hook(entry)
                     });
                     // Add our entries
                     if let Some(our_arr) = our_entries.as_array() {
@@ -468,6 +499,21 @@ fn hooks_are_current(path: &std::path::Path, port: u16, auth: &str) -> bool {
         ours.as_array().unwrap().iter().all(|entry| arr.contains(entry))
     });
     if !all_present {
+        return false;
+    }
+
+    // Exactly one of our SessionStart command hooks may exist. Two or more means
+    // duplicates piled up (the merge historically deduped only URL-bearing HTTP hooks,
+    // never the command hook) or a stale pre-rename AITERM_ command hook still lingers.
+    // Both are drift the write path must sweep — left in place, the stale hook sources
+    // ~/.aiterm and feeds a phantom tab id into the agent's SessionStart context.
+    let cmd_hook_count = settings
+        .get("hooks")
+        .and_then(|h| h.get("SessionStart"))
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter(|e| is_our_command_hook(e)).count())
+        .unwrap_or(0);
+    if cmd_hook_count != 1 {
         return false;
     }
 
