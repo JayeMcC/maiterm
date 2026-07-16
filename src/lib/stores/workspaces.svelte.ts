@@ -2039,6 +2039,12 @@ function createWorkspacesStore() {
         await commands.renameTab(workspaceId, paneId, newTab.id, tabName, true);
       }
 
+      // Carry pin state over — the new tab replaces the original, and it takes the
+      // original's storage slot below, so it keeps its position in the pin cluster.
+      if (sourceTab.pinned) {
+        await commands.setTabPinned(workspaceId, paneId, newTab.id, true);
+      }
+
       // Move new tab into the old tab's position and delete the old one
       const currentIds = freshPane.tabs.map(t => t.id);
       const reordered = currentIds.filter(id => id !== newTab.id);
