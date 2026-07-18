@@ -62,5 +62,9 @@ ignore = "0.4"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 
+[dev-dependencies]
+# `ServiceExt::oneshot` — drives the maiLink router in-process (no TLS, no listener).
+tower = { version = "0.5", features = ["util"] }
+
 [features]
 mcp-bridge = ["dep:tauri-plugin-mcp-bridge"]

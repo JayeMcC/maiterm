@@ -385,6 +385,14 @@ shortcut; this guarantees it can't corrupt a TUI mid-prompt.
   live bubble — so echo == caption on both the live send and thread re-open. A leading path is only
   stripped if it carries the marker, so ordinary messages that mention a path are untouched. **If the
   temp-file stem ever changes, both sides must change together.**
+  **Body-size ceiling: 32 MiB** for `POST .../message` (`MAX_MESSAGE_BODY_BYTES`, `mod.rs`); every
+  other route keeps axum's 2 MiB default. Over the ceiling the request is rejected by the extractor
+  with **413** *before* the handler runs — so there is no server log line and nothing is injected.
+  Budget phone-side by **total** bytes, not image count: per-image size varies far more than the
+  6-image cap implies (JPEG photos ~<500 KB, but PNG screenshots have been seen at ~750 KB, and
+  base64 inflates ~1.37× on top), so a 6-image batch runs ~3–6 MB and two heavy screenshots alone
+  used to exceed the old limit. A 413 on this route means "images too large", not a transient error
+  — don't retry it verbatim.
 - **Answer a permission/question** (`POST .../respond {choice, prompt_id}`): Claude's TUI
   answers permission with a numeric/selection keystroke (e.g. `1`=yes, `2`=yes+don't-ask,
   `3`/Esc=no). The desktop maps `choice` → the correct keystroke for that runtime and injects

@@ -16,7 +16,7 @@ use std::sync::Arc;
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
-        Path, Query, State,
+        DefaultBodyLimit, Path, Query, State,
     },
     http::{header, HeaderMap, StatusCode},
     response::{IntoResponse, Response},
@@ -249,6 +249,34 @@ pub fn prepare(app_state: &Arc<AppState>) -> Option<MailinkConfig> {
     })
 }
 
+/// Max body for POST /chats/{tabId}/message. Sized to the published 6-inline-image contract with
+/// headroom — axum's 2 MiB default rejects a realistic batch at the extractor, before the handler
+/// runs (no log line, generic failure on the phone).
+const MAX_MESSAGE_BODY_BYTES: usize = 32 * 1024 * 1024;
+
+/// The v1 route table. Split out of `serve` so tests can exercise the real router (notably the
+/// per-route body limit) without standing up TLS or a listener.
+fn build_router(api: ApiState) -> Router {
+    Router::new()
+        .route("/mailink/v1/heartbeat", get(heartbeat))
+        .route("/mailink/v1/chats", get(chats_list))
+        .route("/mailink/v1/chats/{tab_id}", get(chat_detail))
+        .route("/mailink/v1/chats/{tab_id}/context", get(chat_context))
+        // Image sends carry base64 inline (mailink-protocol §12), so this is the one route that
+        // outgrows axum's 2 MiB default: 6 images × ~750 KB × 1.37 base64 inflation ≈ 6 MB worst
+        // case. 32 MiB leaves real headroom; every other route keeps the tight default.
+        .route(
+            "/mailink/v1/chats/{tab_id}/message",
+            post(post_message).layer(DefaultBodyLimit::max(MAX_MESSAGE_BODY_BYTES)),
+        )
+        .route("/mailink/v1/chats/{tab_id}/respond", post(post_respond))
+        .route("/mailink/v1/chats/{tab_id}/interrupt", post(post_interrupt))
+        .route("/mailink/v1/ws", get(ws_handler))
+        .route("/mailink/v1/pair", post(post_pair))
+        .route("/mailink/v1/push-register", post(post_push_register))
+        .with_state(api)
+}
+
 /// Background task: install the rustls crypto provider, build the router, and serve over TLS.
 pub async fn serve(app_state: Arc<AppState>, cfg: MailinkConfig) {
     // rustls 0.23 needs a process-default crypto provider before any TLS config is built.
@@ -270,18 +298,7 @@ pub async fn serve(app_state: Arc<AppState>, cfg: MailinkConfig) {
         fingerprint: cfg.fingerprint.clone(),
         dev_token: cfg.dev_token.clone(),
     };
-    let router = Router::new()
-        .route("/mailink/v1/heartbeat", get(heartbeat))
-        .route("/mailink/v1/chats", get(chats_list))
-        .route("/mailink/v1/chats/{tab_id}", get(chat_detail))
-        .route("/mailink/v1/chats/{tab_id}/context", get(chat_context))
-        .route("/mailink/v1/chats/{tab_id}/message", post(post_message))
-        .route("/mailink/v1/chats/{tab_id}/respond", post(post_respond))
-        .route("/mailink/v1/chats/{tab_id}/interrupt", post(post_interrupt))
-        .route("/mailink/v1/ws", get(ws_handler))
-        .route("/mailink/v1/pair", post(post_pair))
-        .route("/mailink/v1/push-register", post(post_push_register))
-        .with_state(api);
+    let router = build_router(api);
 
     let tls = match RustlsConfig::from_pem(cfg.cert_pem.into_bytes(), cfg.key_pem.into_bytes()).await
     {
@@ -376,7 +393,10 @@ struct MessageBody {
 
 /// One inline image from the phone. `data` is base64 with NO `data:` prefix; `mime` carries the
 /// type separately ("image/png" | "image/jpeg" | "image/webp"); `name` is display/debug only. The
-/// phone pre-downscales each to <=1568px and caps 6/message, so payloads are ~<500KB each.
+/// phone pre-downscales each to <=1568px and caps 6/message. Per-image size varies a lot by
+/// source — JPEG photos land under ~500 KB, but PNG screenshots have been seen at ~750 KB, and
+/// base64 inflates ~1.37× on top. Budget by TOTAL bytes, not count: the real ceiling is
+/// MAX_MESSAGE_BODY_BYTES on the route, and exceeding it is a 413 from the extractor.
 #[derive(serde::Deserialize)]
 struct ImageInput {
     data: String,
@@ -2039,6 +2059,87 @@ async fn ring_devices(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Drive the real router with a JSON body of `body_len` bytes and report the status.
+    /// The token is deliberately wrong, so a body that survives the extractor lands on
+    /// `authorize` and returns 401 — nothing is ever injected into a PTY. That makes
+    /// 413-vs-401 a clean read on "rejected before the handler" vs "reached the handler".
+    async fn post_message_status(body_len: usize) -> StatusCode {
+        use tower::ServiceExt as _;
+
+        let api = ApiState {
+            app: Arc::new(AppState::new()),
+            server_name: "maiTerm".to_string(),
+            fingerprint: "sha256/test".to_string(),
+            dev_token: "correct-token".to_string(),
+        };
+        // {"text":"<pad>"} padded to exactly body_len bytes.
+        let prefix = br#"{"text":""#;
+        let suffix = br#""}"#;
+        let pad = body_len - prefix.len() - suffix.len();
+        let mut body = Vec::with_capacity(body_len);
+        body.extend_from_slice(prefix);
+        body.resize(prefix.len() + pad, b'x');
+        body.extend_from_slice(suffix);
+        assert_eq!(body.len(), body_len);
+
+        let req = axum::http::Request::builder()
+            .method("POST")
+            .uri("/mailink/v1/chats/no-such-tab/message")
+            .header("content-type", "application/json")
+            .header("authorization", "Bearer wrong-token")
+            .body(axum::body::Body::from(body))
+            .unwrap();
+
+        build_router(api).oneshot(req).await.unwrap().status()
+    }
+
+    /// Regression: the message route carries base64 images inline, so axum's 2 MiB default
+    /// body limit rejected a realistic 6-image batch at the extractor — before the handler
+    /// ran, hence no log line and a generic "Failed to send" on the phone. Bodies well past
+    /// 2 MiB must now reach the handler.
+    #[tokio::test]
+    async fn message_route_accepts_bodies_past_axum_default_limit() {
+        // Control: comfortably under the old 2 MiB default — always reached the handler.
+        assert_eq!(post_message_status(1_500_000).await, StatusCode::UNAUTHORIZED);
+
+        // The regression: these are the sizes that used to 413.
+        for len in [3 * 1024 * 1024, 8 * 1024 * 1024] {
+            assert_eq!(
+                post_message_status(len).await,
+                StatusCode::UNAUTHORIZED,
+                "{len}-byte body should reach the handler, not 413 at the extractor",
+            );
+        }
+
+        // The new ceiling still holds: past MAX_MESSAGE_BODY_BYTES we do reject.
+        assert_eq!(
+            post_message_status(MAX_MESSAGE_BODY_BYTES + 1024).await,
+            StatusCode::PAYLOAD_TOO_LARGE,
+        );
+    }
+
+    /// The other routes have no reason to accept large bodies; they keep the tight default.
+    #[tokio::test]
+    async fn other_routes_keep_the_default_limit() {
+        use tower::ServiceExt as _;
+
+        let api = ApiState {
+            app: Arc::new(AppState::new()),
+            server_name: "maiTerm".to_string(),
+            fingerprint: "sha256/test".to_string(),
+            dev_token: "correct-token".to_string(),
+        };
+        let req = axum::http::Request::builder()
+            .method("POST")
+            .uri("/mailink/v1/chats/no-such-tab/respond")
+            .header("content-type", "application/json")
+            .header("authorization", "Bearer wrong-token")
+            .body(axum::body::Body::from(vec![b'x'; 3 * 1024 * 1024]))
+            .unwrap();
+        let status = build_router(api).oneshot(req).await.unwrap().status();
+        assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
+    }
 
     /// The one subtle, breakage-prone property: our PEM→DER extraction (which feeds the
     /// pinned fingerprint) must yield the exact bytes `openssl x509 -outform DER` produces.
