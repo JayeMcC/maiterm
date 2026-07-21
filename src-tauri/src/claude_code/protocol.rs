@@ -568,7 +568,7 @@ pub fn tool_list_response() -> Value {
         },
         {
             "name": "postCommsReply",
-            "description": "Post a reply (Mattermost markdown) to the thread this tab is bound to via bindCommsThread. Pass resolve: true with the final resolution post to also close the binding (stops reply forwarding). The bot must be a member of the channel.",
+            "description": "Post a reply (Mattermost markdown) to the thread this tab is bound to via bindCommsThread. Set resolve: true ONLY to close out a thread a human has CONFIRMED is resolved — it posts the message and then clears the binding (stops reply forwarding). Do NOT set resolve when first posting a fix; keep the thread bound until someone confirms it works. The bot must be a member of the channel.",
             "inputSchema": {
                 "type": "object",
                 "properties": {

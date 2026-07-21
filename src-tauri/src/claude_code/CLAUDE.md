@@ -108,7 +108,9 @@ agent can pull a bug-report thread as a work item and post a resolution back. Mo
 - **Skill**: the `resolve` section of `resources/maiterm-skill/SKILL.md` is the agent-facing
   orchestration (silent-while-working, one `**@Support:**`/`**@Dev:**`-addressed question when
   blocked, two-part resolution post: plain-language for support staff, `---`, technical bullets
-  for devs).
+  for devs). Posting the resolution does NOT unbind — the thread stays bound until a human
+  confirms it's resolved; only then does the agent close it (`postCommsReply` with `resolve:true`,
+  which posts-and-clears). A still-broken reply keeps the binding live so work continues.
 
 ## Agent Bridge (agent-to-agent bridge)
 
