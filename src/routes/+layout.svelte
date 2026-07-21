@@ -325,6 +325,21 @@
       claudeCodeStore.setConnected(event.payload.connected);
     }).then(unlisten => { unlistenClaudeConnection = unlisten; });
 
+    // Comms watcher: a bound thread got @bot replies but no agent session is
+    // running to receive them — ring the operator (dispatch scopes to the
+    // window owning the tab; clicking the toast deep-links to it).
+    let unlistenCommsPending: (() => void) | undefined;
+    appWindow.listen<{ tab_id: string; count: number; preview: string }>('comms-reply-pending', async (event) => {
+      const { dispatch } = await import('$lib/stores/notificationDispatch');
+      const p = event.payload;
+      dispatch(
+        'Thread reply waiting',
+        `${p.count > 1 ? `${p.count} replies` : 'A reply'} arrived on a bound thread ("${p.preview}") but no agent session is running in that tab. Resume the session to deliver.`,
+        'info',
+        { tabId: p.tab_id },
+      );
+    }).then(unlisten => { unlistenCommsPending = unlisten; });
+
     // Claude Code state tracking (hook events → per-tab Claude state)
     claudeStateStore.init();
 
@@ -881,6 +896,7 @@
       unlistenClearNavHistory?.();
       unlistenClaudeTool?.();
       unlistenClaudeConnection?.();
+      unlistenCommsPending?.();
       claudeStateStore.destroy();
       agentBridgeStore.destroy();
       agentMeshStore.destroy();

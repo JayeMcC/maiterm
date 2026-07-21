@@ -375,7 +375,7 @@ pub fn run() {
             // Comms integration (/maiterm resolve): global thread-reply watcher.
             // Always spawned — it idles cheaply when no tab is bound, and bound
             // tabs persist on disk so this doubles as restart rehydration.
-            tauri::async_runtime::spawn(comms::watcher_loop(app_state.clone()));
+            tauri::async_runtime::spawn(comms::watcher_loop(app_state.clone(), app.handle().clone()));
 
             // Background tasks owned by Rust (independent of any webview's
             // event loop). See commands/scheduler.rs for the rationale.

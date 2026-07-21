@@ -220,7 +220,9 @@ const BACKOFF_CAP_TICKS: u64 = 60;
 /// Global reply watcher: forwards new human posts on bound threads into the
 /// owning tab's agent session. Always running; idles cheaply when no tab is
 /// bound (bindings persist on tabs, so restart rehydration is implicit).
-pub async fn watcher_loop(app: Arc<AppState>) {
+pub async fn watcher_loop(app: Arc<AppState>, app_handle: tauri::AppHandle) {
+    use tauri::Emitter;
+
     let http = reqwest::Client::new();
     // (config fingerprint, bot user record) — refetched when the url/token change.
     let mut bot_user: Option<(String, User)> = None;
@@ -230,6 +232,10 @@ pub async fn watcher_loop(app: Arc<AppState>) {
     let mut authors: HashMap<String, User> = HashMap::new();
     // tab_id → (consecutive errors, skip until tick).
     let mut backoff: HashMap<String, (u32, u64)> = HashMap::new();
+    // tab_id → newest create_at we already notified the operator about while the
+    // tab had no live agent session (cleared on successful delivery so a later
+    // undeliverable burst re-notifies). Prevents a toast every 5s for held posts.
+    let mut pending_notified: HashMap<String, i64> = HashMap::new();
     let mut tick_no: u64 = 0;
 
     let mut ticker =
@@ -310,19 +316,6 @@ pub async fn watcher_loop(app: Arc<AppState>) {
                 }
             }
 
-            // Only deliver into a live agent session — never type chat text into a
-            // bare shell. Hold (cursor unadvanced) until the agent is back.
-            let session_live = app
-                .agent_sessions
-                .read()
-                .values()
-                .any(|s| s.tab_id == tab_id);
-            let pty_id = crate::mailink::pty_for_tab(&app, &tab_id);
-            let Some(pty_id) = pty_id else { continue };
-            if !session_live {
-                continue;
-            }
-
             let thread = match client.get_thread(&binding.root_id).await {
                 Ok(t) => t,
                 Err(e) => {
@@ -351,6 +344,41 @@ pub async fn watcher_loop(app: Arc<AppState>) {
                 advance_cursor(&app, &tab_id, new_cursor);
                 continue;
             }
+
+            // Only deliver into a live agent session — never type chat text into a
+            // bare shell. When nothing can receive it, hold (cursor unadvanced) so
+            // delivery happens when the agent is back — and ring the operator ONCE
+            // per newest post so held replies are never a silent stall.
+            let session_live = app
+                .agent_sessions
+                .read()
+                .values()
+                .any(|s| s.tab_id == tab_id);
+            let pty_id = crate::mailink::pty_for_tab(&app, &tab_id);
+            let deliverable = session_live && pty_id.is_some();
+            let newest_addressed = addressed.iter().map(|p| p.create_at).max().unwrap_or(0);
+            if !deliverable {
+                if pending_notified.get(&tab_id).copied().unwrap_or(0) < newest_addressed {
+                    pending_notified.insert(tab_id.clone(), newest_addressed);
+                    let first = addressed[0];
+                    let preview: String = first.message.trim().chars().take(120).collect();
+                    let _ = app_handle.emit(
+                        "comms-reply-pending",
+                        serde_json::json!({
+                            "tab_id": tab_id,
+                            "count": addressed.len(),
+                            "preview": preview,
+                        }),
+                    );
+                    log::info!(
+                        "[comms] {} addressed repl{} waiting for tab {tab_id} (no live agent session) — operator notified",
+                        addressed.len(),
+                        if addressed.len() == 1 { "y" } else { "ies" }
+                    );
+                }
+                continue;
+            }
+            let pty_id = pty_id.expect("deliverable implies pty");
 
             // Resolve author records for cache misses (best-effort — fall back to id).
             let missing: Vec<String> = addressed
@@ -398,6 +426,8 @@ pub async fn watcher_loop(app: Arc<AppState>) {
             match crate::mailink::inject_text(&app, &pty_id, &payload, true).await {
                 Ok(()) => {
                     advance_cursor(&app, &tab_id, new_cursor);
+                    // Delivered — a future undeliverable burst should notify again.
+                    pending_notified.remove(&tab_id);
                     log::info!(
                         "[comms] forwarded {} addressed message(s) into tab {tab_id}",
                         addressed.len(),

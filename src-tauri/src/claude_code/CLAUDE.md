@@ -99,8 +99,12 @@ agent can pull a bug-report thread as a work item and post a resolution back. Mo
   own username** (`mentions_username`, cursor-newer, not-the-bot, non-empty) into the tab's PTY
   via `mailink::inject_text` as one bracketed paste per tick. Ambient thread chatter is never
   pushed — it's read-on-demand via `readCommsThread`; the cursor advances past it so it isn't
-  re-scanned. Holds (cursor unadvanced) while the tab has no live agent session or PTY;
-  exponential per-binding backoff on errors; auth failures logged once per config fingerprint.
+  re-scanned. Holds (cursor unadvanced) while the tab has no live agent session or PTY — and
+  rings the operator: an undeliverable @bot reply emits `comms-reply-pending` (handled in
+  `+layout.svelte` → `notificationDispatch`, deep-links to the tab), deduped per newest post so
+  a held burst notifies once, re-armed after a successful delivery. Resuming the session
+  delivers the held replies on the next tick. Exponential per-binding backoff on errors; auth
+  failures logged once per config fingerprint.
 - **Authority tiers**: each injected message is stamped `[AUTHORIZED]` or `[support]`. Authorized
   = author's username is in `Preferences.comms_authorized_users` (matched case-insensitively);
   those messages carry full operator authority. Everyone else is scoped (investigate + reply
