@@ -134,8 +134,10 @@ pub fn format_ts_ms(ms: i64) -> String {
     )
 }
 
-/// Render a fetched thread as a chronological transcript with author display names.
-/// The root post is labeled `[REPORT]`. Resolves names best-effort (falls back to id).
+/// Render a fetched thread as a chronological transcript. Each author is shown as
+/// `Display Name (@username)` so the agent has the exact handle needed to @mention them
+/// in Mattermost (display names don't notify). The root post is labeled `[REPORT]`.
+/// Resolves authors best-effort (falls back to the raw user id if lookup fails).
 pub async fn build_transcript(
     client: &MattermostClient,
     thread: &[mattermost::Post],
@@ -147,23 +149,23 @@ pub async fn build_transcript(
         .collect::<std::collections::HashSet<_>>()
         .into_iter()
         .collect();
-    let names: HashMap<String, String> = client
+    let users: HashMap<String, User> = client
         .users_by_ids(&author_ids)
         .await
         .unwrap_or_default()
-        .iter()
-        .map(|u| (u.id.clone(), display_name(u)))
+        .into_iter()
+        .map(|u| (u.id.clone(), u))
         .collect();
 
     let mut transcript = String::new();
     for p in thread {
-        let who = names.get(&p.user_id).cloned().unwrap_or_else(|| p.user_id.clone());
+        let ts = format_ts_ms(p.create_at);
+        let who = match users.get(&p.user_id) {
+            Some(u) => format!("{} (@{}, {ts})", display_name(u), u.username),
+            None => format!("{} ({ts})", p.user_id),
+        };
         let tag = if p.id == root_id { "[REPORT] " } else { "" };
-        transcript.push_str(&format!(
-            "{tag}— {who} ({}):\n{}\n\n",
-            format_ts_ms(p.create_at),
-            p.message.trim()
-        ));
+        transcript.push_str(&format!("{tag}— {who}:\n{}\n\n", p.message.trim()));
     }
     transcript.trim_end().to_string()
 }

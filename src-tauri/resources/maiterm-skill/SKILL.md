@@ -78,6 +78,8 @@ The install is idempotent — it only writes `~/.claude/statusline-command.sh` a
    - If someone reports it's still broken (or asks a follow-up), keep working; the binding stays live and their messages keep arriving here.
    - If you're abandoning the issue entirely, post a brief note saying so via postCommsReply, then call unbindCommsThread `{}`.
 
+**Mentioning people.** To actually notify a person, Mattermost requires their exact `@username`, not their display name. The transcript gives you both — each author appears as `Display Name (@username)`. Use the value in parentheses: to ping "Jeff Delgado (@jdelgado)" write `@jdelgado`, never `@Jeff` (a display name mentions nobody). `**@Support:**` / `**@Dev:**` are audience labels for indicating who should answer, not real usernames — don't rely on them to notify a specific person; @mention that person's username as well if you need them specifically.
+
 Resolution post format (Mattermost markdown), exactly two parts:
 
 - **Part 1 — for support staff.** 2–4 plain-language sentences addressed to the support person who relayed the report: what the customer was experiencing, what was wrong (no jargon, no file names, no code), what changes for the customer and when (e.g. "fixed in the next release"), and anything they should pass along to the customer.
