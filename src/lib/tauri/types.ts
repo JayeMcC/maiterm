@@ -285,6 +285,8 @@ export interface Preferences {
   comms_server_url?: string | null;
   /** Comms bot bearer token. Stored raw in state (no keychain layer); never exposed to MCP tools. */
   comms_bot_token?: string | null;
+  /** Comms usernames whose thread @mentions carry full operator authority (others are scoped). */
+  comms_authorized_users?: string[];
 }
 
 /** QR payload a phone scans to pair (docs/mailink-protocol.md §3.2). The phone dials

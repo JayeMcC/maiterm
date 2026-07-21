@@ -65,6 +65,7 @@ function createPreferencesStore() {
   let commsProvider = $state('mattermost');
   let commsServerUrl = $state('');
   let commsBotToken = $state('');
+  let commsAuthorizedUsers = $state<string[]>([]);
   let composerDefaultOpen = $state(true);
   let windowsShell = $state('powershell');
   let fileLinkAction = $state('modifier_click');
@@ -143,6 +144,7 @@ function createPreferencesStore() {
     get commsProvider() { return commsProvider; },
     get commsServerUrl() { return commsServerUrl; },
     get commsBotToken() { return commsBotToken; },
+    get commsAuthorizedUsers() { return commsAuthorizedUsers; },
     get composerDefaultOpen() { return composerDefaultOpen; },
     get windowsShell() { return windowsShell; },
     get fileLinkAction() { return fileLinkAction; },
@@ -231,6 +233,7 @@ function createPreferencesStore() {
       commsProvider = prefs.comms_provider || 'mattermost';
       commsServerUrl = prefs.comms_server_url ?? '';
       commsBotToken = prefs.comms_bot_token ?? '';
+      commsAuthorizedUsers = prefs.comms_authorized_users ?? [];
       composerDefaultOpen = prefs.composer_default_open ?? true;
       windowsShell = prefs.windows_shell ?? 'powershell';
       fileLinkAction = prefs.file_link_action ?? 'modifier_click';
@@ -544,6 +547,11 @@ function createPreferencesStore() {
       await this.save();
     },
 
+    async setCommsAuthorizedUsers(value: string[]) {
+      commsAuthorizedUsers = value;
+      await this.save();
+    },
+
     async setWindowsShell(value: string) {
       windowsShell = value;
       await this.save();
@@ -702,6 +710,7 @@ function createPreferencesStore() {
       commsProvider = prefs.comms_provider || 'mattermost';
       commsServerUrl = prefs.comms_server_url ?? '';
       commsBotToken = prefs.comms_bot_token ?? '';
+      commsAuthorizedUsers = prefs.comms_authorized_users ?? [];
       composerDefaultOpen = prefs.composer_default_open ?? true;
       windowsShell = prefs.windows_shell ?? 'powershell';
       fileLinkAction = prefs.file_link_action ?? 'modifier_click';
@@ -781,6 +790,7 @@ function createPreferencesStore() {
         comms_provider: commsProvider,
         comms_server_url: commsServerUrl.trim() || null,
         comms_bot_token: commsBotToken.trim() || null,
+        comms_authorized_users: commsAuthorizedUsers,
         composer_default_open: composerDefaultOpen,
         windows_shell: windowsShell,
         file_link_action: fileLinkAction,

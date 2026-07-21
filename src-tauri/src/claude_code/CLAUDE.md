@@ -10,7 +10,7 @@ Claude Code CLI ←→ WebSocket/SSE ←→ axum server (Rust) ←→ Tauri even
 
 **Backend** (`src-tauri/src/claude_code/`):
 - `server.rs` — axum router with WebSocket (`/`) and SSE (`/sse` + `/message`) endpoints. Random port (10000–65535), 32-char auth token.
-- `protocol.rs` — JSON-RPC request/response types, `tool_list_response()` (49 tools), `initialize_response()`
+- `protocol.rs` — JSON-RPC request/response types, `tool_list_response()` (50 tools), `initialize_response()`
 - `lockfile.rs` — writes `~/.claude/ide/{port}.lock` for discovery, registers `mcpServers.maiterm` (or `maiterm-dev`) in `~/.claude.json` (stripping the legacy `aiterm`/`aiterm-dev` key on write — rebrand migration), registers hooks in `~/.claude/settings.json`
 
 **Frontend** (`src/lib/stores/claudeCode.svelte.ts`):
@@ -70,7 +70,8 @@ Claude Code CLI ←→ WebSocket/SSE ←→ axum server (Rust) ←→ Tauri even
 | listTopics | Mesh only: conversation topics — id, label, state, owner, participants, turn count |
 | startTopic | Mesh only: start/reuse a topic (caller becomes owner); returns the topic id |
 | completeTopic | Mesh only: owner marks a topic complete; signals participants, rejects further sends |
-| bindCommsThread | Comms (/maiterm resolve): bind this tab to a Mattermost thread by permalink; returns the thread as a [REPORT]-tagged transcript and records `Tab.comms_binding`. Backend-only |
+| bindCommsThread | Comms (/maiterm resolve): bind this tab to a Mattermost thread by permalink; returns the thread as a [REPORT]-tagged transcript, the bot's `bot_username`, and records `Tab.comms_binding`. Backend-only |
+| readCommsThread | Comms: re-fetch the full bound thread on demand (only @mentions of the bot are auto-injected; the rest is read-on-demand). Backend-only |
 | postCommsReply | Comms: post Mattermost markdown to the bound thread; `resolve: true` clears the binding after posting. Backend-only |
 | unbindCommsThread | Comms: clear the tab's thread binding without posting (idempotent). Backend-only |
 
@@ -89,11 +90,19 @@ agent can pull a bug-report thread as a work item and post a resolution back. Mo
   with the tab; never cloned by tab/workspace duplication (one thread = one tab, or the watcher
   would double-inject).
 - **Watcher** (`comms::watcher_loop`, spawned unconditionally in `lib.rs` setup): every 5s scans
-  tabs for bindings, fetches each bound thread, and injects new human posts (cursor-newer,
-  not-the-bot, non-empty) into the tab's PTY via `mailink::inject_text` as one
-  `[Mattermost thread update …]` bracketed paste per tick. Holds (cursor unadvanced) while the
-  tab has no live agent session or PTY; exponential per-binding backoff on errors; auth failures
-  logged once per config fingerprint.
+  tabs for bindings, fetches each bound thread, and injects **only posts that @mention the bot's
+  own username** (`mentions_username`, cursor-newer, not-the-bot, non-empty) into the tab's PTY
+  via `mailink::inject_text` as one bracketed paste per tick. Ambient thread chatter is never
+  pushed — it's read-on-demand via `readCommsThread`; the cursor advances past it so it isn't
+  re-scanned. Holds (cursor unadvanced) while the tab has no live agent session or PTY;
+  exponential per-binding backoff on errors; auth failures logged once per config fingerprint.
+- **Authority tiers**: each injected message is stamped `[AUTHORIZED]` or `[support]`. Authorized
+  = author's username is in `Preferences.comms_authorized_users` (matched case-insensitively);
+  those messages carry full operator authority. Everyone else is scoped (investigate + reply
+  only; destructive/scope-expanding actions need operator confirmation — enforced by SKILL.md
+  framing, not a hard sandbox, since the agent runs in a PTY maiTerm can't intercept).
+  **`comms_authorized_users` is deliberately absent from `preference_meta()`** so no chat message
+  can edit who is trusted — only the human via Preferences → Integrations.
 - **Async dispatch**: the comms tools made `handle_backend_tool` async (awaited at its single
   call site in `process_message`). New arms must never hold a lock guard across an await.
 - **Skill**: the `resolve` section of `resources/maiterm-skill/SKILL.md` is the agent-facing

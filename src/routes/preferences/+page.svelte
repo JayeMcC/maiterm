@@ -2251,6 +2251,33 @@
             </p>
           {/if}
         </div>
+
+        <h3 class="section-heading">Message Authority</h3>
+        <p class="section-desc">
+          When an agent is working a thread, it only acts on messages that <strong>@mention the bot</strong>.
+          Those messages are scoped by default — the agent may investigate and reply, but won't take
+          destructive or scope-expanding actions on a support request without confirming with you first.
+          Usernames listed below are trusted: their @mentions carry your full authority.
+          Matching is by Mattermost username, so this is only as trustworthy as your server's identities.
+        </p>
+
+        <div class="setting" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+          <label for="comms-authorized">Authorized usernames</label>
+          <p class="setting-hint">One username per line (with or without a leading <code>@</code>).</p>
+          <textarea
+            id="comms-authorized"
+            class="pattern-input"
+            style="width: 100%; max-width: 380px; min-height: 90px; font-family: var(--font-mono, monospace);"
+            placeholder={'darryl\nlead-dev'}
+            value={preferencesStore.commsAuthorizedUsers.join('\n')}
+            onchange={(e) => preferencesStore.setCommsAuthorizedUsers(
+              e.currentTarget.value
+                .split('\n')
+                .map((u) => u.trim().replace(/^@/, ''))
+                .filter((u) => u.length > 0)
+            )}
+          ></textarea>
+        </div>
       {:else if activeSection === 'backup'}
         <h3 class="section-heading">Backup Options</h3>
         <p class="section-desc">
