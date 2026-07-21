@@ -326,6 +326,22 @@ pub fn migrate_app_data(data: &mut AppData) {
         }
     }
 
+    // Drain the legacy single comms_binding into the comms_bindings list (a tab can
+    // now work several threads at once — chat-monitor pickups). Deserialize-only field;
+    // the next save writes only the list.
+    for win in data.windows.iter_mut() {
+        for ws in win.workspaces.iter_mut() {
+            for pane in ws.panes.iter_mut() {
+                for tab in pane.tabs.iter_mut() {
+                    if let Some(b) = tab.comms_binding.take() {
+                        tab.comms_bindings.push(b);
+                        log::info!("Migration: moved legacy comms_binding into comms_bindings (tab {})", tab.id);
+                    }
+                }
+            }
+        }
+    }
+
     let direction = match data.layout.as_ref() {
         Some(Layout::Vertical) => SplitDirection::Vertical,
         _ => SplitDirection::Horizontal,

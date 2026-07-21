@@ -498,10 +498,17 @@ async fn handle_backend_tool(tool_name: &str, arguments: &Value, state: &Arc<App
                 Ok(t) => t,
                 Err(e) => return Some(e),
             };
-            let had_binding = set_comms_binding(state, &tab_id, None);
-            Some(match had_binding {
-                Some(true) => serde_json::json!({ "unbound": true }),
-                Some(false) => serde_json::json!({ "unbound": false, "note": "tab was not bound to a comms thread" }),
+            let bindings = get_comms_bindings(state, &tab_id);
+            if bindings.is_empty() {
+                return Some(serde_json::json!({ "unbound": false, "note": "tab was not bound to a comms thread" }));
+            }
+            let binding = match resolve_comms_binding(state, &tab_id, arguments) {
+                Ok(b) => b,
+                Err(e) => return Some(e),
+            };
+            Some(match remove_comms_binding(state, &tab_id, &binding.root_id) {
+                Some(true) => serde_json::json!({ "unbound": true, "root_id": binding.root_id, "remaining_bound_threads": bindings.len() - 1 }),
+                Some(false) => serde_json::json!({ "unbound": false, "note": "tab was not bound to that thread" }),
                 None => serde_json::json!({ "error": format!("Tab '{tab_id}' not found") }),
             })
         }
@@ -718,14 +725,15 @@ fn required_tab_id(arguments: &Value) -> Result<String, Value> {
     }
 }
 
-/// Set or clear a tab's comms binding and persist. Returns None if the tab doesn't
-/// exist, otherwise Some(previous binding presence).
-fn set_comms_binding(
+/// Add or refresh (same root_id) a binding on a tab and persist. Returns None if the
+/// tab doesn't exist, otherwise Some(true) when an existing same-thread binding was
+/// refreshed.
+fn upsert_comms_binding(
     state: &Arc<AppState>,
     tab_id: &str,
-    binding: Option<crate::state::CommsBinding>,
+    binding: crate::state::CommsBinding,
 ) -> Option<bool> {
-    let (data_clone, had) = {
+    let (data_clone, refreshed) = {
         let mut app_data = state.app_data.write();
         let tab = app_data
             .windows
@@ -734,14 +742,64 @@ fn set_comms_binding(
             .flat_map(|ws| &mut ws.panes)
             .flat_map(|p| &mut p.tabs)
             .find(|t| t.id == tab_id)?;
-        let had = tab.comms_binding.is_some();
-        tab.comms_binding = binding;
-        (app_data.clone(), had)
+        let refreshed = if let Some(existing) = tab
+            .comms_bindings
+            .iter_mut()
+            .find(|b| b.root_id == binding.root_id)
+        {
+            // Refresh in place, but keep the delivered-cursor high-watermark — a
+            // re-bind must not replay replies already injected into the session.
+            let keep_cursor = existing.last_seen_create_at.max(binding.last_seen_create_at);
+            *existing = binding;
+            existing.last_seen_create_at = keep_cursor;
+            true
+        } else {
+            tab.comms_bindings.push(binding);
+            false
+        };
+        (app_data.clone(), refreshed)
     };
     if let Err(e) = crate::state::save_state(&data_clone) {
         log::warn!("[comms] failed to persist binding change: {e}");
     }
-    Some(had)
+    Some(refreshed)
+}
+
+/// Remove one binding (by root_id) from a tab and persist. Some(true) = removed.
+fn remove_comms_binding(state: &Arc<AppState>, tab_id: &str, root_id: &str) -> Option<bool> {
+    let (data_clone, removed) = {
+        let mut app_data = state.app_data.write();
+        let tab = app_data
+            .windows
+            .iter_mut()
+            .flat_map(|w| &mut w.workspaces)
+            .flat_map(|ws| &mut ws.panes)
+            .flat_map(|p| &mut p.tabs)
+            .find(|t| t.id == tab_id)?;
+        let before = tab.comms_bindings.len();
+        tab.comms_bindings.retain(|b| b.root_id != root_id);
+        let removed = tab.comms_bindings.len() < before;
+        (app_data.clone(), removed)
+    };
+    if removed {
+        if let Err(e) = crate::state::save_state(&data_clone) {
+            log::warn!("[comms] failed to persist binding change: {e}");
+        }
+    }
+    Some(removed)
+}
+
+/// If `root_id` is already bound to a DIFFERENT tab, return that tab's id.
+fn root_bound_elsewhere(state: &Arc<AppState>, tab_id: &str, root_id: &str) -> Option<String> {
+    let app_data = state.app_data.read();
+    app_data
+        .windows
+        .iter()
+        .flat_map(|w| &w.workspaces)
+        .flat_map(|ws| &ws.panes)
+        .flat_map(|p| &p.tabs)
+        .find(|t| t.id != tab_id && t.comms_bindings.iter().any(|b| b.root_id == root_id))
+        .map(|t| t.id.clone())
 }
 
 /// The operator's free-text chat guidance, if set and non-empty.
@@ -757,8 +815,8 @@ fn comms_instructions(state: &Arc<AppState>) -> Option<String> {
         .map(str::to_string)
 }
 
-/// The tab's current comms binding, if any.
-fn get_comms_binding(state: &Arc<AppState>, tab_id: &str) -> Option<crate::state::CommsBinding> {
+/// All of the tab's comms bindings.
+fn get_comms_bindings(state: &Arc<AppState>, tab_id: &str) -> Vec<crate::state::CommsBinding> {
     let app_data = state.app_data.read();
     app_data
         .windows
@@ -767,7 +825,40 @@ fn get_comms_binding(state: &Arc<AppState>, tab_id: &str) -> Option<crate::state
         .flat_map(|ws| &ws.panes)
         .flat_map(|p| &p.tabs)
         .find(|t| t.id == tab_id)
-        .and_then(|t| t.comms_binding.clone())
+        .map(|t| t.comms_bindings.clone())
+        .unwrap_or_default()
+}
+
+/// Resolve which of the tab's bindings a tool call targets. `root_id` optional:
+/// omitted is fine with exactly one binding; with several it's ambiguous — the
+/// error lists the bound threads so the agent can retry with an explicit root_id.
+fn resolve_comms_binding(
+    state: &Arc<AppState>,
+    tab_id: &str,
+    arguments: &Value,
+) -> Result<crate::state::CommsBinding, Value> {
+    let bindings = get_comms_bindings(state, tab_id);
+    let root_id = arguments.get("root_id").and_then(|v| v.as_str()).unwrap_or("");
+    if bindings.is_empty() {
+        return Err(serde_json::json!({ "error": "tab is not bound to a comms thread — run /maiterm resolve <url> first" }));
+    }
+    if !root_id.is_empty() {
+        return bindings
+            .into_iter()
+            .find(|b| b.root_id == root_id)
+            .ok_or_else(|| serde_json::json!({ "error": format!("no binding with root_id '{root_id}' on this tab — omit root_id or use one of the bound threads") }));
+    }
+    if bindings.len() == 1 {
+        return Ok(bindings.into_iter().next().unwrap());
+    }
+    let threads: Vec<Value> = bindings
+        .iter()
+        .map(|b| serde_json::json!({ "root_id": b.root_id, "permalink": b.permalink }))
+        .collect();
+    Err(serde_json::json!({
+        "error": "this tab is bound to multiple threads — pass root_id to say which one",
+        "bound_threads": threads,
+    }))
 }
 
 async fn handle_bind_comms_thread(arguments: &Value, state: &Arc<AppState>) -> Value {
@@ -837,10 +928,18 @@ async fn handle_bind_comms_thread(arguments: &Value, state: &Arc<AppState>) -> V
         last_seen_create_at: last_seen,
         bound_at: now_ms,
     };
-    let replaced = match set_comms_binding(state, &tab_id, Some(binding)) {
-        Some(had) => had,
+    // One thread = one tab: a thread already bound to another tab must not be
+    // double-bound (its watcher would double-inject).
+    if let Some(other) = root_bound_elsewhere(state, &tab_id, &root_id) {
+        return serde_json::json!({ "error": format!(
+            "this thread is already bound to another tab ({other}) — that tab's agent is working it. Unbind there (or the operator can right-click → End thread binding) before rebinding."
+        ) });
+    }
+    let refreshed = match upsert_comms_binding(state, &tab_id, binding) {
+        Some(r) => r,
         None => return serde_json::json!({ "error": format!("Tab '{tab_id}' not found") }),
     };
+    let bound_count = get_comms_bindings(state, &tab_id).len();
 
     let mut result = serde_json::json!({
         "bound": true,
@@ -850,13 +949,18 @@ async fn handle_bind_comms_thread(arguments: &Value, state: &Arc<AppState>) -> V
         "root_id": root_id,
         "bot_username": bot_username,
         "message_count": thread.len(),
+        "bound_thread_count": bound_count,
         "thread": transcript,
     });
     if let Some(instr) = comms_instructions(state) {
         result["operator_instructions"] = Value::String(instr);
     }
-    if replaced {
-        result["note"] = Value::String("this tab was already bound to a thread — the previous binding was replaced".to_string());
+    if refreshed {
+        result["note"] = Value::String("this thread was already bound to this tab — binding refreshed".to_string());
+    } else if bound_count > 1 {
+        result["note"] = Value::String(format!(
+            "this tab now works {bound_count} threads — delegate each to a subagent and pass root_id explicitly on every postCommsReply/readCommsThread/unbindCommsThread call"
+        ));
     }
     result
 }
@@ -868,8 +972,9 @@ async fn handle_read_comms_thread(arguments: &Value, state: &Arc<AppState>) -> V
         Ok(t) => t,
         Err(e) => return e,
     };
-    let Some(binding) = get_comms_binding(state, &tab_id) else {
-        return serde_json::json!({ "error": "tab is not bound to a comms thread — run /maiterm resolve <url> first" });
+    let binding = match resolve_comms_binding(state, &tab_id, arguments) {
+        Ok(b) => b,
+        Err(e) => return e,
     };
     let client = match comms::client_from_prefs(state, reqwest::Client::new()) {
         Ok(c) => c,
@@ -883,6 +988,7 @@ async fn handle_read_comms_thread(arguments: &Value, state: &Arc<AppState>) -> V
     let mut result = serde_json::json!({
         "provider": binding.provider,
         "permalink": binding.permalink,
+        "root_id": binding.root_id,
         "message_count": thread.len(),
         "thread": transcript,
     });
@@ -905,8 +1011,9 @@ async fn handle_post_comms_reply(arguments: &Value, state: &Arc<AppState>) -> Va
     };
     let resolve = arguments.get("resolve").and_then(|v| v.as_bool()).unwrap_or(false);
 
-    let Some(binding) = get_comms_binding(state, &tab_id) else {
-        return serde_json::json!({ "error": "tab is not bound to a comms thread — run /maiterm resolve <url> first" });
+    let binding = match resolve_comms_binding(state, &tab_id, arguments) {
+        Ok(b) => b,
+        Err(e) => return e,
     };
     let client = match comms::client_from_prefs(state, reqwest::Client::new()) {
         Ok(c) => c,
@@ -922,16 +1029,16 @@ async fn handle_post_comms_reply(arguments: &Value, state: &Arc<AppState>) -> Va
     };
 
     if resolve {
-        set_comms_binding(state, &tab_id, None);
+        remove_comms_binding(state, &tab_id, &binding.root_id);
     } else {
         // Belt-and-braces cursor advance — the watcher also filters the bot's own
         // posts by user id, but not re-delivering our own reply is cheap certainty.
-        let mut updated = binding;
+        let mut updated = binding.clone();
         updated.last_seen_create_at = updated.last_seen_create_at.max(posted.create_at);
-        set_comms_binding(state, &tab_id, Some(updated));
+        upsert_comms_binding(state, &tab_id, updated);
     }
 
-    serde_json::json!({ "posted": true, "post_id": posted.id, "resolved": resolve })
+    serde_json::json!({ "posted": true, "post_id": posted.id, "root_id": binding.root_id, "resolved": resolve })
 }
 
 fn collect_workspace_folders(_state: &Arc<AppState>) -> Vec<String> {

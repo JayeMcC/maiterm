@@ -284,10 +284,21 @@ pub struct Tab {
     /// Trigger-extracted variables (persisted across restarts).
     #[serde(default)]
     pub trigger_variables: HashMap<String, String>,
-    /// Comms thread binding (/maiterm resolve). While set, the comms watcher forwards
-    /// new human replies in the bound chat thread into this tab's agent session.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// Legacy single comms binding — deserialize-only; drained into `comms_bindings`
+    /// by the load migration in persistence.rs. Never written back.
+    #[serde(default, skip_serializing)]
     pub comms_binding: Option<CommsBinding>,
+    /// Comms thread bindings (/maiterm resolve + chat-monitor pickups). A tab can work
+    /// several threads at once (the skill tells the agent to fan out subagents when
+    /// more than one is live); the watcher forwards each thread's @bot replies into
+    /// this tab's agent session labeled with the thread they belong to.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub comms_bindings: Vec<CommsBinding>,
+    /// Chat monitoring: operator designated this tab to pick up thread work summoned
+    /// via @bot mentions in the listed channels. Persisted — survives suspend/restart
+    /// (the watcher rescans tabs each tick; summons hold until the session is live).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub comms_monitor: Option<CommsMonitor>,
     /// Last known working directory (absolute path, updated live from OSC 7 / prompt patterns).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_cwd: Option<String>,
@@ -1062,10 +1073,36 @@ pub struct Preferences {
     /// operator harness; no chat message may rewrite how the agent is told to behave.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub comms_instructions: Option<String>,
+    /// Comms usernames allowed to SUMMON the bot (start a thread pickup via @mention in a
+    /// monitored channel), without carrying full authority — their messages stay support-tier
+    /// during the work. Authorized users can always summon. Same preference_meta exclusion.
+    #[serde(default)]
+    pub comms_pickup_users: Vec<String>,
 }
 
 fn default_comms_provider() -> String {
     "mattermost".to_string()
+}
+
+/// Chat monitoring config for a tab: the channels it listens to for @bot summons.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommsMonitor {
+    pub channels: Vec<CommsMonitorChannel>,
+}
+
+/// One monitored channel + the watcher's per-channel cursor.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommsMonitorChannel {
+    pub id: String,
+    /// Display name at selection time (UI/injection labels only).
+    pub name: String,
+    /// Team url-name the channel belongs to — used to build thread permalinks.
+    pub team_name: String,
+    /// Newest create_at (ms) already scanned. Starts at "now" when monitoring is
+    /// enabled (no history replay). Held (not advanced) past an undelivered summon
+    /// so it is naturally re-tried when the tab becomes free/live.
+    #[serde(default)]
+    pub last_seen_create_at: i64,
 }
 
 /// A tab's binding to an external chat thread (/maiterm resolve). The comms watcher
@@ -1199,6 +1236,7 @@ impl Default for Preferences {
             comms_bot_token: None,
             comms_authorized_users: Vec::new(),
             comms_instructions: None,
+            comms_pickup_users: Vec::new(),
         }
     }
 }
@@ -1243,6 +1281,8 @@ impl Tab {
             mailink_native: false,
             mailink_excluded: false,
             comms_binding: None,
+            comms_bindings: Vec::new(),
+            comms_monitor: None,
         }
     }
 
@@ -1285,6 +1325,8 @@ impl Tab {
             mailink_native: false,
             mailink_excluded: false,
             comms_binding: None,
+            comms_bindings: Vec::new(),
+            comms_monitor: None,
         }
     }
 
@@ -1327,6 +1369,8 @@ impl Tab {
             mailink_native: false,
             mailink_excluded: false,
             comms_binding: None,
+            comms_bindings: Vec::new(),
+            comms_monitor: None,
         }
     }
 }

@@ -24,6 +24,28 @@ pub struct Post {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct Team {
+    pub id: String,
+    /// URL name (used in permalinks: https://server/<name>/pl/<post_id>).
+    pub name: String,
+    #[serde(default)]
+    pub display_name: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Channel {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub display_name: String,
+    /// "O" open, "P" private, "D" direct, "G" group.
+    #[serde(rename = "type", default)]
+    pub channel_type: String,
+    #[serde(default)]
+    pub team_id: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct User {
     pub id: String,
     pub username: String,
@@ -130,6 +152,38 @@ impl MattermostClient {
     pub async fn me(&self) -> Result<User, CommsError> {
         self.send(self.http.get(format!("{}/api/v4/users/me", self.base)))
             .await
+    }
+
+    /// Teams the authenticated (bot) user belongs to.
+    pub async fn my_teams(&self) -> Result<Vec<Team>, CommsError> {
+        self.send(self.http.get(format!("{}/api/v4/users/me/teams", self.base)))
+            .await
+    }
+
+    /// Channels the authenticated (bot) user is a member of within a team.
+    pub async fn my_team_channels(&self, team_id: &str) -> Result<Vec<Channel>, CommsError> {
+        self.send(self.http.get(format!(
+            "{}/api/v4/users/me/teams/{team_id}/channels",
+            self.base
+        )))
+        .await
+    }
+
+    /// Posts in a channel newer than `since_ms`, sorted by create_at ascending.
+    pub async fn channel_posts_since(
+        &self,
+        channel_id: &str,
+        since_ms: i64,
+    ) -> Result<Vec<Post>, CommsError> {
+        let list: PostList = self
+            .send(self.http.get(format!(
+                "{}/api/v4/channels/{channel_id}/posts?since={since_ms}",
+                self.base
+            )))
+            .await?;
+        let mut posts: Vec<Post> = list.posts.into_values().collect();
+        posts.sort_by_key(|p| (p.create_at, p.id.clone()));
+        Ok(posts)
     }
 
     pub async fn users_by_ids(&self, ids: &[String]) -> Result<Vec<User>, CommsError> {

@@ -482,7 +482,10 @@ pub(crate) fn clone_workspace_with_id_mapping(
                 mailink_excluded: tab.mailink_excluded,
                 // A comms thread binding must stay unique to one tab — cloning it would
                 // make the watcher double-inject thread replies. Never carry it over.
+                // Same for monitoring: two monitors on one channel would double-pickup.
                 comms_binding: None,
+                comms_bindings: Vec::new(),
+                comms_monitor: None,
             }
         }).collect();
 

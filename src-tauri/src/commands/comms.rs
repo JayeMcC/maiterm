@@ -26,3 +26,42 @@ pub async fn comms_test_connection(
         bot_username: me.username,
     })
 }
+
+#[derive(Serialize)]
+pub struct BotChannel {
+    pub id: String,
+    pub display_name: String,
+    /// Team url-name — needed to build permalinks for picked-up threads.
+    pub team_name: String,
+    pub team_display_name: String,
+}
+
+/// Channels the configured bot is a member of (open/private only — no DMs/groups),
+/// for the chat-monitoring picker. Uses the saved preferences.
+#[tauri::command]
+pub async fn comms_list_bot_channels(
+    state: tauri::State<'_, std::sync::Arc<crate::state::AppState>>,
+) -> Result<Vec<BotChannel>, String> {
+    let client = crate::comms::client_from_prefs(&state, reqwest::Client::new())
+        .map_err(|e| e.to_string())?;
+    let teams = client.my_teams().await.map_err(|e| e.to_string())?;
+    let mut out = Vec::new();
+    for team in &teams {
+        let channels = client
+            .my_team_channels(&team.id)
+            .await
+            .map_err(|e| e.to_string())?;
+        for ch in channels {
+            if ch.channel_type == "O" || ch.channel_type == "P" {
+                out.push(BotChannel {
+                    id: ch.id,
+                    display_name: if ch.display_name.is_empty() { ch.name } else { ch.display_name },
+                    team_name: team.name.clone(),
+                    team_display_name: if team.display_name.is_empty() { team.name.clone() } else { team.display_name.clone() },
+                });
+            }
+        }
+    }
+    out.sort_by(|a, b| (&a.team_display_name, &a.display_name).cmp(&(&b.team_display_name, &b.display_name)));
+    Ok(out)
+}
