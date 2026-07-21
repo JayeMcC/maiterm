@@ -978,12 +978,19 @@
         };
       }
     }
+    const commsItem: MenuItem | null = tabObj?.comms_binding
+      ? {
+          label: 'End thread binding',
+          action: () => workspacesStore.clearTabCommsBinding(workspaceId, pane.id, tabId),
+        }
+      : null;
     const items: Array<MenuItem> = [
       {
         label: isPinned ? 'Unpin tab' : 'Pin tab',
         action: () => workspacesStore.setTabPinned(workspaceId, pane.id, tabId, !isPinned),
       },
       ...(mailinkItem ? [mailinkItem] : []),
+      ...(commsItem ? [commsItem] : []),
       { label: '', separator: true, action: () => {} },
       {
         label: 'Move to New Split Right',
@@ -1168,6 +1175,9 @@
         {/if}
         {#if !isEditor && agentBridgeStore.isBridged(tab.id)}
           <Tooltip text={`Bridged to ${agentBridgeStore.getPartnerLabel(tab.id) ?? 'an agent'} — they can message this agent`}><span class="agent-bridge-indicator">⇄</span></Tooltip>
+        {/if}
+        {#if !isEditor && tab.comms_binding}
+          <Tooltip text={`Bound to a ${tab.comms_binding.provider} thread — @mention replies steer this agent. Right-click → End thread binding to stop.`}><span class="comms-indicator">@</span></Tooltip>
         {/if}
         <span class="tab-name">{displayName(tab)}</span>
         {@const hasRunningPty = !isEditor && !isDiff && !!terminalsStore.get(tab.id)}
@@ -1475,6 +1485,19 @@
     font-size: 0.8rem;
     /* Warm/amber, not the blue accent — a bridge is a distinct, attention-worthy state. */
     color: var(--yellow);
+    opacity: 0.95;
+  }
+
+  .comms-indicator {
+    flex-shrink: 0;
+    margin-right: 3px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    /* Green — a live external thread binding, distinct from the amber agent bridge. */
+    color: var(--green, #9ece6a);
     opacity: 0.95;
   }
 

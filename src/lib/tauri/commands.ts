@@ -505,6 +505,11 @@ export async function setTabMailinkExcluded(workspaceId: string, paneId: string,
   return invoke('set_tab_mailink_excluded', { workspaceId, paneId, tabId, excluded });
 }
 
+/** Operator kill switch: clear a tab's comms thread binding (stops reply forwarding). */
+export async function clearTabCommsBinding(workspaceId: string, paneId: string, tabId: string): Promise<void> {
+  return invoke('clear_tab_comms_binding', { workspaceId, paneId, tabId });
+}
+
 export async function setWorkspaceMailinkNative(workspaceId: string, enabled: boolean): Promise<void> {
   return invoke('set_workspace_mailink_native', { workspaceId, enabled });
 }

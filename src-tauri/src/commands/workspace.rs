@@ -1786,6 +1786,37 @@ pub fn set_tab_mailink_excluded(
     save_state(&data_clone)
 }
 
+/// Operator kill switch for the comms integration: clear a tab's thread binding
+/// without going through the agent. The comms watcher re-reads bindings each tick,
+/// so injection stops within one interval. Silent — posts nothing to the thread.
+#[tauri::command]
+pub fn clear_tab_comms_binding(
+    window: tauri::Window,
+    state: State<'_, Arc<AppState>>,
+    workspace_id: String,
+    pane_id: String,
+    tab_id: String,
+) -> Result<(), String> {
+    let label = window.label().to_string();
+    let mut app_data = state.app_data.write();
+    let win = app_data.window_mut(&label).ok_or("Window not found")?;
+    let workspace = win.workspaces.iter_mut()
+        .find(|w| w.id == workspace_id)
+        .ok_or("Workspace not found")?;
+    let pane = workspace.panes.iter_mut()
+        .find(|p| p.id == pane_id)
+        .ok_or("Pane not found")?;
+    let tab = pane.tabs.iter_mut()
+        .find(|t| t.id == tab_id)
+        .ok_or("Tab not found")?;
+
+    tab.comms_binding = None;
+
+    let data_clone = app_data.clone();
+    drop(app_data);
+    save_state(&data_clone)
+}
+
 /// Replace a mesh workspace's topic registry wholesale. The frontend `agentMesh` store is
 /// authoritative for topics (it mints ids + timestamps in JS and dedups by normalized
 /// label), so persistence is a coarse replace rather than granular CRUD — right-sized for

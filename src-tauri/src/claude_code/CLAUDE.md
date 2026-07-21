@@ -103,6 +103,11 @@ agent can pull a bug-report thread as a work item and post a resolution back. Mo
   framing, not a hard sandbox, since the agent runs in a PTY maiTerm can't intercept).
   **`comms_authorized_users` is deliberately absent from `preference_meta()`** so no chat message
   can edit who is trusted — only the human via Preferences → Integrations.
+- **Operator kill switch**: a bound tab shows a green `@` indicator in `TerminalTabs.svelte`; its
+  context menu gains "End thread binding" → `clear_tab_comms_binding` command, which clears
+  `Tab.comms_binding` directly (no agent involvement, posts nothing). The watcher re-reads
+  bindings each tick, so forwarding stops within ~5s. This is the human's override when the agent
+  is stuck/misbehaving — severing never depends on the agent cooperating.
 - **Async dispatch**: the comms tools made `handle_backend_tool` async (awaited at its single
   call site in `process_message`). New arms must never hold a lock guard across an await.
 - **Skill**: the `resolve` section of `resources/maiterm-skill/SKILL.md` is the agent-facing

@@ -1392,6 +1392,16 @@ function createWorkspacesStore() {
       await commands.setTabMailinkExcluded(workspaceId, paneId, tabId, excluded);
     },
 
+    /** Operator kill switch: end a tab's comms thread binding (stops reply forwarding). */
+    async clearTabCommsBinding(workspaceId: string, paneId: string, tabId: string) {
+      const ws = workspaces.find(w => w.id === workspaceId);
+      const pane = ws?.panes.find(p => p.id === paneId);
+      const tab = pane?.tabs.find(t => t.id === tabId);
+      if (!tab || !tab.comms_binding) return;
+      tab.comms_binding = null;
+      await commands.clearTabCommsBinding(workspaceId, paneId, tabId);
+    },
+
     /** maiLink: toggle whether ALL agent tabs in a workspace are exposed as chats. */
     async setWorkspaceMailinkNative(workspaceId: string, enabled: boolean) {
       const ws = workspaces.find(w => w.id === workspaceId);
