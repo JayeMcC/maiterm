@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.21.0
+
+- **maiLink — SSH-hosted Claude agents are now first-class in the phone app.**
+  - **Real per-turn transcripts for remote Claude tabs.** A Claude agent running on a remote host over SSH used to appear in the phone inbox as a flat terminal-screen snapshot, because its conversation log lives on the remote machine. maiTerm now mirrors that remote log to your computer as the agent works — so SSH agents get the same streamed, per-turn conversation, context-window gauge, and last-turn view as local agents, with the terminal snapshot kept only as a fallback when the connection is unavailable.
+  - **Send images to remote agents.** Attaching an image to a remote Claude tab used to fail as unsupported, because the image only existed on your computer. maiTerm now streams the image to the remote host before referencing it, so image sends to SSH agents work the same as local ones — all-or-nothing, so a failed transfer never leaves a half-filled prompt.
+  - **Fix larger image batches failing with a generic error.** Sending several images — or a couple of large screenshots — at once could fail with only "Failed to send" and nothing injected, because the message endpoint capped the request body well below the size the images require. The limit is raised so realistic multi-image sends go through.
+- **Pinned tabs always show the pin.** The pin glyph shared a single slot with a tab's status/type indicator, so a pinned terminal with any activity could hide its pin — several pinned tabs could show only one pin — while a pinned editor tab hid its file-type icon. The pin now shows alongside the indicator, so it stays visible.
+- **Reloading a pinned tab keeps it pinned.** Cmd+Shift+R on a pinned tab produced an unpinned replacement; the reloaded tab now keeps its pin and its exact position in the pin cluster. (A plain duplicate is still intentionally unpinned — a copy is a new tab, not a replacement.)
+
 ## v1.20.6
 
 - **Fix agents resuming with a phantom tab ID.** A resumed agent could come up greeted with a maiTerm tab ID that no longer exists — failing its session registration and falling into a recovery dance. Two long-standing gaps in how maiTerm manages its `SessionStart` hook in `~/.claude/settings.json` were to blame: re-installs appended identical duplicate hooks unbounded, and stale pre-rename hooks were never swept — so an old hook could echo a dead tab ID from a stale fallback file. maiTerm now keeps exactly one current copy of its hook, and the 30-second self-heal removes duplicates and outdated variants — while leaving a live dev/prod sibling instance's hook alone (both share the same settings file and would otherwise sweep each other forever).
