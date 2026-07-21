@@ -85,6 +85,11 @@ agent can pull a bug-report thread as a work item and post a resolution back. Mo
   account per install; set in Preferences → Integrations, test via the `comms_test_connection`
   command). **Invariant: `comms_bot_token` must never be added to `preference_meta()`** — that
   omission is what keeps the token unreadable via getPreferences/setPreference.
+- **Operator instructions**: `Preferences.comms_instructions` — free-text operator guidance for
+  how the agent communicates on threads. Delivered as `operator_instructions` in the
+  bindCommsThread / readCommsThread results (governs communication only; the authority/safety
+  rules are not overridable by it). Also absent from `preference_meta()` so no chat message can
+  rewrite the agent's harness.
 - **Binding**: `Tab.comms_binding` (`CommsBinding`: provider, server_url snapshot, channel_id,
   root_id, permalink, last_seen_create_at cursor, bound_at). Persisted — survives restart, dies
   with the tab; never cloned by tab/workspace duplication (one thread = one tab, or the watcher

@@ -66,6 +66,7 @@ function createPreferencesStore() {
   let commsServerUrl = $state('');
   let commsBotToken = $state('');
   let commsAuthorizedUsers = $state<string[]>([]);
+  let commsInstructions = $state('');
   let composerDefaultOpen = $state(true);
   let windowsShell = $state('powershell');
   let fileLinkAction = $state('modifier_click');
@@ -145,6 +146,7 @@ function createPreferencesStore() {
     get commsServerUrl() { return commsServerUrl; },
     get commsBotToken() { return commsBotToken; },
     get commsAuthorizedUsers() { return commsAuthorizedUsers; },
+    get commsInstructions() { return commsInstructions; },
     get composerDefaultOpen() { return composerDefaultOpen; },
     get windowsShell() { return windowsShell; },
     get fileLinkAction() { return fileLinkAction; },
@@ -234,6 +236,7 @@ function createPreferencesStore() {
       commsServerUrl = prefs.comms_server_url ?? '';
       commsBotToken = prefs.comms_bot_token ?? '';
       commsAuthorizedUsers = prefs.comms_authorized_users ?? [];
+      commsInstructions = prefs.comms_instructions ?? '';
       composerDefaultOpen = prefs.composer_default_open ?? true;
       windowsShell = prefs.windows_shell ?? 'powershell';
       fileLinkAction = prefs.file_link_action ?? 'modifier_click';
@@ -552,6 +555,11 @@ function createPreferencesStore() {
       await this.save();
     },
 
+    async setCommsInstructions(value: string) {
+      commsInstructions = value;
+      await this.save();
+    },
+
     async setWindowsShell(value: string) {
       windowsShell = value;
       await this.save();
@@ -711,6 +719,7 @@ function createPreferencesStore() {
       commsServerUrl = prefs.comms_server_url ?? '';
       commsBotToken = prefs.comms_bot_token ?? '';
       commsAuthorizedUsers = prefs.comms_authorized_users ?? [];
+      commsInstructions = prefs.comms_instructions ?? '';
       composerDefaultOpen = prefs.composer_default_open ?? true;
       windowsShell = prefs.windows_shell ?? 'powershell';
       fileLinkAction = prefs.file_link_action ?? 'modifier_click';
@@ -791,6 +800,7 @@ function createPreferencesStore() {
         comms_server_url: commsServerUrl.trim() || null,
         comms_bot_token: commsBotToken.trim() || null,
         comms_authorized_users: commsAuthorizedUsers,
+        comms_instructions: commsInstructions.trim() || null,
         composer_default_open: composerDefaultOpen,
         windows_shell: windowsShell,
         file_link_action: fileLinkAction,

@@ -744,6 +744,19 @@ fn set_comms_binding(
     Some(had)
 }
 
+/// The operator's free-text chat guidance, if set and non-empty.
+fn comms_instructions(state: &Arc<AppState>) -> Option<String> {
+    state
+        .app_data
+        .read()
+        .preferences
+        .comms_instructions
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+}
+
 /// The tab's current comms binding, if any.
 fn get_comms_binding(state: &Arc<AppState>, tab_id: &str) -> Option<crate::state::CommsBinding> {
     let app_data = state.app_data.read();
@@ -839,6 +852,9 @@ async fn handle_bind_comms_thread(arguments: &Value, state: &Arc<AppState>) -> V
         "message_count": thread.len(),
         "thread": transcript,
     });
+    if let Some(instr) = comms_instructions(state) {
+        result["operator_instructions"] = Value::String(instr);
+    }
     if replaced {
         result["note"] = Value::String("this tab was already bound to a thread — the previous binding was replaced".to_string());
     }
@@ -864,12 +880,16 @@ async fn handle_read_comms_thread(arguments: &Value, state: &Arc<AppState>) -> V
         Err(e) => return serde_json::json!({ "error": e.to_string() }),
     };
     let transcript = comms::build_transcript(&client, &thread, &binding.root_id).await;
-    serde_json::json!({
+    let mut result = serde_json::json!({
         "provider": binding.provider,
         "permalink": binding.permalink,
         "message_count": thread.len(),
         "thread": transcript,
-    })
+    });
+    if let Some(instr) = comms_instructions(state) {
+        result["operator_instructions"] = Value::String(instr);
+    }
+    result
 }
 
 async fn handle_post_comms_reply(arguments: &Value, state: &Arc<AppState>) -> Value {

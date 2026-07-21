@@ -1056,6 +1056,12 @@ pub struct Preferences {
     /// preference_meta() — no chat message may edit who is trusted, only the human via the UI.
     #[serde(default)]
     pub comms_authorized_users: Vec<String>,
+    /// Operator's free-text guidance for how the agent should communicate on chat threads
+    /// (tone, formatting, what to include/avoid). Delivered to the agent via bindCommsThread /
+    /// readCommsThread as `operator_instructions`. Deliberately NOT in preference_meta() — it's
+    /// operator harness; no chat message may rewrite how the agent is told to behave.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub comms_instructions: Option<String>,
 }
 
 fn default_comms_provider() -> String {
@@ -1192,6 +1198,7 @@ impl Default for Preferences {
             comms_server_url: None,
             comms_bot_token: None,
             comms_authorized_users: Vec::new(),
+            comms_instructions: None,
         }
     }
 }

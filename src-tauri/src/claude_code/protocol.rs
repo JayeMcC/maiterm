@@ -545,7 +545,7 @@ pub fn tool_list_response() -> Value {
     tools.extend(serde_json::json!([
         {
             "name": "bindCommsThread",
-            "description": "Bind this tab to a Mattermost thread (/maiterm resolve). Fetches the whole thread via the configured bot account and returns it as a transcript ([REPORT] marks the root post — the work item). While bound, new human replies in the thread are automatically injected into this session as steering input. Rebinding replaces any prior binding on this tab.",
+            "description": "Bind this tab to a Mattermost thread (/maiterm resolve). Fetches the whole thread via the configured bot account and returns it as a transcript ([REPORT] marks the root post — the work item), plus `bot_username` (how humans reach you) and, if the operator configured any, `operator_instructions` (their guidance for how to communicate — follow it). While bound, new human replies that @mention you are injected into this session. Rebinding replaces any prior binding on this tab.",
             "inputSchema": {
                 "type": "object",
                 "properties": {

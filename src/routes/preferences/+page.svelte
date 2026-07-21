@@ -2278,6 +2278,26 @@
             )}
           ></textarea>
         </div>
+
+        <h3 class="section-heading">Response Instructions</h3>
+        <p class="section-desc">
+          Optional guidance for how the agent should communicate on threads — tone, formatting,
+          what to include or leave out, when to post. Delivered to the agent when it picks up a
+          thread, on top of the built-in defaults. (Safety rules — what the agent may act on, and
+          who it takes orders from — are fixed and can't be changed here.)
+        </p>
+
+        <div class="setting" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+          <label for="comms-instructions">Agent chat instructions</label>
+          <textarea
+            id="comms-instructions"
+            class="pattern-input"
+            style="width: 100%; max-width: 480px; min-height: 110px;"
+            placeholder={'e.g. Address the customer by name if the report includes it. Keep the support-facing summary under 4 sentences and free of jargon. Sign off as "— maiTerm bot".'}
+            value={preferencesStore.commsInstructions}
+            onchange={(e) => preferencesStore.setCommsInstructions(e.currentTarget.value)}
+          ></textarea>
+        </div>
       {:else if activeSection === 'backup'}
         <h3 class="section-heading">Backup Options</h3>
         <p class="section-desc">

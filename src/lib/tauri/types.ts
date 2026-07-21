@@ -287,6 +287,8 @@ export interface Preferences {
   comms_bot_token?: string | null;
   /** Comms usernames whose thread @mentions carry full operator authority (others are scoped). */
   comms_authorized_users?: string[];
+  /** Operator's free-text guidance for how the agent communicates on chat threads. */
+  comms_instructions?: string | null;
 }
 
 /** QR payload a phone scans to pair (docs/mailink-protocol.md §3.2). The phone dials
