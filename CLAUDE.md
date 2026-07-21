@@ -169,7 +169,7 @@ Preferences
 ├── clone_cwd, clone_scrollback, clone_ssh, clone_history, clone_notes
 ├── claude_code_ide, claude_code_ide_ssh
 ├── triggers, hidden_default_triggers
-├── comms_provider, comms_server_url, comms_bot_token, comms_authorized_users, comms_instructions (Mattermost bot; token + authorized-users + instructions never in preference_meta)
+├── comms_provider, comms_server_url, comms_bot_token, comms_authorized_users, comms_pickup_users, comms_instructions (Mattermost bot; token + user lists + instructions never in preference_meta)
 └── (see state/workspace.rs for full list)
 ```
 

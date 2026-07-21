@@ -978,10 +978,19 @@
         };
       }
     }
-    const commsItem: MenuItem | null = tabObj?.comms_binding
+    const boundCount = tabObj?.comms_bindings?.length ?? 0;
+    const commsItem: MenuItem | null = boundCount > 0
       ? {
-          label: 'End thread binding',
+          label: boundCount > 1 ? `End thread bindings (${boundCount})` : 'End thread binding',
           action: () => workspacesStore.clearTabCommsBinding(workspaceId, pane.id, tabId),
+        }
+      : null;
+    const commsMonitorItem: MenuItem | null = isTerminalTab
+      ? {
+          label: tabObj?.comms_monitor ? 'Chat monitoring…' : 'Enable chat monitoring…',
+          action: () => window.dispatchEvent(new CustomEvent('open-comms-monitor', {
+            detail: { workspaceId, paneId: pane.id, tabId },
+          })),
         }
       : null;
     const items: Array<MenuItem> = [
@@ -990,6 +999,7 @@
         action: () => workspacesStore.setTabPinned(workspaceId, pane.id, tabId, !isPinned),
       },
       ...(mailinkItem ? [mailinkItem] : []),
+      ...(commsMonitorItem ? [commsMonitorItem] : []),
       ...(commsItem ? [commsItem] : []),
       { label: '', separator: true, action: () => {} },
       {
@@ -1176,8 +1186,10 @@
         {#if !isEditor && agentBridgeStore.isBridged(tab.id)}
           <Tooltip text={`Bridged to ${agentBridgeStore.getPartnerLabel(tab.id) ?? 'an agent'} — they can message this agent`}><span class="agent-bridge-indicator">⇄</span></Tooltip>
         {/if}
-        {#if !isEditor && tab.comms_binding}
-          <Tooltip text={`Bound to a ${tab.comms_binding.provider} thread — @mention replies steer this agent. Right-click → End thread binding to stop.`}><span class="comms-indicator">@</span></Tooltip>
+        {#if !isEditor && (tab.comms_bindings?.length ?? 0) > 0}
+          <Tooltip text={`Bound to ${tab.comms_bindings!.length > 1 ? `${tab.comms_bindings!.length} chat threads` : 'a chat thread'} — @mention replies steer this agent. Right-click → End thread binding to stop.`}><span class="comms-indicator">@{#if tab.comms_bindings!.length > 1}{tab.comms_bindings!.length}{/if}</span></Tooltip>
+        {:else if !isEditor && tab.comms_monitor}
+          <Tooltip text={`Chat monitoring ${tab.comms_monitor.channels.length} channel${tab.comms_monitor.channels.length === 1 ? '' : 's'} — @bot summons land here. Right-click → Chat monitoring… to change.`}><span class="comms-indicator comms-monitoring">@</span></Tooltip>
         {/if}
         <span class="tab-name">{displayName(tab)}</span>
         {@const hasRunningPty = !isEditor && !isDiff && !!terminalsStore.get(tab.id)}
@@ -1499,6 +1511,11 @@
     /* Green — a live external thread binding, distinct from the amber agent bridge. */
     color: var(--green, #9ece6a);
     opacity: 0.95;
+  }
+
+  /* Monitoring-but-idle: listening for summons, no thread bound yet. */
+  .comms-indicator.comms-monitoring {
+    color: var(--fg-dim);
   }
 
   .bridge-indicator {

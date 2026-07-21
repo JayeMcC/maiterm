@@ -561,31 +561,34 @@ pub fn tool_list_response() -> Value {
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "tabId": { "type": "string", "description": "Tab ID (auto-injected after initSession)" }
+                    "tabId": { "type": "string", "description": "Tab ID (auto-injected after initSession)" },
+                    "root_id": { "type": "string", "description": "Which bound thread — REQUIRED when this tab is bound to more than one thread; omit with a single binding" }
                 },
                 "required": []
             }
         },
         {
             "name": "postCommsReply",
-            "description": "Post a reply (Mattermost markdown) to the thread this tab is bound to via bindCommsThread. Set resolve: true ONLY to close out a thread a human has CONFIRMED is resolved — it posts the message and then clears the binding (stops reply forwarding). Do NOT set resolve when first posting a fix; keep the thread bound until someone confirms it works. The bot must be a member of the channel.",
+            "description": "Post a reply (Mattermost markdown) to a thread this tab is bound to. Set resolve: true ONLY to close out a thread a human has CONFIRMED is resolved — it posts the message and then clears that thread's binding (stops reply forwarding). Do NOT set resolve when first posting a fix; keep the thread bound until someone confirms it works. The bot must be a member of the channel.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "tabId": { "type": "string", "description": "Tab ID (auto-injected after initSession)" },
                     "message": { "type": "string", "description": "The message to post (Mattermost markdown)" },
-                    "resolve": { "type": "boolean", "description": "true = this is the final resolution post; clears the thread binding after posting" }
+                    "root_id": { "type": "string", "description": "Which bound thread to post to — REQUIRED when this tab is bound to more than one thread; omit with a single binding" },
+                    "resolve": { "type": "boolean", "description": "true = this is the confirmed-close post; clears that thread's binding after posting" }
                 },
                 "required": ["message"]
             }
         },
         {
             "name": "unbindCommsThread",
-            "description": "Clear this tab's Mattermost thread binding without posting (e.g. when abandoning the issue). Post a brief note via postCommsReply first so the thread isn't left hanging. Idempotent.",
+            "description": "Clear one of this tab's Mattermost thread bindings without posting (e.g. when abandoning the issue). Post a brief note via postCommsReply first so the thread isn't left hanging. Idempotent.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "tabId": { "type": "string", "description": "Tab ID (auto-injected after initSession)" }
+                    "tabId": { "type": "string", "description": "Tab ID (auto-injected after initSession)" },
+                    "root_id": { "type": "string", "description": "Which bound thread — REQUIRED when this tab is bound to more than one thread; omit with a single binding" }
                 },
                 "required": []
             }

@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { AgentBridge, AppData, DiffContext, DuplicateWorkspaceResult, EditorFileInfo, MailinkDevice, MailinkPairingPayload, MeshTopic, Pane, Preferences, ScrollInfo, SearchResult, ShellInfo, SplitDirection, Tab, TerminalFrame, WindowData, Workspace, WorkspaceNote } from './types';
+import type { AgentBridge, AppData, BotChannel, CommsMonitorChannel, DiffContext, DuplicateWorkspaceResult, EditorFileInfo, MailinkDevice, MailinkPairingPayload, MeshTopic, Pane, Preferences, ScrollInfo, SearchResult, ShellInfo, SplitDirection, Tab, TerminalFrame, WindowData, Workspace, WorkspaceNote } from './types';
 
 // Terminal commands
 export async function spawnTerminal(ptyId: string, tabId: string, cols: number, rows: number, cwd?: string | null): Promise<void> {
@@ -505,9 +505,24 @@ export async function setTabMailinkExcluded(workspaceId: string, paneId: string,
   return invoke('set_tab_mailink_excluded', { workspaceId, paneId, tabId, excluded });
 }
 
-/** Operator kill switch: clear a tab's comms thread binding (stops reply forwarding). */
-export async function clearTabCommsBinding(workspaceId: string, paneId: string, tabId: string): Promise<void> {
-  return invoke('clear_tab_comms_binding', { workspaceId, paneId, tabId });
+/** Operator kill switch: clear a tab's comms thread binding(s). Omit rootId to clear all. */
+export async function clearTabCommsBinding(workspaceId: string, paneId: string, tabId: string, rootId?: string): Promise<void> {
+  return invoke('clear_tab_comms_binding', { workspaceId, paneId, tabId, rootId: rootId ?? null });
+}
+
+/** Channels the configured comms bot is a member of (for the chat-monitoring picker). */
+export async function commsListBotChannels(): Promise<BotChannel[]> {
+  return invoke('comms_list_bot_channels');
+}
+
+/** Enable/update (channels) or disable (null) chat monitoring on a tab. */
+export async function setTabCommsMonitor(
+  workspaceId: string,
+  paneId: string,
+  tabId: string,
+  channels: CommsMonitorChannel[] | null
+): Promise<void> {
+  return invoke('set_tab_comms_monitor', { workspaceId, paneId, tabId, channels });
 }
 
 export async function setWorkspaceMailinkNative(workspaceId: string, enabled: boolean): Promise<void> {

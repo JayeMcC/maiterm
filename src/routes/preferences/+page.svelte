@@ -2279,6 +2279,28 @@
           ></textarea>
         </div>
 
+        <div class="setting" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+          <label for="comms-pickup">Pickup users</label>
+          <p class="setting-hint">
+            Usernames who can <strong>summon</strong> the bot — @mentioning it in a chat-monitored
+            channel assigns that thread to the monitoring tab. Their messages still carry
+            support-tier authority while the work runs. Authorized users can always summon.
+          </p>
+          <textarea
+            id="comms-pickup"
+            class="pattern-input"
+            style="width: 100%; max-width: 380px; min-height: 70px; font-family: var(--font-mono, monospace);"
+            placeholder={'support-jane\nsupport-bob'}
+            value={preferencesStore.commsPickupUsers.join('\n')}
+            onchange={(e) => preferencesStore.setCommsPickupUsers(
+              e.currentTarget.value
+                .split('\n')
+                .map((u) => u.trim().replace(/^@/, ''))
+                .filter((u) => u.length > 0)
+            )}
+          ></textarea>
+        </div>
+
         <h3 class="section-heading">Response Instructions</h3>
         <p class="section-desc">
           Optional guidance for how the agent should communicate on threads — tone, formatting,

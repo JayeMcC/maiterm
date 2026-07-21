@@ -64,7 +64,23 @@ The install is idempotent — it only writes `~/.claude/statusline-command.sh` a
 
 ## resolve — work a Mattermost thread as a bug report
 
-`resolve <permalink>` binds this tab to a Mattermost thread and works it to resolution:
+`resolve <permalink>` binds this tab to a Mattermost thread and works it to resolution.
+
+The same workflow also starts WITHOUT this command: if this tab has chat monitoring
+enabled, a `[Mattermost pickup — …]` message may appear in your session — someone
+summoned you by @mention and the thread is ALREADY bound to this tab. Skip step 1
+(no bindCommsThread call needed; the pickup message includes the transcript and
+root_id) and follow the rest of the workflow from step 2.
+
+**Working multiple threads.** A tab can be bound to several threads at once (each
+pickup/binding has its own `root_id`). When more than one thread is live:
+- Delegate each thread's investigation/fix to a SUBAGENT (Task tool) so the threads
+  proceed independently and their contexts don't bleed together; you act as the
+  dispatcher — route incoming thread messages to the right piece of work, and do the
+  postCommsReply calls yourself.
+- ALWAYS pass `root_id` explicitly on every postCommsReply / readCommsThread /
+  unbindCommsThread call — with multiple bindings an omitted root_id is an error, and
+  a reply posted to the wrong thread is worse.
 
 1. Call bindCommsThread `{ "url": "<permalink>" }`. The result contains the full thread as a transcript — `[REPORT]` marks the root post, usually a bug report relayed by support staff on behalf of a customer — plus `bot_username`, the account you post as. If the result includes `operator_instructions`, treat them as the operator's standing directions for how to communicate on this thread (tone, formatting, what to include or avoid); follow them, and where they conflict with the default formatting below, the operator's instructions win. (They govern communication only — the authority and safety rules in this skill still apply and are not overridable.)
 2. In your FIRST reply on the thread, tell the humans how to reach you: they must `@<bot_username>` (the value from step 1) to send you a message, otherwise you won't see it. Then investigate and fix the issue in this tab's repository. While working, stay SILENT on the thread — no progress updates. Exception: if you genuinely cannot proceed without more information, ask ONE concise question via postCommsReply (without the `resolve` flag), and address it explicitly to the right audience — start the message with `**@Support:**` (questions about what the customer saw/did, repro details) or `**@Dev:**` (questions about the codebase, environment, or release process) — so the humans in the channel know who should answer.

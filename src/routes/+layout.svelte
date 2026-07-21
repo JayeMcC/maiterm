@@ -30,6 +30,7 @@
   import { installGlobalSmartQuoteFix } from '$lib/utils/smartQuotes';
   import QuickOpen from '$lib/components/QuickOpen.svelte';
   import AgentBridgePicker from '$lib/components/AgentBridgePicker.svelte';
+  import CommsMonitorModal from '$lib/components/CommsMonitorModal.svelte';
   import MeshCockpit from '$lib/components/MeshCockpit.svelte';
   import MeshSetupModal from '$lib/components/MeshSetupModal.svelte';
   import { detectLanguageFromPath, isImageFile, isPdfFile } from '$lib/utils/languageDetect';
@@ -49,6 +50,7 @@
   let importFilePath = $state('');
   let showQuickOpen = $state(false);
   let showAgentBridgePicker = $state(false);
+  let commsMonitorTarget = $state<{ workspaceId: string; paneId: string; tabId: string } | null>(null);
   let showMeshCockpit = $state(false);
   let meshSetupWorkspaceId = $state<string | null>(null);
   let agentBridgeCallerTabId = $state<string | null>(null);
@@ -339,6 +341,20 @@
         { tabId: p.tab_id },
       );
     }).then(unlisten => { unlistenCommsPending = unlisten; });
+
+    // Chat-monitor summon events: pickups, queued summons, unauthorized attempts.
+    let unlistenCommsSummon: (() => void) | undefined;
+    appWindow.listen<{ tab_id: string; kind: string; channel: string; from: string; preview: string }>('comms-summon', async (event) => {
+      const { dispatch } = await import('$lib/stores/notificationDispatch');
+      const p = event.payload;
+      if (p.kind === 'picked_up') {
+        dispatch('Thread picked up', `${p.from} summoned the bot in ${p.channel}: "${p.preview}"`, 'info', { tabId: p.tab_id });
+      } else if (p.kind === 'queued') {
+        dispatch('Summon queued', `${p.from} summoned the bot in ${p.channel} but the monitoring tab is busy or offline: "${p.preview}". It will be picked up when the tab frees up.`, 'info', { tabId: p.tab_id });
+      } else if (p.kind === 'unauthorized') {
+        dispatch('Summon not allowed', `${p.from} @mentioned the bot in ${p.channel} but isn't on the pickup or authorized list: "${p.preview}". Nothing was posted in the thread.`, 'info', { tabId: p.tab_id });
+      }
+    }).then(unlisten => { unlistenCommsSummon = unlisten; });
 
     // Claude Code state tracking (hook events → per-tab Claude state)
     claudeStateStore.init();
@@ -871,6 +887,12 @@
     const onOpenMeshCockpit = () => { showMeshCockpit = true; };
     window.addEventListener('open-mesh-cockpit', onOpenMeshCockpit);
 
+    // Chat-monitoring modal opened from the tab context menu.
+    const onOpenCommsMonitor = (e: Event) => {
+      commsMonitorTarget = (e as CustomEvent<{ workspaceId: string; paneId: string; tabId: string }>).detail ?? null;
+    };
+    window.addEventListener('open-comms-monitor', onOpenCommsMonitor);
+
     // Mesh pre-flight setup modal, opened from the cockpit's Enable Mesh button.
     const onOpenMeshSetup = (e: Event) => { meshSetupWorkspaceId = (e as CustomEvent<string>).detail ?? null; };
     window.addEventListener('open-mesh-setup', onOpenMeshSetup);
@@ -882,6 +904,7 @@
     return () => {
       window.removeEventListener('open-agent-bridge-picker', onOpenAgentBridgePicker);
       window.removeEventListener('open-mesh-cockpit', onOpenMeshCockpit);
+      window.removeEventListener('open-comms-monitor', onOpenCommsMonitor);
       window.removeEventListener('open-mesh-setup', onOpenMeshSetup);
       window.removeEventListener('keydown', handleKeydown, true);
       window.removeEventListener('keydown', handleKeydownAlt, true);
@@ -897,6 +920,7 @@
       unlistenClaudeTool?.();
       unlistenClaudeConnection?.();
       unlistenCommsPending?.();
+      unlistenCommsSummon?.();
       claudeStateStore.destroy();
       agentBridgeStore.destroy();
       agentMeshStore.destroy();
@@ -957,6 +981,13 @@
     const tab = workspacesStore.activeTab;
     if (tab?.tab_type === 'terminal') terminalsStore.focusTerminal(tab.id);
   }}
+/>
+<CommsMonitorModal
+  open={commsMonitorTarget !== null}
+  workspaceId={commsMonitorTarget?.workspaceId ?? null}
+  paneId={commsMonitorTarget?.paneId ?? null}
+  tabId={commsMonitorTarget?.tabId ?? null}
+  onclose={() => { commsMonitorTarget = null; }}
 />
 <MeshCockpit
   open={showMeshCockpit}

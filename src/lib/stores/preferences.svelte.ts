@@ -66,6 +66,7 @@ function createPreferencesStore() {
   let commsServerUrl = $state('');
   let commsBotToken = $state('');
   let commsAuthorizedUsers = $state<string[]>([]);
+  let commsPickupUsers = $state<string[]>([]);
   let commsInstructions = $state('');
   let composerDefaultOpen = $state(true);
   let windowsShell = $state('powershell');
@@ -146,6 +147,7 @@ function createPreferencesStore() {
     get commsServerUrl() { return commsServerUrl; },
     get commsBotToken() { return commsBotToken; },
     get commsAuthorizedUsers() { return commsAuthorizedUsers; },
+    get commsPickupUsers() { return commsPickupUsers; },
     get commsInstructions() { return commsInstructions; },
     get composerDefaultOpen() { return composerDefaultOpen; },
     get windowsShell() { return windowsShell; },
@@ -236,6 +238,7 @@ function createPreferencesStore() {
       commsServerUrl = prefs.comms_server_url ?? '';
       commsBotToken = prefs.comms_bot_token ?? '';
       commsAuthorizedUsers = prefs.comms_authorized_users ?? [];
+      commsPickupUsers = prefs.comms_pickup_users ?? [];
       commsInstructions = prefs.comms_instructions ?? '';
       composerDefaultOpen = prefs.composer_default_open ?? true;
       windowsShell = prefs.windows_shell ?? 'powershell';
@@ -555,6 +558,11 @@ function createPreferencesStore() {
       await this.save();
     },
 
+    async setCommsPickupUsers(value: string[]) {
+      commsPickupUsers = value;
+      await this.save();
+    },
+
     async setCommsInstructions(value: string) {
       commsInstructions = value;
       await this.save();
@@ -719,6 +727,7 @@ function createPreferencesStore() {
       commsServerUrl = prefs.comms_server_url ?? '';
       commsBotToken = prefs.comms_bot_token ?? '';
       commsAuthorizedUsers = prefs.comms_authorized_users ?? [];
+      commsPickupUsers = prefs.comms_pickup_users ?? [];
       commsInstructions = prefs.comms_instructions ?? '';
       composerDefaultOpen = prefs.composer_default_open ?? true;
       windowsShell = prefs.windows_shell ?? 'powershell';
@@ -800,6 +809,7 @@ function createPreferencesStore() {
         comms_server_url: commsServerUrl.trim() || null,
         comms_bot_token: commsBotToken.trim() || null,
         comms_authorized_users: commsAuthorizedUsers,
+        comms_pickup_users: commsPickupUsers,
         comms_instructions: commsInstructions.trim() || null,
         composer_default_open: composerDefaultOpen,
         windows_shell: windowsShell,

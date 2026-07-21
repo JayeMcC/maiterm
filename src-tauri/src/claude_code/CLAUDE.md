@@ -90,10 +90,25 @@ agent can pull a bug-report thread as a work item and post a resolution back. Mo
   bindCommsThread / readCommsThread results (governs communication only; the authority/safety
   rules are not overridable by it). Also absent from `preference_meta()` so no chat message can
   rewrite the agent's harness.
-- **Binding**: `Tab.comms_binding` (`CommsBinding`: provider, server_url snapshot, channel_id,
-  root_id, permalink, last_seen_create_at cursor, bound_at). Persisted — survives restart, dies
-  with the tab; never cloned by tab/workspace duplication (one thread = one tab, or the watcher
-  would double-inject).
+- **Bindings**: `Tab.comms_bindings: Vec<CommsBinding>` (provider, server_url snapshot,
+  channel_id, root_id, permalink, last_seen_create_at cursor, bound_at) — a tab can work several
+  threads at once (the skill has the agent fan out subagents and pass `root_id` explicitly on
+  every comms tool call when more than one is bound; the tools error on ambiguity). Legacy
+  single `comms_binding` is drained into the list by a load migration in persistence.rs.
+  Persisted — survives restart, dies with the tab; never cloned by tab/workspace duplication
+  (one thread = one tab, or the watcher would double-inject). A thread bound to one tab refuses
+  to bind to another.
+- **Chat monitoring (summons)**: `Tab.comms_monitor` (`CommsMonitor{channels}`) — operator
+  right-clicks a tab → "Enable chat monitoring…" → `CommsMonitorModal` (channels the bot is a
+  member of, via `comms_list_bot_channels`; persisted via `set_tab_comms_monitor`, new channels'
+  cursors start at now). The watcher's summon phase polls each monitored channel
+  (`channel_posts_since`); an @bot mention in an UNBOUND thread by a user on
+  `comms_pickup_users` (or an authorized user) auto-binds that thread to the monitor tab and
+  injects a `[Mattermost pickup …]` message with the full transcript. Post-by-post cursor walk
+  queues naturally: at capacity (`MAX_TAB_BINDINGS` = 3), busy, or offline, the cursor HOLDS at
+  the summon (one-time in-thread "at capacity" reply + operator `comms-summon` notification) and
+  retries when the tab frees; unauthorized mentions notify the operator only, nothing in-thread.
+  Pickup users are summon-only — their messages stay [support]-tier during the work.
 - **Watcher** (`comms::watcher_loop`, spawned unconditionally in `lib.rs` setup): every 5s scans
   tabs for bindings, fetches each bound thread, and injects **only posts that @mention the bot's
   own username** (`mentions_username`, cursor-newer, not-the-bot, non-empty) into the tab's PTY
