@@ -1328,15 +1328,22 @@ pub fn set_tab_trigger_variables(
     vars: HashMap<String, String>,
 ) -> Result<(), String> {
     let label = window.label().to_string();
-    let mut app_data = state.app_data.write();
-    let win = app_data.window_mut(&label).ok_or("Window not found")?;
-    if let Some(workspace) = win.workspaces.iter_mut().find(|w| w.id == workspace_id) {
-        if let Some(pane) = workspace.panes.iter_mut().find(|p| p.id == pane_id) {
-            if let Some(tab) = pane.tabs.iter_mut().find(|t| t.id == tab_id) {
-                tab.trigger_variables = vars;
+    let data_clone = {
+        let mut app_data = state.app_data.write();
+        let win = app_data.window_mut(&label).ok_or("Window not found")?;
+        if let Some(workspace) = win.workspaces.iter_mut().find(|w| w.id == workspace_id) {
+            if let Some(pane) = workspace.panes.iter_mut().find(|p| p.id == pane_id) {
+                if let Some(tab) = pane.tabs.iter_mut().find(|t| t.id == tab_id) {
+                    tab.trigger_variables = vars;
+                }
             }
         }
-    }
+        app_data.clone()
+    };
+    // Callers persist only on value CHANGES (triggers store guards), so this
+    // stays low-frequency — without it variables never reach disk until some
+    // unrelated mutation saves, and are lost on a crash.
+    save_state(&data_clone)?;
     Ok(())
 }
 
