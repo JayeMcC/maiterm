@@ -2,6 +2,7 @@
 # Managed linked-tools symlinks — un-ignore so the editor indexes them.
 !/.agents
 !/docs/agent-environment
+!/docs/source-trust.md
 !/memory
 !/scripts/bw-helpers.sh
 !/scripts/cli-catalog.mjs

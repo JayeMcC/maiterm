@@ -41,6 +41,7 @@ TAURI_MCP_NOTES.md
 # Symlinks into linked-tools/ (personal tooling) — do not commit here.
 /.agents
 /docs/agent-environment
+/docs/source-trust.md
 /memory
 /scripts/bw-helpers.sh
 /scripts/cli-catalog.mjs
