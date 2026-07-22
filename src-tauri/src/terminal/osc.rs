@@ -319,3 +319,115 @@ fn percent_decode(s: &str) -> String {
     }
     result
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn interceptor() -> (OscInterceptor, Arc<RwLock<HashMap<usize, Rgb>>>) {
+        let overrides: Arc<RwLock<HashMap<usize, Rgb>>> = Arc::new(RwLock::new(HashMap::new()));
+        (OscInterceptor::new(Arc::clone(&overrides)), overrides)
+    }
+
+    fn rgb(r: u8, g: u8, b: u8) -> Rgb {
+        Rgb { r, g, b }
+    }
+
+    #[test]
+    fn parses_icon_name_bel_and_st_terminated() {
+        let (mut i, _) = interceptor();
+        let events = i.process(b"\x1b]1;my-icon\x07");
+        assert!(matches!(&events[..], [OscEvent::IconName { name }] if name == "my-icon"));
+        let events = i.process(b"\x1b]1;other\x1b\\");
+        assert!(matches!(&events[..], [OscEvent::IconName { name }] if name == "other"));
+        // Empty icon name is dropped
+        assert!(i.process(b"\x1b]1;\x07").is_empty());
+    }
+
+    #[test]
+    fn parses_osc777_notify() {
+        let (mut i, _) = interceptor();
+        let events = i.process(b"\x1b]777;notify;Build;done\x1b\\");
+        assert!(matches!(&events[..], [OscEvent::Notification { message }] if message == "Build: done"));
+        // Title only
+        let events = i.process(b"\x1b]777;notify;Build\x07");
+        assert!(matches!(&events[..], [OscEvent::Notification { message }] if message == "Build"));
+        // Non-notify subcommand ignored
+        assert!(i.process(b"\x1b]777;other;x;y\x07").is_empty());
+    }
+
+    #[test]
+    fn parses_osc99_kitty_notifications() {
+        let (mut i, _) = interceptor();
+        let events = i.process(b"\x1b]99;i=1:d=0;Hello\x07");
+        assert!(matches!(&events[..], [OscEvent::Notification { message }] if message == "Hello"));
+        // Bare payload, no metadata
+        let events = i.process(b"\x1b]99;Just text\x07");
+        assert!(matches!(&events[..], [OscEvent::Notification { message }] if message == "Just text"));
+        // Non-text part kinds are ignored
+        assert!(i.process(b"\x1b]99;p=icon;abc\x07").is_empty());
+        assert!(i.process(b"\x1b]99;\x07").is_empty());
+    }
+
+    #[test]
+    fn parses_set_user_var_and_current_dir() {
+        let (mut i, _) = interceptor();
+        // "hello" base64
+        let events = i.process(b"\x1b]1337;SetUserVar=foo=aGVsbG8=\x07");
+        assert!(matches!(&events[..], [OscEvent::UserVar { key, value }] if key == "foo" && value == "hello"));
+        // Invalid base64 dropped
+        assert!(i.process(b"\x1b]1337;SetUserVar=foo=!!!\x07").is_empty());
+        // CurrentDir still works
+        let events = i.process(b"\x1b]1337;CurrentDir=/tmp\x07");
+        assert!(matches!(&events[..], [OscEvent::CurrentDir { cwd }] if cwd == "/tmp"));
+    }
+
+    #[test]
+    fn mirrors_color_sets_and_resets() {
+        let (mut i, overrides) = interceptor();
+
+        // OSC 4 set (two pairs, one a query which must not insert)
+        i.process(b"\x1b]4;1;rgb:ff/00/00;2;?\x07");
+        assert_eq!(overrides.read().get(&1), Some(&rgb(255, 0, 0)));
+        assert!(overrides.read().get(&2).is_none());
+
+        // OSC 10/11/12 map to NamedColor indices 256/257/258
+        i.process(b"\x1b]10;#00ff00\x07");
+        i.process(b"\x1b]11;rgb:00/00/ff\x07");
+        i.process(b"\x1b]12;#123456\x07");
+        assert_eq!(overrides.read().get(&256), Some(&rgb(0, 255, 0)));
+        assert_eq!(overrides.read().get(&257), Some(&rgb(0, 0, 255)));
+        assert_eq!(overrides.read().get(&258), Some(&rgb(0x12, 0x34, 0x56)));
+        // Queries don't insert
+        i.process(b"\x1b]10;?\x07");
+        assert_eq!(overrides.read().get(&256), Some(&rgb(0, 255, 0)));
+
+        // OSC 110/111/112 reset the named slots
+        i.process(b"\x1b]110\x07");
+        assert!(overrides.read().get(&256).is_none());
+
+        // OSC 104 with args resets only those palette entries
+        i.process(b"\x1b]4;3;#aabbcc\x07");
+        i.process(b"\x1b]104;1\x07");
+        assert!(overrides.read().get(&1).is_none());
+        assert_eq!(overrides.read().get(&3), Some(&rgb(0xaa, 0xbb, 0xcc)));
+
+        // OSC 104 bare resets the whole palette but not the named slots
+        i.process(b"\x1b]104\x07");
+        assert!(overrides.read().get(&3).is_none());
+        assert_eq!(overrides.read().get(&257), Some(&rgb(0, 0, 255)));
+    }
+
+    #[test]
+    fn existing_codes_still_parse() {
+        let (mut i, _) = interceptor();
+        let events = i.process(b"\x1b]7;file://host/Users/x\x07");
+        assert!(matches!(&events[..], [OscEvent::Cwd { cwd, host: Some(h) }] if cwd == "/Users/x" && h == "host"));
+        let events = i.process(b"\x1b]133;D;1\x07");
+        assert!(matches!(&events[..], [OscEvent::ShellIntegration { cmd: 'D', exit_code: Some(1) }]));
+        let events = i.process(b"\x1b]9;hi there\x07");
+        assert!(matches!(&events[..], [OscEvent::Notification { message }] if message == "hi there"));
+        // Claude Code protocol payloads (digits/semicolons) stay filtered
+        assert!(i.process(b"\x1b]9;4;2\x07").is_empty());
+    }
+}
