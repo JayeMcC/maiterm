@@ -97,23 +97,23 @@ It travels over **your LAN only**, on an encrypted, authenticated channel — TL
 
 <section class="spotlight">
 
-<p class="spotlight-eyebrow">New — Chat Threads</p>
+<p class="spotlight-eyebrow">New — Chat Threads: channel monitoring</p>
 
-## Work a support thread to resolution, from a terminal tab
+## Watch your channels — the bot picks up threads on demand
 
-A bug report lands in a **Mattermost** thread. Paste its permalink into an agent tab with `/maiterm resolve`, and the agent binds that tab to the thread: it reads the whole conversation as a bug report, reproduces and **fixes the issue in that tab's repository**, and posts the resolution back to the thread — a plain-language summary for support, technical detail for the devs — without you ever leaving maiTerm. Configure a bot account once in **Preferences → Integrations**, and any agent tab can pick up a thread.
+A bug report lands in a **Mattermost** thread. Now maiTerm can be watching for it: right-click a tab → **Enable chat monitoring…**, pick the channels your bot belongs to, and that tab becomes a dispatcher. Whenever someone **`@mentions` the bot** in a thread, maiTerm binds the thread to the tab and hands the agent the whole conversation — it reproduces and **fixes the issue in that tab's repository**, then posts the resolution back, a plain-language summary for support and technical detail for the devs, without you ever leaving maiTerm. Still prefer to hand-pick? Paste a permalink with `/maiterm resolve` — both paths land in the same flow. Configure the bot once in **Preferences → Integrations**.
 
-You stay in control of what it can act on. Only messages that **`@mention` the bot** reach the agent, and each is scoped by its sender: an authorized operator's message carries your full authority, while support staff are treated as information and requests only — the agent won't take destructive or scope-expanding actions on their say-so, it relays those to you. A bound tab shows a green `@` you can right-click to end the binding yourself, and a fix stays open until a **human confirms** it works.
+You stay in control of what it can act on. Only people you list can summon it, only messages that **`@mention` the bot** reach the agent, and each is scoped by its sender: an authorized operator carries your full authority, a **pickup user** can summon but their work is investigate-and-report, and everyone else can neither summon nor direct destructive work. A monitoring tab works **up to three threads at once** — its `@` indicator is dim while idle, green with a count once threads are bound — and a fix stays open until a **human confirms** it works.
 
 <CardGrid>
-  <Card title="You decide what's actionable" icon="approve-check">
-    Only `@mentions` of the bot are delivered into the session; everything else stays ambient context. Authorized usernames (set in Preferences) carry your authority — everyone else is investigate-and-reply only.
+  <Card title="Summoned, not pasted" icon="approve-check">
+    Monitor the channels the bot belongs to; an `@mention` in a thread binds it to your dispatcher tab automatically. One tab handles up to three threads at once, and overflow queues.
   </Card>
-  <Card title="A human closes the loop" icon="comment-alt">
-    Posting a fix doesn't close the thread — the agent asks support to test, keeps working if it's still broken, and only signs off on a human's confirmation.
+  <Card title="A tiered summon list" icon="comment-alt">
+    Authorized operators carry your full authority; pickup users can summon the bot but their work stays investigate-and-report; everyone else is never picked up. Set both lists in Preferences.
   </Card>
-  <Card title="Your override, always" icon="star">
-    End a binding from the tab's right-click menu at any time — it never depends on the agent cooperating, and posts nothing. If a reply lands while no session is live, maiTerm rings you and holds the backlog.
+  <Card title="Route it across a mesh" icon="random">
+    In a mesh workspace, the dispatcher tab can hand an investigation to the peer whose repo matches — staying on the thread itself while the right agent does the work, then posting the answer back.
   </Card>
 </CardGrid>
 
@@ -145,7 +145,7 @@ Other terminals give you tabs and splits. maiTerm gives you a system for managin
     Bridge connects two agents — a mesh connects them all. Flip a workspace into a mesh and every named agent can message any other by role, addressed and routed so a rename never misroutes. Conversation groups into topics, with opt-in soft, hard, and time-to-live loop caps when you want backstops. Open the cockpit (`Cmd+Shift+M`) for a live conversation graph, a topic board, and a focused stage + filmstrip view of every agent.
   </Card>
   <Card title="Resolve support threads in-terminal" icon="approve-check">
-    Paste a Mattermost thread's permalink into an agent tab with `/maiterm resolve` and the agent works the bug to resolution — reading the whole thread, fixing it in that tab's repo, and posting back a support summary plus technical detail. Only `@mentions` of the bot reach it, authorized operators carry your authority, others are investigate-only, and a fix stays open until a human confirms. Configure the bot once in Preferences → Integrations.
+    Watch your Mattermost channels and the bot picks up threads on demand: `@mention` it and maiTerm binds the thread to a dispatcher tab, which works the bug to resolution — reading the whole thread, fixing it in that tab's repo, and posting back a support summary plus technical detail. One tab handles up to three threads at once; you can still hand-pick a thread with `/maiterm resolve <permalink>`. Authorized operators carry your authority, pickup users can summon but stay investigate-only, and a fix stays open until a human confirms. Configure the bot once in Preferences → Integrations.
   </Card>
   <Card title="Reach agents from your phone" icon="phone">
     maiLink, the companion app, connects directly to maiTerm over your LAN — encrypted, authenticated, no cloud in the data path. Watch live transcripts, answer agent questions, approve permissions, and interrupt runaway turns from anywhere in the house. QR pairing with revocable per-device tokens.
