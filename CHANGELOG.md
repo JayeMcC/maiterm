@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.23.0
+
+- **maiTerm can now watch your Mattermost channels and pick up threads on demand.** Building on v1.22.0's `/maiterm resolve`, you no longer have to paste a permalink for every bug report. Right-click a tab → **Enable chat monitoring…**, choose which channels to watch (the picker lists the channels your bot is a member of, grouped by team), and that tab becomes a dispatcher: whenever someone `@mentions` the bot in a thread, maiTerm binds that thread to the tab and hands the agent the request with the full conversation — automatically.
+  - **One tab, several threads.** A monitoring tab works up to three threads at once; further summons queue — as they also do while it's busy or offline — with a one-time "at capacity" reply posted to the thread and a notification to you. The tab's `@` indicator is dim while idle and turns green with a count once threads are bound.
+  - **A new "pickup" permission tier.** Preferences → Integrations gains **Pickup users** — usernames allowed to summon the bot without carrying full operator authority. Their thread work is treated as investigate-and-report; authorized operators still carry your full authority, and an unauthorized summon simply notifies you.
+  - **Hand work to the right agent in a mesh.** If the monitoring tab is part of a mesh workspace, it can route an investigation to the peer whose purpose and working directory match the issue — staying the dispatcher on the thread while the right agent does the work, with the sender's authority relayed verbatim.
+
 ## v1.22.0
 
 - **Work a Mattermost support thread to resolution from a maiTerm tab — the new `/maiterm resolve` integration.** Point an agent at a Mattermost thread (paste the message permalink) and it binds that tab to the thread: it reads the whole conversation as a bug report, investigates and fixes the issue in the tab's repository, and posts the resolution back to the thread — without you leaving maiTerm. Configure the bot once in **Preferences → Integrations** (Mattermost server URL + bot token); a bound tab shows a green `@` indicator you can right-click to manage.
