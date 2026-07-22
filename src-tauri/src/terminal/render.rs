@@ -60,6 +60,28 @@ pub fn render_viewport<T: EventListener>(
     // Clear screen and home cursor
     out.push_str("\x1b[H\x1b[2J");
 
+    // When the program overrode the default fg/bg (OSC 10/11), default-colored
+    // cells never trigger an SGR change, so the override must be seeded as the
+    // active state at frame start and re-seeded after every end-of-line reset.
+    let default_override_sgr: Option<String> = if colors[NamedColor::Foreground].is_some()
+        || colors[NamedColor::Background].is_some()
+    {
+        let mut s = String::new();
+        emit_sgr(
+            &mut s,
+            Color::Named(NamedColor::Foreground),
+            Color::Named(NamedColor::Background),
+            Flags::empty(),
+            colors,
+        );
+        Some(s)
+    } else {
+        None
+    };
+    if let Some(ref sgr) = default_override_sgr {
+        out.push_str(sgr);
+    }
+
     let mut prev_fg = Color::Named(NamedColor::Foreground);
     let mut prev_bg = Color::Named(NamedColor::Background);
     let mut prev_flags = Flags::empty();
@@ -81,6 +103,9 @@ pub fn render_viewport<T: EventListener>(
                 }
                 // Reset attributes at end of line and emit newline
                 out.push_str("\x1b[0m\r\n");
+                if let Some(ref sgr) = default_override_sgr {
+                    out.push_str(sgr);
+                }
                 prev_fg = Color::Named(NamedColor::Foreground);
                 prev_bg = Color::Named(NamedColor::Background);
                 prev_flags = Flags::empty();
@@ -337,5 +362,57 @@ fn emit_color_sgr(
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::terminal::handle::TermDimensions;
+    use alacritty_terminal::event::VoidListener;
+    use alacritty_terminal::term::Config;
+    use alacritty_terminal::vte::ansi::Processor;
+
+    fn term_with(bytes: &[u8]) -> Term<VoidListener> {
+        let dims = TermDimensions { cols: 20, rows: 2 };
+        let mut term = Term::new(Config::default(), &dims, VoidListener);
+        let mut processor: Processor = Processor::default();
+        processor.advance(&mut term, bytes);
+        term
+    }
+
+    fn ansi_of(term: &Term<VoidListener>) -> String {
+        String::from_utf8(render_viewport(term, None).ansi).unwrap()
+    }
+
+    #[test]
+    fn named_color_renders_as_sgr_code_by_default() {
+        let term = term_with(b"\x1b[31mX");
+        let out = ansi_of(&term);
+        assert!(out.contains(";31"), "expected named red SGR in {out:?}");
+        assert!(!out.contains("38;2;"), "no RGB expected without an override: {out:?}");
+    }
+
+    #[test]
+    fn osc4_override_renders_concrete_rgb() {
+        // Program overrides palette color 1 (red) then prints red text
+        let term = term_with(b"\x1b]4;1;rgb:ff/00/00\x07\x1b[31mX");
+        let out = ansi_of(&term);
+        assert!(out.contains("38;2;255;0;0"), "override RGB missing in {out:?}");
+    }
+
+    #[test]
+    fn osc10_foreground_override_applies_to_default_cells() {
+        let term = term_with(b"\x1b]10;#00ff00\x07plain");
+        let out = ansi_of(&term);
+        assert!(out.contains("38;2;0;255;0"), "fg override missing in {out:?}");
+    }
+
+    #[test]
+    fn osc104_reset_returns_to_named_code() {
+        let term = term_with(b"\x1b]4;1;rgb:ff/00/00\x07\x1b]104;1\x07\x1b[31mX");
+        let out = ansi_of(&term);
+        assert!(!out.contains("38;2;255;0;0"), "reset override still rendering in {out:?}");
+        assert!(out.contains(";31"), "named red SGR missing after reset in {out:?}");
     }
 }
