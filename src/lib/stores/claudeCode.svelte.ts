@@ -802,11 +802,26 @@ function createClaudeCodeStore() {
   }
 
   async function handleOpenTab(args: { name: string; workspaceName?: string; command?: string; cwd?: string; reuseExisting?: boolean }) {
-    if (!args.name) return { error: 'name is required' };
+    // Error returns here surface only in the MCP client (e.g. the task-engine
+    // launcher's tab) — WARN-log them so the app log captures the reason too.
+    if (!args.name) {
+      logError('openTab: name is required');
+      return { error: 'name is required' };
+    }
 
-    const ws = args.workspaceName ? workspacesStore.workspaces.find((w) => w.name === args.workspaceName) : workspacesStore.activeWorkspace;
+    let ws = args.workspaceName ? workspacesStore.workspaces.find((w) => w.name === args.workspaceName) : workspacesStore.activeWorkspace;
+    if (!ws && args.workspaceName) {
+      // A stale/renamed workspace name shouldn't abort the whole task chain —
+      // fall back to the active workspace and say so.
+      ws = workspacesStore.activeWorkspace ?? undefined;
+      if (ws) {
+        logInfo(`openTab: workspace '${args.workspaceName}' not found — falling back to active workspace '${ws.name}'`);
+      }
+    }
     if (!ws) {
-      return { error: args.workspaceName ? `Workspace not found: ${args.workspaceName}` : 'No active workspace' };
+      const detail = args.workspaceName ? `Workspace not found: ${args.workspaceName} (and no active workspace)` : 'No active workspace';
+      logError(`openTab failed: ${detail}`);
+      return { error: detail };
     }
 
     // Reuse path: if a terminal tab with the given name exists, focus it and
@@ -866,7 +881,10 @@ function createClaudeCodeStore() {
     // the tab via the workspace store (which handles sibling CWD inference),
     // then wait for the Terminal component to spawn its PTY before writing.
     const pane = ws.panes.find((p) => p.id === ws.active_pane_id) ?? ws.panes[0];
-    if (!pane) return { error: `Workspace has no panes: ${ws.id}` };
+    if (!pane) {
+      logError(`openTab failed: workspace has no panes: ${ws.id}`);
+      return { error: `Workspace has no panes: ${ws.id}` };
+    }
 
     const tab = await workspacesStore.createTab(ws.id, pane.id, args.name);
     await navigateToTab(tab.id);

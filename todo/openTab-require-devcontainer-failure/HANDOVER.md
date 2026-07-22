@@ -1,8 +1,20 @@
 # Handover — maiTerm task browser: "openTab failed for task 'Require devcontainer'"
 
-**Status:** unresolved. Root-caused to the throw site + narrowed to `handleOpenTab`
-error branches, but the exact failing `detail` was never captured (it only renders
-in the task tab, not in any app log). Workaround exists; fix needs the real `detail`.
+**Status: maiTerm-side FIXED on `dev` (2026-07-22).** Both "next steps" that live
+in this repo landed in `handleOpenTab` (`src/lib/stores/claudeCode.svelte.ts`):
+
+- **Observability gap closed** — every error return is now logged
+  (`openTab failed: <detail>` / `openTab: name is required`) so the real
+  `detail` lands in `aiterm.log` instead of only the task tab.
+- **Workspace fallback** — a `workspaceName` that doesn't match a live
+  workspace no longer aborts the chain: `handleOpenTab` falls back to the
+  active workspace and logs the mismatch (the hypothesised intermittent
+  cause). Errors only remain for no-workspace-at-all / no-panes.
+
+Remaining (tools repo, not here): reconcile the launcher's
+`MaitermDispatchContext.workspaceName` with real maiTerm workspace names, and
+a dispatcher unit test for the fallback behaviour
+(`scripts/task-engine/src/__tests__/dispatchers-maiterm.test.ts`).
 
 Date: 2026-07-06. Reported against the `forwood-one_reviewing` stack's dev tasks.
 
