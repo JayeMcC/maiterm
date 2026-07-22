@@ -75,6 +75,14 @@ npm run tauri:build  # Production build
 cargo check          # Check Rust compilation (in src-tauri/)
 ```
 
+**E2E suite (`tests/e2e`) must NEVER run on the host machine** — it spawns
+real maiTerm windows that steal focus. Sanctioned runners: GitHub CI
+(`.github/workflows/e2e.yml`, on push) or a Fleet Hub pool member via
+`scripts/e2e-remote.sh [ref] [member] [test-filter]` (hub dispatches the
+`maiterm-e2e` directive; the member builds + runs in its own GUI session).
+`cargo test`, root `npm run test` (vitest), and `npm run check` are fine on
+the host.
+
 **Note**: `npm run tauri:dev` passes `--features mcp-bridge --config src-tauri/tauri.dev.conf.json` to enable the Claude Code MCP bridge and apply dev-specific CSP overrides.
 
 ## Key Patterns
