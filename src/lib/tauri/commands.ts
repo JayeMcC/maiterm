@@ -16,6 +16,7 @@ import type {
   SplitDirection,
   Tab,
   TerminalFrame,
+  TerminalPalette,
   WindowData,
   WindowPreset,
   Workspace,
@@ -938,4 +939,10 @@ export async function runRailProvider(
  *  or null when absent. The rail merges it over its built-in defaults. */
 export async function readRailConfig(): Promise<string | null> {
   return invoke('read_rail_config');
+}
+
+/** Push the active theme's terminal colors to the backend so OSC 4/10/11/12
+ *  color queries answer with the real scheme. */
+export async function setTerminalPalette(palette: TerminalPalette): Promise<void> {
+  return invoke('set_terminal_palette', { palette });
 }

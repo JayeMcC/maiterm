@@ -68,17 +68,24 @@
   // (e.g., workspace switch destroys and recreates SplitPane → TerminalTabs).
   // Reactive: read via `.get()`/`.has()` in $derived and template on every tab render.
   const oscTitles = new SvelteMap<string, string>();
+  // OSC 1 icon names — shown as the tab's tooltip (secondary label)
+  const oscIconNames = new SvelteMap<string, string>();
   // Intentional one-time seed from existing terminal state; live updates come from
   // the onOscChange subscription below.
   // svelte-ignore state_referenced_locally
   for (const tab of pane.tabs) {
     const osc = terminalsStore.getOsc(tab.id);
     if (osc?.title) oscTitles.set(tab.id, osc.title);
+    if (osc?.iconName) oscIconNames.set(tab.id, osc.iconName);
   }
 
   const unsubOsc = terminalsStore.onOscChange((tabId: string, osc: OscState) => {
     if (osc.title && pane.tabs.some((t) => t.id === tabId)) {
       oscTitles.set(tabId, osc.title);
+    }
+    if (pane.tabs.some((t) => t.id === tabId)) {
+      if (osc.iconName) oscIconNames.set(tabId, osc.iconName);
+      else oscIconNames.delete(tabId);
     }
   });
   onDestroy(unsubOsc);
@@ -1147,6 +1154,7 @@
         class:drop-before={dropTargetIndex === index && dropSide === 'before' && dragTabId !== tab.id}
         class:drop-after={dropTargetIndex === index && dropSide === 'after' && dragTabId !== tab.id}
         data-tab-id={tab.id}
+        title={oscIconNames.get(tab.id)}
         onclick={() => {
           if (!dragTabId && !justDragged) handleTabClick(tab.id);
         }}

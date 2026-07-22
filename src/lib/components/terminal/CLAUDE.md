@@ -6,7 +6,7 @@ Terminal parsing and buffer management runs in Rust via `alacritty_terminal`. xt
 
 ```
 PTY reader thread (Rust)
-  → raw bytes to OscInterceptor (extracts OSC 7/133/9/1337, emits Tauri events)
+  → raw bytes to OscInterceptor (extracts OSC 1/7/9/133/777/99/1337, mirrors OSC 4/10-12 color sets, emits Tauri events)
   → raw bytes to alacritty_terminal::Term (VTE parse + buffer management)
   → Term's EventListener emits Event::Title, Event::Bell, Event::ClipboardStore → Tauri events
   → render_viewport() extracts visible cells → ANSI string (throttled ~60fps)
@@ -24,7 +24,8 @@ Frontend (xterm.js scrollback=0):
 - `handle.rs` — `TerminalHandle` wraps `Term<AitermEventProxy>`, `OscInterceptor`, VTE `Processor`
 - `event_proxy.rs` — `AitermEventProxy` implements `EventListener`, routes Title/Bell/Clipboard/PtyWrite events
 - `render.rs` — `render_viewport()` iterates grid cells, emits SGR sequences, returns `TerminalFrame`
-- `osc.rs` — `OscInterceptor` state machine scans raw bytes for OSC 7/9/133/633/1337
+- `osc.rs` — `OscInterceptor` state machine scans raw bytes for OSC 1/7/9/133/633/777/99/1337 (CurrentDir + SetUserVar); mirrors OSC 4/10/11/12 color sets (+ 104/110/111/112 resets) into the per-terminal override map
+- `palette.rs` — `ThemePalette` (frontend-pushed theme colors) + xterm 256-color resolution + XParseColor spec parsing; answers OSC color queries
 - `search.rs` — buffer search using `RegexSearch` (replaces @xterm/addon-search)
 - `serialize.rs` — buffer serialization/restore via VTE parser (replaces @xterm/addon-serialize)
 
@@ -43,6 +44,8 @@ Frontend (xterm.js scrollback=0):
 - `term-notification-{ptyId}` — notification requests (OSC 9)
 - `term-clipboard-{ptyId}` — clipboard set (OSC 52)
 - `term-bell-{ptyId}` — terminal bell
+- `term-icon-{ptyId}` — icon name (OSC 1) → tab tooltip
+- `term-uservar-{ptyId}` — user variable (OSC 1337 SetUserVar) → trigger variables
 
 **Resize coalescing (`pty/manager.rs::resize_pty`)**: TUIs (Claude Code/Ink) re-render their retained transcript on every _width_ change; mid-stream, the previous rendering has already scrolled into history where it can't be erased, so each SIGWINCH leaves a permanent duplicate block in scrollback (rows-only changes don't re-wrap and are harmless). `resize_pty` therefore: (1) skips resizes that match the current grid; (2) while output is hot (last PTY read < 1s — an active TUI's spinner keeps this true), defers the resize with a 250ms trailing debounce and applies only the final size — an A→B→A flap nets zero SIGWINCHes. Idle resizes apply immediately. PTY and alacritty grid are always resized together.
 
@@ -119,10 +122,13 @@ The `l` shell function wraps `ls -la` and emits OSC 8 hyperlinks (`file://hostna
 `terminals.svelte.ts` manages per-terminal OSC state (title, cwd, cwdHost). OSC events are now emitted from Rust:
 
 - **OSC 0/2** (title): Emitted via `AitermEventProxy` → `term-title-{ptyId}`
+- **OSC 1** (icon name): Parsed by `OscInterceptor` → `term-icon-{ptyId}` → tab tooltip (`oscIconNames` in TerminalTabs)
 - **OSC 7** (cwd): Parsed by `OscInterceptor` → `term-osc7-{ptyId}`
 - **OSC 133/633** (shell integration): Parsed by `OscInterceptor` → `term-osc133-{ptyId}`
-- **OSC 9** (notification): Parsed by `OscInterceptor` → `term-notification-{ptyId}`
-- **OSC 52** (clipboard): Handled by `AitermEventProxy` → `term-clipboard-{ptyId}`
+- **OSC 9/777/99** (notifications): Parsed by `OscInterceptor` → `term-notification-{ptyId}` (rxvt `notify;title;body` and kitty body/title parts normalize to the OSC 9 path)
+- **OSC 52** (clipboard): Handled by `AitermEventProxy` → `term-clipboard-{ptyId}`. Write-only — `ClipboardLoad` (read) is denied by policy.
+- **OSC 4/10/11/12** (colors): Sets are applied by alacritty (render.rs emits the override RGB from `content.colors`) and mirrored by `OscInterceptor` into a per-terminal override map; queries fire `Event::ColorRequest`, answered from override map → `ThemePalette` (pushed from the theme `$effect` in `+layout.svelte` via `set_terminal_palette`). Resets (104/110/111/112) clear the mirror.
+- **OSC 1337 SetUserVar** (`key=base64`): Parsed by `OscInterceptor` → `term-uservar-{ptyId}` → `setVariable()` in the trigger store (programs can set trigger variables directly)
 - **Listener API**: `onOscChange(fn)` for reactive subscriptions (used by TerminalTabs)
 
 ## Shell Integration

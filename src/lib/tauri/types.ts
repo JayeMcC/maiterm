@@ -350,6 +350,15 @@ export interface ScrollInfo {
   viewport_cols: number;
 }
 
+/** Terminal color scheme pushed to the backend for OSC color-query answers.
+ *  Hex strings; `ansi` is the 16 standard colors black..brightWhite. */
+export interface TerminalPalette {
+  fg: string;
+  bg: string;
+  cursor: string;
+  ansi: string[];
+}
+
 export interface SearchMatch {
   line: number;
   start_col: number;

@@ -1,7 +1,12 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use alacritty_terminal::grid::Dimensions;
 use alacritty_terminal::selection::Selection;
 use alacritty_terminal::term::{Config, Term};
 use alacritty_terminal::vte;
+use alacritty_terminal::vte::ansi::Rgb;
+use parking_lot::RwLock;
 
 use super::event_proxy::AitermEventProxy;
 use super::osc::OscInterceptor;
@@ -46,11 +51,14 @@ pub struct TerminalHandle {
 }
 
 /// Create a new alacritty_terminal instance.
+/// `color_overrides` is shared with the event proxy so OSC color queries can be
+/// answered from the same mirror the interceptor maintains.
 pub fn create_terminal(
     cols: u16,
     rows: u16,
     scrollback_limit: usize,
     event_proxy: AitermEventProxy,
+    color_overrides: Arc<RwLock<HashMap<usize, Rgb>>>,
 ) -> TerminalHandle {
     let config = Config {
         scrolling_history: scrollback_limit,
@@ -64,7 +72,7 @@ pub fn create_terminal(
 
     let term = Term::new(config, &dims, event_proxy);
     let processor = vte::ansi::Processor::default();
-    let osc_interceptor = OscInterceptor::new();
+    let osc_interceptor = OscInterceptor::new(color_overrides);
 
     TerminalHandle {
         term,

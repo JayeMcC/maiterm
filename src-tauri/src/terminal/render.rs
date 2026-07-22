@@ -2,6 +2,7 @@ use alacritty_terminal::event::EventListener;
 use alacritty_terminal::grid::Dimensions;
 use alacritty_terminal::selection::{Selection, SelectionRange};
 use alacritty_terminal::term::cell::Flags;
+use alacritty_terminal::term::color::Colors;
 use alacritty_terminal::term::{Term, TermMode};
 use alacritty_terminal::vte::ansi::{Color, NamedColor};
 
@@ -44,6 +45,9 @@ pub fn render_viewport<T: EventListener>(
     let display_offset = content.display_offset;
     let alternate_screen = content.mode.contains(TermMode::ALT_SCREEN);
     let kitty_keyboard = content.mode.intersects(TermMode::KITTY_KEYBOARD_PROTOCOL);
+    // Program-set color overrides (OSC 4/10/11/12) — bind before display_iter
+    // is moved out of `content` below.
+    let colors = content.colors;
     let total_lines = term.grid().total_lines();
     // Prefer the externally-managed selection over term.selection
     let selection_range: Option<SelectionRange> = ext_selection
@@ -124,7 +128,7 @@ pub fn render_viewport<T: EventListener>(
         // Emit SGR changes if attributes differ
         let needs_sgr = cell.fg != prev_fg || cell.bg != prev_bg || flags != prev_flags;
         if needs_sgr {
-            emit_sgr(&mut out, cell.fg, cell.bg, flags);
+            emit_sgr(&mut out, cell.fg, cell.bg, flags, colors);
             prev_fg = cell.fg;
             prev_bg = cell.bg;
             prev_flags = flags;
@@ -193,6 +197,7 @@ fn emit_sgr(
     fg: Color,
     bg: Color,
     flags: Flags,
+    colors: &Colors,
 ) {
     out.push_str("\x1b[0"); // Reset first, then set what's needed
 
@@ -232,10 +237,10 @@ fn emit_sgr(
     }
 
     // Foreground color
-    emit_color_sgr(out, fg, true);
+    emit_color_sgr(out, fg, true, colors);
 
     // Background color
-    emit_color_sgr(out, bg, false);
+    emit_color_sgr(out, bg, false, colors);
 
     out.push('m');
 }
@@ -246,13 +251,24 @@ fn emit_sgr(
 /// (not resolved RGB values) so that xterm.js resolves them through its theme.
 /// If we looked up alacritty_terminal's default palette and emitted RGB, the
 /// colors would not match the user's xterm.js theme (e.g. Tokyo Night).
+/// Exception: colors the running program explicitly overrode via OSC 4/10/11/12
+/// (tracked in `colors`) — those must render as their concrete RGB values.
 fn emit_color_sgr(
     out: &mut String,
     color: Color,
     is_fg: bool,
+    colors: &Colors,
 ) {
     match color {
         Color::Named(name) => {
+            if let Some(rgb) = colors[name] {
+                if is_fg {
+                    out.push_str(&format!(";38;2;{};{};{}", rgb.r, rgb.g, rgb.b));
+                } else {
+                    out.push_str(&format!(";48;2;{};{};{}", rgb.r, rgb.g, rgb.b));
+                }
+                return;
+            }
             let code = match name {
                 NamedColor::Black => 30,
                 NamedColor::Red => 31,
@@ -298,7 +314,13 @@ fn emit_color_sgr(
             }
         }
         Color::Indexed(idx) => {
-            if idx < 8 {
+            if let Some(rgb) = colors[idx as usize] {
+                if is_fg {
+                    out.push_str(&format!(";38;2;{};{};{}", rgb.r, rgb.g, rgb.b));
+                } else {
+                    out.push_str(&format!(";48;2;{};{};{}", rgb.r, rgb.g, rgb.b));
+                }
+            } else if idx < 8 {
                 // Standard ANSI colors — emit as SGR codes for theme resolution
                 let base = if is_fg { 30 } else { 40 };
                 out.push_str(&format!(";{}", base + idx));

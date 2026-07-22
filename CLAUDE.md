@@ -50,7 +50,8 @@ src-tauri/src/                # Backend (Rust)
 │   ├── handle.rs             # TerminalHandle, TermDimensions, create_terminal()
 │   ├── event_proxy.rs        # AitermEventProxy (EventListener → Tauri events)
 │   ├── render.rs             # Grid → ANSI viewport renderer (~60fps)
-│   ├── osc.rs                # OscInterceptor (OSC 7/9/133/633/1337)
+│   ├── osc.rs                # OscInterceptor (OSC 1/7/9/133/633/777/99/1337 + color-set mirror)
+│   ├── palette.rs            # ThemePalette — answers OSC 4/10/11/12 color queries
 │   ├── search.rs             # Buffer search via RegexSearch
 │   └── serialize.rs          # Buffer serialization/restore via VTE parser
 ├── state/                    # Application state + persistence

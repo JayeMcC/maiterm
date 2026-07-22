@@ -1,3 +1,12 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use alacritty_terminal::vte::ansi::Rgb;
+use base64::Engine;
+use parking_lot::RwLock;
+
+use super::palette::parse_color_spec;
+
 /// Events extracted from OSC sequences in raw PTY output.
 /// These are maiTerm-specific features that alacritty_terminal doesn't handle natively.
 #[derive(Debug, Clone)]
@@ -6,10 +15,14 @@ pub enum OscEvent {
     Cwd { cwd: String, host: Option<String> },
     /// OSC 133/633: Shell integration (FinalTerm/VS Code)
     ShellIntegration { cmd: char, exit_code: Option<i32> },
-    /// OSC 9: Notification request (non-protocol text only)
+    /// OSC 9/777/99: Notification request (non-protocol text only)
     Notification { message: String },
     /// OSC 1337: iTerm2 CurrentDir
     CurrentDir { cwd: String },
+    /// OSC 1: Icon name (shown as tab tooltip / secondary label)
+    IconName { name: String },
+    /// OSC 1337 SetUserVar: key + decoded value (feeds the trigger-variable store)
+    UserVar { key: String, value: String },
 }
 
 /// Lightweight state machine that scans raw PTY bytes for OSC sequences.
@@ -21,14 +34,20 @@ pub struct OscInterceptor {
     in_osc: bool,
     /// True when we just saw ESC (waiting for ] or \)
     saw_esc: bool,
+    /// Mirror of program-set palette overrides (OSC 4/10/11/12, cleared by
+    /// 104/110/111/112). alacritty tracks the same state internally for
+    /// rendering; this copy exists so the event proxy can answer color
+    /// queries (Event::ColorRequest) without access to the Term.
+    color_overrides: Arc<RwLock<HashMap<usize, Rgb>>>,
 }
 
 impl OscInterceptor {
-    pub fn new() -> Self {
+    pub fn new(color_overrides: Arc<RwLock<HashMap<usize, Rgb>>>) -> Self {
         Self {
             osc_buffer: Vec::with_capacity(256),
             in_osc: false,
             saw_esc: false,
+            color_overrides,
         }
     }
 
@@ -96,6 +115,15 @@ impl OscInterceptor {
         let code: u32 = code_str.parse().ok()?;
 
         match code {
+            1 => {
+                // OSC 1: Icon name (title's sibling; alacritty only surfaces 0/2)
+                if data.is_empty() {
+                    return None;
+                }
+                Some(OscEvent::IconName {
+                    name: data.to_string(),
+                })
+            }
             7 => {
                 // OSC 7: file://host/path
                 self.parse_osc7(data)
@@ -117,13 +145,108 @@ impl OscInterceptor {
                     message: data.to_string(),
                 })
             }
+            4 => {
+                // OSC 4: palette set — mirror `idx;spec` pairs ("?" queries are
+                // answered by alacritty via Event::ColorRequest, nothing to do here)
+                let mut parts = data.split(';');
+                while let (Some(idx_str), Some(spec)) = (parts.next(), parts.next()) {
+                    if spec == "?" {
+                        continue;
+                    }
+                    if let (Ok(idx), Some(rgb)) = (idx_str.parse::<usize>(), parse_color_spec(spec)) {
+                        if idx < 256 {
+                            self.color_overrides.write().insert(idx, rgb);
+                        }
+                    }
+                }
+                None
+            }
+            10 | 11 | 12 => {
+                // OSC 10/11/12: set foreground/background/cursor color.
+                // Table indices per NamedColor: 256/257/258.
+                if data != "?" {
+                    if let Some(rgb) = parse_color_spec(data) {
+                        self.color_overrides.write().insert(246 + code as usize, rgb);
+                    }
+                }
+                None
+            }
+            104 => {
+                // OSC 104: reset palette entries (all when no args)
+                let mut overrides = self.color_overrides.write();
+                if data.is_empty() {
+                    overrides.retain(|&idx, _| idx >= 256);
+                } else {
+                    for idx_str in data.split(';') {
+                        if let Ok(idx) = idx_str.parse::<usize>() {
+                            overrides.remove(&idx);
+                        }
+                    }
+                }
+                None
+            }
+            110 | 111 | 112 => {
+                // OSC 110/111/112: reset foreground/background/cursor
+                self.color_overrides.write().remove(&(146 + code as usize));
+                None
+            }
+            777 => {
+                // OSC 777 (rxvt-unicode): notify;title;body
+                let mut parts = data.splitn(3, ';');
+                if parts.next() != Some("notify") {
+                    return None;
+                }
+                let title = parts.next().unwrap_or("");
+                let body = parts.next().unwrap_or("");
+                let message = match (title.is_empty(), body.is_empty()) {
+                    (false, false) => format!("{title}: {body}"),
+                    (false, true) => title.to_string(),
+                    (true, false) => body.to_string(),
+                    (true, true) => return None,
+                };
+                Some(OscEvent::Notification { message })
+            }
+            99 => {
+                // OSC 99 (kitty): metadata;payload — minimal support: surface the
+                // payload of plain body/title parts, ignore structured extras.
+                let (meta, payload) = match data.find(';') {
+                    Some(pos) => (&data[..pos], &data[pos + 1..]),
+                    None => ("", data),
+                };
+                if payload.is_empty() {
+                    return None;
+                }
+                // p= selects the part kind; only body (default) and title are text
+                let part_ok = meta
+                    .split(':')
+                    .filter_map(|kv| kv.strip_prefix("p="))
+                    .all(|p| p == "body" || p == "title");
+                if !part_ok {
+                    return None;
+                }
+                Some(OscEvent::Notification {
+                    message: payload.to_string(),
+                })
+            }
             1337 => {
-                // OSC 1337: iTerm2 extensions — only handle CurrentDir
+                // OSC 1337: iTerm2 extensions — CurrentDir + SetUserVar
                 if let Some(cwd) = data.strip_prefix("CurrentDir=") {
                     if !cwd.is_empty() {
                         return Some(OscEvent::CurrentDir {
                             cwd: cwd.to_string(),
                         });
+                    }
+                }
+                if let Some(kv) = data.strip_prefix("SetUserVar=") {
+                    if let Some((key, b64)) = kv.split_once('=') {
+                        if let Ok(decoded) = base64::engine::general_purpose::STANDARD.decode(b64.trim()) {
+                            if !key.is_empty() {
+                                return Some(OscEvent::UserVar {
+                                    key: key.to_string(),
+                                    value: String::from_utf8_lossy(&decoded).to_string(),
+                                });
+                            }
+                        }
                     }
                 }
                 None

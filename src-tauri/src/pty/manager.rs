@@ -384,13 +384,20 @@ pub fn spawn_pty(
             if limit == 0 { 100_000 } else { limit as usize }
         };
 
+        // Shared per-terminal color-override mirror: the OscInterceptor writes
+        // program-set colors into it, the event proxy reads it to answer queries.
+        let color_overrides: std::sync::Arc<parking_lot::RwLock<std::collections::HashMap<usize, alacritty_terminal::vte::ansi::Rgb>>> =
+            std::sync::Arc::new(parking_lot::RwLock::new(std::collections::HashMap::new()));
+
         let event_proxy = AitermEventProxy {
             pty_id: pty_id.to_string(),
             app_handle: app_handle.clone(),
             pty_sender: tx_for_proxy,
+            palette: std::sync::Arc::clone(&state.terminal_palette),
+            color_overrides: std::sync::Arc::clone(&color_overrides),
         };
 
-        let terminal_handle = create_terminal(cols, rows, scrollback_limit, event_proxy);
+        let terminal_handle = create_terminal(cols, rows, scrollback_limit, event_proxy, color_overrides);
         state.terminal_registry.write().insert(pty_id.to_string(), terminal_handle);
     }
 
@@ -564,6 +571,18 @@ pub fn spawn_pty(
                                 let _ = app_handle_clone.emit(
                                     &format!("term-osc7-{}", pty_id_clone),
                                     serde_json::json!({ "cwd": cwd, "host": null }),
+                                );
+                            }
+                            OscEvent::IconName { name } => {
+                                let _ = app_handle_clone.emit(
+                                    &format!("term-icon-{}", pty_id_clone),
+                                    name,
+                                );
+                            }
+                            OscEvent::UserVar { key, value } => {
+                                let _ = app_handle_clone.emit(
+                                    &format!("term-uservar-{}", pty_id_clone),
+                                    serde_json::json!({ "key": key, "value": value }),
                                 );
                             }
                         }

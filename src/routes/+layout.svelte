@@ -79,6 +79,19 @@
   $effect(() => {
     const t = getTheme(preferencesStore.theme, preferencesStore.customThemes);
     applyUiTheme(t.ui);
+    // Mirror the terminal colors into the backend so OSC 4/10/11/12 color
+    // queries from programs (vim, fzf, vivid) answer with the real theme.
+    const c = t.terminal;
+    commands.setTerminalPalette({
+      fg: c.foreground,
+      bg: c.background,
+      cursor: c.cursor,
+      ansi: [
+        c.black, c.red, c.green, c.yellow, c.blue, c.magenta, c.cyan, c.white,
+        c.brightBlack, c.brightRed, c.brightGreen, c.brightYellow,
+        c.brightBlue, c.brightMagenta, c.brightCyan, c.brightWhite,
+      ],
+    }).catch((e) => logError(`Failed to push terminal palette: ${e}`));
   });
 
   // Apply UI font size reactively

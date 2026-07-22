@@ -53,7 +53,7 @@
   import { isModKey, modSymbol } from '$lib/utils/platform';
   import { buildShellIntegrationSnippet, buildInstallSnippet } from '$lib/utils/shellIntegration';
   import ResizableTextarea from '$lib/components/ResizableTextarea.svelte';
-  import { processOutput, cleanupTab, loadTabVariables, interpolateVariables, getVariables, clearTabVariables, suppressTab, unsuppressTab, replayAutoResume, onVariablesChange } from '$lib/stores/triggers.svelte';
+  import { processOutput, cleanupTab, loadTabVariables, interpolateVariables, getVariables, clearTabVariables, suppressTab, unsuppressTab, replayAutoResume, onVariablesChange, setVariable } from '$lib/stores/triggers.svelte';
   import { dispatch } from '$lib/stores/notificationDispatch';
   import { toastStore } from '$lib/stores/toasts.svelte';
   import { getResumeCommand, sessionIdVar } from '$lib/agents/resume';
@@ -117,6 +117,8 @@
   let unlistenNotification: UnlistenFn;
   let unlistenClipboard: UnlistenFn;
   let unlistenBell: UnlistenFn;
+  let unlistenIcon: UnlistenFn;
+  let unlistenUserVar: UnlistenFn;
   let unlistenDragDrop: UnlistenFn;
   let resizeObserver: ResizeObserver;
   let filePathLinkDisposable: { dispose: () => void } | null = null;
@@ -722,6 +724,18 @@
       playBellSound().catch(() => {});
     });
 
+    // OSC 1 — icon name, surfaced as a tab tooltip / secondary label
+    unlistenIcon = await listen<string>(`term-icon-${ptyId}`, (event) => {
+      terminalsStore.updateOsc(tabId, { iconName: event.payload || null });
+    });
+
+    // OSC 1337 SetUserVar — programs can set trigger variables directly
+    unlistenUserVar = await listen<{ key: string; value: string }>(`term-uservar-${ptyId}`, (event) => {
+      if (!trackActivity) return;
+      const { key, value } = event.payload;
+      if (key) setVariable(tabId, key, value).catch((e) => logError(String(e)));
+    });
+
     // Listen for PTY close — when the shell exits (exit/logout/Ctrl+D),
     // close the tab using the same logic as Cmd+W.
     unlistenClose = await listen(`pty-close-${ptyId}`, () => {
@@ -1292,6 +1306,8 @@
     if (unlistenNotification) unlistenNotification();
     if (unlistenClipboard) unlistenClipboard();
     if (unlistenBell) unlistenBell();
+    if (unlistenIcon) unlistenIcon();
+    if (unlistenUserVar) unlistenUserVar();
     if (unlistenDragDrop) unlistenDragDrop();
     clearTimeout(resizePtyTimeout);
     if (resizeObserver) resizeObserver.disconnect();

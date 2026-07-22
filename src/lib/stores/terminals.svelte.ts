@@ -23,6 +23,8 @@ export interface OscState {
   cwdHost: string | null;
   /** Remote cwd extracted from title via prompt pattern matching. */
   promptCwd: string | null;
+  /** Icon name from OSC 1 — shown as the tab's tooltip. */
+  iconName: string | null;
 }
 
 interface TerminalInstance {
@@ -180,7 +182,7 @@ function createTerminalsStore() {
         workspaceId,
         paneId,
         tabId,
-        osc: { title: null, cwd: null, cwdHost: null, promptCwd: null },
+        osc: { title: null, cwd: null, cwdHost: null, promptCwd: null, iconName: null },
       });
       // This PTY is now live in the frontend — consume any reattach eligibility
       // so a later remount (split/move) can't try to reattach a stale ID.

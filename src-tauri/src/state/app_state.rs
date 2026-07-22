@@ -171,6 +171,9 @@ pub struct AppState {
     // momentary count==0 lets an attention transition ring the doorbell spuriously. The doorbell
     // treats a tab as covered for a short grace after this instant even at count==0. 0 ⇒ never dropped.
     pub mailink_ws_last_drop_ms: AtomicU64,
+    /// Terminal color scheme pushed from the frontend theme system; shared into
+    /// each PTY's event proxy so OSC 4/10/11/12 color queries answer truthfully.
+    pub terminal_palette: std::sync::Arc<RwLock<crate::terminal::palette::ThemePalette>>,
 }
 
 impl AppState {
@@ -211,6 +214,9 @@ impl AppState {
             mailink_shutdown: RwLock::new(None),
             mailink_ws_count: std::sync::atomic::AtomicUsize::new(0),
             mailink_ws_last_drop_ms: AtomicU64::new(0),
+            terminal_palette: std::sync::Arc::new(RwLock::new(
+                crate::terminal::palette::ThemePalette::default(),
+            )),
         }
     }
 

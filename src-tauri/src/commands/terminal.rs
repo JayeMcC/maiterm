@@ -767,3 +767,38 @@ pub fn scroll_selection(
     }
     Ok(render::render_viewport(&handle.term, handle.selection.as_ref()))
 }
+
+/// Terminal color scheme as pushed from the frontend theme system (hex strings).
+#[derive(serde::Deserialize)]
+pub struct ThemePaletteDto {
+    pub fg: String,
+    pub bg: String,
+    pub cursor: String,
+    /// 16 ANSI colors: black..white, bright_black..bright_white
+    pub ansi: Vec<String>,
+}
+
+/// Update the backend's copy of the terminal color scheme. Called on startup
+/// and on theme change so OSC 4/10/11/12 color queries answer with the real
+/// theme colors instead of placeholders.
+#[tauri::command]
+pub fn set_terminal_palette(
+    state: State<'_, Arc<AppState>>,
+    palette: ThemePaletteDto,
+) -> Result<(), String> {
+    use crate::terminal::palette::{parse_hex, ThemePalette};
+
+    let fg = parse_hex(&palette.fg).ok_or("invalid fg color")?;
+    let bg = parse_hex(&palette.bg).ok_or("invalid bg color")?;
+    let cursor = parse_hex(&palette.cursor).ok_or("invalid cursor color")?;
+    if palette.ansi.len() != 16 {
+        return Err(format!("expected 16 ansi colors, got {}", palette.ansi.len()));
+    }
+    let mut ansi = [fg; 16];
+    for (i, hex) in palette.ansi.iter().enumerate() {
+        ansi[i] = parse_hex(hex).ok_or_else(|| format!("invalid ansi[{i}] color"))?;
+    }
+
+    *state.terminal_palette.write() = ThemePalette { fg, bg, cursor, ansi };
+    Ok(())
+}
