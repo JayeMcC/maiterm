@@ -1,5 +1,5 @@
 import type { Terminal } from '@xterm/xterm';
-import type { SplitDirection, SplitNode, Tab, Workspace, WorkspaceNote, EditorFileInfo, DiffContext } from '$lib/tauri/types';
+import type { SplitDirection, SplitNode, Tab, Pane, Workspace, WorkspaceNote, EditorFileInfo, DiffContext, CommsMonitorChannel } from '$lib/tauri/types';
 import type { AgentRuntime } from '$lib/agents/types';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import * as commands from '$lib/tauri/commands';
@@ -350,11 +350,32 @@ function createWorkspacesStore() {
           }
           continue;
         }
+        if (restoreMode === 'all') {
+          // Full restore respawns the pty_id-set tabs of non-suspended
+          // workspaces (buildRestoreList), but a persisted suspension is user
+          // intent — a workspace suspended before quit/update stays suspended
+          // across the restart (resume-on-click brings it back).
+          continue;
+        }
         // last_active mode, app restart, no live PTY → suspend (dimmed, resume on click).
         if (!ws.suspended) {
           ws.suspended = true;
           commands.suspendWorkspace(ws.id).catch(() => {});
         }
+      }
+
+      // The active workspace is skipped by the loop above (it's never dimmed —
+      // you're looking at it). But if it was persisted suspended — e.g. a single-
+      // workspace window whose only workspace was suspended (which nulls the active
+      // id path), or a stale suspension — nothing would un-suspend it, and
+      // buildRestoreList skips suspended workspaces wholesale, so that window comes
+      // back empty. Un-suspend it here (regardless of mode) and fold its live-at-
+      // suspend tabs into the wake set so restore respawns them.
+      const activeWs = workspaces.find(w => w.id === activeWorkspaceId);
+      if (activeWs?.suspended) {
+        activeWs.suspended = false;
+        const wakeIds = await commands.resumeWorkspace(activeWs.id).catch(() => [] as string[]);
+        for (const tabId of wakeIds) pendingWakeTabIds.add(tabId);
       }
 
       // Create default workspace if none exist
@@ -1415,6 +1436,28 @@ function createWorkspacesStore() {
       await commands.setTabMailinkExcluded(workspaceId, paneId, tabId, excluded);
     },
 
+    /** Operator kill switch: end a tab's comms thread binding(s). Omit rootId = all. */
+    async clearTabCommsBinding(workspaceId: string, paneId: string, tabId: string, rootId?: string) {
+      const ws = workspaces.find(w => w.id === workspaceId);
+      const pane = ws?.panes.find(p => p.id === paneId);
+      const tab = pane?.tabs.find(t => t.id === tabId);
+      if (!tab || !(tab.comms_bindings?.length)) return;
+      tab.comms_bindings = rootId
+        ? tab.comms_bindings.filter(b => b.root_id !== rootId)
+        : [];
+      await commands.clearTabCommsBinding(workspaceId, paneId, tabId, rootId);
+    },
+
+    /** Enable/update (channels) or disable (null) chat monitoring on a tab. */
+    async setTabCommsMonitor(workspaceId: string, paneId: string, tabId: string, channels: CommsMonitorChannel[] | null) {
+      const ws = workspaces.find(w => w.id === workspaceId);
+      const pane = ws?.panes.find(p => p.id === paneId);
+      const tab = pane?.tabs.find(t => t.id === tabId);
+      if (!tab) return;
+      tab.comms_monitor = channels ? { channels } : null;
+      await commands.setTabCommsMonitor(workspaceId, paneId, tabId, channels);
+    },
+
     /** maiLink: toggle whether ALL agent tabs in a workspace are exposed as chats. */
     async setWorkspaceMailinkNative(workspaceId: string, enabled: boolean) {
       const ws = workspaces.find(w => w.id === workspaceId);
@@ -2064,6 +2107,12 @@ function createWorkspacesStore() {
       // Restore exact name (duplicateTab may have appended " (2)" for custom names)
       if (isCustom) {
         await commands.renameTab(workspaceId, paneId, newTab.id, tabName, true);
+      }
+
+      // Carry pin state over — the new tab replaces the original, and it takes the
+      // original's storage slot below, so it keeps its position in the pin cluster.
+      if (sourceTab.pinned) {
+        await commands.setTabPinned(workspaceId, paneId, newTab.id, true);
       }
 
       // Move new tab into the old tab's position and delete the old one

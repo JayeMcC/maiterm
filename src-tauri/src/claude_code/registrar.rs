@@ -14,8 +14,8 @@ pub trait Registrar: Send + Sync {
     fn enabled(&self, prefs: &Preferences) -> bool;
     /// Write all on-disk registration (config/MCP entry + hooks + skill) for the live server.
     fn install(&self, port: u16, auth: &str, workspace_folders: &[String], prefs: &Preferences);
-    /// Re-assert the MCP config if a co-owning CLI rewrote it. No-op for runtimes that don't self-rewrite.
-    fn reassert_if_drifted(&self, port: u16, auth: &str);
+    /// Re-assert the MCP config + hooks if a co-owner rewrote them. No-op for runtimes that don't self-rewrite.
+    fn reassert_if_drifted(&self, port: u16, auth: &str, prefs: &Preferences);
     /// Remove all on-disk registration (app exit).
     fn unregister(&self, port: u16, auth: &str);
 }
@@ -29,9 +29,17 @@ impl Registrar for ClaudeRegistrar {
             log::warn!("Failed to write Claude Code lock file: {}", e);
         }
     }
-    fn reassert_if_drifted(&self, port: u16, auth: &str) {
+    fn reassert_if_drifted(&self, port: u16, auth: &str, prefs: &Preferences) {
         if let Err(e) = lockfile::ensure_mcp_settings(port, auth) {
             log::warn!("MCP settings re-assert failed: {}", e);
+        }
+        // Hooks live in ~/.claude/settings.json, which is just as clobber-prone
+        // (claude CLI rewrites; an SSH-bridge setup script landing in a local
+        // shell overwrites them with dead remote-tunnel ports).
+        if prefs.claude_hooks {
+            if let Err(e) = lockfile::ensure_hook_settings(port, auth) {
+                log::warn!("Hook settings re-assert failed: {}", e);
+            }
         }
     }
     fn unregister(&self, port: u16, auth: &str) {

@@ -38,7 +38,10 @@ export interface MeshSendDeps {
   /** Deliver framed text to a recipient tab. The store's closure also lazily ensures the
    *  recipient has a delivery slot before delegating to the FIFO mailbox. */
   deliver: (recipientTabId: string, text: string) => Promise<DeliverResult>;
-  buildEnvelope: (senderTabId: string, senderRole: string, topic: MeshTopic, turn: number, message: string) => string;
+  /** Frame a message for delivery. The sender's identity (role + cwd) is resolved from
+   *  `senderTabId` inside the builder — never passed in — so the "from" line can't be
+   *  mislabeled with the recipient's (or any other) name. */
+  buildEnvelope: (senderTabId: string, topic: MeshTopic, turn: number, message: string) => string;
   emitEdge: (e: MeshEdge) => void;
   /** Persist the topic registry after a structural change (create / new participant). */
   persistTopics: () => void;
@@ -83,7 +86,9 @@ export async function performMeshSend(deps: MeshSendDeps, args: { senderTabId: s
   }
 
   // Build with the next turn number, deliver, then commit on success (no phantom turn).
-  const text = deps.buildEnvelope(args.senderTabId, rr.role, tr.topic, nextTurn, message);
+  // The envelope's "from" identity comes from senderTabId (resolved inside buildEnvelope) —
+  // NOT rr.role, which is the RECIPIENT and would mislabel the sender.
+  const text = deps.buildEnvelope(args.senderTabId, tr.topic, nextTurn, message);
   const status = await deps.deliver(rr.tabId, text);
   if (status === 'failed') {
     return { ok: false, error: 'Delivery failed (could not write to the recipient terminal).' };

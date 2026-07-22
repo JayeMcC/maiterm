@@ -48,17 +48,17 @@ pub fn tool_list_response() -> Value {
     // Tools are built in batches to stay under the serde_json::json! macro recursion limit (128).
     // Each batch is a small Vec<Value> that gets extended into the final tools array.
 
-    let mut tools: Vec<Value> = Vec::with_capacity(46);
+    let mut tools: Vec<Value> = Vec::with_capacity(50);
 
     // Batch 1: Session, info, notification, logs, document tools
     tools.extend(serde_json::json!([
         {
             "name": "initSession",
-            "description": "Call this tool once at the start of every session (new, resume, fork, compact). Registers your terminal tab ID and session ID so all subsequent tool calls automatically target your tab. Read your tab ID from the SessionStart hook context ('Your maiTerm tab ID is ...') or from the $AITERM_TAB_ID environment variable.",
+            "description": "Call this tool once at the start of every session (new, resume, fork, compact). Registers your terminal tab ID and session ID so all subsequent tool calls automatically target your tab. Read your tab ID from the SessionStart hook context ('Your maiTerm tab ID is ...') or from the $MAITERM_TAB_ID environment variable.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "tabId": { "type": "string", "description": "Your maiTerm tab ID (from SessionStart hook context or $AITERM_TAB_ID env var)" },
+                    "tabId": { "type": "string", "description": "Your maiTerm tab ID (from SessionStart hook context or $MAITERM_TAB_ID env var)" },
                     "sessionId": { "type": "string", "description": "Your Claude session ID (optional, for session tracking)" }
                 },
                 "required": ["tabId"]
@@ -405,7 +405,7 @@ pub fn tool_list_response() -> Value {
         },
         {
             "name": "getActiveTab",
-            "description": "Get the currently active workspace, pane, and tab in the current window. Returns windowLabel, IDs, names, tab type, display name, and notes status. Use this as a lightweight alternative to listWorkspaces when you just need to know the current context. Prefer reading $AITERM_TAB_ID for your own tab ID instead of calling this.",
+            "description": "Get the currently active workspace, pane, and tab in the current window. Returns windowLabel, IDs, names, tab type, display name, and notes status. Use this as a lightweight alternative to listWorkspaces when you just need to know the current context. Prefer reading $MAITERM_TAB_ID for your own tab ID instead of calling this.",
             "inputSchema": { "type": "object", "properties": {}, "required": [] }
         }
     ]).as_array().unwrap().clone());
@@ -582,6 +582,60 @@ pub fn tool_list_response() -> Value {
         }
     ]).as_array().unwrap().clone());
 
+    // Batch: comms integration (/maiterm resolve — Mattermost thread binding)
+    tools.extend(serde_json::json!([
+        {
+            "name": "bindCommsThread",
+            "description": "Bind this tab to a Mattermost thread (/maiterm resolve). Fetches the whole thread via the configured bot account and returns it as a transcript ([REPORT] marks the root post — the work item), plus `bot_username` (how humans reach you) and, if the operator configured any, `operator_instructions` (their guidance for how to communicate — follow it). While bound, new human replies that @mention you are injected into this session. Rebinding replaces any prior binding on this tab.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "tabId": { "type": "string", "description": "Tab ID (auto-injected after initSession)" },
+                    "url": { "type": "string", "description": "Mattermost permalink: https://<server>/<team>/pl/<post-id>" }
+                },
+                "required": ["url"]
+            }
+        },
+        {
+            "name": "readCommsThread",
+            "description": "Re-fetch the full current Mattermost thread this tab is bound to, as a transcript. Use this to catch up on ambient discussion — only messages that @mention the bot are auto-injected into your session, so the rest of the thread is read-on-demand.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "tabId": { "type": "string", "description": "Tab ID (auto-injected after initSession)" },
+                    "root_id": { "type": "string", "description": "Which bound thread — REQUIRED when this tab is bound to more than one thread; omit with a single binding" }
+                },
+                "required": []
+            }
+        },
+        {
+            "name": "postCommsReply",
+            "description": "Post a reply (Mattermost markdown) to a thread this tab is bound to. Set resolve: true ONLY to close out a thread a human has CONFIRMED is resolved — it posts the message and then clears that thread's binding (stops reply forwarding). Do NOT set resolve when first posting a fix; keep the thread bound until someone confirms it works. The bot must be a member of the channel.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "tabId": { "type": "string", "description": "Tab ID (auto-injected after initSession)" },
+                    "message": { "type": "string", "description": "The message to post (Mattermost markdown)" },
+                    "root_id": { "type": "string", "description": "Which bound thread to post to — REQUIRED when this tab is bound to more than one thread; omit with a single binding" },
+                    "resolve": { "type": "boolean", "description": "true = this is the confirmed-close post; clears that thread's binding after posting" }
+                },
+                "required": ["message"]
+            }
+        },
+        {
+            "name": "unbindCommsThread",
+            "description": "Clear one of this tab's Mattermost thread bindings without posting (e.g. when abandoning the issue). Post a brief note via postCommsReply first so the thread isn't left hanging. Idempotent.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "tabId": { "type": "string", "description": "Tab ID (auto-injected after initSession)" },
+                    "root_id": { "type": "string", "description": "Which bound thread — REQUIRED when this tab is bound to more than one thread; omit with a single binding" }
+                },
+                "required": []
+            }
+        }
+    ]).as_array().unwrap().clone());
+
     serde_json::json!({ "tools": tools })
 }
 
@@ -592,7 +646,7 @@ pub fn initialize_response(client_protocol_version: Option<&str>) -> Value {
         "serverInfo": { "name": crate::app_display_name(), "version": crate::APP_VERSION },
         "instructions": format!(
             "You are running inside a maiTerm terminal tab. At the start of every session (new, resume, compact, clear), \
-             you MUST call initSession with your tab ID (from $AITERM_TAB_ID or SessionStart hook context) before responding to the user. \
+             you MUST call initSession with your tab ID (from $MAITERM_TAB_ID or SessionStart hook context) before responding to the user. \
              You may run this call in parallel with your other opening tool calls (e.g. reading files) to save a round-trip — \
              but do NOT batch it with other maiterm tool calls, which would race the registration and can target the wrong tab. \
              This registers your session so all tool calls automatically target the correct tab. \

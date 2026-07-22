@@ -64,6 +64,12 @@ function createPreferencesStore() {
   let mailinkEnabled = $state(false);
   let mailinkExposeAll = $state(true);
   let mailinkRelayUrl = $state('');
+  let commsProvider = $state('mattermost');
+  let commsServerUrl = $state('');
+  let commsBotToken = $state('');
+  let commsAuthorizedUsers = $state<string[]>([]);
+  let commsPickupUsers = $state<string[]>([]);
+  let commsInstructions = $state('');
   let composerDefaultOpen = $state(true);
   let windowsShell = $state('powershell');
   let fileLinkAction = $state('modifier_click');
@@ -84,225 +90,85 @@ function createPreferencesStore() {
 
   return {
     /** Resolves once the initial load() has completed. */
-    get ready() {
-      return ready;
-    },
-    get uiFontSize() {
-      return uiFontSize;
-    },
-    get fontSize() {
-      return fontSize;
-    },
-    get fontFamily() {
-      return fontFamily;
-    },
-    get cursorStyle() {
-      return cursorStyle;
-    },
-    get cursorBlink() {
-      return cursorBlink;
-    },
-    get autoSaveInterval() {
-      return autoSaveInterval;
-    },
-    get scrollbackLimit() {
-      return scrollbackLimit;
-    },
-    get promptPatterns() {
-      return promptPatterns;
-    },
-    get cloneCwd() {
-      return cloneCwd;
-    },
-    get cloneScrollback() {
-      return cloneScrollback;
-    },
-    get cloneSsh() {
-      return cloneSsh;
-    },
-    get cloneHistory() {
-      return cloneHistory;
-    },
-    get cloneNotes() {
-      return cloneNotes;
-    },
-    get cloneAutoResume() {
-      return cloneAutoResume;
-    },
-    get cloneVariables() {
-      return cloneVariables;
-    },
-    get numberDuplicatedTabs() {
-      return numberDuplicatedTabs;
-    },
-    get theme() {
-      return theme;
-    },
-    get shellTitleIntegration() {
-      return shellTitleIntegration;
-    },
-    get shellIntegration() {
-      return shellIntegration;
-    },
-    get customThemes() {
-      return customThemes;
-    },
-    get restoreSession() {
-      return restoreSession;
-    },
-    get sessionRestoreMode() {
-      return sessionRestoreMode;
-    },
-    get notificationMode() {
-      return notificationMode;
-    },
-    get notifyMinDuration() {
-      return notifyMinDuration;
-    },
-    get notesFontSize() {
-      return notesFontSize;
-    },
-    get notesFontFamily() {
-      return notesFontFamily;
-    },
-    get notesWidth() {
-      return notesWidth;
-    },
-    get notesWordWrap() {
-      return notesWordWrap;
-    },
-    get toastFontSize() {
-      return toastFontSize;
-    },
-    get toastWidth() {
-      return toastWidth;
-    },
-    get toastDuration() {
-      return toastDuration;
-    },
-    get notificationSound() {
-      return notificationSound;
-    },
-    get notificationVolume() {
-      return notificationVolume;
-    },
-    get migrateTabNotes() {
-      return migrateTabNotes;
-    },
-    get notesScope() {
-      return notesScope;
-    },
-    get showRecentWorkspaces() {
-      return showRecentWorkspaces;
-    },
-    get workspaceSortOrder() {
-      return workspaceSortOrder;
-    },
-    get showWorkspaceTabCount() {
-      return showWorkspaceTabCount;
-    },
-    get tabButtonStyle() {
-      return tabButtonStyle;
-    },
-    get terminalRenderer() {
-      return terminalRenderer;
-    },
-    get triggers() {
-      return triggers;
-    },
-    get hiddenDefaultTriggers() {
-      return hiddenDefaultTriggers;
-    },
-    get claudeTriggersPrompted() {
-      return claudeTriggersPrompted;
-    },
-    get claudeCodeIde() {
-      return claudeCodeIde;
-    },
-    get claudeCodeIdeSsh() {
-      return claudeCodeIdeSsh;
-    },
-    get claudeCodeHooks() {
-      return claudeCodeHooks;
-    },
-    get claudeCodeAutoResume() {
-      return claudeCodeAutoResume;
-    },
-    get codexIde() {
-      return codexIde;
-    },
-    get codexIdeSsh() {
-      return codexIdeSsh;
-    },
-    get codexHooks() {
-      return codexHooks;
-    },
-    get codexAutoResume() {
-      return codexAutoResume;
-    },
-    get codexHooksBypassTrust() {
-      return codexHooksBypassTrust;
-    },
-    get mailinkEnabled() {
-      return mailinkEnabled;
-    },
-    get mailinkExposeAll() {
-      return mailinkExposeAll;
-    },
-    get mailinkRelayUrl() {
-      return mailinkRelayUrl;
-    },
-    get composerDefaultOpen() {
-      return composerDefaultOpen;
-    },
-    get windowsShell() {
-      return windowsShell;
-    },
-    get fileLinkAction() {
-      return fileLinkAction;
-    },
-    get cursorReportApplyCommand() {
-      return cursorReportApplyCommand;
-    },
-    get backupDirectory() {
-      return backupDirectory;
-    },
-    get backupInterval() {
-      return backupInterval;
-    },
-    get backupExcludeScrollback() {
-      return backupExcludeScrollback;
-    },
-    get backupTrimEnabled() {
-      return backupTrimEnabled;
-    },
-    get backupTrimAge() {
-      return backupTrimAge;
-    },
-    get autoSuspendMinutes() {
-      return autoSuspendMinutes;
-    },
-    get groupActiveTabs() {
-      return groupActiveTabs;
-    },
-    get autoCheckUpdates() {
-      return autoCheckUpdates;
-    },
-    get quickOpenShowHidden() {
-      return quickOpenShowHidden;
-    },
-    get quickOpenShowIgnored() {
-      return quickOpenShowIgnored;
-    },
-    get meshSoftCap() {
-      return meshSoftCap;
-    },
-    get meshHardCap() {
-      return meshHardCap;
-    },
-    get meshTopicTtlMinutes() {
-      return meshTopicTtlMinutes;
-    },
+    get ready() { return ready; },
+    get uiFontSize() { return uiFontSize; },
+    get fontSize() { return fontSize; },
+    get fontFamily() { return fontFamily; },
+    get cursorStyle() { return cursorStyle; },
+    get cursorBlink() { return cursorBlink; },
+    get autoSaveInterval() { return autoSaveInterval; },
+    get scrollbackLimit() { return scrollbackLimit; },
+    get promptPatterns() { return promptPatterns; },
+    get cloneCwd() { return cloneCwd; },
+    get cloneScrollback() { return cloneScrollback; },
+    get cloneSsh() { return cloneSsh; },
+    get cloneHistory() { return cloneHistory; },
+    get cloneNotes() { return cloneNotes; },
+    get cloneAutoResume() { return cloneAutoResume; },
+    get cloneVariables() { return cloneVariables; },
+    get numberDuplicatedTabs() { return numberDuplicatedTabs; },
+    get theme() { return theme; },
+    get shellTitleIntegration() { return shellTitleIntegration; },
+    get shellIntegration() { return shellIntegration; },
+    get customThemes() { return customThemes; },
+    get restoreSession() { return restoreSession; },
+    get sessionRestoreMode() { return sessionRestoreMode; },
+    get notificationMode() { return notificationMode; },
+    get notifyMinDuration() { return notifyMinDuration; },
+    get notesFontSize() { return notesFontSize; },
+    get notesFontFamily() { return notesFontFamily; },
+    get notesWidth() { return notesWidth; },
+    get notesWordWrap() { return notesWordWrap; },
+    get toastFontSize() { return toastFontSize; },
+    get toastWidth() { return toastWidth; },
+    get toastDuration() { return toastDuration; },
+    get notificationSound() { return notificationSound; },
+    get notificationVolume() { return notificationVolume; },
+    get migrateTabNotes() { return migrateTabNotes; },
+    get notesScope() { return notesScope; },
+    get showRecentWorkspaces() { return showRecentWorkspaces; },
+    get workspaceSortOrder() { return workspaceSortOrder; },
+    get showWorkspaceTabCount() { return showWorkspaceTabCount; },
+    get tabButtonStyle() { return tabButtonStyle; },
+    get terminalRenderer() { return terminalRenderer; },
+    get triggers() { return triggers; },
+    get hiddenDefaultTriggers() { return hiddenDefaultTriggers; },
+    get claudeTriggersPrompted() { return claudeTriggersPrompted; },
+    get claudeCodeIde() { return claudeCodeIde; },
+    get claudeCodeIdeSsh() { return claudeCodeIdeSsh; },
+    get claudeCodeHooks() { return claudeCodeHooks; },
+    get claudeCodeAutoResume() { return claudeCodeAutoResume; },
+    get codexIde() { return codexIde; },
+    get codexIdeSsh() { return codexIdeSsh; },
+    get codexHooks() { return codexHooks; },
+    get codexAutoResume() { return codexAutoResume; },
+    get codexHooksBypassTrust() { return codexHooksBypassTrust; },
+    get mailinkEnabled() { return mailinkEnabled; },
+    get mailinkExposeAll() { return mailinkExposeAll; },
+    get mailinkRelayUrl() { return mailinkRelayUrl; },
+    get commsProvider() { return commsProvider; },
+    get commsServerUrl() { return commsServerUrl; },
+    get commsBotToken() { return commsBotToken; },
+    get commsAuthorizedUsers() { return commsAuthorizedUsers; },
+    get commsPickupUsers() { return commsPickupUsers; },
+    get commsInstructions() { return commsInstructions; },
+    get composerDefaultOpen() { return composerDefaultOpen; },
+    get windowsShell() { return windowsShell; },
+    get fileLinkAction() { return fileLinkAction; },
+    get backupDirectory() { return backupDirectory; },
+    get backupInterval() { return backupInterval; },
+    get backupExcludeScrollback() { return backupExcludeScrollback; },
+    get backupTrimEnabled() { return backupTrimEnabled; },
+    get backupTrimAge() { return backupTrimAge; },
+    get autoSuspendMinutes() { return autoSuspendMinutes; },
+    get groupActiveTabs() { return groupActiveTabs; },
+    get autoCheckUpdates() { return autoCheckUpdates; },
+    get quickOpenShowHidden() { return quickOpenShowHidden; },
+    get quickOpenShowIgnored() { return quickOpenShowIgnored; },
+    get meshSoftCap() { return meshSoftCap; },
+    get meshHardCap() { return meshHardCap; },
+    get meshTopicTtlMinutes() { return meshTopicTtlMinutes; },
+    get cursorReportApplyCommand() { return cursorReportApplyCommand; },
 
     async load() {
       const prefs = await commands.getPreferences();
@@ -372,6 +238,12 @@ function createPreferencesStore() {
       mailinkEnabled = prefs.mailink_enabled ?? false;
       mailinkExposeAll = prefs.mailink_expose_all ?? true;
       mailinkRelayUrl = prefs.mailink_relay_url ?? '';
+      commsProvider = prefs.comms_provider || 'mattermost';
+      commsServerUrl = prefs.comms_server_url ?? '';
+      commsBotToken = prefs.comms_bot_token ?? '';
+      commsAuthorizedUsers = prefs.comms_authorized_users ?? [];
+      commsPickupUsers = prefs.comms_pickup_users ?? [];
+      commsInstructions = prefs.comms_instructions ?? '';
       composerDefaultOpen = prefs.composer_default_open ?? true;
       windowsShell = prefs.windows_shell ?? 'powershell';
       fileLinkAction = prefs.file_link_action ?? 'modifier_click';
@@ -671,6 +543,36 @@ function createPreferencesStore() {
       await this.save();
     },
 
+    async setCommsProvider(value: string) {
+      commsProvider = value;
+      await this.save();
+    },
+
+    async setCommsServerUrl(value: string) {
+      commsServerUrl = value;
+      await this.save();
+    },
+
+    async setCommsBotToken(value: string) {
+      commsBotToken = value;
+      await this.save();
+    },
+
+    async setCommsAuthorizedUsers(value: string[]) {
+      commsAuthorizedUsers = value;
+      await this.save();
+    },
+
+    async setCommsPickupUsers(value: string[]) {
+      commsPickupUsers = value;
+      await this.save();
+    },
+
+    async setCommsInstructions(value: string) {
+      commsInstructions = value;
+      await this.save();
+    },
+
     async setWindowsShell(value: string) {
       windowsShell = value;
       await this.save();
@@ -831,6 +733,12 @@ function createPreferencesStore() {
       mailinkEnabled = prefs.mailink_enabled ?? false;
       mailinkExposeAll = prefs.mailink_expose_all ?? true;
       mailinkRelayUrl = prefs.mailink_relay_url ?? '';
+      commsProvider = prefs.comms_provider || 'mattermost';
+      commsServerUrl = prefs.comms_server_url ?? '';
+      commsBotToken = prefs.comms_bot_token ?? '';
+      commsAuthorizedUsers = prefs.comms_authorized_users ?? [];
+      commsPickupUsers = prefs.comms_pickup_users ?? [];
+      commsInstructions = prefs.comms_instructions ?? '';
       composerDefaultOpen = prefs.composer_default_open ?? true;
       windowsShell = prefs.windows_shell ?? 'powershell';
       fileLinkAction = prefs.file_link_action ?? 'modifier_click';
@@ -908,6 +816,12 @@ function createPreferencesStore() {
         mailink_enabled: mailinkEnabled,
         mailink_expose_all: mailinkExposeAll,
         mailink_relay_url: mailinkRelayUrl.trim() || null,
+        comms_provider: commsProvider,
+        comms_server_url: commsServerUrl.trim() || null,
+        comms_bot_token: commsBotToken.trim() || null,
+        comms_authorized_users: commsAuthorizedUsers,
+        comms_pickup_users: commsPickupUsers,
+        comms_instructions: commsInstructions.trim() || null,
         composer_default_open: composerDefaultOpen,
         windows_shell: windowsShell,
         file_link_action: fileLinkAction,

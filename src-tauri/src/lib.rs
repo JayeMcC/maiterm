@@ -1,5 +1,6 @@
 mod claude_code;
 mod commands;
+mod comms;
 mod mailink;
 mod pty;
 mod state;
@@ -68,6 +69,59 @@ fn build_log_plugin() -> tauri_plugin_log::Builder {
         .timezone_strategy(TimezoneStrategy::UseLocal)
 }
 
+/// Raise the file-descriptor soft limit toward the hard limit. macOS GUI apps
+/// start with a soft limit of 256; each open PTY costs 3 fds (master + cloned
+/// reader + writer), so ~70 terminal tabs exhausts it and every subsequent
+/// spawn fails with EMFILE ("Too many open files"). Returns (old, new) on a
+/// successful raise so the caller can log it once the logger is up.
+#[cfg(unix)]
+fn raise_fd_limit() -> Option<(u64, u64)> {
+    unsafe {
+        let mut lim = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
+        if libc::getrlimit(libc::RLIMIT_NOFILE, &mut lim) != 0 {
+            return None;
+        }
+        let mut desired: libc::rlim_t = 65536;
+        #[cfg(target_os = "macos")]
+        {
+            // macOS rejects rlim_cur above kern.maxfilesperproc even when the
+            // hard limit reports RLIM_INFINITY.
+            let mut maxfiles: libc::c_int = 0;
+            let mut size = std::mem::size_of::<libc::c_int>();
+            let name = std::ffi::CString::new("kern.maxfilesperproc").unwrap();
+            if libc::sysctlbyname(
+                name.as_ptr(),
+                &mut maxfiles as *mut _ as *mut libc::c_void,
+                &mut size,
+                std::ptr::null_mut(),
+                0,
+            ) == 0
+                && maxfiles > 0
+            {
+                desired = desired.min(maxfiles as libc::rlim_t);
+            }
+        }
+        if lim.rlim_max != libc::RLIM_INFINITY {
+            desired = desired.min(lim.rlim_max);
+        }
+        if desired <= lim.rlim_cur {
+            return None;
+        }
+        let old = lim.rlim_cur;
+        lim.rlim_cur = desired;
+        if libc::setrlimit(libc::RLIMIT_NOFILE, &lim) == 0 {
+            Some((old, desired))
+        } else {
+            None
+        }
+    }
+}
+
+#[cfg(not(unix))]
+fn raise_fd_limit() -> Option<(u64, u64)> {
+    None
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Fork isolation: on first launch of the fork, copy the upstream install's
@@ -82,6 +136,10 @@ pub fn run() {
     // is cached in the function's static so get_app_diagnostics can read it
     // back without us having to thread it through AppState.
     let _prev_run = arm_running_marker();
+
+    // Raise the fd soft limit before anything can spawn PTYs or sockets.
+    // Logged in setup() once the log plugin is active.
+    let fd_limit_raise = raise_fd_limit();
 
     let app_state = Arc::new(AppState::new());
 
@@ -181,6 +239,10 @@ pub fn run() {
                 crate::state::persistence::app_data_slug(),
                 app.webview_windows().keys().collect::<Vec<_>>(),
             );
+            match fd_limit_raise {
+                Some((old, new)) => log::info!("Raised RLIMIT_NOFILE soft limit {} -> {}", old, new),
+                None => log::warn!("RLIMIT_NOFILE soft limit not raised (already at max or setrlimit failed)"),
+            }
 
             // Window title is set dynamically from the frontend (workspace name)
 
@@ -367,6 +429,11 @@ pub fn run() {
                 }
             }
 
+            // Comms integration (/maiterm resolve): global thread-reply watcher.
+            // Always spawned — it idles cheaply when no tab is bound, and bound
+            // tabs persist on disk so this doubles as restart rehydration.
+            tauri::async_runtime::spawn(comms::watcher_loop(app_state.clone(), app.handle().clone()));
+
             // Background tasks owned by Rust (independent of any webview's
             // event loop). See commands/scheduler.rs for the rationale.
             commands::scheduler::spawn_backup_scheduler(app_state.clone());
@@ -509,6 +576,7 @@ pub fn run() {
             commands::terminal::get_pty_info,
             commands::terminal::get_tmux_state,
             commands::terminal::detach_tmux_client,
+            commands::terminal::get_pty_foreground,
             commands::terminal::list_live_ptys,
             commands::terminal::read_clipboard_file_paths,
             commands::terminal::detect_windows_shells,
@@ -532,6 +600,7 @@ pub fn run() {
             commands::terminal::set_terminal_palette,
             commands::terminal::get_terminal_recent_text,
             commands::terminal::save_terminal_scrollback,
+            commands::terminal::save_all_scrollback,
             commands::terminal::restore_terminal_from_saved,
             commands::terminal::has_saved_scrollback,
             commands::terminal::get_saved_scrollback_text,
@@ -595,11 +664,15 @@ pub fn run() {
             commands::workspace::set_workspace_mesh_topics,
             commands::workspace::set_tab_mailink_native,
             commands::workspace::set_tab_mailink_excluded,
+            commands::workspace::clear_tab_comms_binding,
             commands::workspace::set_workspace_mailink_native,
             commands::mailink::mailink_create_pairing,
             commands::mailink::mailink_set_enabled,
             commands::mailink::mailink_list_devices,
             commands::mailink::mailink_remove_device,
+            commands::comms::comms_test_connection,
+            commands::comms::comms_list_bot_channels,
+            commands::workspace::set_tab_comms_monitor,
             commands::window::get_window_data,
             commands::window::create_window,
             commands::window::duplicate_window,

@@ -293,7 +293,7 @@ pub async fn serve_server(app_handle: AppHandle, state: Arc<AppState>, setup: Se
                 _ = ticker.tick() => {
                     let prefs = reassert_state.app_data.read().preferences.clone();
                     for r in registrar::enabled_registrars(&prefs) {
-                        r.reassert_if_drifted(reassert_port, &reassert_auth);
+                        r.reassert_if_drifted(reassert_port, &reassert_auth, &prefs);
                     }
                 }
                 res = reassert_shutdown.changed() => {
@@ -469,6 +469,10 @@ fn preference_meta() -> Vec<(&'static str, PrefMeta)> {
         ("codex_hooks", PrefMeta { description: "Enable Codex lifecycle hooks", ptype: "boolean", category: "Integration", read_only: false }),
         ("codex_auto_resume", PrefMeta { description: "Enable Codex hooks-based auto-resume", ptype: "boolean", category: "Integration", read_only: false }),
         ("codex_hooks_bypass_trust", PrefMeta { description: "Skip the one-time Codex hook-trust prompt (advanced)", ptype: "boolean", category: "Integration", read_only: false }),
+        // comms_bot_token is deliberately ABSENT: preference_meta() is the getPreferences/
+        // setPreference surface, and the bot token must never be readable by agents.
+        ("comms_provider", PrefMeta { description: "Comms integration provider (mattermost)", ptype: "string", category: "Integration", read_only: false }),
+        ("comms_server_url", PrefMeta { description: "Comms server base URL for /maiterm resolve (e.g. https://chat.example.com)", ptype: "string", category: "Integration", read_only: false }),
         ("backup_directory", PrefMeta { description: "Backup directory path (null = scheduled backups disabled)", ptype: "string", category: "Backup", read_only: false }),
         ("backup_interval", PrefMeta { description: "Scheduled backup interval (off, hourly, daily, weekly, monthly)", ptype: "string", category: "Backup", read_only: false }),
         ("backup_exclude_scrollback", PrefMeta { description: "Exclude terminal scrollback from backups", ptype: "boolean", category: "Backup", read_only: false }),
@@ -483,7 +487,8 @@ fn preference_meta() -> Vec<(&'static str, PrefMeta)> {
 
 /// Handle tools that can be resolved entirely on the backend without frontend involvement.
 /// Returns Some(result) if handled, None if the tool should be forwarded to the frontend.
-fn handle_backend_tool(tool_name: &str, arguments: &Value, state: &Arc<AppState>, app_handle: &AppHandle) -> Option<Value> {
+/// Async for the comms tools (outbound HTTP); lock guards must never be held across an await.
+async fn handle_backend_tool(tool_name: &str, arguments: &Value, state: &Arc<AppState>, app_handle: &AppHandle) -> Option<Value> {
     match tool_name {
         "createWindow" => {
             // Drive the same code path the File > New Window menu and Cmd+N
@@ -539,6 +544,28 @@ fn handle_backend_tool(tool_name: &str, arguments: &Value, state: &Arc<AppState>
                 "webviewOpen": webview_ready,
                 "stateEntryPresent": state_present,
             }))
+        }
+        "bindCommsThread" => Some(handle_bind_comms_thread(arguments, state).await),
+        "readCommsThread" => Some(handle_read_comms_thread(arguments, state).await),
+        "postCommsReply" => Some(handle_post_comms_reply(arguments, state).await),
+        "unbindCommsThread" => {
+            let tab_id = match required_tab_id(arguments) {
+                Ok(t) => t,
+                Err(e) => return Some(e),
+            };
+            let bindings = get_comms_bindings(state, &tab_id);
+            if bindings.is_empty() {
+                return Some(serde_json::json!({ "unbound": false, "note": "tab was not bound to a comms thread" }));
+            }
+            let binding = match resolve_comms_binding(state, &tab_id, arguments) {
+                Ok(b) => b,
+                Err(e) => return Some(e),
+            };
+            Some(match remove_comms_binding(state, &tab_id, &binding.root_id) {
+                Some(true) => serde_json::json!({ "unbound": true, "root_id": binding.root_id, "remaining_bound_threads": bindings.len() - 1 }),
+                Some(false) => serde_json::json!({ "unbound": false, "note": "tab was not bound to that thread" }),
+                None => serde_json::json!({ "error": format!("Tab '{tab_id}' not found") }),
+            })
         }
         "listWindows" => {
             let app_data = state.app_data.read();
@@ -743,6 +770,330 @@ fn handle_backend_tool(tool_name: &str, arguments: &Value, state: &Arc<AppState>
         }
         _ => None,
     }
+}
+
+/// The tabId argument (auto-injected by connection affinity after initSession).
+fn required_tab_id(arguments: &Value) -> Result<String, Value> {
+    match arguments.get("tabId").and_then(|v| v.as_str()) {
+        Some(t) if !t.is_empty() => Ok(t.to_string()),
+        _ => Err(serde_json::json!({ "error": "Missing tabId — call initSession first" })),
+    }
+}
+
+/// Add or refresh (same root_id) a binding on a tab and persist. Returns None if the
+/// tab doesn't exist, otherwise Some(true) when an existing same-thread binding was
+/// refreshed.
+fn upsert_comms_binding(
+    state: &Arc<AppState>,
+    tab_id: &str,
+    binding: crate::state::CommsBinding,
+) -> Option<bool> {
+    let (data_clone, refreshed) = {
+        let mut app_data = state.app_data.write();
+        let tab = app_data
+            .windows
+            .iter_mut()
+            .flat_map(|w| &mut w.workspaces)
+            .flat_map(|ws| &mut ws.panes)
+            .flat_map(|p| &mut p.tabs)
+            .find(|t| t.id == tab_id)?;
+        let refreshed = if let Some(existing) = tab
+            .comms_bindings
+            .iter_mut()
+            .find(|b| b.root_id == binding.root_id)
+        {
+            // Refresh in place, but keep the delivered-cursor high-watermark — a
+            // re-bind must not replay replies already injected into the session.
+            let keep_cursor = existing.last_seen_create_at.max(binding.last_seen_create_at);
+            *existing = binding;
+            existing.last_seen_create_at = keep_cursor;
+            true
+        } else {
+            tab.comms_bindings.push(binding);
+            false
+        };
+        (app_data.clone(), refreshed)
+    };
+    if let Err(e) = crate::state::save_state(&data_clone) {
+        log::warn!("[comms] failed to persist binding change: {e}");
+    }
+    Some(refreshed)
+}
+
+/// Remove one binding (by root_id) from a tab and persist. Some(true) = removed.
+fn remove_comms_binding(state: &Arc<AppState>, tab_id: &str, root_id: &str) -> Option<bool> {
+    let (data_clone, removed) = {
+        let mut app_data = state.app_data.write();
+        let tab = app_data
+            .windows
+            .iter_mut()
+            .flat_map(|w| &mut w.workspaces)
+            .flat_map(|ws| &mut ws.panes)
+            .flat_map(|p| &mut p.tabs)
+            .find(|t| t.id == tab_id)?;
+        let before = tab.comms_bindings.len();
+        tab.comms_bindings.retain(|b| b.root_id != root_id);
+        let removed = tab.comms_bindings.len() < before;
+        (app_data.clone(), removed)
+    };
+    if removed {
+        if let Err(e) = crate::state::save_state(&data_clone) {
+            log::warn!("[comms] failed to persist binding change: {e}");
+        }
+    }
+    Some(removed)
+}
+
+/// If `root_id` is already bound to a DIFFERENT tab, return that tab's id.
+fn root_bound_elsewhere(state: &Arc<AppState>, tab_id: &str, root_id: &str) -> Option<String> {
+    let app_data = state.app_data.read();
+    app_data
+        .windows
+        .iter()
+        .flat_map(|w| &w.workspaces)
+        .flat_map(|ws| &ws.panes)
+        .flat_map(|p| &p.tabs)
+        .find(|t| t.id != tab_id && t.comms_bindings.iter().any(|b| b.root_id == root_id))
+        .map(|t| t.id.clone())
+}
+
+/// The operator's free-text chat guidance, if set and non-empty.
+fn comms_instructions(state: &Arc<AppState>) -> Option<String> {
+    state
+        .app_data
+        .read()
+        .preferences
+        .comms_instructions
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+}
+
+/// All of the tab's comms bindings.
+fn get_comms_bindings(state: &Arc<AppState>, tab_id: &str) -> Vec<crate::state::CommsBinding> {
+    let app_data = state.app_data.read();
+    app_data
+        .windows
+        .iter()
+        .flat_map(|w| &w.workspaces)
+        .flat_map(|ws| &ws.panes)
+        .flat_map(|p| &p.tabs)
+        .find(|t| t.id == tab_id)
+        .map(|t| t.comms_bindings.clone())
+        .unwrap_or_default()
+}
+
+/// Resolve which of the tab's bindings a tool call targets. `root_id` optional:
+/// omitted is fine with exactly one binding; with several it's ambiguous — the
+/// error lists the bound threads so the agent can retry with an explicit root_id.
+fn resolve_comms_binding(
+    state: &Arc<AppState>,
+    tab_id: &str,
+    arguments: &Value,
+) -> Result<crate::state::CommsBinding, Value> {
+    let bindings = get_comms_bindings(state, tab_id);
+    let root_id = arguments.get("root_id").and_then(|v| v.as_str()).unwrap_or("");
+    if bindings.is_empty() {
+        return Err(serde_json::json!({ "error": "tab is not bound to a comms thread — run /maiterm resolve <url> first" }));
+    }
+    if !root_id.is_empty() {
+        return bindings
+            .into_iter()
+            .find(|b| b.root_id == root_id)
+            .ok_or_else(|| serde_json::json!({ "error": format!("no binding with root_id '{root_id}' on this tab — omit root_id or use one of the bound threads") }));
+    }
+    if bindings.len() == 1 {
+        return Ok(bindings.into_iter().next().unwrap());
+    }
+    let threads: Vec<Value> = bindings
+        .iter()
+        .map(|b| serde_json::json!({ "root_id": b.root_id, "permalink": b.permalink }))
+        .collect();
+    Err(serde_json::json!({
+        "error": "this tab is bound to multiple threads — pass root_id to say which one",
+        "bound_threads": threads,
+    }))
+}
+
+async fn handle_bind_comms_thread(arguments: &Value, state: &Arc<AppState>) -> Value {
+    use crate::comms;
+
+    let tab_id = match required_tab_id(arguments) {
+        Ok(t) => t,
+        Err(e) => return e,
+    };
+    let url = match arguments.get("url").and_then(|v| v.as_str()) {
+        Some(u) if !u.trim().is_empty() => u.trim().to_string(),
+        _ => return serde_json::json!({ "error": "Missing required parameter: url (a Mattermost permalink)" }),
+    };
+
+    let parsed = match comms::parse_permalink(&url) {
+        Ok(p) => p,
+        Err(e) => return serde_json::json!({ "error": e.to_string() }),
+    };
+    let client = match comms::client_from_prefs(state, reqwest::Client::new()) {
+        Ok(c) => c,
+        Err(e) => return serde_json::json!({ "error": e.to_string() }),
+    };
+    // The permalink must belong to the configured server — API calls always use the
+    // configured base URL, so a foreign permalink would silently 404 otherwise.
+    let cfg_host = client
+        .base_url()
+        .split("://")
+        .nth(1)
+        .unwrap_or_default()
+        .split('/')
+        .next()
+        .unwrap_or_default()
+        .to_string();
+    if !cfg_host.is_empty() && !parsed.host.eq_ignore_ascii_case(&cfg_host) {
+        return serde_json::json!({ "error": format!(
+            "permalink host '{}' does not match the configured comms server '{}' — check Preferences → Integrations",
+            parsed.host, cfg_host
+        ) });
+    }
+
+    let post = match client.get_post(&parsed.post_id).await {
+        Ok(p) => p,
+        Err(e) => return serde_json::json!({ "error": e.to_string() }),
+    };
+    let root_id = if post.root_id.is_empty() { post.id.clone() } else { post.root_id.clone() };
+    let thread = match client.get_thread(&root_id).await {
+        Ok(t) => t,
+        Err(e) => return serde_json::json!({ "error": e.to_string() }),
+    };
+    // The bot's own @username — so the agent can tell support how to reach it (only
+    // messages that @mention the bot are forwarded into this session).
+    let bot_username = client.me().await.map(|u| u.username).unwrap_or_default();
+
+    let transcript = comms::build_transcript(&client, &thread, &root_id).await;
+
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0);
+    let last_seen = thread.iter().map(|p| p.create_at).max().unwrap_or(now_ms);
+    let binding = crate::state::CommsBinding {
+        provider: "mattermost".to_string(),
+        server_url: client.base_url().to_string(),
+        channel_id: post.channel_id.clone(),
+        root_id: root_id.clone(),
+        permalink: url.clone(),
+        last_seen_create_at: last_seen,
+        bound_at: now_ms,
+    };
+    // One thread = one tab: a thread already bound to another tab must not be
+    // double-bound (its watcher would double-inject).
+    if let Some(other) = root_bound_elsewhere(state, &tab_id, &root_id) {
+        return serde_json::json!({ "error": format!(
+            "this thread is already bound to another tab ({other}) — that tab's agent is working it. Unbind there (or the operator can right-click → End thread binding) before rebinding."
+        ) });
+    }
+    let refreshed = match upsert_comms_binding(state, &tab_id, binding) {
+        Some(r) => r,
+        None => return serde_json::json!({ "error": format!("Tab '{tab_id}' not found") }),
+    };
+    let bound_count = get_comms_bindings(state, &tab_id).len();
+
+    let mut result = serde_json::json!({
+        "bound": true,
+        "provider": "mattermost",
+        "permalink": url,
+        "channel_id": post.channel_id,
+        "root_id": root_id,
+        "bot_username": bot_username,
+        "message_count": thread.len(),
+        "bound_thread_count": bound_count,
+        "thread": transcript,
+    });
+    if let Some(instr) = comms_instructions(state) {
+        result["operator_instructions"] = Value::String(instr);
+    }
+    if refreshed {
+        result["note"] = Value::String("this thread was already bound to this tab — binding refreshed".to_string());
+    } else if bound_count > 1 {
+        result["note"] = Value::String(format!(
+            "this tab now works {bound_count} threads — delegate each to a subagent and pass root_id explicitly on every postCommsReply/readCommsThread/unbindCommsThread call"
+        ));
+    }
+    result
+}
+
+async fn handle_read_comms_thread(arguments: &Value, state: &Arc<AppState>) -> Value {
+    use crate::comms;
+
+    let tab_id = match required_tab_id(arguments) {
+        Ok(t) => t,
+        Err(e) => return e,
+    };
+    let binding = match resolve_comms_binding(state, &tab_id, arguments) {
+        Ok(b) => b,
+        Err(e) => return e,
+    };
+    let client = match comms::client_from_prefs(state, reqwest::Client::new()) {
+        Ok(c) => c,
+        Err(e) => return serde_json::json!({ "error": e.to_string() }),
+    };
+    let thread = match client.get_thread(&binding.root_id).await {
+        Ok(t) => t,
+        Err(e) => return serde_json::json!({ "error": e.to_string() }),
+    };
+    let transcript = comms::build_transcript(&client, &thread, &binding.root_id).await;
+    let mut result = serde_json::json!({
+        "provider": binding.provider,
+        "permalink": binding.permalink,
+        "root_id": binding.root_id,
+        "message_count": thread.len(),
+        "thread": transcript,
+    });
+    if let Some(instr) = comms_instructions(state) {
+        result["operator_instructions"] = Value::String(instr);
+    }
+    result
+}
+
+async fn handle_post_comms_reply(arguments: &Value, state: &Arc<AppState>) -> Value {
+    use crate::comms;
+
+    let tab_id = match required_tab_id(arguments) {
+        Ok(t) => t,
+        Err(e) => return e,
+    };
+    let message = match arguments.get("message").and_then(|v| v.as_str()) {
+        Some(m) if !m.trim().is_empty() => m.to_string(),
+        _ => return serde_json::json!({ "error": "Missing required parameter: message" }),
+    };
+    let resolve = arguments.get("resolve").and_then(|v| v.as_bool()).unwrap_or(false);
+
+    let binding = match resolve_comms_binding(state, &tab_id, arguments) {
+        Ok(b) => b,
+        Err(e) => return e,
+    };
+    let client = match comms::client_from_prefs(state, reqwest::Client::new()) {
+        Ok(c) => c,
+        Err(e) => return serde_json::json!({ "error": e.to_string() }),
+    };
+
+    let posted = match client
+        .create_post(&binding.channel_id, &binding.root_id, &message)
+        .await
+    {
+        Ok(p) => p,
+        Err(e) => return serde_json::json!({ "error": e.to_string() }),
+    };
+
+    if resolve {
+        remove_comms_binding(state, &tab_id, &binding.root_id);
+    } else {
+        // Belt-and-braces cursor advance — the watcher also filters the bot's own
+        // posts by user id, but not re-delivering our own reply is cheap certainty.
+        let mut updated = binding.clone();
+        updated.last_seen_create_at = updated.last_seen_create_at.max(posted.create_at);
+        upsert_comms_binding(state, &tab_id, updated);
+    }
+
+    serde_json::json!({ "posted": true, "post_id": posted.id, "root_id": binding.root_id, "resolved": resolve })
 }
 
 fn collect_workspace_folders(_state: &Arc<AppState>) -> Vec<String> {
@@ -1153,7 +1504,7 @@ async fn process_message(
                         let resp = JsonRpcResponse::success(
                             id,
                             serde_json::json!({
-                                "content": [{ "type": "text", "text": "Error: tabId is required. Read your tab ID from the SessionStart hook context or $AITERM_TAB_ID environment variable." }],
+                                "content": [{ "type": "text", "text": "Error: tabId is required. Read your tab ID from the SessionStart hook context or $MAITERM_TAB_ID environment variable." }],
                                 "isError": true
                             }),
                         );
@@ -1165,14 +1516,14 @@ async fn process_message(
                         let this_server = crate::state::agent_runtime::mcp_server_name(crate::state::AgentRuntime::Claude);
                         let other_server = if cfg!(debug_assertions) { "maiterm" } else { "maiterm-dev" };
                         // A tabId unknown to this instance is usually a *stale*
-                        // $AITERM_TAB_ID (the shell outlived the tab it was spawned
+                        // $MAITERM_TAB_ID (the shell outlived the tab it was spawned
                         // under), not a wrong-instance call. The old "use the other
                         // server" message caused a circular bounce when the id was
                         // stale in BOTH instances (each blamed the other). Give a
                         // deterministic recovery path instead: getActiveTab → retry.
                         let msg = format!(
                             "Tab '{}' was not found in this maiTerm instance ({}). This almost always means your \
-                             $AITERM_TAB_ID is stale (the shell outlived the tab it was created under, or was \
+                             $MAITERM_TAB_ID is stale (the shell outlived the tab it was created under, or was \
                              started under a different tab). To recover: call getActiveTab to get your real tab \
                              ID, then call initSession again with that tabId. \
                              Only if getActiveTab also fails should you assume you belong to the other instance \
@@ -1232,6 +1583,7 @@ async fn process_message(
                                     tool_detail: existing.as_ref().and_then(|e| e.tool_detail.clone()),
                                     pending_question: existing.as_ref().and_then(|e| e.pending_question.clone()),
                                     pending_question_at: existing.as_ref().and_then(|e| e.pending_question_at),
+                                    transcript_path: existing.as_ref().and_then(|e| e.transcript_path.clone()),
                                     model: existing.and_then(|e| e.model),
                                     connection_id: Some(connection_id.to_string()),
                                 },
@@ -1264,6 +1616,7 @@ async fn process_message(
                                         tool_detail: None,
                                         pending_question: None,
                                         pending_question_at: None,
+                                        transcript_path: None,
                                         model: None,
                                         connection_id: Some(connection_id.to_string()),
                                     },
@@ -1445,7 +1798,7 @@ async fn process_message(
                             serde_json::json!({
                                 "content": [{ "type": "text", "text":
                                     "Session not initialized. You must call initSession with your tabId first. \
-                                     Read your tab ID from $AITERM_TAB_ID environment variable."
+                                     Read your tab ID from $MAITERM_TAB_ID environment variable."
                                 }],
                                 "isError": true
                             }),
@@ -1478,7 +1831,7 @@ async fn process_message(
                 }
 
                 // Backend-only tools: handle directly without emitting to frontend
-                if let Some(result) = handle_backend_tool(&tool_name, &arguments, state, app_handle) {
+                if let Some(result) = handle_backend_tool(&tool_name, &arguments, state, app_handle).await {
                     let content_text = serde_json::to_string(&result).unwrap_or_default();
                     let resp = JsonRpcResponse::success(
                         id,
@@ -1677,6 +2030,12 @@ async fn hooks_handler(
         .and_then(|v| v.as_str())
         .unwrap_or("")
         .to_string();
+    // Present on every Claude hook payload; for SSH tabs it's the REMOTE JSONL path. Captured
+    // below (post-match) onto the session and fed to the SSH transcript mirror.
+    let transcript_path = event
+        .get("transcript_path")
+        .and_then(|v| v.as_str())
+        .map(String::from);
 
     log::debug!("Claude hook: received '{}' session={}", hook_event_name, &session_id[..session_id.len().min(8)]);
 
@@ -1688,7 +2047,7 @@ async fn hooks_handler(
         .unwrap_or(crate::state::AgentRuntime::Claude);
     let runtime_key = runtime.as_key();
 
-    // tab_id comes from query param (set by the command hook script from $AITERM_TAB_ID)
+    // tab_id comes from query param (set by the command hook script from $MAITERM_TAB_ID)
     // Validate it actually exists — it may be stale after HMR reload or tab recreation.
     let tab_id_from_param = params.get("tab_id").and_then(|raw_id| {
         if raw_id.is_empty() {
@@ -1736,6 +2095,7 @@ async fn hooks_handler(
                         tool_detail: None,
                         pending_question: None,
                         pending_question_at: None,
+                        transcript_path: transcript_path.clone(),
                         model: model.clone(),
                         connection_id: None,
                     },
@@ -2055,6 +2415,24 @@ async fn hooks_handler(
 
         HookPhase::Other => {
             log::debug!("Claude hook: unhandled event type '{}'", hook_event_name);
+        }
+    }
+
+    // SSH transcript mirror: refresh the session's transcript_path (SessionStart above inserts
+    // it; every later hook re-carries it, covering resume-minted paths) and treat this hook as
+    // the "something appended" signal. schedule_fetch() no-ops for non-SSH tabs.
+    if runtime == crate::state::AgentRuntime::Claude && !session_id.is_empty() {
+        if let Some(tp) = &transcript_path {
+            let tab_id = {
+                let mut sessions = srv.state.agent_sessions.write();
+                sessions.get_mut(&session_id).map(|s| {
+                    s.transcript_path = Some(tp.clone());
+                    s.tab_id.clone()
+                })
+            };
+            if let Some(tab_id) = tab_id.filter(|t| !t.is_empty()) {
+                crate::mailink::mirror::schedule_fetch(&srv.state, &tab_id, &session_id, tp);
+            }
         }
     }
 

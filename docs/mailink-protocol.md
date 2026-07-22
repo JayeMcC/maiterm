@@ -385,6 +385,21 @@ shortcut; this guarantees it can't corrupt a TUI mid-prompt.
   live bubble — so echo == caption on both the live send and thread re-open. A leading path is only
   stripped if it carries the marker, so ordinary messages that mention a path are untouched. **If the
   temp-file stem ever changes, both sides must change together.**
+  **Body-size ceiling: 32 MiB** for `POST .../message` (`MAX_MESSAGE_BODY_BYTES`, `mod.rs`); every
+  other route keeps axum's 2 MiB default. Over the ceiling the request is rejected by the extractor
+  with **413** *before* the handler runs — so there is no server log line and nothing is injected.
+  Budget phone-side by **total** bytes, not image count: per-image size varies far more than the
+  6-image cap implies (JPEG photos ~<500 KB, but PNG screenshots have been seen at ~750 KB, and
+  base64 inflates ~1.37× on top), so a 6-image batch runs ~3–6 MB and two heavy screenshots alone
+  used to exceed the old limit. A 413 on this route means "images too large", not a transient error
+  — don't retry it verbatim.
+  **SSH tabs**: with a live bridge tunnel, the desktop stages the decoded bytes in the REMOTE
+  host's `/tmp` (same `maiterm-mailink-<uuid>.<ext>` stem — the marker contract above holds
+  unchanged for echo-stripping) by streaming them over the tunnel's mux socket, then types the
+  remote paths; the send returns `delivered` exactly like a local tab, all-or-nothing (a failed
+  transfer never types half a batch). `{status:"unsupported", reason:"unsupported_ssh"}` now means
+  only "no usable bridge" (tunnel down/disabled, mosh) or "staging failed" — render it as the same
+  in-app notice as before; a retry after the bridge reconnects can succeed.
 - **Answer a permission/question** (`POST .../respond {choice, prompt_id}`): Claude's TUI
   answers permission with a numeric/selection keystroke (e.g. `1`=yes, `2`=yes+don't-ask,
   `3`/Esc=no). The desktop maps `choice` → the correct keystroke for that runtime and injects
@@ -774,9 +789,28 @@ export interface Turn {
   thread_id: string;
   author?: Participant;         // absent => the human/user
   role: 'agent' | 'user' | 'tool' | 'system';
-  text: string;                 // source markdown
+  kind?: 'terminal_snapshot';   // present ONLY on the raw-scrape fallback (see below); absent => distilled turn
+  text: string;                 // source markdown (for kind:"terminal_snapshot", raw newline-delimited grid text, NOT markdown)
   ts: number;
 }
+
+// kind:"terminal_snapshot" — emitted for tabs with no locatable JSONL (a pruned local session,
+// Gemini, a plain shell, or an SSH tab whose transcript mirror is unavailable — see below). It is a
+// single system turn holding a raw scrape of the tab's live terminal grid (last ~40 rows,
+// newline-delimited, may contain TUI chrome), with a STABLE msg_id (`ctx_<tabId>`) that is
+// re-scraped on every GET. Render it preformatted (white-space: pre-wrap; overflow-wrap:
+// break-word), badged as a live terminal snapshot, and treat it as ONE replaceable block — not
+// appended history. Older clients can sniff the `ctx_` msg_id prefix for the same signal. Dormant
+// tabs (no live PTY) omit it entirely → empty transcript → "no messages captured yet".
+//
+// SSH Claude tabs (v2 transcript mirror): the desktop mirrors the session's REMOTE JSONL into a
+// local shadow file (offset-tracked `tail` fetches mux'd over the SSH bridge tunnel's maiTerm-owned
+// ControlMaster socket; hook events are the fetch trigger, plus a slow keep-fresh tick while a WS
+// client is connected). With a healthy mirror an SSH Claude tab serves REAL distilled turns —
+// indistinguishable on the wire from a local tab (same GET shape, same `message` WS streaming, same
+// per-agent meta) — and the snapshot turn does not appear. If the mirror can't fetch (tunnel down,
+// bridge disabled), the tab degrades to exactly the snapshot fallback above. No client-side changes
+// are required either way. Codex/Gemini SSH tabs always use the snapshot path.
 
 export interface AskOption { label: string; description?: string; }
 export interface AskQuestion {

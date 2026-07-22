@@ -1578,7 +1578,7 @@ fn now_utc_parts() -> (i64, u32, u32, u64, u64, u64) {
     (y, mo, da, h, m, s)
 }
 
-pub(crate) fn iso_now() -> String {
+pub fn iso_now() -> String {
     let (y, mo, da, h, m, s) = now_utc_parts();
     format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z", y, mo, da, h, m, s)
 }
@@ -1787,6 +1787,91 @@ pub fn set_tab_mailink_excluded(
         .ok_or("Tab not found")?;
 
     tab.mailink_excluded = excluded;
+
+    let data_clone = app_data.clone();
+    drop(app_data);
+    save_state(&data_clone)
+}
+
+/// Operator kill switch for the comms integration: clear a tab's thread binding(s)
+/// without going through the agent. `root_id: None` clears them all. The comms
+/// watcher re-reads bindings each tick, so injection stops within one interval.
+/// Silent — posts nothing to the thread.
+#[tauri::command]
+pub fn clear_tab_comms_binding(
+    window: tauri::Window,
+    state: State<'_, Arc<AppState>>,
+    workspace_id: String,
+    pane_id: String,
+    tab_id: String,
+    root_id: Option<String>,
+) -> Result<(), String> {
+    let label = window.label().to_string();
+    let mut app_data = state.app_data.write();
+    let win = app_data.window_mut(&label).ok_or("Window not found")?;
+    let workspace = win.workspaces.iter_mut()
+        .find(|w| w.id == workspace_id)
+        .ok_or("Workspace not found")?;
+    let pane = workspace.panes.iter_mut()
+        .find(|p| p.id == pane_id)
+        .ok_or("Pane not found")?;
+    let tab = pane.tabs.iter_mut()
+        .find(|t| t.id == tab_id)
+        .ok_or("Tab not found")?;
+
+    match root_id {
+        Some(root) => tab.comms_bindings.retain(|b| b.root_id != root),
+        None => tab.comms_bindings.clear(),
+    }
+
+    let data_clone = app_data.clone();
+    drop(app_data);
+    save_state(&data_clone)
+}
+
+/// Enable/update (Some) or disable (None) chat monitoring on a tab. New channels
+/// start their scan cursor at "now" (no history replay); channels kept from the
+/// previous config preserve their cursor.
+#[tauri::command]
+pub fn set_tab_comms_monitor(
+    window: tauri::Window,
+    state: State<'_, Arc<AppState>>,
+    workspace_id: String,
+    pane_id: String,
+    tab_id: String,
+    channels: Option<Vec<crate::state::CommsMonitorChannel>>,
+) -> Result<(), String> {
+    let label = window.label().to_string();
+    let mut app_data = state.app_data.write();
+    let win = app_data.window_mut(&label).ok_or("Window not found")?;
+    let workspace = win.workspaces.iter_mut()
+        .find(|w| w.id == workspace_id)
+        .ok_or("Workspace not found")?;
+    let pane = workspace.panes.iter_mut()
+        .find(|p| p.id == pane_id)
+        .ok_or("Pane not found")?;
+    let tab = pane.tabs.iter_mut()
+        .find(|t| t.id == tab_id)
+        .ok_or("Tab not found")?;
+
+    match channels {
+        None => tab.comms_monitor = None,
+        Some(mut chans) => {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as i64)
+                .unwrap_or(0);
+            let prev = tab.comms_monitor.take();
+            for ch in chans.iter_mut() {
+                let kept = prev
+                    .as_ref()
+                    .and_then(|m| m.channels.iter().find(|c| c.id == ch.id))
+                    .map(|c| c.last_seen_create_at);
+                ch.last_seen_create_at = kept.unwrap_or(now);
+            }
+            tab.comms_monitor = Some(crate::state::CommsMonitor { channels: chans });
+        }
+    }
 
     let data_clone = app_data.clone();
     drop(app_data);

@@ -1,6 +1,6 @@
 [package]
 name = "aiterm"
-version = "1.21.0"
+version = "1.23.0"
 description = "A Tauri-based terminal organizer"
 authors = ["you"]
 license = "LicenseRef-Proprietary"
@@ -61,6 +61,10 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 ignore = "0.4"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
+
+[dev-dependencies]
+# `ServiceExt::oneshot` — drives the maiLink router in-process (no TLS, no listener).
+tower = { version = "0.5", features = ["util"] }
 
 [features]
 mcp-bridge = ["dep:tauri-plugin-mcp-bridge"]

@@ -1,5 +1,63 @@
 # Changelog
 
+## v1.23.0
+
+- **maiTerm can now watch your Mattermost channels and pick up threads on demand.** Building on v1.22.0's `/maiterm resolve`, you no longer have to paste a permalink for every bug report. Right-click a tab → **Enable chat monitoring…**, choose which channels to watch (the picker lists the channels your bot is a member of, grouped by team), and that tab becomes a dispatcher: whenever someone `@mentions` the bot in a thread, maiTerm binds that thread to the tab and hands the agent the request with the full conversation — automatically.
+  - **One tab, several threads.** A monitoring tab works up to three threads at once; further summons queue — as they also do while it's busy or offline — with a one-time "at capacity" reply posted to the thread and a notification to you. The tab's `@` indicator is dim while idle and turns green with a count once threads are bound.
+  - **A new "pickup" permission tier.** Preferences → Integrations gains **Pickup users** — usernames allowed to summon the bot without carrying full operator authority. Their thread work is treated as investigate-and-report; authorized operators still carry your full authority, and an unauthorized summon simply notifies you.
+  - **Hand work to the right agent in a mesh.** If the monitoring tab is part of a mesh workspace, it can route an investigation to the peer whose purpose and working directory match the issue — staying the dispatcher on the thread while the right agent does the work, with the sender's authority relayed verbatim.
+
+## v1.22.0
+
+- **Work a Mattermost support thread to resolution from a maiTerm tab — the new `/maiterm resolve` integration.** Point an agent at a Mattermost thread (paste the message permalink) and it binds that tab to the thread: it reads the whole conversation as a bug report, investigates and fixes the issue in the tab's repository, and posts the resolution back to the thread — without you leaving maiTerm. Configure the bot once in **Preferences → Integrations** (Mattermost server URL + bot token); a bound tab shows a green `@` indicator you can right-click to manage.
+  - **You stay in control of what the agent can act on.** Only messages that `@mention` the bot are delivered into the session, and each one is tagged by the sender's authority: an authorized operator's message carries full authority, while support staff and other channel members are treated as information and requests only — the agent won't take destructive or scope-expanding actions on their say-so, it relays those to you instead. Authorized usernames are managed in Preferences → Integrations.
+  - **Operator kill switch.** End a thread binding yourself at any time from the tab's right-click menu — severing it never depends on the agent cooperating, and it posts nothing to the thread.
+  - **Configurable response style.** A free-text "Response Instructions" field lets you set how the agent communicates on threads (tone, formatting, what to include) without touching its safety and authority rules.
+  - **A fix stays open until a human confirms it.** Posting a resolution no longer auto-closes the thread — the agent asks support to test and confirm, keeps working if it's still broken, and only closes out on a human's confirmation.
+  - **You're told when a reply can't be delivered.** If someone replies to a bound thread while its agent session isn't running, maiTerm raises a notification (deep-linking to the tab) instead of silently holding the message; the backlog is delivered when you resume the session.
+
+## v1.21.0
+
+- **maiLink — SSH-hosted Claude agents are now first-class in the phone app.**
+  - **Real per-turn transcripts for remote Claude tabs.** A Claude agent running on a remote host over SSH used to appear in the phone inbox as a flat terminal-screen snapshot, because its conversation log lives on the remote machine. maiTerm now mirrors that remote log to your computer as the agent works — so SSH agents get the same streamed, per-turn conversation, context-window gauge, and last-turn view as local agents, with the terminal snapshot kept only as a fallback when the connection is unavailable.
+  - **Send images to remote agents.** Attaching an image to a remote Claude tab used to fail as unsupported, because the image only existed on your computer. maiTerm now streams the image to the remote host before referencing it, so image sends to SSH agents work the same as local ones — all-or-nothing, so a failed transfer never leaves a half-filled prompt.
+  - **Fix larger image batches failing with a generic error.** Sending several images — or a couple of large screenshots — at once could fail with only "Failed to send" and nothing injected, because the message endpoint capped the request body well below the size the images require. The limit is raised so realistic multi-image sends go through.
+- **Pinned tabs always show the pin.** The pin glyph shared a single slot with a tab's status/type indicator, so a pinned terminal with any activity could hide its pin — several pinned tabs could show only one pin — while a pinned editor tab hid its file-type icon. The pin now shows alongside the indicator, so it stays visible.
+- **Reloading a pinned tab keeps it pinned.** Cmd+Shift+R on a pinned tab produced an unpinned replacement; the reloaded tab now keeps its pin and its exact position in the pin cluster. (A plain duplicate is still intentionally unpinned — a copy is a new tab, not a replacement.)
+
+## v1.20.6
+
+- **Fix agents resuming with a phantom tab ID.** A resumed agent could come up greeted with a maiTerm tab ID that no longer exists — failing its session registration and falling into a recovery dance. Two long-standing gaps in how maiTerm manages its `SessionStart` hook in `~/.claude/settings.json` were to blame: re-installs appended identical duplicate hooks unbounded, and stale pre-rename hooks were never swept — so an old hook could echo a dead tab ID from a stale fallback file. maiTerm now keeps exactly one current copy of its hook, and the 30-second self-heal removes duplicates and outdated variants — while leaving a live dev/prod sibling instance's hook alone (both share the same settings file and would otherwise sweep each other forever).
+- **Workspaces you suspend stay suspended across a restart.** With session restore set to "all", a workspace you explicitly suspended right before quitting (or installing an update) came back live on relaunch. An explicit suspension now survives a full restore; the only automatic wake left is a workspace whose terminals are genuinely still running after a reload.
+
+## v1.20.5
+
+- **The agent environment variables are now named `MAITERM_*` instead of `AITERM_*`.** The tab-ID and port variables injected into your shells — including the `export MAITERM_TAB_ID=…` line you see when connecting to an SSH host — carried the old `aiterm` name. They're renamed everywhere (local and remote shells, hooks, and the Codex shim) to match the maiTerm branding.
+- **Fix the SSH env-var injection lagging behind your first keystrokes again.** On connecting to a remote host, the tab-ID/port export had crept back to landing at the prompt *after* the remote setup work kicked off, so a fast typist's first characters could race in front of it. The export now fires immediately once the tunnel is up — before any setup — restoring the snappy behavior.
+
+## v1.20.4
+
+- **Fix secondary windows coming back empty or with stale scrollback after an update or restart.** Two fixes: a window whose active workspace had been suspended now un-suspends and respawns its tabs on load instead of returning blank, and an update relaunch now flushes *every* window's terminal scrollback before restarting — previously only the window you triggered the update from was saved, so other windows lost their buffers.
+- Older "limbo" terminal tabs — ones whose PTY had ended without going through a normal suspend — are now normalized to suspended, so they show a proper "suspended Xd ago" age and are counted correctly in diagnostics instead of as uninitialized.
+
+## v1.20.3
+
+- **Fix an SSH host spamming `export AITERM_TAB_ID=…` into your shell on nearly every command.** When connecting to a remote host whose bridge setup was slow, the setup kept timing out and getting retried on every prompt — and each retry re-injected the tab-ID/port export into your live shell. Two root causes fixed: the environment variables are now injected only once per session, and the stale-lockfile cleanup that ran during setup no longer hangs for 30 seconds on a dead reverse-tunnel port (a leftover port that accepts a connection but never answers), which was what left the bridge stuck retrying in the first place.
+- **Fix a release occasionally showing no notes in the "What's New" window.** A release whose notes were written as a plain paragraph instead of a bulleted list rendered as an empty entry. The window now reads both formats.
+
+## v1.20.2
+
+- **Fix mesh messages showing the wrong sender.** In a mesh workspace, every `⟦MESH⟧ "Message from …"` line was labeled with the *recipient's* own role name instead of the sender's — so a message from one agent arrived looking like it came from you. The envelope now derives the sender's identity from the sending tab, making a mislabel structurally impossible.
+
+## v1.20.1
+
+- **Fix the UI freezing after opening a mesh workspace.** The readiness modal polls every ambiguous tab once a second to see whether its agent is still alive, and each poll ran a full process scan on the main thread — with dozens of tabs the app beach-balled, and restarting re-triggered it. The probe now runs off the main thread and one process sweep answers the whole poll tick instead of one per tab.
+- **Fix "Too many open files" once you pass roughly 68 open terminals.** macOS starts a GUI app with a 256-descriptor limit and each terminal costs three, so new terminals failed to spawn — usually surfacing as "MCP Bridge Failed". maiTerm now raises the limit at startup, before any terminal can spawn.
+- **Agent hooks repair themselves instead of failing on every event.** If something rewrites `~/.claude/settings.json` — the `claude` CLI, or an overlapping deploy leaving the previous instance's port behind — every hook fired at a dead port (`ECONNREFUSED`) until the next restart, losing session tracking and the state indicators. maiTerm now notices hook entries pointing at ports that are no longer live and repairs them within 30 seconds, including a stale reverse tunnel left behind by another machine's SSH bridge.
+- **Fix the SSH bridge breaking your own `ssh` to the same host.** With `ControlMaster auto` in your SSH config, the bridge's long-lived tunnel took ownership of the shared connection socket, so your own `ssh <host>` was forced to multiplex over it and failed with "Session open refused by peer". Every bridge connection is now fully independent of that socket.
+- Fix "Install MCP for Current User" and "Inject maiTerm Env Vars" running against your local machine when the tab's SSH session had already exited — which clobbered your local Claude config with the remote's settings. Both now check that `ssh` is still in the foreground and tell you instead of writing.
+- In maiLink, a remote or pruned agent tab that falls back to a live terminal snapshot now renders as a preformatted, badged block instead of collapsing into one long overflowing line.
+
 ## v1.20.0
 
 - **Resuming a workspace brings back exactly the agents that were running.** Suspending a workspace now remembers which tabs had a live terminal; resuming it respawns and auto-resumes just those — so a 20-tab workspace that had 3 agents running comes back with those 3 live (with a progress modal for larger resumes), instead of waking tabs you never started or leaving live ones dead.

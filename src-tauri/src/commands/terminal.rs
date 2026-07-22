@@ -104,6 +104,14 @@ pub fn detach_tmux_client(
 }
 
 #[tauri::command]
+pub fn get_pty_foreground(
+    state: State<'_, Arc<AppState>>,
+    pty_id: String,
+) -> Result<Option<String>, String> {
+    pty::get_pty_foreground(&*state, &pty_id)
+}
+
+#[tauri::command]
 pub fn list_live_ptys(state: State<'_, Arc<AppState>>) -> Vec<String> {
     pty::list_live_ptys(&*state)
 }
@@ -300,11 +308,18 @@ pub fn terminal_bracketed_paste(
 /// true means the tab needs only re-registration (`/maiterm init`), NOT a full
 /// ssh+resume replay (which would inject junk into the running agent / nest ssh).
 #[tauri::command]
-pub fn get_agent_liveness(
+pub async fn get_agent_liveness(
     state: State<'_, Arc<AppState>>,
     pty_id: String,
 ) -> Result<pty::AgentLiveness, String> {
-    pty::get_agent_liveness(&*state, &pty_id)
+    // The probe spawns `ps -x` (full process list) plus lsof/sysinfo scans — all blocking.
+    // A synchronous command runs on Tauri's main event-loop thread, so the mesh readiness
+    // modal's 1s poll loop over every tab would peg the main thread and freeze the whole UI
+    // (pinwheel). Offload the blocking work to the blocking pool so the event loop stays free.
+    let app_state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || pty::get_agent_liveness(&app_state, &pty_id))
+        .await
+        .map_err(|e| format!("liveness probe failed to run: {}", e))?
 }
 
 /// Search the terminal buffer.
@@ -370,6 +385,43 @@ pub fn save_terminal_scrollback(
     };
 
     state.scrollback_db.save(&tab_id, &scrollback, Some(size))
+}
+
+/// Serialize and persist the scrollback of EVERY live terminal across ALL
+/// windows, returning how many were saved. The per-window frontend
+/// `saveAllScrollback` only sees its own webview's terminals, so an update
+/// relaunch triggered from one window would otherwise lose the other windows'
+/// buffers (a secondary window comes back with blank terminals). Rust owns every
+/// alacritty buffer, so it can flush them all in one pass. Alt-screen terminals
+/// (TUI content) are skipped, matching `save_terminal_scrollback`; best-effort
+/// per tab, so one failure never blocks the rest.
+#[tauri::command]
+pub fn save_all_scrollback(state: State<'_, Arc<AppState>>) -> usize {
+    // Snapshot tab→pty pairs up front so the map lock isn't held across serialize.
+    let pairs: Vec<(String, String)> = {
+        let tab_map = state.tab_pty_map.read();
+        tab_map.iter().map(|(t, p)| (t.clone(), p.clone())).collect()
+    };
+
+    let mut saved = 0;
+    for (tab_id, pty_id) in pairs {
+        let serialized = {
+            let registry = state.terminal_registry.read();
+            let Some(handle) = registry.get(&pty_id) else { continue };
+            if handle.term.mode().contains(alacritty_terminal::term::TermMode::ALT_SCREEN) {
+                continue;
+            }
+            let size = (handle.term.columns() as u16, handle.term.screen_lines() as u16);
+            (serialize::serialize_buffer(&handle.term), size)
+        };
+        if state.scrollback_db.save(&tab_id, &serialized.0, Some(serialized.1)).is_ok() {
+            saved += 1;
+        }
+    }
+    if saved > 0 {
+        log::info!("save_all_scrollback: flushed {} terminal(s) across all windows", saved);
+    }
+    saved
 }
 
 /// Terminal size (cols, rows) recorded with the tab's last scrollback save.

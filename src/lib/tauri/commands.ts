@@ -2,6 +2,8 @@ import { invoke } from '@tauri-apps/api/core';
 import type {
   AgentBridge,
   AppData,
+  BotChannel,
+  CommsMonitorChannel,
   DiffContext,
   DuplicateWorkspaceResult,
   EditorFileInfo,
@@ -113,6 +115,14 @@ export async function getPtyInfo(ptyId: string): Promise<PtyInfo> {
     info.foreground_command = cleanSshCommand(info.foreground_command);
   }
   return info;
+}
+
+/** Foreground command only — skips the lsof cwd lookup `getPtyInfo` also does.
+ *  Used on the SSH-bridge env-injection hot path where cwd is irrelevant and the
+ *  export races the user's first keystrokes. */
+export async function getPtyForeground(ptyId: string): Promise<string | null> {
+  const cmd: string | null = await invoke('get_pty_foreground', { ptyId });
+  return cmd ? cleanSshCommand(cmd) : null;
 }
 
 export async function writeTerminal(ptyId: string, data: number[]): Promise<void> {
@@ -235,6 +245,13 @@ export async function scrollSelection(ptyId: string, delta: number, col: number)
 
 export async function saveTerminalScrollback(ptyId: string, tabId: string): Promise<void> {
   return invoke('save_terminal_scrollback', { ptyId, tabId });
+}
+
+/** Flush scrollback for every live terminal across ALL windows (Rust owns the
+ *  buffers). Returns the number saved. Used before an update relaunch so
+ *  secondary windows don't come back with blank terminals. */
+export async function saveAllScrollback(): Promise<number> {
+  return invoke('save_all_scrollback');
 }
 
 export async function restoreTerminalFromSaved(ptyId: string, tabId: string): Promise<void> {
@@ -491,6 +508,26 @@ export async function setTabMailinkExcluded(workspaceId: string, paneId: string,
   return invoke('set_tab_mailink_excluded', { workspaceId, paneId, tabId, excluded });
 }
 
+/** Operator kill switch: clear a tab's comms thread binding(s). Omit rootId to clear all. */
+export async function clearTabCommsBinding(workspaceId: string, paneId: string, tabId: string, rootId?: string): Promise<void> {
+  return invoke('clear_tab_comms_binding', { workspaceId, paneId, tabId, rootId: rootId ?? null });
+}
+
+/** Channels the configured comms bot is a member of (for the chat-monitoring picker). */
+export async function commsListBotChannels(): Promise<BotChannel[]> {
+  return invoke('comms_list_bot_channels');
+}
+
+/** Enable/update (channels) or disable (null) chat monitoring on a tab. */
+export async function setTabCommsMonitor(
+  workspaceId: string,
+  paneId: string,
+  tabId: string,
+  channels: CommsMonitorChannel[] | null
+): Promise<void> {
+  return invoke('set_tab_comms_monitor', { workspaceId, paneId, tabId, channels });
+}
+
 export async function setWorkspaceMailinkNative(workspaceId: string, enabled: boolean): Promise<void> {
   return invoke('set_workspace_mailink_native', { workspaceId, enabled });
 }
@@ -513,6 +550,14 @@ export async function mailinkListDevices(): Promise<MailinkDevice[]> {
 /** Unpair a device: its bearer token stops working and the doorbell stops ringing it. */
 export async function mailinkRemoveDevice(deviceId: string): Promise<void> {
   return invoke('mailink_remove_device', { deviceId });
+}
+
+/** Test a comms (Mattermost) server URL + bot token before saving them. */
+export async function commsTestConnection(
+  serverUrl: string,
+  botToken: string
+): Promise<{ ok: boolean; bot_username: string }> {
+  return invoke('comms_test_connection', { serverUrl, botToken });
 }
 
 export async function setWorkspaceMeshTopics(workspaceId: string, topics: MeshTopic[]): Promise<void> {

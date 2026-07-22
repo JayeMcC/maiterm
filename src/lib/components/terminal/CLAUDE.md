@@ -1,5 +1,9 @@
 # Terminal Components
 
+> **Split-pane performance**: why split panes degrade rendering while separate
+> windows don't (one JS main thread per webview vs. one process per window), and the
+> options to fix it — see [`docs/split-pane-performance.md`](../../../../docs/split-pane-performance.md).
+
 ## Architecture: alacritty_terminal + xterm.js
 
 Terminal parsing and buffer management runs in Rust via `alacritty_terminal`. xterm.js serves only as a thin renderer (scrollback=0, ~2KB per terminal).
@@ -79,7 +83,7 @@ When the split tree changes (leaf → split node), Svelte destroys and recreates
 Dragging a terminal tab to another workspace preserves the running PTY instead of killing and respawning:
 
 - **`terminalsStore.preservePty(ptyId)`** — called before the move, prevents `onDestroy` from killing the PTY
-- **`terminalsStore.consumePreserve(ptyId)`** — consumed once at the top of `onDestroy`; when set, skips `killTerminal` **and** skips `disableBridge`. The SSH MCP bridge is keyed by `tabId` (unchanged across a move), so the reattaching pane keeps using it. Tearing it down on move would drop the bridge state, and the new pane's `term-title` handler would then re-run `enableBridge`, re-injecting `export AITERM_TAB_ID=…` into the live (e.g. compacting) session.
+- **`terminalsStore.consumePreserve(ptyId)`** — consumed once at the top of `onDestroy`; when set, skips `killTerminal` **and** skips `disableBridge`. The SSH MCP bridge is keyed by `tabId` (unchanged across a move), so the reattaching pane keeps using it. Tearing it down on move would drop the bridge state, and the new pane's `term-title` handler would then re-run `enableBridge`, re-injecting `export MAITERM_TAB_ID=…` into the live (e.g. compacting) session.
 - **Backend `move_tab_to_workspace`** — atomically moves the tab (with `pty_id`) between workspaces
 - **`existingPtyId` prop** — `+page.svelte` passes `tab.pty_id` only when `terminalsStore.get(tab.id)` is truthy (avoids reattach on app restart with stale PTY IDs)
 - **New TerminalPane reattach** — when `existingPtyId` is set, skips `spawnTerminal`, SSH replay, and auto-resume; sets up fresh event listeners and registers with the store

@@ -35,11 +35,23 @@ const bridgeStates = new SvelteMap<string, BridgeState>();
 const tunnelListeners = new Map<string, UnlistenFn>();
 
 /**
+ * Remote ports for which we've already injected `export MAITERM_TAB_ID/PORT` into
+ * the live shell, keyed by tabId. The env vars persist for the whole ssh session,
+ * so injecting once is enough. Without this, a bridge whose remote setup keeps
+ * timing out stays in 'failed' state and the term-title retry loop re-injects the
+ * export line into the user's interactive shell on every prompt — visible spam.
+ * Keyed by port so a genuine reconnect (new tunnel port) re-injects.
+ */
+const injectedEnvPort = new Map<string, number>();
+
+/**
  * Remove bridge state for a tab (internal — no backend call).
  * Used when Rust notifies us the tunnel died.
  */
 function clearBridgeState(tabId: string): void {
-  if (!bridgeStates.delete(tabId)) return;
+  if (!bridgeStates.has(tabId)) return;
+  bridgeStates.delete(tabId);
+  injectedEnvPort.delete(tabId);
   logInfo(`SSH MCP bridge cleared for tab ${tabId} (tunnel down)`);
 }
 
@@ -116,6 +128,24 @@ export function isInteractiveSshSession(cmd: string): boolean {
 }
 
 /**
+ * True when the tab's PTY currently has an interactive ssh session in the
+ * foreground — the precondition for writing bridge setup / env-var commands
+ * to the PTY. Writing when ssh has exited dumps the script into the LOCAL
+ * shell, which clobbers local ~/.claude.json / ~/.claude/settings.json /
+ * ~/.aiterm with remote-tunnel ports that are dead on this machine.
+ */
+export async function isRemoteShellForeground(ptyId: string): Promise<boolean> {
+  try {
+    // Foreground-only probe (no lsof cwd) — this runs right before the env-var
+    // injection, which races the user's first keystrokes at the remote prompt.
+    const cmd = await commands.getPtyForeground(ptyId);
+    return !!cmd && isInteractiveSshSession(cmd);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Build a shell script for background SSH execution.
  * This runs as a non-interactive command, not through the user's PTY.
  * Sets up: lockfile, MCP entry in ~/.claude.json, hooks in ~/.claude/settings.json.
@@ -148,19 +178,17 @@ function buildSetupScript(remotePort: number, authToken: string, tabId: string, 
   // HTTP hooks tunnel back through the reverse SSH tunnel to our local MCP server.
   const hooksUrl = 'http://127.0.0.1:' + remotePort + '/hooks';
 
-  // SessionStart command hook: reads $AITERM_TAB_ID (injected into PTY after bridge setup),
+  // SessionStart command hook: reads $MAITERM_TAB_ID (injected into PTY after bridge setup),
   // extracts session_id from hook stdin, echoes both into Claude's context.
   // Uses double-quoted JS string to avoid template literal ${} interpolation of bash vars.
-  // SessionStart hook: reads $AITERM_TAB_ID from env, falls back to ~/.aiterm file
+  // SessionStart hook: reads $MAITERM_TAB_ID from env, falls back to ~/.aiterm file
   // (needed when Claude runs inside tmux where env vars weren't inherited).
   const sessionStartCmd =
-    '{ [ -z "$AITERM_TAB_ID" ] && [ -f ~/.aiterm ] && . ~/.aiterm; } 2>/dev/null; ' +
-    '{ [ "$AITERM_PORT" = "' +
-    remotePort +
-    '" ] || [ -z "$AITERM_PORT" ]; } && ' +
-    '[ -n "$AITERM_TAB_ID" ] && ' +
-    'AITERM_SID=$(cat | sed -n \'s/.*"session_id" *: *"\\([^"]*\\)".*/\\1/p\' | head -1) && ' +
-    "echo 'Your maiTerm tab ID is '$AITERM_TAB_ID'. Your session ID is '$AITERM_SID'. " +
+    "{ [ -z \"$MAITERM_TAB_ID\" ] && [ -f ~/.aiterm ] && . ~/.aiterm; } 2>/dev/null; " +
+    "{ [ \"$MAITERM_PORT\" = \"" + remotePort + "\" ] || [ -z \"$MAITERM_PORT\" ]; } && " +
+    "[ -n \"$MAITERM_TAB_ID\" ] && " +
+    "MAITERM_SID=$(cat | sed -n 's/.*\"session_id\" *: *\"\\([^\"]*\\)\".*/\\1/p' | head -1) && " +
+    "echo 'Your maiTerm tab ID is '$MAITERM_TAB_ID'. Your session ID is '$MAITERM_SID'. " +
     "You MUST immediately call the maiterm initSession tool with this tabId and sessionId before responding to the user. You can run it in parallel with your other opening tool calls to save a round-trip, but not alongside other maiterm calls. This is required for correct tab targeting.' || true";
 
   const httpHook = { matcher: '', hooks: [{ type: 'http', url: hooksUrl, headers: { 'x-claude-code-ide-authorization': authToken } }] };
@@ -223,7 +251,12 @@ function buildSetupScript(remotePort: number, authToken: string, tabId: string, 
     '__p=$(grep -o \'"serverPort":[0-9]*\' "$__f" 2>/dev/null | grep -o \'[0-9]*\')',
     '__t=$(grep -o \'"authToken":"[^"]*"\' "$__f" 2>/dev/null | cut -d\'"\'  -f4)',
     '[ -n "$__p" ] && [ "$__p" != "' + remotePort + '" ] && {',
-    '__code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 -X POST -H "x-claude-code-ide-authorization: $__t" "http://127.0.0.1:$__p/hooks" 2>/dev/null)',
+    // --max-time bounds the TOTAL request: a zombie reverse-tunnel port (kept
+    // listening by a dead ControlMaster) accepts the TCP connect but never answers,
+    // so --connect-timeout alone lets curl block on the response read forever —
+    // which hangs this whole setup script until ssh_run_setup's 30s timeout, wedging
+    // the bridge in 'failed'. With --max-time it returns 000 → the lock is pruned.
+    '__code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 --max-time 4 -X POST -H "x-claude-code-ide-authorization: $__t" "http://127.0.0.1:$__p/hooks" 2>/dev/null)',
     '[ "$__code" = "000" ] || [ "$__code" = "" ] && rm -f "$__f"',
     '} 2>/dev/null',
     'done',
@@ -241,7 +274,7 @@ function buildSetupScript(remotePort: number, authToken: string, tabId: string, 
     "[ -f ~/.claude.json ] || echo '{}' > ~/.claude.json",
     'fi',
     // Write tab ID + port to ~/.aiterm so tmux/new shells can source it
-    `printf 'export AITERM_TAB_ID=${tabId}\\nexport AITERM_PORT=${remotePort}\\n' > ~/.aiterm`,
+    `printf 'export MAITERM_TAB_ID=${tabId}\\nexport MAITERM_PORT=${remotePort}\\n' > ~/.aiterm`,
     // Install /maiterm skill on the remote (drop any legacy /aiterm one)
     'rm -rf ~/.claude/skills/aiterm',
     'mkdir -p ~/.claude/skills/maiterm',
@@ -268,7 +301,7 @@ function buildSetupScript(remotePort: number, authToken: string, tabId: string, 
 /**
  * Enable the MCP bridge for an SSH tab.
  * Spawns (or reuses) a reverse tunnel, writes lockfile + hooks via background SSH,
- * and injects AITERM_TAB_ID / AITERM_PORT env vars into the remote shell.
+ * and injects MAITERM_TAB_ID / MAITERM_PORT env vars into the remote shell.
  *
  * @param ptyId — if provided, injects env vars into the remote shell via PTY write.
  *   Leading space prevents the command from appearing in shell history.
@@ -310,11 +343,51 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
     const tunnelInfo = await commands.startSshTunnel(sshArgs, hostKey, tabId, localPort);
     logInfo(`SSH MCP bridge: tunnel to ${hostKey} on remote port ${tunnelInfo.remote_port}`);
 
-    // Kick off remote setup in parallel with env-var injection below. The injection
-    // only needs remote_port, which we already have — awaiting setup first delays the
-    // export landing in the remote shell by ~0.5-2s, which collides with the user's
-    // first keystrokes. Claude and Codex are SEPARATE background-SSH setups behind
-    // independent gates, so one failing can't break the other.
+    // Set trigger variables so auto-resume commands can interpolate them.
+    // %maitermTabId, %maitermPort for individual values, %maitermExport for the full export command.
+    setVariable(tabId, 'maitermTabId', tabId);
+    setVariable(tabId, 'maitermPort', String(tunnelInfo.remote_port));
+    setVariable(tabId, 'maitermExport', `export MAITERM_TAB_ID=${tabId} MAITERM_PORT=${tunnelInfo.remote_port}`);
+
+    // Inject MAITERM_TAB_ID and MAITERM_PORT into the remote shell FIRST — before
+    // building or kicking off the remote setup below. The injection only needs
+    // remote_port (already known), so NOTHING else should sit between tunnel-up
+    // and the PTY write: every await in between (getMaitermSkillScripts,
+    // buildCodexSetupScript, and the foreground probe) delays the export landing
+    // at the remote prompt and lets the user's first keystrokes race in front of
+    // it. That race is exactly what building the setup scripts here used to cause.
+    // Leading space suppresses shell history (bash HISTCONTROL=ignorespace, zsh
+    // HIST_IGNORE_SPACE). Re-check the foreground process right before writing:
+    // tunnel setup is async (~1-2s), and the ssh process may have exited in the
+    // meantime (quick user disconnect, one-shot command that slipped past the
+    // filter, etc.). Writing to a PTY whose foreground is no longer ssh dumps the
+    // export into the local shell. The probe is foreground-only (no lsof) to keep
+    // this last gate as thin as possible.
+    if (ptyId && injectedEnvPort.get(tabId) === tunnelInfo.remote_port) {
+      // Already injected for this port — a prior attempt's export is still live in
+      // the shell. Re-injecting on every failed-setup retry would spam the user's
+      // interactive session with `export MAITERM_TAB_ID=…` lines, once per prompt.
+      logInfo("SSH MCP bridge: env vars already injected for tab " + tabId + " — skipping re-injection");
+    } else if (ptyId) {
+      try {
+        if (!(await isRemoteShellForeground(ptyId))) {
+          logInfo("SSH MCP bridge: skipping env-var injection — ssh no longer foreground for tab " + tabId);
+        } else {
+          const envCmd = " export MAITERM_TAB_ID=" + tabId + " MAITERM_PORT=" + tunnelInfo.remote_port + "\n";
+          const bytes = Array.from(new TextEncoder().encode(envCmd));
+          await commands.writeTerminal(ptyId, bytes);
+          injectedEnvPort.set(tabId, tunnelInfo.remote_port);
+          logInfo("SSH MCP bridge: injected env vars into remote shell for tab " + tabId);
+        }
+      } catch (e) {
+        logError("SSH MCP bridge: failed to inject env vars: " + e);
+      }
+    }
+
+    // Now kick off remote setup(s) — these gate the 'connected' status flip but
+    // NOT the interactive experience, so they run after the injection above rather
+    // than in front of it. Claude and Codex are SEPARATE background-SSH setups
+    // behind independent gates, so one failing can't break the other.
     const setupPromises: Promise<void>[] = [];
     if (claudeOn) {
       const skillScripts = await commands.getMaitermSkillScripts();
@@ -326,34 +399,6 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
       // renderers (config.toml + hooks.json + shim + prompt), pointed at the tunnel port.
       const codexScript = await commands.buildCodexSetupScript(tunnelInfo.remote_port, authToken, tabId);
       setupPromises.push(commands.sshRunSetup(sshArgs, codexScript));
-    }
-
-    // Set trigger variables so auto-resume commands can interpolate them.
-    // %aitermTabId, %aitermPort for individual values, %aitermExport for the full export command.
-    setVariable(tabId, 'aitermTabId', tabId);
-    setVariable(tabId, 'aitermPort', String(tunnelInfo.remote_port));
-    setVariable(tabId, 'aitermExport', `export AITERM_TAB_ID=${tabId} AITERM_PORT=${tunnelInfo.remote_port}`);
-
-    // Inject AITERM_TAB_ID and AITERM_PORT into the remote shell so hooks can read them.
-    // Leading space suppresses shell history (bash HISTCONTROL=ignorespace, zsh HIST_IGNORE_SPACE).
-    // Re-check the foreground process right before writing: tunnel setup is async
-    // (~1-2s), and the ssh process may have exited in the meantime (quick user
-    // disconnect, one-shot command that slipped past the filter, etc.). Writing to a
-    // PTY whose foreground is no longer ssh dumps the export into the local shell.
-    if (ptyId) {
-      try {
-        const info = await commands.getPtyInfo(ptyId);
-        if (!info.foreground_command || !isInteractiveSshSession(info.foreground_command)) {
-          logInfo('SSH MCP bridge: skipping env-var injection — ssh no longer foreground for tab ' + tabId);
-        } else {
-          const envCmd = ' export AITERM_TAB_ID=' + tabId + ' AITERM_PORT=' + tunnelInfo.remote_port + '\n';
-          const bytes = Array.from(new TextEncoder().encode(envCmd));
-          await commands.writeTerminal(ptyId, bytes);
-          logInfo('SSH MCP bridge: injected env vars into remote shell for tab ' + tabId);
-        }
-      } catch (e) {
-        logError('SSH MCP bridge: failed to inject env vars: ' + e);
-      }
     }
 
     // Wait for remote setup(s) to finish before flipping to 'connected'.
@@ -400,6 +445,7 @@ export async function disableBridge(tabId: string): Promise<void> {
 
   cleanupListener(tabId);
   bridgeStates.delete(tabId);
+  injectedEnvPort.delete(tabId);
 
   try {
     await commands.detachSshTunnel(bridge.hostKey, tabId);

@@ -11,7 +11,7 @@ Claude Code CLI ←→ WebSocket/SSE ←→ axum server (Rust) ←→ Tauri even
 **Backend** (`src-tauri/src/claude_code/`):
 
 - `server.rs` — axum router with WebSocket (`/`) and SSE (`/sse` + `/message`) endpoints. Random port (10000–65535), 32-char auth token.
-- `protocol.rs` — JSON-RPC request/response types, `tool_list_response()` (46 tools), `initialize_response()`
+- `protocol.rs` — JSON-RPC request/response types, `tool_list_response()` (50 tools), `initialize_response()`
 - `lockfile.rs` — writes `~/.claude/ide/{port}.lock` for discovery, registers `mcpServers.maiterm` (or `maiterm-dev`) in `~/.claude.json` (stripping the legacy `aiterm`/`aiterm-dev` key on write — rebrand migration), registers hooks in `~/.claude/settings.json`
 
 **Frontend** (`src/lib/stores/claudeCode.svelte.ts`):
@@ -72,6 +72,76 @@ Claude Code CLI ←→ WebSocket/SSE ←→ axum server (Rust) ←→ Tauri even
 | listTopics | Mesh only: conversation topics — id, label, state, owner, participants, turn count |
 | startTopic | Mesh only: start/reuse a topic (caller becomes owner); returns the topic id |
 | completeTopic | Mesh only: owner marks a topic complete; signals participants, rejects further sends |
+| bindCommsThread | Comms (/maiterm resolve): bind this tab to a Mattermost thread by permalink; returns the thread as a [REPORT]-tagged transcript, the bot's `bot_username`, and records `Tab.comms_binding`. Backend-only |
+| readCommsThread | Comms: re-fetch the full bound thread on demand (only @mentions of the bot are auto-injected; the rest is read-on-demand). Backend-only |
+| postCommsReply | Comms: post Mattermost markdown to the bound thread; `resolve: true` clears the binding after posting. Backend-only |
+| unbindCommsThread | Comms: clear the tab's thread binding without posting (idempotent). Backend-only |
+
+## Comms Integration (/maiterm resolve)
+
+Binds a tab to an external chat thread (Mattermost; `provider` field is the Slack seam) so an
+agent can pull a bug-report thread as a work item and post a resolution back. Module:
+`src-tauri/src/comms/` (thin bot-token REST client + permalink parsing + the reply watcher).
+
+- **Config**: `Preferences.comms_provider` / `comms_server_url` / `comms_bot_token` (single
+  account per install; set in Preferences → Integrations, test via the `comms_test_connection`
+  command). **Invariant: `comms_bot_token` must never be added to `preference_meta()`** — that
+  omission is what keeps the token unreadable via getPreferences/setPreference.
+- **Operator instructions**: `Preferences.comms_instructions` — free-text operator guidance for
+  how the agent communicates on threads. Delivered as `operator_instructions` in the
+  bindCommsThread / readCommsThread results (governs communication only; the authority/safety
+  rules are not overridable by it). Also absent from `preference_meta()` so no chat message can
+  rewrite the agent's harness.
+- **Bindings**: `Tab.comms_bindings: Vec<CommsBinding>` (provider, server_url snapshot,
+  channel_id, root_id, permalink, last_seen_create_at cursor, bound_at) — a tab can work several
+  threads at once (the skill has the agent fan out subagents and pass `root_id` explicitly on
+  every comms tool call when more than one is bound; the tools error on ambiguity). Legacy
+  single `comms_binding` is drained into the list by a load migration in persistence.rs.
+  Persisted — survives restart, dies with the tab; never cloned by tab/workspace duplication
+  (one thread = one tab, or the watcher would double-inject). A thread bound to one tab refuses
+  to bind to another.
+- **Chat monitoring (summons)**: `Tab.comms_monitor` (`CommsMonitor{channels}`) — operator
+  right-clicks a tab → "Enable chat monitoring…" → `CommsMonitorModal` (channels the bot is a
+  member of, via `comms_list_bot_channels`; persisted via `set_tab_comms_monitor`, new channels'
+  cursors start at now). The watcher's summon phase polls each monitored channel
+  (`channel_posts_since`); an @bot mention in an UNBOUND thread by a user on
+  `comms_pickup_users` (or an authorized user) auto-binds that thread to the monitor tab and
+  injects a `[Mattermost pickup …]` message with the full transcript. Post-by-post cursor walk
+  queues naturally: at capacity (`MAX_TAB_BINDINGS` = 3), busy, or offline, the cursor HOLDS at
+  the summon (one-time in-thread "at capacity" reply + operator `comms-summon` notification) and
+  retries when the tab frees; unauthorized mentions notify the operator only, nothing in-thread.
+  Pickup users are summon-only — their messages stay [support]-tier during the work.
+- **Watcher** (`comms::watcher_loop`, spawned unconditionally in `lib.rs` setup): every 5s scans
+  tabs for bindings, fetches each bound thread, and injects **only posts that @mention the bot's
+  own username** (`mentions_username`, cursor-newer, not-the-bot, non-empty) into the tab's PTY
+  via `mailink::inject_text` as one bracketed paste per tick. Ambient thread chatter is never
+  pushed — it's read-on-demand via `readCommsThread`; the cursor advances past it so it isn't
+  re-scanned. Holds (cursor unadvanced) while the tab has no live agent session or PTY — and
+  rings the operator: an undeliverable @bot reply emits `comms-reply-pending` (handled in
+  `+layout.svelte` → `notificationDispatch`, deep-links to the tab), deduped per newest post so
+  a held burst notifies once, re-armed after a successful delivery. Resuming the session
+  delivers the held replies on the next tick. Exponential per-binding backoff on errors; auth
+  failures logged once per config fingerprint.
+- **Authority tiers**: each injected message is stamped `[AUTHORIZED]` or `[support]`. Authorized
+  = author's username is in `Preferences.comms_authorized_users` (matched case-insensitively);
+  those messages carry full operator authority. Everyone else is scoped (investigate + reply
+  only; destructive/scope-expanding actions need operator confirmation — enforced by SKILL.md
+  framing, not a hard sandbox, since the agent runs in a PTY maiTerm can't intercept).
+  **`comms_authorized_users` is deliberately absent from `preference_meta()`** so no chat message
+  can edit who is trusted — only the human via Preferences → Integrations.
+- **Operator kill switch**: a bound tab shows a green `@` indicator in `TerminalTabs.svelte`; its
+  context menu gains "End thread binding" → `clear_tab_comms_binding` command, which clears
+  `Tab.comms_binding` directly (no agent involvement, posts nothing). The watcher re-reads
+  bindings each tick, so forwarding stops within ~5s. This is the human's override when the agent
+  is stuck/misbehaving — severing never depends on the agent cooperating.
+- **Async dispatch**: the comms tools made `handle_backend_tool` async (awaited at its single
+  call site in `process_message`). New arms must never hold a lock guard across an await.
+- **Skill**: the `resolve` section of `resources/maiterm-skill/SKILL.md` is the agent-facing
+  orchestration (silent-while-working, one `**@Support:**`/`**@Dev:**`-addressed question when
+  blocked, two-part resolution post: plain-language for support staff, `---`, technical bullets
+  for devs). Posting the resolution does NOT unbind — the thread stays bound until a human
+  confirms it's resolved; only then does the agent close it (`postCommsReply` with `resolve:true`,
+  which posts-and-clears). A still-broken reply keeps the binding live so work continues.
 
 ## Agent Bridge (agent-to-agent bridge)
 
@@ -186,8 +256,7 @@ when the tab is in a mesh workspace, else the 1:1 `agentBridgeStore`.
 Hooks registered in `~/.claude/settings.json` on MCP server startup, cleaned up on app exit and stale lockfile sweep.
 
 **Hooks registered:**
-
-- `SessionStart` (command): Echoes tab ID into Claude's context. Gated on `$AITERM_PORT` matching server port (prevents dev/prod cross-talk). Output appears collapsed in TUI ("Ran 1 start hook") but injected into model context as system-reminder.
+- `SessionStart` (command): Echoes tab ID into Claude's context. Gated on `$MAITERM_PORT` matching server port (prevents dev/prod cross-talk). Output appears collapsed in TUI ("Ran 1 start hook") but injected into model context as system-reminder.
 - `SessionStart` (HTTP): POST to `/hooks` with `{session_id, cwd, source, model}`. Registers session→tab mapping in `AppState.agent_sessions`.
 - `SessionEnd` (HTTP): Removes session from mapping.
 - `Notification` (HTTP): Receives Claude Code notification events.
@@ -218,9 +287,8 @@ key; mint a per-request id instead so distinct agents can't merge.
 **SSE reconnect recovery:** SSE connections over SSH tunnels flap frequently (disconnect/reconnect every few seconds). Each reconnect creates a new SSE session ID, clearing the old `connection_tabs` entry. Without recovery, every tool call after a reconnect fails with "Session not initialized." Fix: when a tool call arrives with no connection affinity, `agent_sessions` is checked for active sessions. Recovery only binds when unambiguous — exactly one active session, or (with multiple bridged agents) exactly one of them currently lacks a live connection. With 2+ ambiguous candidates it declines and requires an explicit `initSession`, because guessing could bind one agent's call to another agent's tab (the same class of cross-agent corruption as the shared-key bug above).
 
 **Dev/prod isolation:**
-
-- PTY env vars: `AITERM_TAB_ID` (tab ID), `AITERM_PORT` (server port) — set at spawn in `pty/manager.rs`
-- Command hook gates on `$AITERM_PORT` match
+- PTY env vars: `MAITERM_TAB_ID` (tab ID), `MAITERM_PORT` (server port) — set at spawn in `pty/manager.rs`
+- Command hook gates on `$MAITERM_PORT` match
 - MCP tool guard in `server.rs` rejects `tabId` that doesn't exist in this instance
 - MCP instructions specify server name (`maiterm` vs `maiterm-dev`)
 
@@ -236,7 +304,9 @@ key; mint a per-request id instead so distinct agents can't merge.
   - **Single source:** both scripts live in `src-tauri/resources/maiterm-skill/bin/`, baked into the binary via `include_str!` (`STATUSLINE_SETUP_SCRIPT` / `STATUSLINE_PAYLOAD_SCRIPT`) and exposed to the frontend via the `get_maiterm_skill_scripts` command so the remote (SSH) install reuses the exact same bytes.
 - **Single SKILL.md source:** the `/maiterm` skill body lives once at `src-tauri/resources/maiterm-skill/SKILL.md`, baked in via `include_str!` (`MAITERM_SKILL_MD` in `lockfile.rs`) for the local install and shipped to the remote (SSH) install through `get_maiterm_skill_scripts` → `MaitermSkillScripts.skill_md` (consumed by `sshMcpBridge.svelte.ts::buildSetupScript`). Edit the resource file only; both installs track it. The trailing `$ARGUMENTS` is the slash-command placeholder.
 
-**Stale hook cleanup:** On startup, `write_hook_settings()` sweeps hooks whose port has no live lockfile. `cleanup_stale_lockfiles()` also removes hooks for dead servers by auth token. Port extraction handles both URL format (`127.0.0.1:NNNNN`) and legacy env var format (`AITERM_PORT = "NNNNN"`).
+**Stale hook cleanup:** On startup, `write_hook_settings()` sweeps hooks whose port has no live lockfile. `cleanup_stale_lockfiles()` also removes hooks for dead servers by auth token. Port extraction handles both URL format (`127.0.0.1:NNNNN`) and the command-hook env-var format (`MAITERM_PORT = "NNNNN"`, whose marker substring also matches legacy `AITERM_PORT` hooks).
+
+**Hook self-heal:** the 30s reassert loop (`reassert_if_drifted`) covers BOTH `~/.claude.json` (`ensure_mcp_settings`) and the hooks in `~/.claude/settings.json` (`ensure_hook_settings`, gated on `claude_hooks` pref). Both files are co-owned: the `claude` CLI rewrites them, and an SSH-bridge setup script that lands in a local shell clobbers them with remote-tunnel ports (dead locally → ECONNREFUSED on every hook). `build_our_hooks()` is the single definition shared by install and drift check. Drift also includes **stale foreign maiTerm entries** (hook or allowlist ports with no live lockfile) — since the sweep lives in `write_hook_settings()`, which only runs on drift, `hooks_are_current()` must return false when a dead foreign port is present, or every session dials it forever (ECONNREFUSED on every hook event). The canonical source of such entries: **this machine was the ssh target of a peer maiTerm's bridge** — the peer's remote setup legitimately writes hooks for its reverse-tunnel port plus a `pid: 0` lockfile here; when the tunnel dies those hooks go dead. Lockfile liveness must go through `lockfile_is_live()`: pid > 0 → process check; pid 0 (tunnel lockfile — the listener is sshd, not a process we can see) → TCP probe of the port. Never call `is_process_alive(0)`: `kill(0, 0)` signals our own process group and always succeeds, which made tunnel lockfiles immortal.
 
 **Auto-open notes panel:** `claudeCode.svelte.ts` auto-opens notes panel when MCP tools write tab notes or workspace notes, switching scope as appropriate.
 
@@ -263,22 +333,21 @@ Remote Claude Code → discovers ~/.claude/ide/{port}.lock → connects through 
 
 **Auto-enable:** SSH sessions detected reactively via terminal title changes — when a title change fires, `getPtyInfo()` checks for a foreground SSH command and enables/disables the bridge accordingly. For restore/clone SSH: polls `getPtyInfo()` every 500ms until SSH is detected (max 15s). `enableBridge` sets a `'pending'` state immediately to prevent race conditions from concurrent title-change calls.
 
-**Remote setup:** Lockfile, `~/.claude.json`, hooks (`~/.claude/settings.json`), skill (`~/.claude/skills/maiterm/SKILL.md` + `bin/` statusline helper scripts, fetched via `get_maiterm_skill_scripts`), and `~/.aiterm` env file are written via a separate background SSH connection (`ssh_run_setup`), **not** through the user's interactive PTY. This prevents command injection into running programs (e.g. Claude Code). The setup script uses shell variables for JSON data to avoid nested quoting issues, and pipes JSON to python3/jq via stdin. After setup, `AITERM_TAB_ID` and `AITERM_PORT` env vars are injected into the remote shell via PTY write (leading space suppresses shell history).
+**Remote setup:** Lockfile, `~/.claude.json`, hooks (`~/.claude/settings.json`), skill (`~/.claude/skills/maiterm/SKILL.md` + `bin/` statusline helper scripts, fetched via `get_maiterm_skill_scripts`), and `~/.aiterm` env file are written via a separate background SSH connection (`ssh_run_setup`), **not** through the user's interactive PTY. This prevents command injection into running programs (e.g. Claude Code). The setup script uses shell variables for JSON data to avoid nested quoting issues, and pipes JSON to python3/jq via stdin. After setup, `MAITERM_TAB_ID` and `MAITERM_PORT` env vars are injected into the remote shell via PTY write (leading space suppresses shell history).
 
-**`~/.aiterm` env file:** Written during bridge setup with `export AITERM_TAB_ID=... AITERM_PORT=...`. Sourced as a fallback by the SessionStart hook when `$AITERM_TAB_ID` is empty (e.g. inside tmux where env vars weren't inherited). Users can manually `source ~/.aiterm` in any shell. Overwritten on each bridge connect — self-correcting for stale values.
+**`~/.aiterm` env file:** Written during bridge setup with `export MAITERM_TAB_ID=... MAITERM_PORT=...`. Sourced as a fallback by the SessionStart hook when `$MAITERM_TAB_ID` is empty (e.g. inside tmux where env vars weren't inherited). Users can manually `source ~/.aiterm` in any shell. Overwritten on each bridge connect — self-correcting for stale values.
 
 **Context menu items (SSH tabs with active bridge):**
-
-- "Inject maiTerm Env Vars" — re-writes `export AITERM_TAB_ID=... AITERM_PORT=...` to the PTY for the current shell (useful after tmux attach, sudo, su)
+- "Inject maiTerm Env Vars" — re-writes `export MAITERM_TAB_ID=... MAITERM_PORT=...` to the PTY for the current shell (useful after tmux attach, sudo, su)
 - "Install MCP for Current User" — writes the full setup script (lockfile, MCP, hooks, skill) to the PTY, executing as the current user. Needed after `sudo -i` or `su -l otheruser` where `~/` changed but the tunnel is still accessible on localhost.
 
-**Remote hooks:** All hook events (SessionStart, SessionEnd, Notification, Stop, UserPromptSubmit, PreToolUse, PostToolUse, PreCompact) are registered on the remote with HTTP hooks pointing to `127.0.0.1:{remotePort}/hooks`. These tunnel back through the SSH reverse tunnel to the local MCP server's hooks handler. A command hook on SessionStart reads `$AITERM_TAB_ID` (from env var injection) and echoes the tab ID into Claude's context. Hooks require python3 on the remote for the settings.json merge.
+**Remote hooks:** All hook events (SessionStart, SessionEnd, Notification, Stop, UserPromptSubmit, PreToolUse, PostToolUse, PreCompact) are registered on the remote with HTTP hooks pointing to `127.0.0.1:{remotePort}/hooks`. These tunnel back through the SSH reverse tunnel to the local MCP server's hooks handler. A command hook on SessionStart reads `$MAITERM_TAB_ID` (from env var injection) and echoes the tab ID into Claude's context. Hooks require python3 on the remote for the settings.json merge.
 
-**Remote cleanup:** Stale lockfile detection on reconnect tests dead ports via `/dev/tcp/localhost/{port}`. No EXIT trap (background SSH has no persistent shell on remote). Stale hooks with dead port URLs are harmless (fail silently) and cleaned up on next bridge setup.
+**Remote cleanup:** Stale lockfile detection on reconnect tests dead ports via `/dev/tcp/localhost/{port}`. No EXIT trap (background SSH has no persistent shell on remote). Stale hooks with dead port URLs are NOT silent — Claude Code prints `hook error / connect ECONNREFUSED` in every session until they're removed. On an ordinary remote they linger until the next bridge setup rewrites them; when the "remote" is itself a maiTerm machine, its own hook self-heal sweeps them (tunnel lockfiles have `pid: 0`, so liveness is the port probe in `lockfile_is_live()`).
 
 **Port allocation:** `ssh -v -R 0:...` lets SSH pick a free remote port. The `-v` flag is required because ControlMaster mux clients print nothing without it. Port parsed from both stdout and stderr (direct connections use stderr, mux clients use stderr with `-v`). Uses `tokio::select!` to read both streams concurrently.
 
-**ControlMaster mux:** Tunnel and setup SSH commands do **not** use `-o ControlMaster=no` — this lets them multiplex over the user's existing authenticated socket (free auth for password/passphrase users). Mux clients exit immediately after setup (the master holds the forwarding), so the background process monitor only removes tunnel state on error exits, not clean exits.
+**ControlMaster mux:** The tunnel is the **master of a maiTerm-owned socket** (`~/.maiterm/cm[-dev]/<host_key>.sock`, see `cm_socket_path` in `ssh_tunnel.rs`) — never of the user's `~/.ssh/master-*` namespace (a maiTerm connection owning the user's socket once broke their own `ssh <host>` when it died: "Session open refused by peer"). No `ControlPersist`, so the socket lives and dies with the tunnel process we track by pid; ssh unlinks it on master exit and `cleanup_cm_socket` covers kills/crashes, plus a stale-file sweep before each spawn (a leftover file makes `ControlMaster=yes` silently degrade to non-mux). Short-lived maiTerm clients — SSH transcript-mirror fetches (`mailink/mirror.rs`), future scp image sends — mux over it with `ControlMaster=no` for ~tens-of-ms re-auth-free commands, falling back to independent BatchMode connections when the socket is dead. Setup commands (`ssh_run_setup`) stay fully independent (`ControlPath=none`). Windows: no ControlMaster support — the tunnel runs as a plain independent connection.
 
 **Bridge status UI:** Reactive `$state` Map in `sshMcpBridge.svelte.ts` drives a bolt icon in TerminalTabs (green=connected, dim/fg-dim=pending, dim=failed). Failure dispatches an in-app notification via `notificationDispatch`.
 

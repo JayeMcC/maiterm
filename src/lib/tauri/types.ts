@@ -75,6 +75,42 @@ export interface Tab {
   /** maiLink exception: when true, hold this tab back from maiLink even while the
    *  "make all tabs available" preference is on (ignored in designate-only mode). */
   mailink_excluded?: boolean;
+  /** Comms thread bindings (/maiterm resolve + chat-monitor pickups): the watcher
+   *  forwards each bound thread's @bot replies into this tab's agent session. */
+  comms_bindings?: CommsBinding[];
+  /** Chat monitoring: this tab picks up @bot summons from the listed channels. */
+  comms_monitor?: CommsMonitor | null;
+}
+
+/** A tab's binding to an external chat thread (Mattermost) — see /maiterm resolve. */
+export interface CommsBinding {
+  provider: string;
+  server_url: string;
+  channel_id: string;
+  root_id: string;
+  permalink: string;
+  last_seen_create_at: number;
+  bound_at: number;
+}
+
+/** Chat-monitoring config for a tab (operator-designated pickup target). */
+export interface CommsMonitor {
+  channels: CommsMonitorChannel[];
+}
+
+export interface CommsMonitorChannel {
+  id: string;
+  name: string;
+  team_name: string;
+  last_seen_create_at: number;
+}
+
+/** A channel the bot is a member of (comms_list_bot_channels). */
+export interface BotChannel {
+  id: string;
+  display_name: string;
+  team_name: string;
+  team_display_name: string;
 }
 
 export interface Pane {
@@ -266,6 +302,18 @@ export interface Preferences {
   mailink_expose_all?: boolean;
   /** maiLink doorbell: OPTIONAL override for the shared push relay (self-hosters). Empty ⇒ built-in default. */
   mailink_relay_url?: string | null;
+  /** Comms integration provider ("mattermost"; Slack may follow). */
+  comms_provider?: string;
+  /** Comms server base URL (e.g. https://chat.example.com). Empty/null = not configured. */
+  comms_server_url?: string | null;
+  /** Comms bot bearer token. Stored raw in state (no keychain layer); never exposed to MCP tools. */
+  comms_bot_token?: string | null;
+  /** Comms usernames whose thread @mentions carry full operator authority (others are scoped). */
+  comms_authorized_users?: string[];
+  /** Operator's free-text guidance for how the agent communicates on chat threads. */
+  comms_instructions?: string | null;
+  /** Comms usernames allowed to summon the bot from monitored channels (support-tier authority). */
+  comms_pickup_users?: string[];
 }
 
 /** QR payload a phone scans to pair (docs/mailink-protocol.md §3.2). The phone dials

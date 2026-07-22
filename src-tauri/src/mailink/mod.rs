@@ -16,7 +16,7 @@ use std::sync::Arc;
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
-        Path, Query, State,
+        DefaultBodyLimit, Path, Query, State,
     },
     http::{header, HeaderMap, StatusCode},
     response::{IntoResponse, Response},
@@ -32,6 +32,7 @@ use crate::state::app_state::AgentSessionState;
 use crate::state::workspace::TabType;
 use crate::state::{AgentRuntime, AppState, MailinkDevice};
 
+pub(crate) mod mirror;
 pub(crate) mod transcript;
 
 /// Default LAN port. The pairing QR carries the actual host:port, so this is just a
@@ -199,6 +200,7 @@ pub fn start(app_state: &Arc<AppState>) -> Result<(), String> {
         return Ok(()); // already running
     }
     let cfg = prepare(app_state).ok_or("maiLink bridge failed to initialize (see logs)")?;
+    mirror::prune_stale_shadows();
     let st = Arc::clone(app_state);
     tauri::async_runtime::spawn(async move {
         serve(st, cfg).await;
@@ -249,6 +251,34 @@ pub fn prepare(app_state: &Arc<AppState>) -> Option<MailinkConfig> {
     })
 }
 
+/// Max body for POST /chats/{tabId}/message. Sized to the published 6-inline-image contract with
+/// headroom — axum's 2 MiB default rejects a realistic batch at the extractor, before the handler
+/// runs (no log line, generic failure on the phone).
+const MAX_MESSAGE_BODY_BYTES: usize = 32 * 1024 * 1024;
+
+/// The v1 route table. Split out of `serve` so tests can exercise the real router (notably the
+/// per-route body limit) without standing up TLS or a listener.
+fn build_router(api: ApiState) -> Router {
+    Router::new()
+        .route("/mailink/v1/heartbeat", get(heartbeat))
+        .route("/mailink/v1/chats", get(chats_list))
+        .route("/mailink/v1/chats/{tab_id}", get(chat_detail))
+        .route("/mailink/v1/chats/{tab_id}/context", get(chat_context))
+        // Image sends carry base64 inline (mailink-protocol §12), so this is the one route that
+        // outgrows axum's 2 MiB default: 6 images × ~750 KB × 1.37 base64 inflation ≈ 6 MB worst
+        // case. 32 MiB leaves real headroom; every other route keeps the tight default.
+        .route(
+            "/mailink/v1/chats/{tab_id}/message",
+            post(post_message).layer(DefaultBodyLimit::max(MAX_MESSAGE_BODY_BYTES)),
+        )
+        .route("/mailink/v1/chats/{tab_id}/respond", post(post_respond))
+        .route("/mailink/v1/chats/{tab_id}/interrupt", post(post_interrupt))
+        .route("/mailink/v1/ws", get(ws_handler))
+        .route("/mailink/v1/pair", post(post_pair))
+        .route("/mailink/v1/push-register", post(post_push_register))
+        .with_state(api)
+}
+
 /// Background task: install the rustls crypto provider, build the router, and serve over TLS.
 pub async fn serve(app_state: Arc<AppState>, cfg: MailinkConfig) {
     // rustls 0.23 needs a process-default crypto provider before any TLS config is built.
@@ -270,18 +300,7 @@ pub async fn serve(app_state: Arc<AppState>, cfg: MailinkConfig) {
         fingerprint: cfg.fingerprint.clone(),
         dev_token: cfg.dev_token.clone(),
     };
-    let router = Router::new()
-        .route("/mailink/v1/heartbeat", get(heartbeat))
-        .route("/mailink/v1/chats", get(chats_list))
-        .route("/mailink/v1/chats/{tab_id}", get(chat_detail))
-        .route("/mailink/v1/chats/{tab_id}/context", get(chat_context))
-        .route("/mailink/v1/chats/{tab_id}/message", post(post_message))
-        .route("/mailink/v1/chats/{tab_id}/respond", post(post_respond))
-        .route("/mailink/v1/chats/{tab_id}/interrupt", post(post_interrupt))
-        .route("/mailink/v1/ws", get(ws_handler))
-        .route("/mailink/v1/pair", post(post_pair))
-        .route("/mailink/v1/push-register", post(post_push_register))
-        .with_state(api);
+    let router = build_router(api);
 
     let tls = match RustlsConfig::from_pem(cfg.cert_pem.into_bytes(), cfg.key_pem.into_bytes()).await
     {
@@ -376,7 +395,10 @@ struct MessageBody {
 
 /// One inline image from the phone. `data` is base64 with NO `data:` prefix; `mime` carries the
 /// type separately ("image/png" | "image/jpeg" | "image/webp"); `name` is display/debug only. The
-/// phone pre-downscales each to <=1568px and caps 6/message, so payloads are ~<500KB each.
+/// phone pre-downscales each to <=1568px and caps 6/message. Per-image size varies a lot by
+/// source — JPEG photos land under ~500 KB, but PNG screenshots have been seen at ~750 KB, and
+/// base64 inflates ~1.37× on top. Budget by TOTAL bytes, not count: the real ceiling is
+/// MAX_MESSAGE_BODY_BYTES on the route, and exceeding it is a 413 from the extractor.
 #[derive(serde::Deserialize)]
 struct ImageInput {
     data: String,
@@ -401,25 +423,52 @@ async fn post_message(
     }
     let pty = pty_for_tab(&s.app, &tab_id).ok_or(StatusCode::CONFLICT)?;
 
-    // Image attach: v1 supports LOCAL Claude Code only. Gate BEFORE touching the PTY and return a
-    // machine-readable `status:"unsupported"` (HTTP 200) so the phone reframes it as an in-app
-    // notice — never a "do it on the desktop" deferral. Text-only messages are unchanged for all
-    // runtimes.
+    // Image attach: Claude only. Gate BEFORE touching the PTY and return a machine-readable
+    // `status:"unsupported"` (HTTP 200) so the phone reframes it as an in-app notice — never a
+    // "do it on the desktop" deferral. Text-only messages are unchanged for all runtimes.
     if !body.images.is_empty() {
         if runtime_for_tab(&s.app, &tab_id) != Some(AgentRuntime::Claude) {
             return Ok(Json(json!({ "status": "unsupported", "reason": "unsupported_runtime",
                 "detail": "This agent can't accept images yet." })));
         }
-        // foreground_command is Some only for a live ssh/mosh: the image temp files are LOCAL paths
-        // the remote claude can't see, so scope v1 to local sessions.
+        // foreground_command is Some only for a live ssh/mosh: the temp files are LOCAL paths the
+        // remote claude can't see. With a live bridge tunnel we stage the bytes on the remote host
+        // over its mux socket and type THOSE paths; no tunnel (mosh, bridge down/disabled) or a
+        // failed transfer degrades to the same `unsupported_ssh` the app already renders.
         let is_ssh = crate::pty::get_pty_info(&s.app, &pty)
             .map(|i| i.foreground_command.is_some())
             .unwrap_or(false);
-        if is_ssh {
-            return Ok(Json(json!({ "status": "unsupported", "reason": "unsupported_ssh",
-                "detail": "Images aren't supported over SSH sessions yet." })));
-        }
-        inject_images_and_text(&s.app, &pty, &body)
+        let paths = if is_ssh {
+            let tunnel = {
+                let tunnels = s.app.ssh_tunnels.read();
+                tunnels
+                    .values()
+                    .find(|t| t.tab_ids.contains(&tab_id))
+                    .map(|t| (t.host_key.clone(), t.ssh_args.clone()))
+            };
+            let Some((host_key, ssh_args)) = tunnel else {
+                return Ok(Json(json!({ "status": "unsupported", "reason": "unsupported_ssh",
+                    "detail": "Images need the maiTerm SSH bridge, which isn't connected for this tab." })));
+            };
+            match stage_images_remote(&host_key, &ssh_args, &body.images).await {
+                Ok(paths) => paths,
+                Err(e) => {
+                    log::warn!("[maiLink] remote image staging failed for tab {tab_id}: {e}");
+                    return Ok(Json(json!({ "status": "unsupported", "reason": "unsupported_ssh",
+                        "detail": "Couldn't stage the images on the remote host." })));
+                }
+            }
+        } else {
+            let mut paths = Vec::with_capacity(body.images.len());
+            for img in &body.images {
+                paths.push(save_image_temp(&img.data, &img.mime).map_err(|e| {
+                    log::warn!("[maiLink] local image staging failed for tab {tab_id}: {e}");
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?);
+            }
+            paths
+        };
+        inject_image_paths_and_text(&s.app, &pty, &paths, &body)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         return Ok(Json(json!({ "status": "delivered", "msg_id": format!("m_{}", now_ms()) })));
@@ -716,12 +765,21 @@ async fn ws_event_loop(mut socket: WebSocket, s: ApiState) {
     // A faster, mtime-gated ticker for per-turn message streaming: near-instant delivery without
     // paying the full chat rebuild (build_chats) at this cadence.
     let mut msg_ticker = tokio::time::interval(std::time::Duration::from_millis(400));
+    // SSH transcript mirror keep-fresh: hook events drive most fetches, but a long assistant
+    // turn appends JSONL with no hook until Stop — while a phone is actually watching, pull
+    // the delta on a slow tick too. schedule_fetch coalesces, so ticks over an idle session
+    // cost one no-op ssh mux command; non-SSH tabs are filtered out inside.
+    let mut mirror_ticker = tokio::time::interval(std::time::Duration::from_secs(5));
     loop {
         tokio::select! {
             _ = msg_ticker.tick() => {
                 if stream_new_messages(&mut socket, &s.app, &mut seen, &mut mtimes).await.is_err() {
                     return;
                 }
+            }
+            _ = mirror_ticker.tick() => {
+                let tabs: Vec<String> = designated_tabs(&s.app).into_iter().map(|t| t.tab_id).collect();
+                mirror::refresh_tabs(&s.app, &tabs);
             }
             _ = ticker.tick() => {
                 let chats = build_chats(&s.app);
@@ -906,7 +964,7 @@ fn attention_event(app: &AppState, tab_id: &str, state: &str, title: &str) -> Va
 /// Inject text into a PTY: bracketed paste, then (if submit) a deferred CR — the same
 /// convention as `agentPrompt.ts::bracketedPasteSubmit`, so a multi-line message stays one
 /// prompt and submits cleanly into the agent's TUI.
-async fn inject_text(
+pub(crate) async fn inject_text(
     app: &Arc<AppState>,
     pty_id: &str,
     text: &str,
@@ -928,25 +986,26 @@ async fn inject_text(
 /// the desktop drag-drop path's 200ms inter-path delay, with a little headroom.
 const IMAGE_SETTLE_MS: u64 = 220;
 
-/// Inject one or more images plus an optional caption into a LOCAL Claude Code TUI, then submit
-/// once for the whole batch. Mechanism (matches the desktop drag-drop/clipboard path and Claude
-/// Code's image-attach contract, confirmed against current CC behavior): write each image to a
-/// temp file with a recognized extension, then type its BARE ABSOLUTE PATH — raw, NOT wrapped in
+/// Type pre-staged image paths plus an optional caption into a Claude Code TUI, then submit once
+/// for the whole batch. The paths must already exist on the host where claude RUNS (local temp
+/// files, or remote-staged for SSH tabs — staging happens before any typing so a failed transfer
+/// never leaves half a batch in the prompt). Mechanism (matches the desktop drag-drop/clipboard
+/// path and CC's image-attach contract): type each BARE ABSOLUTE PATH — raw, NOT wrapped in
 /// bracketed paste (wrapping defeats CC's path→image detection) — followed by a space, pausing
 /// between images so the TUI attaches each before the next arrives. Then paste the caption via the
 /// normal bracketed-paste path and submit with CR. CC reads the files at submit time; we leave the
-/// temp files for the OS to reap (small; deleting risks racing that read).
-async fn inject_images_and_text(
+/// temp files for the OS tmp reaper (small; deleting risks racing that read).
+async fn inject_image_paths_and_text(
     app: &Arc<AppState>,
     pty_id: &str,
+    paths: &[String],
     body: &MessageBody,
 ) -> Result<(), String> {
-    for (i, img) in body.images.iter().enumerate() {
-        let path = save_image_temp(&img.data, &img.mime)?;
+    for (i, path) in paths.iter().enumerate() {
         if i > 0 {
             tokio::time::sleep(std::time::Duration::from_millis(IMAGE_SETTLE_MS)).await;
         }
-        let mut buf = path.into_bytes();
+        let mut buf = path.clone().into_bytes();
         buf.push(b' '); // trailing space delimits the path from the next path / the caption
         crate::pty::write_pty(app, pty_id, &buf)?;
     }
@@ -956,25 +1015,112 @@ async fn inject_images_and_text(
     inject_text(app, pty_id, &body.text, body.submit).await
 }
 
-/// Decode a base64 image and write it to a temp file whose extension Claude Code recognizes as an
-/// image (it sniffs by extension). Returns the absolute path. Sibling of
-/// commands::editor::save_clipboard_image; kept local so the maiLink path has no UI-command dep.
-fn save_image_temp(data_base64: &str, mime: &str) -> Result<String, String> {
-    let bytes = base64::engine::general_purpose::STANDARD
-        .decode(data_base64.as_bytes())
-        .map_err(|e| format!("invalid image base64: {e}"))?;
-    let ext = match mime {
+/// The temp-file extension for an image mime. Claude Code sniffs images BY EXTENSION, so unknown
+/// mimes default to a recognized one rather than failing the attach.
+fn image_ext(mime: &str) -> &'static str {
+    match mime {
         "image/png" => "png",
         "image/jpeg" => "jpg",
         "image/webp" => "webp",
         "image/gif" => "gif",
-        _ => "png", // unknown/absent mime: default to a recognized extension so CC still attaches.
-    };
-    let path =
-        std::env::temp_dir().join(format!("maiterm-mailink-{}.{}", uuid::Uuid::new_v4(), ext));
+        _ => "png",
+    }
+}
+
+fn decode_image(data_base64: &str) -> Result<Vec<u8>, String> {
+    base64::engine::general_purpose::STANDARD
+        .decode(data_base64.as_bytes())
+        .map_err(|e| format!("invalid image base64: {e}"))
+}
+
+/// Decode a base64 image and write it to a temp file whose extension Claude Code recognizes as an
+/// image. Returns the absolute path. Sibling of commands::editor::save_clipboard_image; kept local
+/// so the maiLink path has no UI-command dep.
+fn save_image_temp(data_base64: &str, mime: &str) -> Result<String, String> {
+    let bytes = decode_image(data_base64)?;
+    let path = std::env::temp_dir()
+        .join(format!("maiterm-mailink-{}.{}", uuid::Uuid::new_v4(), image_ext(mime)));
     std::fs::write(&path, &bytes).map_err(|e| format!("cannot write temp image: {e}"))?;
     log::info!("[maiLink] staged {} image bytes → {:?}", bytes.len(), path);
     Ok(path.to_string_lossy().to_string())
+}
+
+/// Stage a message's images in the SSH tab's REMOTE /tmp, returning the remote paths to type.
+/// Bytes stream over `ssh … 'cat > path'` mux'd through the bridge tunnel's ControlMaster
+/// socket — ssh (not scp) so the tunnel's recorded ssh_args apply verbatim (scp's -P port flag
+/// diverges from ssh's -p). All-or-nothing: any failed transfer fails the batch before a single
+/// path is typed. Fixed /tmp (not $TMPDIR) so the typed path is knowable without a round trip;
+/// like local temps, the files are left to the remote's tmp reaper. Caveat: staging lands on the
+/// tunnel host — if the user ssh'd onward to a third host, claude there can't see the files and
+/// renders dead path chips (recoverable; same class of mismatch as the transcript mirror, which
+/// simply finds no file).
+async fn stage_images_remote(
+    host_key: &str,
+    ssh_args: &str,
+    images: &[ImageInput],
+) -> Result<Vec<String>, String> {
+    let mut paths = Vec::with_capacity(images.len());
+    for img in images {
+        let bytes = decode_image(&img.data)?;
+        let remote_path =
+            format!("/tmp/maiterm-mailink-{}.{}", uuid::Uuid::new_v4(), image_ext(&img.mime));
+        push_bytes_remote(host_key, ssh_args, &bytes, &remote_path).await?;
+        log::info!(
+            "[maiLink] staged {} image bytes → {}:{}",
+            bytes.len(), host_key, remote_path
+        );
+        paths.push(remote_path);
+    }
+    Ok(paths)
+}
+
+/// Write `bytes` to `remote_path` on an SSH bridge host via `cat > path` with the bytes on
+/// stdin. ~tens of ms over the mux socket; BatchMode direct fallback when the socket is dead.
+async fn push_bytes_remote(
+    host_key: &str,
+    ssh_args: &str,
+    bytes: &[u8],
+    remote_path: &str,
+) -> Result<(), String> {
+    let quoted = format!("'{}'", remote_path.replace('\'', "'\\''"));
+    let mut cmd_args = crate::commands::ssh_tunnel::mux_client_args(host_key);
+    for arg in ssh_args.split_whitespace() {
+        cmd_args.push(arg.to_string());
+    }
+    cmd_args.push(format!("cat > {quoted}"));
+
+    let mut child = tokio::process::Command::new("ssh")
+        .args(&cmd_args)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("ssh spawn failed: {e}"))?;
+
+    let mut stdin = child.stdin.take().ok_or("no ssh stdin")?;
+    use tokio::io::AsyncWriteExt;
+    stdin
+        .write_all(bytes)
+        .await
+        .map_err(|e| format!("streaming image bytes failed: {e}"))?;
+    drop(stdin); // EOF ends the remote `cat`
+
+    let output = tokio::time::timeout(
+        tokio::time::Duration::from_secs(30),
+        child.wait_with_output(),
+    )
+    .await
+    .map_err(|_| "image transfer timed out (30s)".to_string())?
+    .map_err(|e| format!("ssh wait failed: {e}"))?;
+
+    if !output.status.success() {
+        return Err(format!(
+            "remote write failed (exit {:?}): {}",
+            output.status.code(),
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    Ok(())
 }
 
 /// Settle delays so the TUI redraws between keystrokes (mirrors inject_text's paste settle).
@@ -1345,7 +1491,7 @@ fn runtime_key(r: AgentRuntime) -> &'static str {
     }
 }
 
-fn pty_for_tab(app: &AppState, tab_id: &str) -> Option<String> {
+pub(crate) fn pty_for_tab(app: &AppState, tab_id: &str) -> Option<String> {
     app.tab_pty_map.read().get(tab_id).cloned()
 }
 
@@ -1572,9 +1718,16 @@ fn build_transcript(app: &AppState, tab_id: &str, now: u64) -> Vec<Value> {
         .unwrap_or_default();
     let mut out = Vec::new();
     if !recent.trim().is_empty() {
+        // `kind: "terminal_snapshot"` is an explicit signal to the phone renderer: this is a raw
+        // scrape of the live terminal grid (newline-delimited, may contain TUI chrome), NOT a
+        // distilled conversation turn — render it preformatted (pre-wrap + break-word), badged as
+        // a live snapshot, and treat it as a single replaceable block (stable msg_id, re-scraped
+        // every GET) rather than appended history. The `ctx_` msg_id prefix carries the same
+        // signal for older clients that sniff it.
         out.push(json!({
             "msg_id": format!("ctx_{tab_id}"),
             "role": "system",
+            "kind": "terminal_snapshot",
             "text": recent,
             "ts": now,
         }));
@@ -2033,6 +2186,87 @@ async fn ring_devices(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Drive the real router with a JSON body of `body_len` bytes and report the status.
+    /// The token is deliberately wrong, so a body that survives the extractor lands on
+    /// `authorize` and returns 401 — nothing is ever injected into a PTY. That makes
+    /// 413-vs-401 a clean read on "rejected before the handler" vs "reached the handler".
+    async fn post_message_status(body_len: usize) -> StatusCode {
+        use tower::ServiceExt as _;
+
+        let api = ApiState {
+            app: Arc::new(AppState::new()),
+            server_name: "maiTerm".to_string(),
+            fingerprint: "sha256/test".to_string(),
+            dev_token: "correct-token".to_string(),
+        };
+        // {"text":"<pad>"} padded to exactly body_len bytes.
+        let prefix = br#"{"text":""#;
+        let suffix = br#""}"#;
+        let pad = body_len - prefix.len() - suffix.len();
+        let mut body = Vec::with_capacity(body_len);
+        body.extend_from_slice(prefix);
+        body.resize(prefix.len() + pad, b'x');
+        body.extend_from_slice(suffix);
+        assert_eq!(body.len(), body_len);
+
+        let req = axum::http::Request::builder()
+            .method("POST")
+            .uri("/mailink/v1/chats/no-such-tab/message")
+            .header("content-type", "application/json")
+            .header("authorization", "Bearer wrong-token")
+            .body(axum::body::Body::from(body))
+            .unwrap();
+
+        build_router(api).oneshot(req).await.unwrap().status()
+    }
+
+    /// Regression: the message route carries base64 images inline, so axum's 2 MiB default
+    /// body limit rejected a realistic 6-image batch at the extractor — before the handler
+    /// ran, hence no log line and a generic "Failed to send" on the phone. Bodies well past
+    /// 2 MiB must now reach the handler.
+    #[tokio::test]
+    async fn message_route_accepts_bodies_past_axum_default_limit() {
+        // Control: comfortably under the old 2 MiB default — always reached the handler.
+        assert_eq!(post_message_status(1_500_000).await, StatusCode::UNAUTHORIZED);
+
+        // The regression: these are the sizes that used to 413.
+        for len in [3 * 1024 * 1024, 8 * 1024 * 1024] {
+            assert_eq!(
+                post_message_status(len).await,
+                StatusCode::UNAUTHORIZED,
+                "{len}-byte body should reach the handler, not 413 at the extractor",
+            );
+        }
+
+        // The new ceiling still holds: past MAX_MESSAGE_BODY_BYTES we do reject.
+        assert_eq!(
+            post_message_status(MAX_MESSAGE_BODY_BYTES + 1024).await,
+            StatusCode::PAYLOAD_TOO_LARGE,
+        );
+    }
+
+    /// The other routes have no reason to accept large bodies; they keep the tight default.
+    #[tokio::test]
+    async fn other_routes_keep_the_default_limit() {
+        use tower::ServiceExt as _;
+
+        let api = ApiState {
+            app: Arc::new(AppState::new()),
+            server_name: "maiTerm".to_string(),
+            fingerprint: "sha256/test".to_string(),
+            dev_token: "correct-token".to_string(),
+        };
+        let req = axum::http::Request::builder()
+            .method("POST")
+            .uri("/mailink/v1/chats/no-such-tab/respond")
+            .header("content-type", "application/json")
+            .header("authorization", "Bearer wrong-token")
+            .body(axum::body::Body::from(vec![b'x'; 3 * 1024 * 1024]))
+            .unwrap();
+        let status = build_router(api).oneshot(req).await.unwrap().status();
+        assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
+    }
 
     /// The one subtle, breakage-prone property: our PEM→DER extraction (which feeds the
     /// pinned fingerprint) must yield the exact bytes `openssl x509 -outform DER` produces.

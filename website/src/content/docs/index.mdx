@@ -95,6 +95,32 @@ It travels over **your LAN only**, on an encrypted, authenticated channel — TL
 
 </section>
 
+<section class="spotlight">
+
+<p class="spotlight-eyebrow">New — Chat Threads: channel monitoring</p>
+
+## Watch your channels — the bot picks up threads on demand
+
+A bug report lands in a **Mattermost** thread. Now maiTerm can be watching for it: right-click a tab → **Enable chat monitoring…**, pick the channels your bot belongs to, and that tab becomes a dispatcher. Whenever someone **`@mentions` the bot** in a thread, maiTerm binds the thread to the tab and hands the agent the whole conversation — it reproduces and **fixes the issue in that tab's repository**, then posts the resolution back, a plain-language summary for support and technical detail for the devs, without you ever leaving maiTerm. Still prefer to hand-pick? Paste a permalink with `/maiterm resolve` — both paths land in the same flow. Configure the bot once in **Preferences → Integrations**.
+
+You stay in control of what it can act on. Only people you list can summon it, only messages that **`@mention` the bot** reach the agent, and each is scoped by its sender: an authorized operator carries your full authority, a **pickup user** can summon but their work is investigate-and-report, and everyone else can neither summon nor direct destructive work. A monitoring tab works **up to three threads at once** — its `@` indicator is dim while idle, green with a count once threads are bound — and a fix stays open until a **human confirms** it works.
+
+<CardGrid>
+  <Card title="Summoned, not pasted" icon="approve-check">
+    Monitor the channels the bot belongs to; an `@mention` in a thread binds it to your dispatcher tab automatically. One tab handles up to three threads at once, and overflow queues.
+  </Card>
+  <Card title="A tiered summon list" icon="comment-alt">
+    Authorized operators carry your full authority; pickup users can summon the bot but their work stays investigate-and-report; everyone else is never picked up. Set both lists in Preferences.
+  </Card>
+  <Card title="Route it across a mesh" icon="random">
+    In a mesh workspace, the dispatcher tab can hand an investigation to the peer whose repo matches — staying on the thread itself while the right agent does the work, then posting the answer back.
+  </Card>
+</CardGrid>
+
+<p class="spotlight-cta"><a href="/features/comms/">Explore Chat Threads →</a></p>
+
+</section>
+
 ## Why maiTerm?
 
 Other terminals give you tabs and splits. maiTerm gives you a system for managing the chaos of real AI-assisted development — where you're juggling multiple agent sessions (Claude Code, Codex) across projects, SSHing into servers, and trying to remember what you were doing three hours ago.
@@ -117,6 +143,9 @@ Other terminals give you tabs and splits. maiTerm gives you a system for managin
   </Card>
   <Card title="Mesh a whole workspace" icon="random">
     Bridge connects two agents — a mesh connects them all. Flip a workspace into a mesh and every named agent can message any other by role, addressed and routed so a rename never misroutes. Conversation groups into topics, with opt-in soft, hard, and time-to-live loop caps when you want backstops. Open the cockpit (`Cmd+Shift+M`) for a live conversation graph, a topic board, and a focused stage + filmstrip view of every agent.
+  </Card>
+  <Card title="Resolve support threads in-terminal" icon="approve-check">
+    Watch your Mattermost channels and the bot picks up threads on demand: `@mention` it and maiTerm binds the thread to a dispatcher tab, which works the bug to resolution — reading the whole thread, fixing it in that tab's repo, and posting back a support summary plus technical detail. One tab handles up to three threads at once; you can still hand-pick a thread with `/maiterm resolve <permalink>`. Authorized operators carry your authority, pickup users can summon but stay investigate-only, and a fix stays open until a human confirms. Configure the bot once in Preferences → Integrations.
   </Card>
   <Card title="Reach agents from your phone" icon="phone">
     maiLink, the companion app, connects directly to maiTerm over your LAN — encrypted, authenticated, no cloud in the data path. Watch live transcripts, answer agent questions, approve permissions, and interrupt runaway turns from anywhere in the house. QR pairing with revocable per-device tokens.
