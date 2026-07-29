@@ -2,6 +2,17 @@
 
 Personal-fork backlog (github.com/JayeMcC/maiterm). Not upstream's.
 
+## Claude Code CLI UI (idea)
+- **New idea (2026-07-29): a dedicated CLI-style UI for driving Claude Code**,
+  rather than running it raw in a terminal tab. In a long session the prompt you
+  typed scrolls out of view under the agent's output.
+  - Core feature: **pin the current/active prompt at the top of the screen** so it
+    stays visible while the agent works and scrollback grows.
+  - Open Qs: maiTerm block/widget vs a full alt-screen TUI; how it composes with
+    the fork's existing Claude Code IDE integration (MCP server + session hooks);
+    whether the pinned header also carries session state (model, tokens,
+    thinking/waiting/needs-permission).
+
 ## Sync
 - **Done (2026-07-03): merged upstream through v1.19.0.** 23 conflicts resolved
   (fork identity + features preserved; upstream's agent-mesh rework, mailink,
