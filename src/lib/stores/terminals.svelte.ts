@@ -74,6 +74,11 @@ function createTerminalsStore() {
   // temporary strings that pressure the GC (81 terminals × ~300KB = 24MB/cycle).
   // eslint-disable-next-line svelte/prefer-svelte-reactivity -- scratchpad checked imperatively inside auto-save setInterval
   const dirtyTabs = new Set<string>();
+  // Last raw PTY output per tab (ms epoch), stamped on every chunk — including TUI
+  // spinner/redraw frames that activityStore deliberately filters out. Non-reactive:
+  // consumers poll it (e.g. mesh setup waits for output quiescence before injecting
+  // a command, so a paste can't land mid-compaction or mid-dialog-transition).
+  const lastOutputAt = new Map<string, number>();
   // Tabs whose PTY is being spawned — treated as "active" by the tab grouping
   // logic so they don't flash into the suspended group before registration.
   const spawningTabs = new SvelteSet<string>();
@@ -104,6 +109,11 @@ function createTerminalsStore() {
     },
     markDirty(tabId: string) {
       dirtyTabs.add(tabId);
+      lastOutputAt.set(tabId, Date.now());
+    },
+    /** ms epoch of the tab's last raw PTY output, or undefined if none seen. */
+    getLastOutputAt(tabId: string): number | undefined {
+      return lastOutputAt.get(tabId);
     },
     isDirty(tabId: string) {
       return dirtyTabs.has(tabId);
@@ -165,6 +175,11 @@ function createTerminalsStore() {
       return cmd;
     },
 
+    /** Read a pending split context WITHOUT consuming it — the spawning pane still needs it. */
+    peekSplitContext(tabId: string): SplitContext | undefined {
+      return splitContexts.get(tabId);
+    },
+
     consumeSplitContext(tabId: string): SplitContext | undefined {
       const ctx = splitContexts.get(tabId);
       if (ctx) splitContexts.delete(tabId);
@@ -193,6 +208,7 @@ function createTerminalsStore() {
 
     unregister(tabId: string) {
       instances.delete(tabId);
+      lastOutputAt.delete(tabId);
       instanceVersion++;
     },
 

@@ -387,6 +387,62 @@ fn find_window_for_tab(state: &Arc<AppState>, tab_id: &str) -> Option<String> {
     None
 }
 
+/// The tab's persisted resume session id — the `<runtime>SessionId` trigger variable that
+/// auto-resume interpolates into `claude --resume …` / `codex resume …`. Since a resume keeps
+/// the session id, this is what lets `initSession` match a resumed agent's buffered
+/// SessionStart back to ITS tab even when the pending pool holds many tabs' entries.
+fn persisted_resume_session_id(
+    state: &Arc<AppState>,
+    tab_id: &str,
+    runtime: crate::state::AgentRuntime,
+) -> Option<String> {
+    let var = crate::state::agent_runtime::descriptor(runtime).session_id_var;
+    let data = state.app_data.read();
+    for win in &data.windows {
+        for ws in &win.workspaces {
+            for pane in &ws.panes {
+                for tab in &pane.tabs {
+                    if tab.id == tab_id {
+                        return tab
+                            .trigger_variables
+                            .get(var)
+                            .cloned()
+                            .filter(|s| !s.is_empty());
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Pure selection rule for the empty-sessionId path of `initSession` (unit-tested): which
+/// pending SessionStart entry, if any, may THIS tab claim? The pool is shared across all tabs
+/// (Claude http hooks carry no tab_id, so SessionStart can only buffer here), so claiming must
+/// be verifiable, never a blind pop:
+///   1. An entry matching the tab's persisted resume session id — a resume keeps the session
+///      id, so a resumed agent's buffered SessionStart is identifiable even among many
+///      (the mesh-resume case that used to mis-bind).
+///   2. Else, exactly ONE live entry → unambiguous, claim it (the same single-candidate
+///      principle as SSE reconnect recovery). Covers a fresh session whose $MAITERM_SID
+///      parse came up empty, and a Codex tab whose env vars were missing.
+///   3. Else decline — guessing would bind one agent's session to another agent's tab
+///      (the sibling then stays "dormant" forever: per-turn hooks only get_mut an entry).
+fn claim_pending_index(
+    pending: &[(String, Option<String>, std::time::Instant)],
+    tab_resume_sid: Option<&str>,
+) -> Option<usize> {
+    if let Some(want) = tab_resume_sid {
+        if let Some(i) = pending.iter().position(|(sid, _, _)| sid == want) {
+            return Some(i);
+        }
+    }
+    if pending.len() == 1 {
+        return Some(0);
+    }
+    None
+}
+
 /// Resolve the best window label to emit a tool event to.
 /// Checks windowId, then tabId in the tool arguments, then falls back to the first window.
 fn resolve_target_window(state: &Arc<AppState>, arguments: &Value) -> Option<String> {
@@ -545,9 +601,10 @@ async fn handle_backend_tool(tool_name: &str, arguments: &Value, state: &Arc<App
                 "stateEntryPresent": state_present,
             }))
         }
-        "bindCommsThread" => Some(handle_bind_comms_thread(arguments, state).await),
+        "bindCommsThread" => Some(handle_bind_comms_thread(arguments, state, app_handle).await),
         "readCommsThread" => Some(handle_read_comms_thread(arguments, state).await),
-        "postCommsReply" => Some(handle_post_comms_reply(arguments, state).await),
+        "postCommsReply" => Some(handle_post_comms_reply(arguments, state, app_handle).await),
+        "startCommsThread" => Some(handle_start_comms_thread(arguments, state, app_handle).await),
         "unbindCommsThread" => {
             let tab_id = match required_tab_id(arguments) {
                 Ok(t) => t,
@@ -561,7 +618,15 @@ async fn handle_backend_tool(tool_name: &str, arguments: &Value, state: &Arc<App
                 Ok(b) => b,
                 Err(e) => return Some(e),
             };
-            Some(match remove_comms_binding(state, &tab_id, &binding.root_id) {
+            let removed = remove_comms_binding(state, &tab_id, &binding.root_id);
+            if matches!(removed, Some(true)) {
+                log::info!(
+                    "[comms] tab {tab_id} released thread {} (unbindCommsThread)",
+                    binding.root_id
+                );
+                crate::comms::emit_bindings_changed(app_handle, state, &tab_id);
+            }
+            Some(match removed {
                 Some(true) => serde_json::json!({ "unbound": true, "root_id": binding.root_id, "remaining_bound_threads": bindings.len() - 1 }),
                 Some(false) => serde_json::json!({ "unbound": false, "note": "tab was not bound to that thread" }),
                 None => serde_json::json!({ "error": format!("Tab '{tab_id}' not found") }),
@@ -870,6 +935,22 @@ fn comms_instructions(state: &Arc<AppState>) -> Option<String> {
         .map(str::to_string)
 }
 
+/// Usernames the operator marked as authorized, so the agent knows who can sign off on a
+/// support-tier request. Readable (they're just channel handles, and escalation is
+/// useless without them) but still never writable — `comms_authorized_users` stays out of
+/// `preference_meta()`, so no chat message can edit who is trusted.
+fn authorized_usernames(state: &Arc<AppState>) -> Vec<String> {
+    state
+        .app_data
+        .read()
+        .preferences
+        .comms_authorized_users
+        .iter()
+        .map(|u| u.trim().trim_start_matches('@').to_string())
+        .filter(|u| !u.is_empty())
+        .collect()
+}
+
 /// All of the tab's comms bindings.
 fn get_comms_bindings(state: &Arc<AppState>, tab_id: &str) -> Vec<crate::state::CommsBinding> {
     let app_data = state.app_data.read();
@@ -916,7 +997,104 @@ fn resolve_comms_binding(
     }))
 }
 
-async fn handle_bind_comms_thread(arguments: &Value, state: &Arc<AppState>) -> Value {
+/// Parse and validate an `attachments` argument (absolute paths, max 5).
+fn comms_attachment_paths(arguments: &Value) -> Result<Vec<String>, Value> {
+    let paths: Vec<String> = arguments
+        .get("attachments")
+        .and_then(|v| v.as_array())
+        .map(|a| {
+            a.iter()
+                .filter_map(|v| v.as_str())
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect()
+        })
+        .unwrap_or_default();
+    if paths.len() > 5 {
+        return Err(serde_json::json!({ "error": "at most 5 attachments per post" }));
+    }
+    Ok(paths)
+}
+
+/// Read the agent's attachment files and upload them to `channel_id`, returning the
+/// file ids to reference from the post. Paths are the AGENT's paths: local files for a
+/// local tab, remote-host files for an SSH tab (fetched back over the bridge tunnel
+/// before upload). All-or-nothing — the Err value is a ready-to-return tool error.
+async fn upload_comms_attachments(
+    state: &Arc<AppState>,
+    client: &crate::comms::mattermost::MattermostClient,
+    tab_id: &str,
+    channel_id: &str,
+    paths: &[String],
+) -> Result<Vec<String>, Value> {
+    use crate::comms;
+
+    if paths.is_empty() {
+        return Ok(Vec::new());
+    }
+    let staging = comms::staging_target_for_tab(state, tab_id);
+    let mut file_ids = Vec::with_capacity(paths.len());
+    for path in paths {
+        let bytes = match &staging {
+            comms::StagingTarget::Remote { host_key, ssh_args } => {
+                crate::mailink::fetch_bytes_remote(host_key, ssh_args, path)
+                    .await
+                    .map_err(|e| {
+                        serde_json::json!({ "error": format!(
+                            "could not fetch '{path}' from the remote host: {e}"
+                        ) })
+                    })?
+            }
+            comms::StagingTarget::Unavailable => {
+                return Err(serde_json::json!({ "error": format!(
+                    "cannot fetch '{path}': this SSH tab has no live maiTerm bridge tunnel"
+                ) }))
+            }
+            comms::StagingTarget::Local => std::fs::read(path).map_err(|e| {
+                serde_json::json!({ "error": format!("could not read '{path}': {e}") })
+            })?,
+        };
+        if bytes.len() > 20 * 1024 * 1024 {
+            return Err(serde_json::json!({ "error": format!(
+                "'{path}' is {} MB — attachments are capped at 20 MB", bytes.len() / (1024 * 1024)
+            ) }));
+        }
+        let filename = std::path::Path::new(path)
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| "attachment".to_string());
+        let id = client
+            .upload_file(channel_id, &filename, bytes)
+            .await
+            .map_err(|e| serde_json::json!({ "error": format!("upload of '{path}' failed: {e}") }))?;
+        file_ids.push(id);
+    }
+    Ok(file_ids)
+}
+
+/// The channels this tab monitors — the only channels an agent may open a thread in.
+fn monitored_channels(
+    state: &Arc<AppState>,
+    tab_id: &str,
+) -> Vec<crate::state::CommsMonitorChannel> {
+    let app_data = state.app_data.read();
+    app_data
+        .windows
+        .iter()
+        .flat_map(|w| &w.workspaces)
+        .flat_map(|ws| &ws.panes)
+        .flat_map(|p| &p.tabs)
+        .find(|t| t.id == tab_id)
+        .and_then(|t| t.comms_monitor.as_ref())
+        .map(|m| m.channels.clone())
+        .unwrap_or_default()
+}
+
+async fn handle_bind_comms_thread(
+    arguments: &Value,
+    state: &Arc<AppState>,
+    app_handle: &AppHandle,
+) -> Value {
     use crate::comms;
 
     let tab_id = match required_tab_id(arguments) {
@@ -967,7 +1145,12 @@ async fn handle_bind_comms_thread(arguments: &Value, state: &Arc<AppState>) -> V
     // messages that @mention the bot are forwarded into this session).
     let bot_username = client.me().await.map(|u| u.username).unwrap_or_default();
 
-    let transcript = comms::build_transcript(&client, &thread, &root_id).await;
+    // Stage image attachments (screenshots in the bug report) where this tab's agent
+    // can Read them; the transcript carries the staged paths.
+    let staging = comms::staging_target_for_tab(state, &tab_id);
+    let thread_refs: Vec<_> = thread.iter().collect();
+    let attachment_notes = comms::stage_attachments(&client, &staging, &thread_refs).await;
+    let transcript = comms::build_transcript(&client, &thread, &root_id, &attachment_notes).await;
 
     let now_ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -982,6 +1165,8 @@ async fn handle_bind_comms_thread(arguments: &Value, state: &Arc<AppState>) -> V
         permalink: url.clone(),
         last_seen_create_at: last_seen,
         bound_at: now_ms,
+        // A human's thread (resolve/permalink) — stay mention-gated.
+        deliver_all_replies: false,
     };
     // One thread = one tab: a thread already bound to another tab must not be
     // double-bound (its watcher would double-inject).
@@ -995,6 +1180,10 @@ async fn handle_bind_comms_thread(arguments: &Value, state: &Arc<AppState>) -> V
         None => return serde_json::json!({ "error": format!("Tab '{tab_id}' not found") }),
     };
     let bound_count = get_comms_bindings(state, &tab_id).len();
+    if !refreshed {
+        log::info!("[comms] tab {tab_id} bound thread {root_id} (bindCommsThread, {url})");
+    }
+    comms::emit_bindings_changed(app_handle, state, &tab_id);
 
     let mut result = serde_json::json!({
         "bound": true,
@@ -1009,6 +1198,10 @@ async fn handle_bind_comms_thread(arguments: &Value, state: &Arc<AppState>) -> V
     });
     if let Some(instr) = comms_instructions(state) {
         result["operator_instructions"] = Value::String(instr);
+    }
+    let approvers = authorized_usernames(state);
+    if !approvers.is_empty() {
+        result["authorized_users"] = Value::from(approvers);
     }
     if refreshed {
         result["note"] = Value::String("this thread was already bound to this tab — binding refreshed".to_string());
@@ -1039,21 +1232,33 @@ async fn handle_read_comms_thread(arguments: &Value, state: &Arc<AppState>) -> V
         Ok(t) => t,
         Err(e) => return serde_json::json!({ "error": e.to_string() }),
     };
-    let transcript = comms::build_transcript(&client, &thread, &binding.root_id).await;
+    let staging = comms::staging_target_for_tab(state, &tab_id);
+    let thread_refs: Vec<_> = thread.iter().collect();
+    let attachment_notes = comms::stage_attachments(&client, &staging, &thread_refs).await;
+    let transcript = comms::build_transcript(&client, &thread, &binding.root_id, &attachment_notes).await;
     let mut result = serde_json::json!({
         "provider": binding.provider,
         "permalink": binding.permalink,
         "root_id": binding.root_id,
         "message_count": thread.len(),
         "thread": transcript,
+        "all_replies_delivered": binding.deliver_all_replies,
     });
     if let Some(instr) = comms_instructions(state) {
         result["operator_instructions"] = Value::String(instr);
     }
+    let approvers = authorized_usernames(state);
+    if !approvers.is_empty() {
+        result["authorized_users"] = Value::from(approvers);
+    }
     result
 }
 
-async fn handle_post_comms_reply(arguments: &Value, state: &Arc<AppState>) -> Value {
+async fn handle_post_comms_reply(
+    arguments: &Value,
+    state: &Arc<AppState>,
+    app_handle: &AppHandle,
+) -> Value {
     use crate::comms;
 
     let tab_id = match required_tab_id(arguments) {
@@ -1065,6 +1270,20 @@ async fn handle_post_comms_reply(arguments: &Value, state: &Arc<AppState>) -> Va
         _ => return serde_json::json!({ "error": "Missing required parameter: message" }),
     };
     let resolve = arguments.get("resolve").and_then(|v| v.as_bool()).unwrap_or(false);
+    let attachments: Vec<String> = arguments
+        .get("attachments")
+        .and_then(|v| v.as_array())
+        .map(|a| {
+            a.iter()
+                .filter_map(|v| v.as_str())
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect()
+        })
+        .unwrap_or_default();
+    if attachments.len() > 5 {
+        return serde_json::json!({ "error": "at most 5 attachments per post" });
+    }
 
     let binding = match resolve_comms_binding(state, &tab_id, arguments) {
         Ok(b) => b,
@@ -1075,8 +1294,21 @@ async fn handle_post_comms_reply(arguments: &Value, state: &Arc<AppState>) -> Va
         Err(e) => return serde_json::json!({ "error": e.to_string() }),
     };
 
+    let file_ids = match upload_comms_attachments(
+        state,
+        &client,
+        &tab_id,
+        &binding.channel_id,
+        &attachments,
+    )
+    .await
+    {
+        Ok(ids) => ids,
+        Err(e) => return e,
+    };
+
     let posted = match client
-        .create_post(&binding.channel_id, &binding.root_id, &message)
+        .create_post(&binding.channel_id, &binding.root_id, &message, &file_ids)
         .await
     {
         Ok(p) => p,
@@ -1085,6 +1317,11 @@ async fn handle_post_comms_reply(arguments: &Value, state: &Arc<AppState>) -> Va
 
     if resolve {
         remove_comms_binding(state, &tab_id, &binding.root_id);
+        log::info!(
+            "[comms] tab {tab_id} released thread {} (resolved via postCommsReply)",
+            binding.root_id
+        );
+        comms::emit_bindings_changed(app_handle, state, &tab_id);
     } else {
         // Belt-and-braces cursor advance — the watcher also filters the bot's own
         // posts by user id, but not re-delivering our own reply is cheap certainty.
@@ -1093,7 +1330,165 @@ async fn handle_post_comms_reply(arguments: &Value, state: &Arc<AppState>) -> Va
         upsert_comms_binding(state, &tab_id, updated);
     }
 
-    serde_json::json!({ "posted": true, "post_id": posted.id, "root_id": binding.root_id, "resolved": resolve })
+    serde_json::json!({
+        "posted": true,
+        "post_id": posted.id,
+        "root_id": binding.root_id,
+        "resolved": resolve,
+        "attached_files": file_ids.len(),
+    })
+}
+
+/// Open a NEW thread in one of the channels this tab monitors (agent-initiated: an
+/// incident report, a heads-up, a question for the channel). Posts a root message and —
+/// unless `bind: false` — binds this tab to the new thread so replies stream back.
+///
+/// Scoped deliberately: the channel must be one the OPERATOR put on this tab's monitor
+/// list, so an agent can't post into arbitrary channels it discovers.
+async fn handle_start_comms_thread(
+    arguments: &Value,
+    state: &Arc<AppState>,
+    app_handle: &AppHandle,
+) -> Value {
+    use crate::comms;
+
+    let tab_id = match required_tab_id(arguments) {
+        Ok(t) => t,
+        Err(e) => return e,
+    };
+    let message = match arguments.get("message").and_then(|v| v.as_str()) {
+        Some(m) if !m.trim().is_empty() => m.to_string(),
+        _ => return serde_json::json!({ "error": "Missing required parameter: message" }),
+    };
+    let attachments = match comms_attachment_paths(arguments) {
+        Ok(a) => a,
+        Err(e) => return e,
+    };
+    let bind = arguments.get("bind").and_then(|v| v.as_bool()).unwrap_or(true);
+
+    let channels = monitored_channels(state, &tab_id);
+    if channels.is_empty() {
+        return serde_json::json!({ "error":
+            "this tab isn't monitoring any channels — the operator enables chat monitoring via right-click on the tab → Enable chat monitoring…" });
+    }
+    let requested = arguments
+        .get("channel")
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim())
+        .unwrap_or("");
+    let channel = if requested.is_empty() {
+        if channels.len() > 1 {
+            return serde_json::json!({
+                "error": "this tab monitors multiple channels — pass channel to say which one",
+                "monitored_channels": channels.iter().map(|c| c.name.clone()).collect::<Vec<_>>(),
+            });
+        }
+        channels[0].clone()
+    } else {
+        let stripped = requested.trim_start_matches('~');
+        match channels.iter().find(|c| {
+            c.id == requested
+                || c.name.eq_ignore_ascii_case(stripped)
+        }) {
+            Some(c) => c.clone(),
+            None => {
+                return serde_json::json!({
+                    "error": format!("'{requested}' is not a channel this tab monitors — an agent can only open threads in its monitored channels"),
+                    "monitored_channels": channels.iter().map(|c| c.name.clone()).collect::<Vec<_>>(),
+                })
+            }
+        }
+    };
+
+    // Opening a thread we intend to work counts against the same cap as a summon —
+    // otherwise an agent could open its way past the limit the watcher enforces.
+    if bind {
+        let bound_count = get_comms_bindings(state, &tab_id).len();
+        if bound_count >= comms::MAX_TAB_BINDINGS {
+            return serde_json::json!({ "error": format!(
+                "this tab already works {bound_count} threads (the cap) — close one out before opening another, or pass bind: false to post without binding"
+            ) });
+        }
+    }
+
+    let client = match comms::client_from_prefs(state, reqwest::Client::new()) {
+        Ok(c) => c,
+        Err(e) => return serde_json::json!({ "error": e.to_string() }),
+    };
+    let file_ids = match upload_comms_attachments(state, &client, &tab_id, &channel.id, &attachments).await {
+        Ok(ids) => ids,
+        Err(e) => return e,
+    };
+    // Empty root_id = a new thread rather than a reply.
+    let posted = match client.create_post(&channel.id, "", &message, &file_ids).await {
+        Ok(p) => p,
+        Err(e) => return serde_json::json!({ "error": e.to_string() }),
+    };
+
+    let permalink = format!(
+        "{}/{}/pl/{}",
+        client.base_url().trim_end_matches('/'),
+        channel.team_name,
+        posted.id
+    );
+    let mut result = serde_json::json!({
+        "posted": true,
+        "post_id": posted.id,
+        "root_id": posted.id,
+        "channel": channel.name,
+        "permalink": permalink,
+        "attached_files": file_ids.len(),
+        "bound": false,
+    });
+    if !bind {
+        result["note"] = Value::String(
+            "not bound — replies on this thread will NOT be delivered to you unless someone @mentions the bot (which summons it as fresh work)".to_string(),
+        );
+        return result;
+    }
+
+    let binding = crate::state::CommsBinding {
+        provider: "mattermost".to_string(),
+        server_url: client.base_url().to_string(),
+        channel_id: channel.id.clone(),
+        root_id: posted.id.clone(),
+        permalink: permalink.clone(),
+        // Our own root post is already "seen" — never re-deliver it to ourselves.
+        last_seen_create_at: posted.create_at,
+        bound_at: posted.create_at,
+        // The agent asked the question, so every reply is an answer to it — humans
+        // shouldn't have to @mention a bot they didn't summon.
+        deliver_all_replies: true,
+    };
+    if upsert_comms_binding(state, &tab_id, binding).is_none() {
+        result["note"] = Value::String(format!(
+            "posted, but tab '{tab_id}' was not found so the thread could not be bound"
+        ));
+        return result;
+    }
+    let bound_count = get_comms_bindings(state, &tab_id).len();
+    log::info!(
+        "[comms] tab {tab_id} raised and bound thread {} in {} (startCommsThread)",
+        posted.id,
+        channel.name
+    );
+    comms::emit_bindings_changed(app_handle, state, &tab_id);
+    result["bound"] = Value::Bool(true);
+    result["bound_thread_count"] = Value::from(bound_count);
+    result["all_replies_delivered"] = Value::Bool(true);
+    let approvers = authorized_usernames(state);
+    if !approvers.is_empty() {
+        result["authorized_users"] = Value::from(approvers);
+        result["authority_note"] = Value::String(
+            "every reply on this thread reaches you, no @mention needed. Replies from authorized_users carry full authority — do what they ask. If anyone else asks for real work, reply @mentioning one of authorized_users for confirmation and wait for it.".to_string(),
+        );
+    }
+    if bound_count > 1 {
+        result["note"] = Value::String(format!(
+            "this tab now works {bound_count} threads — pass root_id explicitly on every postCommsReply/readCommsThread/unbindCommsThread call"
+        ));
+    }
+    result
 }
 
 fn collect_workspace_folders(_state: &Arc<AppState>) -> Vec<String> {
@@ -1572,6 +1967,19 @@ async fn process_message(
                             let mut sessions = state.agent_sessions.write();
                             // Preserve existing fields (model, tool_name) if session already registered
                             let existing = sessions.remove(&session_id);
+                            // A session re-binding to a DIFFERENT tab is legitimate for tab
+                            // duplication (reload = dup+close, fork = dup+/branch), but is also
+                            // the fingerprint of SSH shared-host identity pollution (an env-less
+                            // agent announcing a sibling tab's id via ~/.aiterm). Log it so the
+                            // rebind is visible without changing behavior.
+                            if let Some(prev_tab) = existing.as_ref().map(|e| &e.tab_id) {
+                                if *prev_tab != tab_id {
+                                    log::warn!(
+                                        "initSession: session {} rebinding tab {} → {}",
+                                        session_id, prev_tab, tab_id
+                                    );
+                                }
+                            }
                             sessions.insert(
                                 session_id.clone(),
                                 AgentSessionInfo {
@@ -1590,45 +1998,61 @@ async fn process_message(
                             );
                         }
 
-                        // Also pop the most recent pending SessionStart hook session and link it
-                        let pending = {
+                        // Claim from the pending SessionStart pool ONLY what verifiably belongs
+                        // to THIS tab. The pool is shared across every tab (Claude http hooks
+                        // carry no tab_id, so SessionStart can't insert an entry directly — it
+                        // buffers here). The old blind LIFO pop let one tab's init claim a
+                        // SIBLING's SessionStart during a mesh/SSH resume: the sibling's session
+                        // got bound to the wrong tab (its hooks then flickered THAT tab's state)
+                        // and the sibling itself could end up with no entry at all — reporting
+                        // "dormant" while live and producing, unrecoverable because the per-turn
+                        // hooks only get_mut an existing entry.
+                        let pending_claim = {
                             let mut pending = state.pending_agent_sessions.write();
                             let cutoff = std::time::Instant::now() - std::time::Duration::from_secs(30);
                             pending.retain(|(_, _, ts)| *ts > cutoff);
-                            pending.pop()
-                        };
-                        if let Some((pending_sid, pending_cwd, _)) = pending {
-                            if session_id.is_empty() || pending_sid != session_id {
-                                // Surface this hook session id when the agent passed none
-                                // (Codex) so the frontend can wire codexSessionId + resume.
-                                if init_session_id.is_empty() {
-                                    init_session_id = pending_sid.clone();
-                                }
-                                let mut sessions = state.agent_sessions.write();
-                                sessions.insert(
-                                    pending_sid.clone(),
-                                    AgentSessionInfo {
-                                        runtime,
-                                        tab_id: tab_id.clone(),
-                                        cwd: pending_cwd,
-                                        state: AgentSessionState::Active,
-                                        tool_name: None,
-                                        tool_detail: None,
-                                        pending_question: None,
-                                        pending_question_at: None,
-                                        transcript_path: None,
-                                        model: None,
-                                        connection_id: Some(connection_id.to_string()),
-                                    },
-                                );
-                                log::debug!("initSession: linked pending session {} → tab {}",
-                                    &pending_sid[..pending_sid.len().min(8)], &tab_id[..tab_id.len().min(8)]);
-                                // Re-emit session start now that we know the tab
-                                emit_dual(app_handle, "agent-hook-session-start", "claude-hook-session-start", serde_json::json!({
-                                    "session_id": pending_sid,
-                                    "tab_id": &tab_id,
-                                }));
+                            if !session_id.is_empty() {
+                                // The entry was already inserted above from the passed sessionId;
+                                // its buffered twin (if the SessionStart hook raced us here) is
+                                // redundant — drop it so no OTHER tab's init can claim it.
+                                pending.retain(|(sid, _, _)| *sid != session_id);
+                                None
+                            } else {
+                                let resume_sid =
+                                    persisted_resume_session_id(state, &tab_id, runtime);
+                                claim_pending_index(&pending, resume_sid.as_deref())
+                                    .map(|i| pending.remove(i))
                             }
+                        };
+                        if let Some((pending_sid, pending_cwd, _)) = pending_claim {
+                            // Only reached when the agent passed no sessionId — surface the
+                            // claimed hook session id so the frontend wires
+                            // <runtime>SessionId + auto-resume.
+                            init_session_id = pending_sid.clone();
+                            let mut sessions = state.agent_sessions.write();
+                            sessions.insert(
+                                pending_sid.clone(),
+                                AgentSessionInfo {
+                                    runtime,
+                                    tab_id: tab_id.clone(),
+                                    cwd: pending_cwd,
+                                    state: AgentSessionState::Active,
+                                    tool_name: None,
+                                    tool_detail: None,
+                                    pending_question: None,
+                                    pending_question_at: None,
+                                    transcript_path: None,
+                                    model: None,
+                                    connection_id: Some(connection_id.to_string()),
+                                },
+                            );
+                            log::debug!("initSession: linked pending session {} → tab {}",
+                                &pending_sid[..pending_sid.len().min(8)], &tab_id[..tab_id.len().min(8)]);
+                            // Re-emit session start now that we know the tab
+                            emit_dual(app_handle, "agent-hook-session-start", "claude-hook-session-start", serde_json::json!({
+                                "session_id": pending_sid,
+                                "tab_id": &tab_id,
+                            }));
                         }
                     }
 
@@ -2465,6 +2889,36 @@ mod tests {
 
     fn norm(name: &str, ev: serde_json::Value) -> HookPhase {
         normalize_hook_event(AgentRuntime::Claude, name, &ev)
+    }
+
+    #[test]
+    fn pending_claim_matches_this_tabs_resume_sid_never_a_siblings() {
+        use super::claim_pending_index;
+        let now = std::time::Instant::now();
+        let pool = |sids: &[&str]| -> Vec<(String, Option<String>, std::time::Instant)> {
+            sids.iter().map(|s| (s.to_string(), None, now)).collect()
+        };
+
+        // Mesh resume: many tabs' SessionStarts buffered. A tab whose persisted resume sid
+        // matches claims exactly ITS entry, regardless of position (the old LIFO pop
+        // would have grabbed "sid-c").
+        let p = pool(&["sid-a", "sid-b", "sid-c"]);
+        assert_eq!(claim_pending_index(&p, Some("sid-b")), Some(1));
+
+        // No resume-sid match + multiple candidates → decline (guessing mis-binds a
+        // sibling's session; the display fallback covers the interim).
+        assert_eq!(claim_pending_index(&p, Some("sid-x")), None);
+        assert_eq!(claim_pending_index(&p, None), None);
+
+        // Exactly one candidate → unambiguous, claim it even without a resume-sid match
+        // (fresh session whose $MAITERM_SID parse failed; Codex without env vars).
+        let single = pool(&["only"]);
+        assert_eq!(claim_pending_index(&single, None), Some(0));
+        assert_eq!(claim_pending_index(&single, Some("other")), Some(0));
+
+        // Empty pool → nothing to claim.
+        assert_eq!(claim_pending_index(&[], Some("sid-a")), None);
+        assert_eq!(claim_pending_index(&[], None), None);
     }
 
     #[test]

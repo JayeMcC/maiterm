@@ -26,6 +26,9 @@ Conversation in a mesh is organized into **topics**. A topic is owned by whoever
 
 - **Ownership** — the agent (or you, the human) that opens a topic owns it.
 - **Completion** — only the owner or the human can complete a topic. Once completed, the topic rejects further messages, so a wrapped-up thread can't be reopened by a stray turn.
+- **Topics age out on their own.** Agents are good at starting threads and bad at closing them, so the registry doesn't grow forever: a topic left open with no activity for **7 days** quietly completes itself (no notice is sent — its participants moved on long ago), and a completed topic is removed **48 hours** later. A message sent to a topic that no longer exists is a hard error, so a late reply can't resurrect a dead thread as a new one.
+
+You can also prune by hand from the cockpit — an **×** on any topic deletes it, and **Clear done** sweeps out every completed one at once.
 
 ## Loop control
 
@@ -42,7 +45,7 @@ Enable and tune any of the three in the **AI Agents** section of Preferences.
 Open the cockpit with `Cmd+Shift+M`, or by clicking the **MESH** badge on a mesh workspace row in the sidebar. It gives you a single view of everything the agents are doing:
 
 - **Live conversation graph** — the mesh's agents are arranged on a circle, with topic "stars" weighted by turn count. A pulse animation lights up topics that delivered a message recently, and a halo marks agents that are currently active. Click any node to jump straight to that agent's tab.
-- **Topic list** — every topic with human **complete** and **resume** controls, so you can wrap a thread or lift a paused one without leaving the drawer.
+- **Topic list** — every topic with human **complete** and **resume** controls, so you can wrap a thread or lift a paused one without leaving the drawer, plus an **×** to delete a single topic and a **Clear done** button to remove the finished ones in one go.
 - **Status board** — every agent with its live state and a **needs you** flag. The flag is the agent's *native* awaiting-input signal — an `AskUserQuestion` or a permission prompt — not guesswork parsed from terminal output, so it's deterministic: when an agent needs a decision it asks you directly, you get one deep-linked toast, and nothing else masquerades as needing attention. (Those same prompts are what ring your phone via [maiLink](/features/mailink/).)
 
 ## Stage + filmstrip view
@@ -60,7 +63,11 @@ Enabling a mesh opens a **pre-flight readiness modal** that inventories every ta
 - **Suspended** — offers **Wake** for that tab, or **Wake all** to bring back everything at once.
 - **Unnamed** — offers an inline rename, since a mesh agent needs a role name to be addressable.
 
+Registering an agent isn't a blind paste. A tab coming out of a resume is often sitting on a startup dialog — Claude Code's "restore as is / compact first" prompt, say — where a typed command would answer *the dialog* instead of registering. maiTerm answers any such dialog first, waits for the terminal to actually go quiet (so a long compaction finishes before anything is sent), and then delivers the registration command exactly once. The response window starts when the command is genuinely delivered, so a slow-starting agent no longer reads as a failure; a row that really does time out keeps a **Retry** button rather than dead-ending.
+
 After a restart, the mesh **auto-rechecks** readiness and offers to wake or re-init any agents that dropped, so your mesh comes back the way you left it. Each agent can also carry an optional **purpose** note — a one-line scope steer that tells it what its role in the mesh is — and those purposes persist across restarts.
+
+You can also ready a whole mesh **from your phone**: mesh workspaces are badged in the [maiLink](/features/mailink/) inbox with a one-tap **Initialize all** that triages each member the same way — register the running-but-unregistered, resume the exited, leave the live ones alone.
 
 :::note
 Mesh Workspace builds on the same [agent integration](/features/agents/) pipeline as [Agent Bridge](/features/agent-bridge/). It needs supported agents (Claude Code or Codex) running in the tabs you want to mesh, and works over SSH through the same reverse-tunnel MCP bridge.

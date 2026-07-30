@@ -81,12 +81,333 @@ pub enum ToolRender {
     Marker,
 }
 
+/// Byte cap for a transcript tail read. The distiller keeps only the last ~40 turns, so it never
+/// needs the whole file — real sessions here reach 155 MB, and reading + line-splitting that on
+/// every `GET /chats/{tab}` (re-polled every 2 s while a thread is open) was a 10–25 s open. 8 MiB
+/// comfortably holds ≥40 distilled turns even for heavy sessions while capping the read regardless
+/// of file size. A pathological session whose last 40 turns exceed 8 MiB renders slightly fewer
+/// turns — acceptable versus a 25 s open, and tunable here.
+const TRANSCRIPT_TAIL_BYTES: u64 = 8 * 1024 * 1024;
+
+// ─── tail-facts cache ───────────────────────────────────────────────────────────────────
+//
+// The two per-tab list facts — last REAL turn ts and session meta (model/context/effort) — both
+// come from the same bounded tail of the same file, and chat-list recomputes them for EVERY
+// designated tab on every call while the file is unchanged for almost all of them. Gate on
+// (mtime, len) and cache the parsed pair per path: steady-state cost per tab drops from two
+// 256 KB read+parses to one stat. Transcripts are append-only, so (mtime, len) is a sound
+// change key; a miss re-reads and replaces the entry.
+
+/// Bytes scanned for the last-turn / meta facts. The newest usage line and the last real turn
+/// both sit near EOF (a resume appends only small scaffolding past them).
+const FACTS_TAIL_BYTES: u64 = 256 * 1024;
+
+#[derive(Clone, Default)]
+struct TailFacts {
+    last_turn_ts: Option<u64>,
+    meta: Option<SessionMeta>,
+}
+
+static TAIL_FACTS: std::sync::OnceLock<std::sync::Mutex<HashMap<PathBuf, (u64, u64, TailFacts)>>> =
+    std::sync::OnceLock::new();
+
+/// The cached (or freshly parsed) facts for `path`, where `parse` distills a raw tail into the
+/// pair. `parse` is keyed per runtime by the caller; a given path always belongs to one runtime,
+/// so entries never mix parsers.
+fn tail_facts(path: &PathBuf, parse: fn(&str) -> TailFacts) -> TailFacts {
+    let Ok(md) = std::fs::metadata(path) else { return TailFacts::default() };
+    let mtime_ms = md
+        .modified()
+        .ok()
+        .and_then(|m| m.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    let len = md.len();
+    let cache = TAIL_FACTS.get_or_init(|| std::sync::Mutex::new(HashMap::new()));
+    if let Ok(c) = cache.lock() {
+        if let Some((m, l, facts)) = c.get(path) {
+            if *m == mtime_ms && *l == len {
+                return facts.clone();
+            }
+        }
+    }
+    let facts = read_tail(path, FACTS_TAIL_BYTES)
+        .map(|tail| parse(&tail))
+        .unwrap_or_default();
+    if let Ok(mut c) = cache.lock() {
+        c.insert(path.clone(), (mtime_ms, len, facts.clone()));
+    }
+    facts
+}
+
 /// Build the last `limit` maiLink messages for a Claude session, or `None` if its transcript
 /// can't be found/read (caller falls back to the terminal scrape).
+/// Messages currently sitting in a Claude session's input queue — typed while the agent was busy
+/// and not yet consumed. `(text, enqueued_at_ms)`, oldest first.
+///
+/// Claude Code writes four `queue-operation` kinds. Only `enqueue` and `popAll` carry `content`
+/// at all — `remove` and `dequeue` are bare, so which entry left has to be recovered from what
+/// the transcript records next:
+///   * `enqueue` — a message went into the queue (carries its text).
+///   * `remove`  — DRAINED mid-turn. The `queued_command` attachment that follows names the exact
+///                 prompt, so we match on that rather than guess a position.
+///   * `dequeue` — also a DRAIN, at a turn boundary, becoming a normal user turn. Nothing in the
+///                 record identifies the entry, so we take the oldest.
+///   * `popAll`  — the whole queue was cleared.
+///
+/// `dequeue` is NOT the arrow-up recall it looks like: 1042 of 1229 in the local corpus are
+/// immediately followed by a normal user turn. Nothing in a transcript marks a genuine recall, so
+/// don't try to infer one from these ops — an earlier attempt read "the newest entry was still
+/// outstanding afterwards" as "the op took the newest", which a FIFO drain produces exactly.
+/// Re-measured by identifying the CONSUMED text, both ops lean oldest-first (remove 61:28,
+/// dequeue 18:6), which is why both drain in order here.
+///
+/// A queue that outlives the scanned tail simply reports what the tail can prove.
+pub fn pending_queue(session_id: &str, max_bytes: u64) -> Vec<(String, u64)> {
+    let Some(lines) = claude_lines(session_id, max_bytes) else { return Vec::new() };
+    replay_queue(&lines)
+}
+
+/// The queue replay itself, over already-parsed lines (unit-tested; `pending_queue` reads them).
+fn replay_queue(lines: &[Value]) -> Vec<(String, u64)> {
+    let mut queue: Vec<(String, u64)> = Vec::new();
+    for (i, v) in lines.iter().enumerate() {
+        if v.get("type").and_then(|t| t.as_str()) != Some("queue-operation") {
+            continue;
+        }
+        let content = v.get("content").and_then(|c| c.as_str()).unwrap_or("");
+        match v.get("operation").and_then(|o| o.as_str()) {
+            Some("enqueue") if !content.is_empty() => {
+                let ts = v
+                    .get("timestamp")
+                    .and_then(|t| t.as_str())
+                    .map(rfc3339_to_ms)
+                    .unwrap_or(0)
+                    .max(0) as u64;
+                queue.push((content.to_string(), ts));
+            }
+            // Both drain one entry. `remove` names its prompt in the attachment that follows, so
+            // resolve it exactly; `dequeue` names nothing, so take the head.
+            Some("remove") => {
+                let drained = drained_prompt(&lines[i + 1..])
+                    .and_then(|p| queue.iter().position(|(t, _)| texts_match(t, &p)))
+                    .unwrap_or(0);
+                if drained < queue.len() {
+                    queue.remove(drained);
+                }
+            }
+            Some("dequeue") => {
+                if !queue.is_empty() {
+                    queue.remove(0);
+                }
+            }
+            Some("popAll") => queue.clear(),
+            _ => {}
+        }
+    }
+    queue
+}
+
+/// The prompt named by the `queued_command` attachment that follows a `remove`, if it's close
+/// enough to belong to it. The op record itself carries no text — this is the only thing that
+/// says WHICH queued message was just consumed.
+fn drained_prompt(after: &[Value]) -> Option<String> {
+    after.iter().take(4).find_map(|w| {
+        let a = w.get("attachment")?;
+        (a.get("type").and_then(|t| t.as_str()) == Some("queued_command"))
+            .then(|| a.get("prompt").and_then(|p| p.as_str()).map(str::to_string))
+            .flatten()
+    })
+}
+
+/// Whether a drained prompt refers to a queued entry. The attachment may carry `[Image #N]` chips
+/// the enqueued text didn't, so compare on the bare caption too.
+fn texts_match(queued: &str, drained: &str) -> bool {
+    queued == drained || strip_leading_image_refs(drained) == strip_leading_image_refs(queued)
+}
+
+// ─── /goal ──────────────────────────────────────────────────────────────────────────────
+
+/// Bytes scanned for `goal_status` records. A goal's set record can sit a long way back — the
+/// judge only evaluates at turn end, and a first turn under a goal ran 65 minutes in the local
+/// corpus — so this matches the transcript window rather than the smaller facts one: if the phone
+/// can see the turns, it can see the goal that produced them. Only lines that actually mention
+/// `goal_status` are parsed, so the cost is the read plus a substring scan.
+const GOAL_SCAN_BYTES: u64 = 8 * 1024 * 1024;
+
+/// A `/goal` condition the session is being held to. `/goal <condition>` installs a session-scoped
+/// Stop hook: the agent cannot end its turn until a judge decides the condition holds, and each
+/// attempt that falls short sends it back to work with a written explanation of what's missing.
+///
+/// The transcript is the only place this state lives — no state file, no hook event, no process to
+/// interrogate — which also means it costs nothing extra on SSH tabs, where the mirrored JSONL
+/// already carries it.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GoalStatus {
+    /// The condition as the operator typed it. Present on every record, so it survives even when
+    /// the set record itself has scrolled out of the scan window.
+    pub condition: String,
+    /// `active` — being enforced right now (freshly set, or evaluated and sent back).
+    /// `met` — the judge accepted it; the hook auto-cleared. `failed` — the judge ruled it
+    /// impossible; the goal was dropped. `cleared` — the operator removed it by hand.
+    /// The three terminal states are reported only until the conversation moves on (see
+    /// `read_goal`), so "goal finished" and "no goal" stay distinguishable.
+    pub state: &'static str,
+    /// Evaluations of THIS goal so far, counted from its set record — 0 before the first turn
+    /// ends. Deliberately not the record's own `iterations` field: that counter lives in process
+    /// memory and restarts at 0 every time a resume re-arms the hook, so on a resumed session it
+    /// under-reports. It also appears only on terminal records, so it can't be shown while a goal
+    /// is still running, which is exactly when the operator wants it.
+    pub attempts: usize,
+    /// The judge's most recent verdict prose — what's done and what's still outstanding. Absent
+    /// until the first evaluation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    /// When the goal was set. From the sentinel's own timestamp, so it's the real wall-clock start
+    /// rather than the in-memory `setAt`, which a resume also restarts. Absent if the set record
+    /// is older than the scan window (an evaluation still names the condition).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub set_at: Option<u64>,
+    /// When the judge last ran. Absent until the first evaluation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_checked_at: Option<u64>,
+    /// Wall-clock and token cost of the goal, as Claude Code measured it. Emitted only on a
+    /// terminal evaluation (met/failed) — a blocked one carries neither — so both stay absent for
+    /// the whole life of a running goal.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tokens: Option<u64>,
+}
+
+/// The goal a Claude session is currently under, or `None` if there isn't one.
+///
+/// Scoped to whichever session id is passed in, which is the point: the Stop hook is session-scoped,
+/// so a goal read off some other session is not being enforced anywhere. Resume keeps the same
+/// session id and re-arms the hook from this same transcript (`restoreGoalFromTranscript` in Claude
+/// Code 2.1.220), so a resumed session correctly still reports its goal. A fork gets a new session
+/// id, and this reports a goal for it only if the forked transcript carried the records across.
+pub fn goal_for_session(session_id: &str) -> Option<GoalStatus> {
+    let path = locate_jsonl(session_id)?;
+    let tail = read_tail(&path, GOAL_SCAN_BYTES)?;
+    read_goal(&tail, session_last_turn_ts(session_id).unwrap_or(0))
+}
+
+/// Whether a `goal_status` attachment is a sentinel — a record written by the operator setting or
+/// clearing the goal, as opposed to a verdict from the judge.
+fn goal_is_sentinel(a: &Value) -> bool {
+    a.get("sentinel").and_then(|s| s.as_bool()) == Some(true)
+}
+
+/// The goal state from a transcript tail, given when the session last had a real turn.
+///
+/// Five record shapes, and the flags have to be read TOGETHER — neither identifies a record alone:
+///   * `sentinel:true, met:false`  — the goal was SET.
+///   * `sentinel:true, met:true`   — the goal was CLEARED by hand. A sentinel meaning the exact
+///                                   opposite of the one above, which is why `sentinel` can't be
+///                                   the discriminator on its own.
+///   * `met:false`                 — evaluated and BLOCKED; `reason` says what's missing and the
+///                                   agent is sent back. Carries no metrics, ever.
+///   * `met:false, failed:true`    — evaluated as IMPOSSIBLE. Terminal; the goal is dropped.
+///   * `met:true`                  — evaluated as SATISFIED. Terminal; the hook auto-clears.
+///
+/// Claude Code decides whether a goal is live by walking back to the newest `goal_status` and
+/// treating `met || failed` as "no" (`findGoalToRestore`, 2.1.220). That function is what re-arms
+/// the Stop hook on resume, so it IS the definition of "actually being enforced" — hence the same
+/// rule here, rather than anything inferred from the shape of the records.
+///
+/// A terminal goal is reported until the conversation moves past it (`last_turn_ts` newer than the
+/// record). Without that, "the goal was met" and "there was never a goal" arrive as the same
+/// absence — no clear record follows a met evaluation — and a finished goal would vanish unseen
+/// from a phone that happened not to be polling at that moment.
+fn read_goal(tail: &str, last_turn_ts: u64) -> Option<GoalStatus> {
+    // Parsing every line of an 8 MiB tail to find a handful of records would cost more than the
+    // rest of the detail build put together; a `goal_status` record always names itself.
+    let recs: Vec<(Value, u64)> = tail
+        .lines()
+        .filter(|l| l.contains("\"goal_status\""))
+        .filter_map(|l| serde_json::from_str::<Value>(l).ok())
+        .filter_map(|v| {
+            let ts = v
+                .get("timestamp")
+                .and_then(|t| t.as_str())
+                .map(rfc3339_to_ms)
+                .unwrap_or(0)
+                .max(0) as u64;
+            let a = v.get("attachment")?;
+            (a.get("type").and_then(|t| t.as_str()) == Some("goal_status")).then(|| (a.clone(), ts))
+        })
+        .collect();
+
+    let (last, last_ts) = recs.last()?;
+    let met = last.get("met").and_then(|m| m.as_bool()) == Some(true);
+    let failed = last.get("failed").and_then(|f| f.as_bool()) == Some(true);
+    let state = if goal_is_sentinel(last) {
+        if met {
+            "cleared"
+        } else {
+            "active"
+        }
+    } else if failed {
+        "failed"
+    } else if met {
+        "met"
+    } else {
+        // Blocked: the judge refused this turn, so the goal is still very much live.
+        "active"
+    };
+    if state != "active" && last_turn_ts > *last_ts {
+        return None;
+    }
+
+    // The run this record belongs to starts at the newest set sentinel before it — a session can
+    // hold several goals over its life, and only the current one's attempts and start time count.
+    let set_idx = recs.iter().rposition(|(a, _)| goal_is_sentinel(a) && a.get("met").and_then(|m| m.as_bool()) != Some(true));
+    let first_eval = set_idx.map_or(0, |i| i + 1);
+    let evals: Vec<&(Value, u64)> =
+        recs[first_eval..].iter().filter(|(a, _)| !goal_is_sentinel(a)).collect();
+    let newest_eval = evals.last();
+
+    let num = |a: &Value, k: &str| a.get(k).and_then(|x| x.as_u64());
+    Some(GoalStatus {
+        condition: last
+            .get("condition")
+            .and_then(|c| c.as_str())
+            .filter(|c| !c.trim().is_empty())
+            .or_else(|| set_idx.and_then(|i| recs[i].0.get("condition")).and_then(|c| c.as_str()))
+            .unwrap_or_default()
+            .to_string(),
+        state,
+        attempts: evals.len(),
+        reason: newest_eval
+            .and_then(|(a, _)| a.get("reason"))
+            .and_then(|r| r.as_str())
+            .map(|r| r.trim().to_string())
+            .filter(|r| !r.is_empty()),
+        set_at: set_idx.map(|i| recs[i].1).filter(|&t| t > 0),
+        last_checked_at: newest_eval.map(|(_, t)| *t).filter(|&t| t > 0),
+        duration_ms: newest_eval.and_then(|(a, _)| num(a, "durationMs")),
+        tokens: newest_eval.and_then(|(a, _)| num(a, "tokens")),
+    })
+}
+
+/// Parsed transcript lines from the last `max_bytes` of a Claude session's JSONL, oldest first.
+/// For consumers that need the raw entries rather than distilled turns (the background-shell
+/// roster). A truncated leading line simply fails to parse and is skipped, as everywhere else.
+pub(crate) fn claude_lines(session_id: &str, max_bytes: u64) -> Option<Vec<Value>> {
+    let path = locate_jsonl(session_id)?;
+    let body = read_tail(&path, max_bytes)?;
+    Some(body.lines().filter_map(|l| serde_json::from_str::<Value>(l).ok()).collect())
+}
+
 fn turns_for_session(session_id: &str, limit: usize, tools: ToolRender) -> Option<Vec<Value>> {
     let path = locate_jsonl(session_id)?;
-    let body = std::fs::read_to_string(&path).ok()?;
-    // Only the tail can hold the last `limit` turns; bound the work regardless of file size.
+    // Only the tail can hold the last `limit` turns; bound the read regardless of file size (a 155 MB
+    // session would otherwise be read + UTF-8-validated + line-split in full). A truncated first line
+    // just fails to parse and is skipped, same as every other tail scan here. Claude msg_ids are the
+    // per-turn uuids from the JSON, so a tail window (vs the whole file) can't shift them.
+    let body = read_tail(&path, TRANSCRIPT_TAIL_BYTES)?;
     // A turn is a handful of lines, so ~12× headroom is plenty.
     let lines: Vec<&str> = body.lines().collect();
     let start = lines.len().saturating_sub(limit * 12 + 64);
@@ -106,12 +427,16 @@ fn turns_for_session(session_id: &str, limit: usize, tools: ToolRender) -> Optio
 /// and current context size (prompt tokens). Drives the maiLink per-agent `meta` strip. Sourced
 /// from the JSONL (not the SessionStart hook, whose `model` is often null) so it's always available
 /// for a Claude tab; naturally Claude-only since it reads `~/.claude` transcripts.
+#[derive(Clone)]
 pub struct SessionMeta {
-    /// Raw model id from the last assistant turn (e.g. "claude-opus-4-8", "gpt-5.5"). Caller
+    /// Raw model id from the last assistant turn (e.g. "claude-opus-5", "gpt-5.5"). Caller
     /// normalizes for display.
     /// NOTE (Claude): the transcript records only the BARE id — it never carries the 1M-context
     /// variant marker (no "[1m]", no betas field), so the 1M window can't be detected from the id.
-    /// maiLink works around this by assuming 1M for Opus 4.8 (see context_limit_for in mod.rs).
+    /// Confirmed still true for Opus 5: a 1M session records exactly "claude-opus-5". Claude Code
+    /// DOES expose the marker, but only on the statusLine input, which maiTerm never receives.
+    /// maiLink works around it with an allowlist + a past-200k backstop (context_limit_for in
+    /// mod.rs) — extend that list when a new 1M-by-default model appears.
     pub model_id: Option<String>,
     /// Tokens currently in the context window. Claude: input + cache_read + cache_creation
     /// (matches the maiTerm statusline). Codex: the last token_count's
@@ -123,15 +448,32 @@ pub struct SessionMeta {
     /// The model's context window when the transcript states it directly (Codex rollouts carry
     /// `model_context_window`). `None` for Claude — the caller derives it from the model id.
     pub context_window: Option<u64>,
+    /// Reasoning-effort level from the last assistant turn (Claude: low/medium/high/xhigh/max —
+    /// a top-level `effort` field on each JSONL entry). `None` for a model with no effort param,
+    /// an older transcript that predates the field, or a non-Claude runtime.
+    pub effort: Option<String>,
 }
 
 /// Read the most recent `message.usage` line from a Claude session's transcript and return its
 /// model id + summed context tokens. None if the transcript can't be found/read or has no usage.
+/// Served from the (mtime, len)-gated tail-facts cache.
 fn session_meta(session_id: &str) -> Option<SessionMeta> {
     let path = locate_jsonl(session_id)?;
-    // The last usage block is near EOF (the latest assistant turn); scan a bounded tail so this
-    // stays cheap when polled per chat_state. A truncated first line just fails to parse → skipped.
-    let tail = read_tail(&path, 256 * 1024)?;
+    tail_facts(&path, claude_tail_facts).meta
+}
+
+/// Parse both cached facts (last real turn ts + meta) from one Claude JSONL tail.
+fn claude_tail_facts(tail: &str) -> TailFacts {
+    TailFacts {
+        last_turn_ts: claude_last_turn_from_tail(tail),
+        meta: claude_meta_from_tail(tail),
+    }
+}
+
+/// Parse a Claude JSONL tail (newest lines last) into model id + context tokens + effort, scanning
+/// upward for the latest assistant turn that carries a usable `message.usage`. Split out so it can
+/// be unit-tested without a real `~/.claude` transcript (mirrors `codex_meta_from_tail`).
+fn claude_meta_from_tail(tail: &str) -> Option<SessionMeta> {
     for line in tail.lines().rev() {
         if !line.contains("\"usage\"") {
             continue;
@@ -147,9 +489,59 @@ fn session_meta(session_id: &str) -> Option<SessionMeta> {
             continue;
         }
         let model_id = msg.get("model").and_then(|m| m.as_str()).map(String::from);
-        return Some(SessionMeta { model_id, context_tokens: tokens, context_window: None });
+        // `effort` is a top-level field on the SAME assistant line (sibling of `message`), so it
+        // costs no extra read. Absent on older transcripts / effort-less models → None.
+        let effort = v.get("effort").and_then(|e| e.as_str()).map(String::from);
+        return Some(SessionMeta { model_id, context_tokens: tokens, context_window: None, effort });
     }
     None
+}
+
+/// The maiTerm tab id that most recently HOSTED a Claude session, read from the transcript
+/// itself: the SessionStart command hook echoes `Your maiTerm tab ID is $MAITERM_TAB_ID` into
+/// the session (lockfile.rs `build_our_hooks`) on every start/resume/compact, so the LAST
+/// occurrence names the tab the session last actually ran in. Used to resolve a CONTESTED
+/// session id (tab duplication copies the var on purpose — reload/fork workflows) to its one
+/// rightful renderer: ownership follows actual usage, and flips to the duplicate the moment it
+/// actually resumes the session there. `None` if the transcript can't be located or no marker
+/// falls within the scanned tail (a session that's run a long stretch since its last
+/// start/resume). (mtime, len)-cached — resolution paths hit this per ticker pass.
+pub(crate) fn claude_session_host_tab(session_id: &str) -> Option<String> {
+    static HOST_CACHE: std::sync::OnceLock<
+        std::sync::Mutex<HashMap<PathBuf, (u64, u64, Option<String>)>>,
+    > = std::sync::OnceLock::new();
+
+    let path = locate_jsonl(session_id)?;
+    let md = std::fs::metadata(&path).ok()?;
+    let mtime_ms = md
+        .modified()
+        .ok()
+        .and_then(|m| m.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    let len = md.len();
+    let cache = HOST_CACHE.get_or_init(|| std::sync::Mutex::new(HashMap::new()));
+    if let Ok(c) = cache.lock() {
+        if let Some((m, l, host)) = c.get(&path) {
+            if *m == mtime_ms && *l == len {
+                return host.clone();
+            }
+        }
+    }
+    let host = (|| {
+        let tail = read_tail(&path, 4 * 1024 * 1024)?;
+        const MARKER: &str = "maiTerm tab ID is ";
+        let idx = tail.rfind(MARKER)?;
+        let id: String = tail[idx + MARKER.len()..]
+            .chars()
+            .take_while(|c| c.is_ascii_hexdigit() || *c == '-')
+            .collect();
+        (id.len() >= 8).then_some(id)
+    })();
+    if let Ok(mut c) = cache.lock() {
+        c.insert(path, (mtime_ms, len, host.clone()));
+    }
+    host
 }
 
 /// Claude Code version that wrote the most recent entries of a session's transcript (every JSONL
@@ -177,9 +569,13 @@ pub fn claude_session_version(session_id: &str) -> Option<String> {
 /// transcript can't be found/read or no real turn falls within the scanned tail.
 fn session_last_turn_ts(session_id: &str) -> Option<u64> {
     let path = locate_jsonl(session_id)?;
-    // The last real turn sits just before whatever small scaffolding a resume appends at EOF, so a
-    // 256KB tail clears the largest realistic resume dump (hook context + deferred-tool list) easily.
-    let tail = read_tail(&path, 256 * 1024)?;
+    // The last real turn sits just before whatever small scaffolding a resume appends at EOF, so
+    // FACTS_TAIL_BYTES clears the largest realistic resume dump (hook context + deferred-tool
+    // list) easily. Served from the (mtime, len)-gated tail-facts cache.
+    tail_facts(&path, claude_tail_facts).last_turn_ts
+}
+
+fn claude_last_turn_from_tail(tail: &str) -> Option<u64> {
     for line in tail.lines().rev() {
         let Ok(v) = serde_json::from_str::<Value>(line) else { continue };
         if let Some(ts) = real_turn_ts(&v) {
@@ -203,6 +599,16 @@ fn real_turn_ts(v: &Value) -> Option<i64> {
         // Any assistant turn (text, tool_use, even thinking-only) exists only from real work — a
         // resume never runs the model, so it never appends one.
         Some("assistant") => ts,
+        // A human message that was QUEUED while the agent was busy — real human activity, and the
+        // only record of it (Claude Code writes no `user` turn for these). Same human-origin gate
+        // as push_line_messages, so recency tracks exactly what the phone renders.
+        Some("attachment") => {
+            let a = v.get("attachment")?;
+            let human = a.get("origin").and_then(|o| o.get("kind")).and_then(|k| k.as_str())
+                == Some("human");
+            let queued = a.get("type").and_then(|t| t.as_str()) == Some("queued_command");
+            (human && queued).then_some(ts).flatten()
+        }
         // A genuine human message is plain-string content that isn't the compaction summary, a
         // tool_result (list content), or injected scaffolding (<system-reminder>, Caveat:, …).
         Some("user") => {
@@ -231,12 +637,48 @@ fn read_tail(path: &std::path::Path, max: u64) -> Option<String> {
     Some(String::from_utf8_lossy(&buf).into_owned())
 }
 
+/// Read at most the last `max` bytes of a file as raw bytes, returning `(bytes, base)` where `base`
+/// is the byte offset in the FILE where the returned buffer starts. The Codex reader needs exact
+/// file byte offsets (its msg_ids key on them), so it works on raw bytes rather than the lossy
+/// String from `read_tail` — a U+FFFD replacement would inflate lengths and drift the offsets.
+fn read_tail_bytes(path: &std::path::Path, max: u64) -> Option<(Vec<u8>, u64)> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut f = std::fs::File::open(path).ok()?;
+    let len = f.metadata().ok()?.len();
+    let base = len.saturating_sub(max);
+    f.seek(SeekFrom::Start(base)).ok()?;
+    let mut buf = Vec::new();
+    f.read_to_end(&mut buf).ok()?;
+    Some((buf, base))
+}
+
 /// Find `<session_id>.jsonl` under any `~/.claude/projects/*/` dir, or — for SSH tabs whose
 /// session runs on a remote host — its locally shadow-mirrored copy (mirror.rs). The session
 /// id is globally unique, so a match is unambiguous and the two roots can't collide. This
 /// single lookup is what makes mirrored SSH tabs indistinguishable from local ones: every
 /// transcript consumer (distiller, mtime gate, meta, recency) resolves through here.
+/// session_id → located transcript path. Uncached, every lookup was a `read_dir` over EVERY
+/// `~/.claude/projects/*` dir plus one stat each — and chat-list does 2-3 lookups per tab per
+/// call. Sessions append in place and never move, so cache hits just re-validate with
+/// `is_file()` (same contract as CODEX_PATHS below).
+static CLAUDE_PATHS: std::sync::OnceLock<std::sync::Mutex<HashMap<String, PathBuf>>> =
+    std::sync::OnceLock::new();
+
 fn locate_jsonl(session_id: &str) -> Option<PathBuf> {
+    let cache = CLAUDE_PATHS.get_or_init(|| std::sync::Mutex::new(HashMap::new()));
+    if let Some(p) = cache.lock().ok()?.get(session_id) {
+        if p.is_file() {
+            return Some(p.clone());
+        }
+    }
+    let found = locate_jsonl_uncached(session_id)?;
+    if let Ok(mut c) = cache.lock() {
+        c.insert(session_id.to_string(), found.clone());
+    }
+    Some(found)
+}
+
+fn locate_jsonl_uncached(session_id: &str) -> Option<PathBuf> {
     let file = format!("{session_id}.jsonl");
     if let Some(root) = dirs::home_dir().map(|h| h.join(".claude").join("projects")) {
         if let Ok(entries) = std::fs::read_dir(&root) {
@@ -324,20 +766,30 @@ fn subdirs_desc(path: &std::path::Path) -> Vec<PathBuf> {
 }
 
 /// Build the last `limit` maiLink messages for a Codex session, or `None` if its rollout can't
-/// be found/read (caller falls back to the terminal scrape). msg_ids are `cx<line>[:<block>]`
-/// keyed on the GLOBAL line number — stable across reads because the rollout is append-only, so
-/// the streamed frame and any REST re-fetch dedup to one entry (same guarantee as Claude's
-/// uuid-based ids).
+/// be found/read (caller falls back to the terminal scrape). msg_ids are `cx<byte_offset>[:<block>]`
+/// keyed on the line's GLOBAL byte offset in the rollout — stable across reads because the rollout
+/// is append-only (a line's start byte never moves), so the streamed frame and any REST re-fetch
+/// dedup to one entry (same guarantee as Claude's uuid-based ids). Byte offset — not line number —
+/// so it survives the bounded tail read below: it's recoverable from a mid-file slice, whereas a
+/// line index would shift as the file grows.
 fn codex_turns_for_session(session_id: &str, limit: usize, tools: ToolRender) -> Option<Vec<Value>> {
     let path = locate_codex_jsonl(session_id)?;
-    let body = std::fs::read_to_string(&path).ok()?;
-    let lines: Vec<&str> = body.lines().collect();
-    // Only the tail can hold the last `limit` turns; bound the parse like the Claude path.
-    let start = lines.len().saturating_sub(limit * 12 + 64);
+    // Bound the read like the Claude path — rollouts grow large too, and chat_detail re-reads on
+    // every poll. Work on raw bytes so line offsets are exact file offsets (see read_tail_bytes).
+    let (buf, base) = read_tail_bytes(&path, TRANSCRIPT_TAIL_BYTES)?;
+    let mut off = base;
     let mut msgs: Vec<Value> = Vec::new();
-    for (i, line) in lines[start..].iter().enumerate() {
-        if let Ok(v) = serde_json::from_str::<Value>(line) {
-            push_codex_line_messages(start + i, &v, tools, &mut msgs);
+    for (idx, line) in buf.split_inclusive(|&b| b == b'\n').enumerate() {
+        let line_start = off;
+        off += line.len() as u64;
+        // If the tail began mid-file it starts mid-line; that leading fragment isn't a real line
+        // and its byte offset would be wrong — skip it (matches the partial-line skip elsewhere).
+        if idx == 0 && base > 0 {
+            continue;
+        }
+        let trimmed = line.strip_suffix(b"\n").unwrap_or(line);
+        if let Ok(v) = serde_json::from_slice::<Value>(trimmed) {
+            push_codex_line_messages(line_start, &v, tools, &mut msgs);
         }
     }
     if msgs.len() > limit {
@@ -346,8 +798,9 @@ fn codex_turns_for_session(session_id: &str, limit: usize, tools: ToolRender) ->
     Some(msgs)
 }
 
-/// Turn one rollout line into zero or more maiLink messages, appended to `out`.
-fn push_codex_line_messages(line_no: usize, v: &Value, tools: ToolRender, out: &mut Vec<Value>) {
+/// Turn one rollout line into zero or more maiLink messages, appended to `out`. `line_no` is the
+/// line's global byte offset in the rollout — the stable per-line key baked into its msg_id.
+fn push_codex_line_messages(line_no: u64, v: &Value, tools: ToolRender, out: &mut Vec<Value>) {
     if v.get("type").and_then(|t| t.as_str()) != Some("response_item") {
         return; // event_msg mirrors response_item content; session_meta/turn_context are meta
     }
@@ -372,6 +825,20 @@ fn push_codex_line_messages(line_no: usize, v: &Value, tools: ToolRender, out: &
                     continue;
                 }
                 let text = b.get("text").and_then(|t| t.as_str()).unwrap_or("");
+                // Mesh workspaces mix runtimes, so a Codex agent receives the same envelopes.
+                if out_role == "user" {
+                    if let Some(env) = parse_peer_envelope(text) {
+                        out.push(peer_msg(
+                            format!("cx{line_no}:{bi}"),
+                            "in",
+                            env.name,
+                            env.topic,
+                            env.body,
+                            ts,
+                        ));
+                        continue;
+                    }
+                }
                 if text.trim().is_empty() || (out_role == "user" && is_system_noise(text)) {
                     continue;
                 }
@@ -381,12 +848,15 @@ fn push_codex_line_messages(line_no: usize, v: &Value, tools: ToolRender, out: &
         // Tool calls: `arguments` is a JSON-ENCODED STRING (e.g. `{"cmd":"pwd",…}`).
         Some("function_call") if tools == ToolRender::Marker => {
             let name = p.get("name").and_then(|n| n.as_str()).unwrap_or("tool");
-            let arg = p
+            let input = p
                 .get("arguments")
                 .and_then(|a| a.as_str())
-                .and_then(|s| serde_json::from_str::<Value>(s).ok())
-                .and_then(|input| compact_tool_arg(&input));
-            let text = match arg {
+                .and_then(|s| serde_json::from_str::<Value>(s).ok());
+            if let Some(peer) = peer_send_turn(name, input.as_ref(), format!("cx{line_no}"), ts) {
+                out.push(peer);
+                return;
+            }
+            let text = match input.as_ref().and_then(compact_tool_arg) {
                 Some(a) => format!("{name}({a})"),
                 None => name.to_string(),
             };
@@ -414,8 +884,15 @@ fn push_codex_line_messages(line_no: usize, v: &Value, tools: ToolRender, out: &
 /// the window, both stated in the file) + last `turn_context` (model id).
 fn codex_session_meta(session_id: &str) -> Option<SessionMeta> {
     let path = locate_codex_jsonl(session_id)?;
-    let tail = read_tail(&path, 256 * 1024)?;
-    codex_meta_from_tail(&tail)
+    tail_facts(&path, codex_tail_facts).meta
+}
+
+/// Parse both cached facts (last real turn ts + meta) from one codex rollout tail.
+fn codex_tail_facts(tail: &str) -> TailFacts {
+    TailFacts {
+        last_turn_ts: codex_last_turn_from_tail(tail),
+        meta: codex_meta_from_tail(tail),
+    }
 }
 
 fn codex_meta_from_tail(tail: &str) -> Option<SessionMeta> {
@@ -462,14 +939,18 @@ fn codex_meta_from_tail(tail: &str) -> Option<SessionMeta> {
         }
     }
     let (context_tokens, context_window) = tokens?;
-    Some(SessionMeta { model_id, context_tokens, context_window })
+    // Codex rollouts don't carry a Claude-style effort level; effort stays Claude-only.
+    Some(SessionMeta { model_id, context_tokens, context_window, effort: None })
 }
 
 /// Unix-ms timestamp of the last REAL turn in a codex rollout — mirrors
 /// `session_last_turn_ts`'s rationale (recency from content, not file churn).
 fn codex_session_last_turn_ts(session_id: &str) -> Option<u64> {
     let path = locate_codex_jsonl(session_id)?;
-    let tail = read_tail(&path, 256 * 1024)?;
+    tail_facts(&path, codex_tail_facts).last_turn_ts
+}
+
+fn codex_last_turn_from_tail(tail: &str) -> Option<u64> {
     for line in tail.lines().rev() {
         let Ok(v) = serde_json::from_str::<Value>(line) else { continue };
         if let Some(ts) = codex_real_turn_ts(&v) {
@@ -538,7 +1019,11 @@ fn push_line_messages(v: &Value, tools: ToolRender, out: &mut Vec<Value>) {
                         }
                     }
                     Some("tool_use") if tools == ToolRender::Marker => {
-                        out.push(msg(format!("{uuid}:{i}"), "tool", &tool_label(b), ts));
+                        let name = b.get("name").and_then(|n| n.as_str()).unwrap_or("");
+                        match peer_send_turn(name, b.get("input"), format!("{uuid}:{i}"), ts) {
+                            Some(peer) => out.push(peer),
+                            None => out.push(msg(format!("{uuid}:{i}"), "tool", &tool_label(b), ts)),
+                        }
                     }
                     _ => {} // thinking, tool_use when None, etc.
                 }
@@ -559,7 +1044,12 @@ fn push_line_messages(v: &Value, tools: ToolRender, out: &mut Vec<Value>) {
                 // A no-op for ordinary messages.
                 Some(Value::String(text)) => {
                     let cleaned = strip_leading_image_refs(text);
-                    if !cleaned.trim().is_empty() && !is_system_noise(cleaned) {
+                    // A peer envelope arrives as a real user prompt but is NOT a human message —
+                    // surface it as its own thin row instead of letting is_system_noise drop it
+                    // (invisible) or rendering it as a giant fake "user" bubble.
+                    if let Some(env) = parse_peer_envelope(cleaned) {
+                        out.push(peer_msg(uuid.to_string(), "in", env.name, env.topic, env.body, ts));
+                    } else if !cleaned.trim().is_empty() && !is_system_noise(cleaned) {
                         out.push(msg(uuid.to_string(), "user", cleaned, ts));
                     }
                 }
@@ -585,6 +1075,59 @@ fn push_line_messages(v: &Value, tools: ToolRender, out: &mut Vec<Value>) {
                 _ => {}
             }
         }
+        // A message typed while the agent was MID-TURN. Claude Code queues it and never writes a
+        // `user` turn for it — only a pair of `queue-operation` lines (enqueue/remove) and this
+        // `attachment` at consumption time. Without this arm the human's message is absent from
+        // the transcript entirely: the thread shows the agent's reply with nothing it replied to.
+        //
+        // `origin.kind == "human"` is load-bearing, not belt-and-braces: `queued_command` is also
+        // used for machine traffic (a `task-notification` is queued the same way), and rendering
+        // one of those as something the user said would be worse than the gap it fixes.
+        "attachment" => {
+            let a = v.get("attachment");
+            // A /goal state change. The judge's verdict prose is the single most useful thing in
+            // the transcript when you're away from the desk — it's a written account of what's
+            // done and what isn't — and it belongs in the conversation, in the place it happened,
+            // rather than only as the current-state summary on the thread.
+            if a.and_then(|a| a.get("type")).and_then(|t| t.as_str()) == Some("goal_status") {
+                if let Some(row) = goal_msg(uuid.to_string(), a.unwrap_or(&Value::Null), ts) {
+                    out.push(row);
+                }
+                return;
+            }
+            let is_human = a.and_then(|a| a.get("origin")).and_then(|o| o.get("kind")).and_then(|k| k.as_str())
+                == Some("human");
+            let is_queued = a.and_then(|a| a.get("type")).and_then(|t| t.as_str()) == Some("queued_command");
+            let Some(raw) = a.and_then(|a| a.get("prompt")).and_then(|p| p.as_str()) else { return };
+            if !(is_human && is_queued) {
+                return;
+            }
+            // Same image-ref stripping as a normal user turn: a queued maiLink image send records
+            // its `[Image #N]` chips / `maiterm-mailink-` temp paths in `prompt` too, and the
+            // phone reconciles its optimistic bubble against the bare CAPTION. Without this the
+            // queued path would echo text the phone never sent, so those bubbles would hang.
+            let text = strip_leading_image_refs(raw);
+            if text.trim().is_empty() || is_system_noise(text) {
+                return;
+            }
+            // ORDERING: the attachment's own timestamp is when the message was ENQUEUED, but the
+            // line is written when the queue is DRAINED — after the tool calls that ran while it
+            // waited. Sorting by the enqueue time would float the message above work that
+            // actually preceded it, so it reads as answered before it was sent. Order by file
+            // position instead: one tick past the last turn emitted so far, which lands it
+            // immediately before the reply it triggered. The true send time is preserved
+            // separately in `queuedAt` for clients that want to show it.
+            let after = out
+                .last()
+                .and_then(|m| m.get("ts"))
+                .and_then(|t| t.as_i64())
+                .map_or(ts, |prev| prev.saturating_add(1).max(ts));
+            let mut m = msg(uuid.to_string(), "user", text, after);
+            if ts > 0 {
+                m["queuedAt"] = json!(ts);
+            }
+            out.push(m);
+        }
         // A compaction boundary → one `system` turn so maiLink can draw a divider showing how much
         // context was summarized away (pre → post tokens). Its fields are top-level on the entry
         // (no nested `message`); metadata may be absent on odd builds, so degrade gracefully.
@@ -607,6 +1150,144 @@ fn push_line_messages(v: &Value, tools: ToolRender, out: &mut Vec<Value>) {
 
 fn msg(msg_id: String, role: &str, text: &str, ts: i64) -> Value {
     json!({ "msg_id": msg_id, "role": role, "text": text, "ts": ts })
+}
+
+/// An agent-to-agent message as a thin `kind:"peer_message"` row (mailink-protocol §4.3).
+/// `role:"system"` deliberately: a peer exchange is neither side of THIS thread's conversation,
+/// and the WS streamer skips `user` turns (the phone owns those optimistically), so a `user`
+/// peer turn would vanish on the live path and only reappear on the next GET.
+fn peer_msg(
+    msg_id: String,
+    direction: &str,
+    name: Option<&str>,
+    topic: Option<&str>,
+    text: &str,
+    ts: i64,
+) -> Value {
+    let mut peer = json!({ "direction": direction });
+    // Both optional: a 1:1 bridge has no addressable peer name and no topic. Omitted rather than
+    // sent empty, so the client renders "peer message sent" instead of a blank placeholder.
+    if let Some(n) = name.map(str::trim).filter(|n| !n.is_empty()) {
+        peer["name"] = json!(n);
+    }
+    if let Some(t) = topic.map(str::trim).filter(|t| !t.is_empty()) {
+        peer["topic"] = json!(t);
+    }
+    json!({
+        "msg_id": msg_id,
+        "role": "system",
+        "kind": "peer_message",
+        "peer": peer,
+        "text": text,
+        "ts": ts,
+    })
+}
+
+/// One `/goal` state change as a thin `kind:"goal_status"` row (mailink-protocol §4.3).
+///
+/// `event` is per-record and finer-grained than the thread's `goal.state`: a row says what
+/// happened at that moment (`set`, `blocked`, `met`, `failed`, `cleared`), where the thread field
+/// says where things stand now. `blocked` is the interesting one — it's the judge turning the
+/// agent around, and its `text` is the explanation of what's still missing.
+///
+/// `role:"system"` for the same reason as `peer_msg`: it's neither side of the conversation, and
+/// the WS streamer drops `user` turns (the phone owns those optimistically), so a blocked verdict
+/// tagged `user` would never arrive live.
+fn goal_msg(msg_id: String, a: &Value, ts: i64) -> Option<Value> {
+    let condition = a.get("condition").and_then(|c| c.as_str()).unwrap_or("").trim();
+    let met = a.get("met").and_then(|m| m.as_bool()) == Some(true);
+    let event = if goal_is_sentinel(a) {
+        if met {
+            "cleared"
+        } else {
+            "set"
+        }
+    } else if a.get("failed").and_then(|f| f.as_bool()) == Some(true) {
+        "failed"
+    } else if met {
+        "met"
+    } else {
+        "blocked"
+    };
+    // A verdict's prose is the payload; a sentinel has none, so it shows its condition instead.
+    let text = a
+        .get("reason")
+        .and_then(|r| r.as_str())
+        .map(str::trim)
+        .filter(|r| !r.is_empty())
+        .unwrap_or(condition);
+    if text.is_empty() {
+        return None;
+    }
+    Some(json!({
+        "msg_id": msg_id,
+        "role": "system",
+        "kind": "goal_status",
+        "goal": { "event": event, "condition": condition },
+        "text": text,
+        "ts": ts,
+    }))
+}
+
+/// An INCOMING peer envelope, split into who sent it and what they actually said.
+struct PeerEnvelope<'a> {
+    name: Option<&'a str>,
+    topic: Option<&'a str>,
+    body: &'a str,
+}
+
+/// Parse a bridge/mesh message envelope (see `agentBridge.svelte.ts` / `agentMesh.svelte.ts`
+/// `buildEnvelope`). Matches ONLY real peer messages — the other `⟦…⟧` injections (bridge
+/// openers, `⟦TOPIC COMPLETE⟧`, disconnect notices) are scaffolding with no sender or body and
+/// stay filtered as noise by [`is_system_noise`].
+///
+/// The envelope is two header lines, a blank line, then the message. We strip the header so the
+/// phone shows what the peer said, not maiTerm's routing preamble.
+fn parse_peer_envelope(text: &str) -> Option<PeerEnvelope<'_>> {
+    let t = text.trim_start();
+    let after_from = t
+        .strip_prefix("⟦AGENT-BRIDGE⟧ Message from ")
+        .or_else(|| t.strip_prefix("⟦MESH⟧ Message from "))?;
+    // Header ends at the blank line; degrade to the first newline (then to the whole string) so a
+    // reworded envelope still yields a row rather than disappearing.
+    let (header, body) = match t.split_once("\n\n") {
+        Some((h, b)) => (h, b),
+        None => match t.split_once('\n') {
+            Some((h, b)) => (h, b),
+            None => (t, ""),
+        },
+    };
+    // `Message from "NAME", working in …` — the quoted sender.
+    let name = after_from
+        .strip_prefix('"')
+        .and_then(|r| r.split('"').next())
+        .filter(|s| !s.is_empty());
+    // `[topic: LABEL]` — mesh only.
+    let topic = header
+        .split_once("[topic: ")
+        .and_then(|(_, r)| r.split(']').next())
+        .filter(|s| !s.is_empty());
+    Some(PeerEnvelope { name, topic, body: body.trim() })
+}
+
+/// An OUTGOING peer message for a `sendToBridgedAgent` tool call, or `None` for any other tool.
+/// REPLACES the generic tool chip: the same send must not appear twice, and
+/// `mcp__maiterm__sendToBridgedAgent` as a bare chip in a run of file reads is exactly the
+/// burial this row exists to fix. Matches the MCP-namespaced and bare forms; deliberately not
+/// `postCommsReply`/`startCommsThread` (Mattermost humans) or `SendMessage` (subagents).
+fn peer_send_turn(name: &str, input: Option<&Value>, msg_id: String, ts: i64) -> Option<Value> {
+    if name.rsplit("__").next().unwrap_or(name) != "sendToBridgedAgent" {
+        return None;
+    }
+    let field = |k: &str| input.and_then(|i| i.get(k)).and_then(|v| v.as_str());
+    Some(peer_msg(
+        msg_id,
+        "out",
+        field("recipient"),
+        field("topic"),
+        field("message").unwrap_or(""),
+        ts,
+    ))
 }
 
 /// Caption for a human image-attachment turn: its text blocks joined with spaces, any leading
@@ -681,7 +1362,10 @@ fn tool_label(block: &Value) -> String {
 /// the UI truncates for display. Shared by the transcript tool chips and the session's
 /// `tool_detail` (the maiLink permission card).
 pub(crate) fn compact_tool_arg(input: &Value) -> Option<String> {
-    let arg = ["command", "cmd", "file_path", "path", "pattern", "query", "url"]
+    // `recipient` is last of the primary keys: it only wins for agent-messaging tools, and makes
+    // a permission card / non-Marker chip read `sendToBridgedAgent(maiLink App)` instead of a
+    // bare tool name. (The Marker path replaces that chip outright — see peer_send_turn.)
+    let arg = ["command", "cmd", "file_path", "path", "pattern", "query", "url", "recipient"]
         .iter()
         .find_map(|key| match input.get(key) {
             Some(Value::String(s)) => Some(s.clone()),
@@ -794,6 +1478,53 @@ mod tests {
         let _ = std::fs::remove_file(&path); // clean up before asserting
         assert_eq!(found, Some(path));
         assert!(locate_jsonl(sid).is_none(), "gone once the shadow file is removed");
+    }
+
+    #[test]
+    fn tail_facts_cache_serves_hits_and_refreshes_on_append() {
+        // The cache key is (mtime, len): an unchanged file must serve the cached parse, an
+        // append (len changes even within mtime granularity) must re-parse. Uses the real
+        // claude parser so the test also pins the facts themselves.
+        let dir = std::env::temp_dir().join("aiterm-tail-facts-test");
+        std::fs::create_dir_all(&dir).expect("create test dir");
+        let path = dir.join("facts-test-session.jsonl");
+        let turn = |ts: &str| {
+            format!(
+                "{}\n",
+                json!({
+                    "type": "assistant",
+                    "timestamp": ts,
+                    "effort": "high",
+                    "message": {
+                        "model": "claude-opus-4-8",
+                        "content": [{ "type": "text", "text": "hi" }],
+                        "usage": { "input_tokens": 10, "cache_read_input_tokens": 5 }
+                    }
+                })
+            )
+        };
+        std::fs::write(&path, turn("2026-06-27T21:25:57.904Z")).expect("write");
+
+        let first = tail_facts(&path, claude_tail_facts);
+        assert_eq!(first.last_turn_ts, Some(1782595557904));
+        let meta = first.meta.as_ref().expect("meta parsed");
+        assert_eq!(meta.model_id.as_deref(), Some("claude-opus-4-8"));
+        assert_eq!(meta.context_tokens, 15);
+        assert_eq!(meta.effort.as_deref(), Some("high"));
+
+        // Unchanged file → same facts (cache hit or not, the answer must be identical).
+        assert_eq!(tail_facts(&path, claude_tail_facts).last_turn_ts, Some(1782595557904));
+
+        // Append a newer turn → facts must advance (len changed, so the gate re-reads).
+        let mut body = std::fs::read_to_string(&path).unwrap();
+        body.push_str(&turn("2026-06-27T21:30:00.000Z"));
+        std::fs::write(&path, body).expect("append");
+        assert_eq!(tail_facts(&path, claude_tail_facts).last_turn_ts, Some(1782595800000));
+
+        // A vanished file yields empty facts, not stale ones.
+        std::fs::remove_file(&path).unwrap();
+        let gone = tail_facts(&path, claude_tail_facts);
+        assert!(gone.last_turn_ts.is_none() && gone.meta.is_none());
     }
 
     #[test]
@@ -1056,7 +1787,7 @@ mod tests {
 
         let mut out = Vec::new();
         for (i, line) in [agent, user, scaffold, reasoning, event_dup].iter().enumerate() {
-            push_codex_line_messages(i, line, ToolRender::Marker, &mut out);
+            push_codex_line_messages(i as u64, line, ToolRender::Marker, &mut out);
         }
         assert_eq!(out.len(), 2);
         assert_eq!(out[0]["role"], "agent");
@@ -1066,6 +1797,54 @@ mod tests {
         assert_eq!(out[1]["role"], "user");
         assert_eq!(out[1]["text"], "hi");
         assert_eq!(out[1]["msg_id"], "cx1:0");
+    }
+
+    /// The Codex tail read keys msg_ids on each line's GLOBAL byte offset. The property that makes
+    /// that safe: a given line's offset is identical no matter how far back the tail window starts,
+    /// AND a window that begins mid-line drops that partial fragment. Without both, a growing
+    /// rollout would re-id the same turn between reads → duplicate streamed frames.
+    #[test]
+    fn read_tail_bytes_yields_stable_global_offsets_and_skips_partial_line() {
+        use std::io::Write;
+        // Three newline-terminated "lines" of known lengths.
+        let l0 = b"line-zero\n"; // 10 bytes, offset 0
+        let l1 = b"line-one!!\n"; // 11 bytes, offset 10
+        let l2 = b"line-two-xy\n"; // 12 bytes, offset 21
+        let mut file = std::env::temp_dir();
+        file.push(format!("maiterm-codex-offset-{}.jsonl", std::process::id()));
+        {
+            let mut f = std::fs::File::create(&file).unwrap();
+            f.write_all(l0).unwrap();
+            f.write_all(l1).unwrap();
+            f.write_all(l2).unwrap();
+        }
+        let total = (l0.len() + l1.len() + l2.len()) as u64;
+
+        // Compute the global offset of every COMPLETE line in a tail window of `max` bytes.
+        let offsets = |max: u64| -> Vec<u64> {
+            let (buf, base) = read_tail_bytes(&file, max).unwrap();
+            let mut off = base;
+            let mut out = Vec::new();
+            for (idx, line) in buf.split_inclusive(|&b| b == b'\n').enumerate() {
+                let start = off;
+                off += line.len() as u64;
+                if idx == 0 && base > 0 {
+                    continue; // partial leading fragment — dropped
+                }
+                out.push(start);
+            }
+            out
+        };
+
+        // Whole file: all three lines at their true offsets.
+        assert_eq!(offsets(total), vec![0, 10, 21]);
+        // Tail that starts INSIDE line 1 (base = total-20 = 13): the l1 fragment is dropped, and l2
+        // still reports its true global offset 21 — byte-identical to the whole-file read.
+        assert_eq!(offsets(20), vec![21]);
+        // A wider tail that starts inside line 0 keeps l1 and l2 at their real offsets.
+        assert_eq!(offsets(total - 5), vec![10, 21]);
+
+        std::fs::remove_file(&file).ok();
     }
 
     #[test]
@@ -1089,7 +1868,7 @@ mod tests {
 
         let mut out = Vec::new();
         for (i, line) in [exec, argv, patch, output].iter().enumerate() {
-            push_codex_line_messages(i, line, ToolRender::Marker, &mut out);
+            push_codex_line_messages(i as u64, line, ToolRender::Marker, &mut out);
         }
         assert_eq!(out.len(), 3);
         assert_eq!(out[0]["role"], "tool");
@@ -1139,6 +1918,34 @@ mod tests {
 
         // No usable token_count at all → None (no gauge is better than a wrong gauge).
         assert!(codex_meta_from_tail(r#"{"type":"turn_context","payload":{"model":"gpt-5.5"}}"#).is_none());
+    }
+
+    #[test]
+    fn claude_meta_reads_effort_and_model_from_last_assistant_turn() {
+        // Shapes trimmed from a real ~/.claude transcript: `effort` is top-level, sibling of
+        // `message`; the usage block is inside `message`.
+        let with_effort = concat!(
+            r#"{"type":"user","message":{"role":"user","content":"hi"}}"#, "\n",
+            r#"{"type":"assistant","effort":"xhigh","message":{"role":"assistant","model":"claude-opus-4-8","usage":{"input_tokens":1000,"cache_read_input_tokens":200,"cache_creation_input_tokens":50}}}"#, "\n",
+        );
+        let meta = claude_meta_from_tail(with_effort).expect("parses");
+        assert_eq!(meta.model_id.as_deref(), Some("claude-opus-4-8"));
+        assert_eq!(meta.context_tokens, 1250);
+        assert_eq!(meta.effort.as_deref(), Some("xhigh"));
+        assert_eq!(meta.context_window, None); // Claude derives the window from the model id
+
+        // Older transcript / effort-less model: the field is simply absent → None (not an error).
+        let no_effort = r#"{"type":"assistant","message":{"role":"assistant","model":"claude-opus-4-8","usage":{"input_tokens":500}}}"#;
+        let meta2 = claude_meta_from_tail(no_effort).expect("parses");
+        assert_eq!(meta2.effort, None);
+        assert_eq!(meta2.context_tokens, 500);
+
+        // Newest assistant turn wins: a later high overrides an earlier medium.
+        let two_turns = concat!(
+            r#"{"type":"assistant","effort":"medium","message":{"role":"assistant","model":"claude-opus-4-8","usage":{"input_tokens":100}}}"#, "\n",
+            r#"{"type":"assistant","effort":"high","message":{"role":"assistant","model":"claude-opus-4-8","usage":{"input_tokens":900}}}"#, "\n",
+        );
+        assert_eq!(claude_meta_from_tail(two_turns).unwrap().effort.as_deref(), Some("high"));
     }
 
     #[test]
@@ -1233,21 +2040,323 @@ mod tests {
             "message": { "role": "user", "content": [ { "type": "tool_result", "content": "output" } ] } });
         let noise = json!({ "type": "user", "uuid": "u4", "timestamp": "2026-06-27T21:26:00Z",
             "message": { "role": "user", "content": "<system-reminder>hi</system-reminder>" } });
-        // Agent-to-agent injections (bridge/mesh envelopes) are not human messages.
-        let bridge = json!({ "type": "user", "uuid": "u5", "timestamp": "2026-06-27T21:26:01Z",
+        // Bridge/mesh openers carry no sender or body — still pure scaffolding, still dropped.
+        let opener = json!({ "type": "user", "uuid": "u5", "timestamp": "2026-06-27T21:26:01Z",
             "message": { "role": "user",
-                "content": "⟦AGENT-BRIDGE⟧ Message from \"peer\" — a peer AI agent…" } });
-        let mesh = json!({ "type": "user", "uuid": "u6", "timestamp": "2026-06-27T21:26:02Z",
+                "content": "⟦AGENT-BRIDGE⟧ You are now bridged to \"peer\" — a peer AI agent." } });
+        let complete = json!({ "type": "user", "uuid": "u6", "timestamp": "2026-06-27T21:26:02Z",
             "message": { "role": "user",
-                "content": "⟦MESH⟧ Message from \"reviewer\" [topic: api] [turn 3]…" } });
+                "content": "⟦TOPIC COMPLETE⟧ The topic \"api\" has been marked complete." } });
         let mut out = Vec::new();
         push_line_messages(&real, ToolRender::Marker, &mut out);
         push_line_messages(&toolres, ToolRender::Marker, &mut out);
         push_line_messages(&noise, ToolRender::Marker, &mut out);
-        push_line_messages(&bridge, ToolRender::Marker, &mut out);
-        push_line_messages(&mesh, ToolRender::Marker, &mut out);
+        push_line_messages(&opener, ToolRender::Marker, &mut out);
+        push_line_messages(&complete, ToolRender::Marker, &mut out);
         assert_eq!(out.len(), 1);
         assert_eq!(out[0]["role"], "user");
         assert_eq!(out[0]["text"], "Please fix the bug.");
+    }
+
+    #[test]
+    fn the_queue_replay_drains_on_remove_even_though_the_op_carries_no_text() {
+        let enq = |text: &str, ts: &str| {
+            json!({ "type": "queue-operation", "operation": "enqueue", "content": text, "timestamp": ts })
+        };
+        let op = |kind: &str| json!({ "type": "queue-operation", "operation": kind, "timestamp": "2026-07-26T15:00:09.000Z" });
+        let drained = |prompt: &str| {
+            json!({ "type": "attachment", "attachment": { "type": "queued_command", "prompt": prompt,
+                "origin": { "kind": "human" } } })
+        };
+
+        // `remove` is a bare record — no `content`. Matching it against its own (absent) text
+        // silently drained nothing, so consumed messages stayed listed as pending forever.
+        let lines = vec![
+            enq("first", "2026-07-26T15:00:00.000Z"),
+            enq("second", "2026-07-26T15:00:01.000Z"),
+            op("remove"),
+            drained("first"),
+        ];
+        let q = replay_queue(&lines);
+        assert_eq!(q.len(), 1, "the consumed message must leave the queue");
+        assert_eq!(q[0].0, "second");
+
+        // The attachment names WHICH entry drained, so an out-of-order drain is exact rather
+        // than positional.
+        let lines = vec![
+            enq("first", "2026-07-26T15:00:00.000Z"),
+            enq("second", "2026-07-26T15:00:01.000Z"),
+            op("remove"),
+            drained("second"),
+        ];
+        assert_eq!(replay_queue(&lines)[0].0, "first");
+
+        // An image send's attachment carries `[Image #N]` chips the enqueued caption never had.
+        let lines = vec![
+            enq("look at this", "2026-07-26T15:00:00.000Z"),
+            op("remove"),
+            drained("[Image #1]look at this"),
+        ];
+        assert!(replay_queue(&lines).is_empty(), "an image caption must still match its entry");
+
+        // `dequeue` identifies nothing, so it drains the head — it is an ordinary turn-boundary
+        // drain, NOT the arrow-up recall it was once read as.
+        let lines = vec![
+            enq("first", "2026-07-26T15:00:00.000Z"),
+            enq("second", "2026-07-26T15:00:01.000Z"),
+            op("dequeue"),
+        ];
+        assert_eq!(replay_queue(&lines)[0].0, "second");
+
+        let lines = vec![enq("first", "2026-07-26T15:00:00.000Z"), op("popAll")];
+        assert!(replay_queue(&lines).is_empty());
+    }
+
+    /// One `goal_status` transcript line. Shapes are verbatim from live sessions (2.1.177–2.1.220).
+    fn goal_line(ts: &str, att: Value) -> String {
+        let mut a = json!({ "type": "goal_status" });
+        a.as_object_mut().unwrap().extend(att.as_object().unwrap().clone());
+        json!({ "type": "attachment", "uuid": ts, "timestamp": ts, "attachment": a }).to_string()
+    }
+
+    #[test]
+    fn a_goal_is_live_until_a_verdict_ends_it_and_sentinel_alone_cannot_say_which() {
+        let cond = "ship the feature";
+        let set = goal_line("2026-07-28T10:00:00.000Z", json!({ "met": false, "sentinel": true, "condition": cond }));
+        let blocked = goal_line(
+            "2026-07-28T10:20:00.000Z",
+            json!({ "met": false, "condition": cond, "reason": "Tests still failing." }),
+        );
+
+        // Set, not yet evaluated: live, and honest that no judge has run.
+        let g = read_goal(&set, 0).unwrap();
+        assert_eq!((g.state, g.attempts), ("active", 0));
+        assert_eq!(g.condition, cond);
+        assert!(g.reason.is_none() && g.last_checked_at.is_none());
+
+        // Blocked is NOT terminal — the judge turned the agent around, so the goal is still on.
+        // The verdict prose is the whole point of the feature.
+        let g = read_goal(&format!("{set}\n{blocked}"), 0).unwrap();
+        assert_eq!((g.state, g.attempts), ("active", 1));
+        assert_eq!(g.reason.as_deref(), Some("Tests still failing."));
+        // Blocked evaluations carry no metrics at all — not a version quirk, they're never emitted.
+        assert!(g.duration_ms.is_none() && g.tokens.is_none());
+
+        // met:true ends it, and carries the cost figures.
+        let done = goal_line(
+            "2026-07-28T10:40:00.000Z",
+            json!({ "met": true, "condition": cond, "reason": "Shipped.", "iterations": 2,
+                "durationMs": 2400000, "tokens": 198573 }),
+        );
+        let g = read_goal(&format!("{set}\n{blocked}\n{done}"), 0).unwrap();
+        assert_eq!((g.state, g.attempts), ("met", 2));
+        assert_eq!((g.duration_ms, g.tokens), (Some(2400000), Some(198573)));
+
+        // A judge ruling it impossible is terminal too, and must not read as "still working".
+        let imp = goal_line(
+            "2026-07-28T10:40:00.000Z",
+            json!({ "met": false, "failed": true, "condition": cond, "reason": "Needs prod access." }),
+        );
+        assert_eq!(read_goal(&format!("{set}\n{imp}"), 0).unwrap().state, "failed");
+
+        // THE TRAP: a manual clear is `sentinel:true` too, and means the opposite of the set
+        // record. Keying on `sentinel` alone would show a goal as freshly set at the moment it
+        // was removed.
+        let cleared = goal_line("2026-07-28T10:41:00.000Z", json!({ "met": true, "sentinel": true, "condition": cond }));
+        assert_eq!(read_goal(&format!("{set}\n{cleared}"), 0).unwrap().state, "cleared");
+
+        // No goal_status records at all → no goal.
+        assert!(read_goal("{\"type\":\"assistant\"}", 0).is_none());
+    }
+
+    #[test]
+    fn a_finished_goal_is_reported_until_the_conversation_moves_past_it() {
+        let cond = "ship it";
+        let set = goal_line("2026-07-28T10:00:00.000Z", json!({ "met": false, "sentinel": true, "condition": cond }));
+        let done_ms = rfc3339_to_ms("2026-07-28T10:40:00.000Z") as u64;
+        let done = goal_line("2026-07-28T10:40:00.000Z", json!({ "met": true, "condition": cond, "reason": "Done." }));
+        let tail = format!("{set}\n{done}");
+
+        // No clear record follows a met evaluation, so without this the completion and "there was
+        // never a goal" are the same absence — the phone would watch the goal silently vanish.
+        assert_eq!(read_goal(&tail, done_ms - 1).unwrap().state, "met");
+        // Once the operator says something else, the completion is old news.
+        assert!(read_goal(&tail, done_ms + 1).is_none());
+        // A live goal is never suppressed by activity — activity is the agent working on it.
+        assert_eq!(read_goal(&set, done_ms + 1).unwrap().state, "active");
+    }
+
+    #[test]
+    fn a_second_goal_starts_its_own_attempt_count() {
+        let first = format!(
+            "{}\n{}\n{}",
+            goal_line("2026-07-28T10:00:00.000Z", json!({ "met": false, "sentinel": true, "condition": "one" })),
+            goal_line("2026-07-28T10:10:00.000Z", json!({ "met": false, "condition": "one", "reason": "no" })),
+            goal_line("2026-07-28T10:20:00.000Z", json!({ "met": true, "condition": "one", "reason": "yes" })),
+        );
+        let second = goal_line("2026-07-28T11:00:00.000Z", json!({ "met": false, "sentinel": true, "condition": "two" }));
+
+        let g = read_goal(&format!("{first}\n{second}"), 0).unwrap();
+        assert_eq!((g.condition.as_str(), g.state, g.attempts), ("two", "active", 0));
+        // The second goal's own start, not the first goal's.
+        assert_eq!(g.set_at, Some(rfc3339_to_ms("2026-07-28T11:00:00.000Z") as u64));
+
+        // A goal whose set record has scrolled out of the scan window still reports itself —
+        // every evaluation names the condition. Only the start time is unknowable.
+        let orphan = goal_line("2026-07-28T11:30:00.000Z", json!({ "met": false, "condition": "two", "reason": "not yet" }));
+        let g = read_goal(&orphan, 0).unwrap();
+        assert_eq!((g.condition.as_str(), g.state), ("two", "active"));
+        assert!(g.set_at.is_none());
+    }
+
+    #[test]
+    fn goal_records_render_as_their_own_transcript_rows() {
+        let line: Value = serde_json::from_str(&goal_line(
+            "2026-07-28T10:20:00.000Z",
+            json!({ "met": false, "condition": "ship it", "reason": "Tests still failing." }),
+        ))
+        .unwrap();
+        let mut out = Vec::new();
+        push_line_messages(&line, ToolRender::Marker, &mut out);
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0]["kind"], "goal_status");
+        assert_eq!(out[0]["role"], "system"); // `user` rows are dropped by the WS streamer
+        assert_eq!(out[0]["goal"]["event"], "blocked");
+        assert_eq!(out[0]["text"], "Tests still failing.");
+
+        // A sentinel has no prose, so it shows the condition it set.
+        let line: Value = serde_json::from_str(&goal_line(
+            "2026-07-28T10:00:00.000Z",
+            json!({ "met": false, "sentinel": true, "condition": "ship it" }),
+        ))
+        .unwrap();
+        let mut out = Vec::new();
+        push_line_messages(&line, ToolRender::Marker, &mut out);
+        assert_eq!(out[0]["goal"]["event"], "set");
+        assert_eq!(out[0]["text"], "ship it");
+
+        // A goal attachment must not fall through to the queued-message arm.
+        assert!(out.iter().all(|m| m["role"] != "user"));
+    }
+
+    #[test]
+    fn queued_human_messages_surface_in_order_after_the_work_they_waited_on() {
+        // Verbatim shape from a live session: a message typed mid-turn is written ONLY as this
+        // attachment, at drain time, carrying the ENQUEUE timestamp — which is older than the
+        // tool work that ran while it waited.
+        let queued = |prompt: &str, origin: Value, kind: &str| {
+            json!({ "type": "attachment", "uuid": "att1", "timestamp": "2026-07-26T15:25:16.208Z",
+                "attachment": { "type": kind, "prompt": prompt, "commandMode": "prompt",
+                    "origin": origin, "timestamp": "2026-07-26T15:25:16.208Z" } })
+        };
+        let tool = json!({ "type": "assistant", "uuid": "a1", "timestamp": "2026-07-26T15:25:19.769Z",
+            "message": { "content": [ { "type": "tool_use", "name": "Edit", "input": { "file_path": "x.rs" } } ] } });
+
+        let mut out = Vec::new();
+        push_line_messages(&tool, ToolRender::Marker, &mut out);
+        push_line_messages(&queued("build should not restart", json!({"kind": "human"}), "queued_command"), ToolRender::Marker, &mut out);
+        assert_eq!(out.len(), 2, "the queued human message must appear at all");
+        assert_eq!(out[1]["role"], "user");
+        assert_eq!(out[1]["text"], "build should not restart");
+        // Sorted AFTER the tool work despite its older enqueue stamp, so the thread doesn't read
+        // as though the message was answered before it was sent…
+        assert!(
+            out[1]["ts"].as_i64().unwrap() > out[0]["ts"].as_i64().unwrap(),
+            "queued message must sort after the work it waited on"
+        );
+        // …while the true send time survives separately.
+        assert_eq!(out[1]["queuedAt"], json!(rfc3339_to_ms("2026-07-26T15:25:16.208Z")));
+
+        // Machine-queued traffic uses the SAME attachment type — it must not render as a human turn.
+        let mut out2 = Vec::new();
+        push_line_messages(&queued("<task-notification>…", Value::Null, "queued_command"), ToolRender::Marker, &mut out2);
+        push_line_messages(&queued("some delta", json!({"kind": "human"}), "deferred_tools_delta"), ToolRender::Marker, &mut out2);
+        assert!(out2.is_empty(), "non-human / non-queued_command attachments stay out");
+    }
+
+    #[test]
+    fn queued_image_send_echoes_the_bare_caption() {
+        // A queued maiLink image send records its chips in `prompt` too; the echo must equal the
+        // CAPTION the phone sent, or the optimistic bubble never reconciles.
+        let line = json!({ "type": "attachment", "uuid": "att2", "timestamp": "2026-07-26T15:25:16.208Z",
+            "attachment": { "type": "queued_command", "prompt": "[Image #1]look at this",
+                "origin": { "kind": "human" } } });
+        let mut out = Vec::new();
+        push_line_messages(&line, ToolRender::Marker, &mut out);
+        assert_eq!(out[0]["text"], "look at this");
+    }
+
+    #[test]
+    fn incoming_peer_envelopes_become_peer_message_turns() {
+        // Verbatim envelope shapes from agentBridge/agentMesh buildEnvelope.
+        let bridge = json!({ "type": "user", "uuid": "p1", "timestamp": "2026-06-27T21:26:01Z",
+            "message": { "role": "user", "content":
+                "⟦AGENT-BRIDGE⟧ Message from \"maiLink App\", working in ~/DATA/IDE/maiLink — a peer AI agent, NOT your human operator. [turn 7]\nReply with the sendToBridgedAgent tool. If this fully answers the request, you can stop — don't reply just to acknowledge.\n\nThe task board UI is built.\n\nSecond paragraph survives." } });
+        let mesh = json!({ "type": "user", "uuid": "p2", "timestamp": "2026-06-27T21:26:02Z",
+            "message": { "role": "user", "content":
+                "⟦MESH⟧ Message from \"reviewer\", working in /srv/api — a peer AI agent, NOT your human operator. [topic: auth-refactor] [turn 3]\nReply with the sendToBridgedAgent tool, tagging topic \"t_9\".\n\nLGTM." } });
+        let mut out = Vec::new();
+        push_line_messages(&bridge, ToolRender::Marker, &mut out);
+        push_line_messages(&mesh, ToolRender::Marker, &mut out);
+        assert_eq!(out.len(), 2);
+
+        assert_eq!(out[0]["role"], "system");
+        assert_eq!(out[0]["kind"], "peer_message");
+        assert_eq!(out[0]["peer"]["direction"], "in");
+        assert_eq!(out[0]["peer"]["name"], "maiLink App");
+        // 1:1 bridge has no topic — the key is omitted, not sent empty.
+        assert!(out[0]["peer"].get("topic").is_none());
+        // Routing preamble stripped; the whole body (blank lines and all) kept.
+        assert_eq!(out[0]["text"], "The task board UI is built.\n\nSecond paragraph survives.");
+
+        assert_eq!(out[1]["peer"]["name"], "reviewer");
+        assert_eq!(out[1]["peer"]["topic"], "auth-refactor");
+        assert_eq!(out[1]["text"], "LGTM.");
+    }
+
+    #[test]
+    fn send_to_bridged_agent_replaces_its_tool_chip() {
+        let line = json!({ "type": "assistant", "uuid": "a1", "timestamp": "2026-06-27T21:26:03Z",
+            "message": { "content": [
+                { "type": "tool_use", "name": "Bash", "input": { "command": "ls" } },
+                { "type": "tool_use", "name": "mcp__maiterm__sendToBridgedAgent",
+                  "input": { "message": "Deployed — go ahead.", "recipient": "maiLink App", "topic": "tasks" } },
+            ] } });
+        let mut out = Vec::new();
+        push_line_messages(&line, ToolRender::Marker, &mut out);
+        // Two blocks in, two turns out — the send became a peer row INSTEAD of a chip, not
+        // alongside one (the same event must not appear twice).
+        assert_eq!(out.len(), 2);
+        assert_eq!(out[0]["role"], "tool");
+        assert_eq!(out[0]["text"], "Bash(ls)");
+        assert_eq!(out[1]["role"], "system");
+        assert_eq!(out[1]["kind"], "peer_message");
+        assert_eq!(out[1]["peer"]["direction"], "out");
+        assert_eq!(out[1]["peer"]["name"], "maiLink App");
+        assert_eq!(out[1]["peer"]["topic"], "tasks");
+        assert_eq!(out[1]["text"], "Deployed — go ahead.");
+    }
+
+    #[test]
+    fn peer_send_matching_is_narrow_and_name_is_optional() {
+        // Bare (non-MCP) name matches; a 1:1 bridge send carries no recipient/topic.
+        let bare = peer_send_turn(
+            "sendToBridgedAgent",
+            Some(&json!({ "message": "hi" })),
+            "m1".into(),
+            0,
+        )
+        .expect("bare name matches");
+        assert_eq!(bare["peer"]["direction"], "out");
+        assert!(bare["peer"].get("name").is_none(), "no placeholder name on a 1:1 bridge");
+        assert_eq!(bare["text"], "hi");
+
+        // Human/subagent messaging tools are NOT peer messages and keep their tool chips.
+        for name in ["postCommsReply", "mcp__maiterm__startCommsThread", "SendMessage", "Bash"] {
+            assert!(
+                peer_send_turn(name, Some(&json!({ "message": "x" })), "m".into(), 0).is_none(),
+                "{name} must not be treated as a peer message"
+            );
+        }
     }
 }

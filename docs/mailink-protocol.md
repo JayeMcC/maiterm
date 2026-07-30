@@ -295,10 +295,21 @@ everything except `/pair`. JSON bodies. All times are unix ms.
 | `GET  /chats` | List maiLink-native chats + state | → `Chat[]` (see §4.3) |
 | `GET  /chats/{tabId}?before={msg_id}&limit=N` | One chat + transcript (paging params reserved) | → `ChatDetail` |
 | `GET  /chats/{tabId}/context?lines=N` | Distilled plain-text context | → `{text, truncated}` |
-| `POST /chats/{tabId}/message` | Send a message / proactive command | `{text, submit?:true}` → `{status:"queued"\|"delivered", msg_id}` |
+| `POST /chats/{tabId}/message` | Send a message / proactive command (auto-wakes an unregistered tab first — §5) | `{text, submit?:true}` → `{status:"delivered", msg_id, woke:null\|"init"\|"resume"}` \| `{status:"unreachable", reason, detail}` |
 | `POST /chats/{tabId}/respond` | Answer a pending permission/question | `{choice, prompt_id}` (see §5) → `{ok}` \| `{ok:false, reason:"stale"}` |
 | `POST /chats/{tabId}/activate` | Activate/focus/resume a designated tab | `{}` → `{state}` |
-| `POST /chats/{tabId}/interrupt` | Send Esc (stop the agent) | `{}` → `{ok}` |
+| `POST /chats/{tabId}/interrupt` | Send Esc (stop the agent); settles chat state to idle, clears the restored prompt | `{}` → `{ok, settled, composerCleared}` (may hold up to 3 s — §5) |
+| `POST /chats/{tabId}/shells/{shellId}/stop` | Terminate one background shell (SIGTERM→SIGKILL on its own pid) | `{}` → `{ok:true, stopped:bool}`; IDEMPOTENT — an already-dead or unknown shell is `ok:true, stopped:false`, never 404 |
+| `POST /chats/{tabId}/new` | Start a NEW conversation from this one (light clone: SSH host + cwd, fresh agent session) | `{}` → `{ok:true, tabId}`; `{ok:false, reason:"timeout"}` if the tab didn't appear in time |
+| `POST /chats/{tabId}/rename` | Set the tab title | `{title}` → `{ok, title}` (normalized) |
+| `POST /chats/{tabId}/resume-workspace` | Wake the suspended workspace that owns this tab | `{}` → `{ok, resumed, workspaceId?}` |
+| `POST /chats/{tabId}/wake` | Per-tab Initialize — re-register or restart this tab's agent | `{}` → `{ok:true, woke:"init"\|"resume"}` \| `{ok:true, woke:null, reason, detail?}` |
+| `POST /chats/{tabId}/queue/cancel` | Pull back the ONE message waiting in the input queue (§5) | `{}` → `{ok:true, cancelled:true, text, composerCleared}` \| `{ok:true, cancelled:false, reason}` |
+| `POST /chats/{tabId}/mesh-init` | Initialize-all for the mesh workspace that owns this tab | `{}` → `{ok, initiated, workspaceId?, reason?}` |
+| `GET  /chats/archived` | Archived (recoverable) tabs across all workspaces | → `ArchivedChat[]` |
+| `POST /chats/{tabId}/archive` | Archive a live tab (RECOVERABLE) | `{}` → `{ok}` |
+| `POST /chats/{tabId}/close` | End a live tab PERMANENTLY (destructive) | `{}` → `{ok}` |
+| `POST /chats/{tabId}/restore` | Un-archive a tab back into its workspace | `{}` → `{ok, workspaceId?}` |
 | `GET  /heartbeat` | Liveness + server clock | → `{ok, now, server_name}` |
 
 ### 4.2 WebSocket (live chat channel) — `GET /mailink/v1/ws` (upgrade)
@@ -318,7 +329,16 @@ Bidirectional, opened while the app is foreground. Server→client events:
                                                      // `prompt` mirrors pendingPrompt; present for permission/question,
                                                      // omitted for idle_done. Lets the app render decision buttons on the
                                                      // live path with no follow-up GET. GET /chats/{tabId} stays source of truth.
-{ "type": "chats_changed" }                           // roster/designation changed; re-GET /chats
+{ "type": "chats_changed" }                           // roster/designation, a tab title, a workspace's suspended flag, OR its mesh flag changed; re-GET /chats
+{ "type": "tasks", "tabId": "...", "tasks": [/* AgentTask[] */], "ts": 0 }
+{ "type": "shells", "tabId": "...", "shells": [/* AgentShell[] */], "ts": 0 }
+                                                     // the tab's background-shell roster changed — REPLACE the whole
+                                                     // array. Same baseline-on-connect discipline as `tasks`; [] clears.
+                                                     // Fires on a shell EXITING too, which appends nothing to the
+                                                     // transcript. Claude + local tabs only.
+                                                     // the tab's Claude task board changed — REPLACE the whole board (they're
+                                                     // tiny; no per-task diffing). Emitted per board on WS connect (baseline),
+                                                     // then only on change; [] when the board empties/disappears. Claude only.
 ```
 
 Client→server frames are optional conveniences mirroring the REST actions (`message`,
@@ -336,14 +356,66 @@ interface Chat {
   tabId: string;
   title: string;            // tab name
   workspace: string;        // workspace name (grouping)
+  workspaceId: string;      // owning workspace id (stable; resume flow resolves tab→workspace)
+  workspaceSuspended: boolean; // owning workspace is suspended → show "Resume workspace", not Initialize
+  mesh: boolean;            // owning workspace is a Mesh Workspace → badge the group, offer Initialize-all
   runtime: 'claude' | 'codex' | 'gemini';
   state: 'active' | 'idle' | 'permission' | 'dormant';
+                            // dormant = no live agent. A tab with a live PTY that is still producing
+                            // turns but whose session registration was lost (e.g. a mesh/SSH resume
+                            // where the hook/init handshake missed) reports 'active' via a
+                            // self-correcting liveness fallback — never a stuck 'dormant' over live output.
+  registered: boolean;      // false ⇒ this tab has NO tracked agent session, so `state` was
+                            //   inferred from a liveness fallback (live PTY + a recent transcript
+                            //   turn ⇒ "active", else "dormant") rather than observed. A live
+                            //   agent that never registered is neither dormant nor working, and
+                            //   `state` has no word for it — so don't read too much into the word;
+                            //   offer a re-initialize action instead. Always true when a session
+                            //   is tracked.
   unread: boolean;          // idle/attention not yet seen on a device
   lastActivityTs: number;
   preview: string;          // last line(s) of distilled context
 }
 interface ChatDetail extends Chat {
   transcript: Message[];    // distilled turns, newest last
+  tasks?: AgentTask[];      // Claude session task board (the strip above the TUI prompt), sorted
+                            // by numeric id; present only when non-empty. Live updates ride the
+                            // WS `tasks` event (full-array replace). Claude runtime only.
+                            // NOTE: Claude Code DELETES a session's task files once every task
+                            // reaches `completed` — an all-done board vanishes on its own, with
+                            // no user action, FASTER than the ~400ms WS diff interval (measured
+                            // <100ms). So a client typically never observes the all-done board
+                            // at all: the last event before the clear still shows one task
+                            // unfinished, then `tasks: []` arrives. Treat that as normal
+                            // completion, NOT an error or a dropped session — and do NOT design
+                            // an "all tasks complete" state; it is unreachable in practice, not
+                            // merely brief. A session that finished its work reports no board.
+  queued?: { text: string; queuedAt: number }[];
+                            // messages typed while the agent was BUSY and not yet consumed, oldest
+                            //   first. Render these as genuinely "queued" (the agent is busy),
+                            //   not as an in-flight spinner — and treat presence here as the
+                            //   precondition for offering to pull one back: an already-consumed
+                            //   message cannot be recalled. `text` matches what the turn will echo
+                            //   once consumed. Claude tabs only; absent when the queue is empty.
+                            //   GET only — there is no `queued` WS event; re-GET on a state change.
+                            //   Reconstructed by replaying `queue-operation` lines, and only
+                            //   `enqueue`/`popAll` carry text: `remove` and `dequeue` are bare
+                            //   records, so which entry drained comes from the `queued_command`
+                            //   attachment that follows a `remove`, and from FIFO order otherwise.
+                            //   Do NOT read `dequeue` as an arrow-up recall — 1042 of 1229 in a
+                            //   real corpus are followed by an ordinary user turn. Nothing in a
+                            //   transcript marks a genuine recall.
+  goal?: AgentGoal;         // the `/goal` condition the agent is being held to. Claude tabs only;
+                            //   absent when there is no goal. GET only — re-GET on a state change.
+                            //   Scoped to the tab's CURRENT session: the Stop hook is
+                            //   session-scoped, so a goal read off any other session would be one
+                            //   nothing is actually enforcing. Costs a transcript tail read, so it
+                            //   is detail-only and never on the chat list.
+  shells?: AgentShell[];    // background shells (`Bash run_in_background` — the TUI's /bashes
+                            // list), present only when non-empty. Claude + LOCAL tabs only: an
+                            // SSH tab's shells are the REMOTE host's processes, so their liveness
+                            // can't be confirmed and Stop couldn't signal them — those tabs report
+                            // nothing rather than a roster that can't be stood behind.
   pendingPrompt?: {         // present iff state==='permission' or a question is open
     prompt_id: string;      // opaque, minted when the agent opens this prompt; echoed in /respond
     kind: 'permission' | 'question';
@@ -359,6 +431,102 @@ interface ChatDetail extends Chat {
 // `message{role:'user'}` WS echo for that turn (mints at accept-time, reused for both) —
 // lets the app reconcile an optimistic local bubble against the echo.
 interface Message { msg_id: string; role: 'agent'|'user'|'system'; text: string; ts: number; }
+
+// One background shell. Reconstructed from the transcript (identity + observed outcomes) and then
+// SETTLED AGAINST THE OS PROCESS TABLE, because the transcript alone is badly stale: nothing is
+// appended when a background process exits, so its "running" only ever means "was running when
+// last polled". Measured on a real 37-shell session: the transcript claimed 31 running; exactly 1
+// process existed. So `status:"running"` here means a live process was CONFIRMED — it is the only
+// status that offers a Stop button, and it never lies about a dead process.
+//
+// The confirmation can't just count the agent's children: a live agent's direct children ALSO
+// include its stdio MCP servers, which look exactly like long-running processes and would each be
+// mistaken for a background shell. Matching is therefore keyed on the wrapper Claude Code actually
+// spawns (`bash -c source …/shell-snapshots/… && eval '<command>'`), which no MCP server has.
+interface AgentShell {
+  id: string;               // Claude Code's shell id, e.g. "bkbod6zxj"
+  command: string;          // the command line as the agent wrote it
+  description?: string;     // the agent's own short label, when it gave one
+  status: 'running' | 'completed' | 'failed' | 'killed';
+  exitCode?: number;        // ABSENT on a terminal status means the outcome was never observed —
+                            //   the shell ended without a final poll, so no code was recorded.
+                            //   Never guessed. Render such rows as "ended", NOT as succeeded.
+  startedAt: number;        // unix ms
+  endedAt?: number;         // absent while running, and when the end went unobserved
+  tail?: string;            // last captured output line — a progress hint, not the log
+}
+
+// The `/goal <condition>` an agent is being held to. The goal installs a session-scoped Stop hook:
+// the agent CANNOT end its turn until a judge decides the condition holds, and each attempt that
+// falls short sends it back to work with a written explanation of what's missing. Away from the
+// desk this is the best available answer to "is it actually going to finish, and what's left".
+//
+// Entirely transcript-derived (`goal_status` attachments in the session JSONL), which means it
+// costs nothing extra on SSH tabs — the remote-JSONL mirror already carries it. No remote process
+// is consulted, unlike `shells`.
+interface AgentGoal {
+  condition: string;        // as the operator typed it
+  state: 'active' | 'met' | 'failed' | 'cleared';
+                            // active  — being enforced right now: freshly set, OR evaluated and
+                            //           sent back. A blocked verdict is NOT an ending; `reason`
+                            //           then holds the judge's account of what's still outstanding.
+                            // met     — the judge accepted it; the hook auto-cleared.
+                            // failed  — the judge ruled the condition IMPOSSIBLE and dropped the
+                            //           goal. Terminal, and NOT the same as met — the agent stopped
+                            //           because it can't get there, which is worth surfacing loudly.
+                            // cleared — the operator removed it by hand (`/goal` with no condition).
+                            //
+                            // The three terminal states are reported until the conversation moves
+                            // past them (the session's next real turn), then the field drops. No
+                            // clear record follows a met verdict, so without that window "the goal
+                            // was met" and "there was never a goal" would arrive as the same
+                            // absence and a completion could vanish unseen between two polls.
+  attempts: number;         // evaluations of THIS goal so far; 0 before the agent's first turn ends.
+                            //   Counted from the goal's set record, NOT taken from the record's own
+                            //   `iterations` field: that counter lives in process memory and
+                            //   restarts at 0 whenever a resume re-arms the hook, and it is written
+                            //   only on terminal records — so it cannot be shown while a goal is
+                            //   still running, which is exactly when it matters. (It is not
+                            //   meaningless, though: it counts evaluations. It reads 1 throughout a
+                            //   real corpus because those goals passed their FIRST check — including
+                            //   one that took 65 minutes, which was one long turn, not many tries.)
+  reason?: string;          // the judge's most recent verdict prose — what's done, what isn't,
+                            //   quoted from the transcript. Absent until the first evaluation.
+                            //   This is the payload of the feature; it is a paragraph, not a label.
+  setAt?: number;           // unix ms the goal was set. Absent only if the set record is older than
+                            //   the scanned transcript window — an evaluation still names the
+                            //   condition, so the goal itself is never lost with it.
+  lastCheckedAt?: number;   // unix ms of the most recent evaluation; absent until the first one.
+  durationMs?: number;      // wall-clock and token cost, as Claude Code measured them. Emitted ONLY
+  tokens?: number;          //   on a terminal verdict — a blocked evaluation carries neither — so
+                            //   both are absent for the entire life of a running goal. Optional by
+                            //   OUTCOME, not by version.
+}
+
+// One entry of a Claude session's task board (~/.claude/tasks/<sid>/<id>.json passed through
+// verbatim — unknown future fields flow to the app unchanged; render what you know).
+interface AgentTask {
+  id: string;               // stringified counter; list is sorted numerically by this
+  subject: string;          // imperative title — the primary display string
+  description: string;      // longer body; show on expand/tap
+  activeForm?: string;      // present-continuous label while in_progress ("Running tests")
+  status: 'pending' | 'in_progress' | 'completed';
+  blocks: string[];         // task ids this task gates
+  blockedBy: string[];      // open task ids that gate this task
+  owner?: string;           // claiming agent id, when a subagent picked it up
+}
+
+// GET /chats/archived — recoverable tabs (NOT in GET /chats). Flat across workspaces; group by
+// workspaceId client-side. tabId is what POST /chats/{tabId}/restore takes.
+interface ArchivedChat {
+  tabId: string;
+  name: string;             // resolved display label captured at archive time
+  workspace: string;        // workspace name
+  workspaceId: string;      // owning workspace id
+  runtime?: 'claude' | 'codex' | 'gemini';  // persisted from when it was live
+  archivedAt?: string;      // ISO-8601; list is sorted newest-first
+  cwd?: string;             // restore cwd captured at archive time
+}
 ```
 
 ---
@@ -415,7 +583,157 @@ shortcut; this guarantees it can't corrupt a TUI mid-prompt.
 - **Activate** (`POST .../activate`): for a dormant maiLink-native tab, run the existing
   auto-resume/spawn path (the same machinery clone/bridge use) and `switchTab` to focus it;
   return the resulting state. For a live tab it's a focus + presence no-op.
-- **Interrupt**: inject `\x1b` (Esc) — the documented "human interrupts the agent" gesture.
+- **New conversation** (`POST .../new`): create a sibling tab that inherits ONLY where the source
+  runs — its SSH command and cwd — and launches a FRESH agent session there (the runtime's bare
+  launch command rides the existing auto-resume replay, so the tab comes up connected, in the
+  right directory, with a live agent; `/maiterm init` needs no help because the SessionStart hook
+  injects it). Explicitly NOT the duplicate path: duplication copies the session-id trigger
+  variable — correct for reload and `/branch` forks, and exactly wrong here, since the copy would
+  re-render the SAME conversation instead of starting one. Nothing else is inherited: no
+  scrollback, notes, shell history, trigger variables or the source's own auto-resume command. The
+  source tab is untouched and need not be idle. Works for SSH tabs (it's just another SSH spawn —
+  no remote inspection needed). Tab creation happens in the owning window, so the endpoint waits
+  for the new tab to exist and returns its id only once it's navigable; the roster picks it up on
+  the next `chats_changed`.
+- **Interrupt**: inject `\x1b` (Esc) — the documented "human interrupts the agent" gesture. A
+  single Esc byte, nothing else — it interrupts a running turn, clears a half-typed line, and
+  backs out of a TUI menu (including the resume startup menu), so the button is a safe always-on
+  escape hatch regardless of the tab's believed state. `404` if the tab isn't maiLink-available;
+  `409` if it has no live PTY (nothing to interrupt — resume it first). Returns
+  `{ ok: true, settled: bool }`: **Claude Code does not fire its `Stop` hook on a user
+  interrupt** (only on a normal turn completion), so the hook-driven chat state would otherwise
+  latch at `active` ("Working") forever after an Esc. Because the interrupt is server-originated,
+  the endpoint authoritatively settles the tab's running sessions to idle in the same in-memory
+  state every reader consumes (WS + REST both converge on `idle` within a tick — no transient
+  event to be clobbered by the poll floor). `settled` is `true` when a running turn was actually
+  stopped, `false` when nothing was running. If the Esc didn't land and the agent keeps working,
+  the next real tool-use hook flips the state back to `active`, so a spurious idle self-heals.
+  **When `settled` is true the endpoint also clears the composer** (Ctrl+L = Claude Code's
+  `chat:clearInput`): cancelling a running turn makes CC restore that turn's prompt into the
+  composer for editing, and since message injection is a bracketed paste APPENDED to whatever the
+  composer holds, the next message from the phone would otherwise land on the restored text and
+  submit both as ONE concatenated prompt. Nothing is cleared when `settled` is false, so a Stop
+  can't wipe a draft being typed at an idle desktop prompt.
+
+  **The clear waits for the restore rather than assuming a delay.** It first waits for the Esc to
+  produce output (that repaint *is* the restore), then for the output to stop, then clears —
+  bounded at 3 s. A fixed 150 ms delay used to lose this race in the field: three phone sends,
+  each followed by Stop, concatenated into a single prompt on a tab where `settled` was true and
+  the clear had definitely fired. No output at all within the cap means nothing was cancelled, so
+  the composer is left alone. `composerCleared: bool` reports what happened, which is what
+  distinguishes "never cleared" from "cleared and it didn't take" in a merge report. Because it
+  waits on a real signal, a Stop that cancels a heavy repaint can hold the response for up to 3 s.
+  (This settles maiLink's own view; a *desktop keyboard* Esc bypasses this endpoint and would
+  need PTY observation to detect — out of scope here.)
+- **Rename** (`POST .../rename`): set the tab title. The title is trimmed and capped at 120
+  chars; empty/whitespace-only is `400` (not a way to clear the name). Sets `custom_name` so the
+  chosen title pins against later OSC/agent title overrides (same as a desktop rename), persists
+  it (survives resume/restart), and updates the live desktop tab strip in every open window.
+  Returns the normalized `title` actually stored. The label reaches other phones as a
+  `chats_changed` on the next WS tick (≤1.5 s) — re-GET `/chats`.
+- **Resume workspace** (`POST .../resume-workspace`): wake the *suspended* workspace that owns
+  this tab. Tab-scoped so the phone never has to model workspace ids — the server resolves
+  tab→workspace. A **suspended** workspace has its PTYs killed and tabs restore-on-demand, so a
+  per-tab Initialize can't work — `/wake` returns `reason:"no-pty"` and `/message` returns `409`.
+  The UI should therefore key off `workspaceSuspended`: when `true`, show **Resume workspace**
+  instead of Initialize. This endpoint returns `{ ok, resumed }` —
+  `resumed:false` (200) if the workspace was already awake (proceed to normal per-tab Initialize),
+  `resumed:true` if a resume was kicked off. Suspend/resume is a frontend operation (PTY respawn +
+  agent auto-resume live in the desktop app), so the backend signals the owning window to run it;
+  it **respawns exactly the tabs that were live at suspend and re-inits their agents**, so after
+  resume the tab is live on its own — no separate per-tab Initialize needed. The suspended→awake
+  transition reaches every phone as a `chats_changed` (≤1.5 s) — re-GET `/chats` and the tabs now
+  report their live state.
+- **Wake / per-tab Initialize** (`POST .../wake`): the action to offer whenever a chat reports
+  `registered:false`. It is also applied AUTOMATICALLY, with identical rules, ahead of every
+  `POST .../message` — so a phone that just sends never has to think about registration.
+
+  **Never send `/maiterm init` as a message to do this.** An unregistered tab is not merely
+  untracked: if its agent has *exited*, the PTY is a bash prompt, and anything injected there is
+  run as a shell command. The recovery affordance would be executing shell commands in the tab it
+  was meant to recover. The remedy depends on whether the agent PROCESS is alive, which the phone
+  can't see and shouldn't have to — so the desktop probes the process tree and picks:
+
+  | tab state | remedy | `woke` |
+  |---|---|---|
+  | registered | none needed | `null` |
+  | unregistered, agent alive (or a live ssh hop) | types `/maiterm init`, dialog-safe | `"init"` |
+  | unregistered, agent gone, tab has auto-resume | replays the auto-resume | `"resume"` |
+
+  Getting this wrong is destructive in both directions — a resume replay typed into a running
+  agent injects junk and nests ssh — so a live agent always takes `init`, even when a resume
+  command is also stored.
+
+  **A registered tab is never touched**, which is the point: it may be mid-turn, and typing into
+  a running turn is the one thing guaranteed to corrupt it.
+
+  **It's synchronous, with a 45 s budget** (`WAKE_BUDGET_MS`). A local `claude --resume` is
+  usually up inside 10 s; an ssh hop plus a remote agent boot can take 20–30 s. Design the UI for
+  a long hold rather than a spinner that reads as hung. When the budget expires the wake keeps
+  going, so a retry a few seconds later normally succeeds immediately — word `wake-timeout` as
+  "still starting up, try again", not as a failure.
+
+  Failures are `200` with a machine-readable `reason` plus a human `detail` (same shape as
+  `unsupported` for images — never a "do it on the desktop" deferral):
+  - `no-pty` — no live terminal. A **suspended workspace** lands here: resume it first.
+  - `no-agent` — the agent exited and there is no auto-resume to restart it. On `/message` this
+    means the text was NOT delivered, which is the fix: it would have gone to bash.
+  - `wake-timeout` — the remedy was applied but nothing came up in time. Also not delivered.
+  - `already-registered` — `/wake` only; nothing needed doing.
+
+  If registration hasn't landed by the end of the budget but the agent process *is* up, a
+  `/message` is delivered anyway (`woke` set) rather than lost — being unregistered was never a
+  reason a paste couldn't land, and a runtime that doesn't register has no other signal.
+- **Mesh Initialize-all** (`POST .../mesh-init`): bring the *Mesh Workspace* that owns this tab
+  back to ready, typically after a maiTerm restart. Tab-scoped like resume-workspace (server
+  resolves tab→workspace; the `mesh` field on `Chat` says when to offer it). Post-restart, mesh
+  members usually show `state:"dormant"` even though their agent processes were auto-resumed —
+  what they lost is their maiTerm *registration* (hook liveness + the MCP connection→tab binding
+  that routes their outbound mesh sends), restored by `/maiterm init`. The desktop triages each
+  member by a process probe: agent still running → types `/maiterm init` into its PTY
+  (dialog-safe); agent exited → replays the tab's auto-resume; already-live members untouched.
+  The phone does NOT need to distinguish these cases — one tap covers all members, and progress
+  arrives as normal `chat_state` events (`dormant` → `active`/`idle`) as each agent re-registers
+  (allow ~5–30 s per member; resume replays can take longer). Returns `{ ok, initiated }`:
+  `initiated:false` with `reason:"not-mesh"` (workspace isn't a mesh) or
+  `reason:"workspace-suspended"` (resume the workspace first — mesh-init needs live PTYs);
+  `initiated:true` with `workspaceId` when the pass was kicked off. Per-member Initialize from
+  the thread view is `POST .../wake` (above) — the same triage, scoped to one tab.
+- **Cancel a queued message** (`POST .../queue/cancel`): pull a message back out of the input
+  queue before the agent reaches it. **Offer it only when `queued` holds exactly one entry** — the
+  endpoint enforces that too, and the reason is mechanical rather than cautious.
+
+  Reading Claude Code 2.1.220: cursor-up in the chat input calls `popAllEditable`, which recalls
+  the WHOLE queue into the composer as one blob. A per-message variant exists (`popEditableAt`,
+  driven by a `queueEditIndex` the arrow keys move) but sits behind `CLAUDE_CODE_KB_COHESION_FIXES`,
+  unset by default. So with two messages queued, one cursor-up recalls BOTH and clearing the
+  composer would silently destroy the message the user didn't pick. With exactly one queued,
+  "pop all" and "pop that one" are the same operation. `multiple-queued` (with `queuedCount`) is
+  the refusal.
+
+  **It verifies rather than assumes.** After the cursor-up it watches the transcript for the queue
+  to actually empty (recalling writes a `popAll` op), and clears the composer only once it has.
+  A recall that didn't happen returns `cancelled:false, reason:"not-recalled"` with the composer
+  untouched — never a false success, and never a clear that could wipe something maiTerm didn't
+  put there. Other refusals: `already-consumed` (the agent got there first — expected, since the
+  affordance renders against a queue that keeps draining), `not-registered`, `unsupported_runtime`
+  (Claude only). `409` if the tab has no live PTY.
+- **Archive / Close / Restore** (tab lifecycle): two DISTINCT real operations, both reversible-ness
+  labelled honestly:
+  - **Archive** (`POST .../archive`) — RECOVERABLE. The tab leaves the workspace's live tabs into
+    its archive; scrollback + restore context (cwd, ssh, auto-resume) are preserved. It drops from
+    GET /chats and a `chats_changed` follows (≤1.5 s). Later restorable.
+  - **Close** (`POST .../close`) — DESTRUCTIVE, NOT recoverable. The genuine end-conversation path
+    (desktop Cmd+W): PTY killed, tab removed, scrollback deleted, any agent bridge torn down — no
+    archive entry afterward. The phone MUST confirm before calling this.
+  - **Restore** (`POST .../restore`) — reverses Archive. The `tabId` is an ARCHIVED tab (from GET
+    /chats/archived), not a live one. Respawns the PTY + replays auto-resume; reappears in GET
+    /chats on the next `chats_changed`. Returns the resolved `workspaceId`.
+  All three are frontend-driven (serialize/kill/respawn PTYs), so — like resume-workspace — the
+  backend emits to the owning window and returns `{ok}` immediately; the observable result arrives
+  as the follow-up `chats_changed`. `404` if the tab id isn't a live maiLink tab (archive/close) or
+  isn't an archived tab (restore). Archived tabs live outside GET /chats: enumerate them with **GET
+  /chats/archived** (flat `ArchivedChat[]`, newest-first; group by `workspaceId` on the phone).
 
 ---
 
@@ -753,9 +1071,10 @@ export interface Participant { id: string; name: string; runtime: Runtime; meta?
 
 /** Per-agent telemetry strip (thread header). All fields optional; the gauge is driven by contextPct. */
 export interface AgentMeta {
-  model?: string;         // normalized display name: "Opus 4.8", "GPT-5-codex", "Gemini 2.5 Pro"
-  effort?: string;        // runtime effort tier; OMITTED when the runtime has none, or not sourceable
-                          //   (Claude effort lives only in the statusLine payload maiTerm doesn't receive → omitted today)
+  model?: string;         // normalized display name: "Opus 5", "GPT-5-codex", "Gemini 2.5 Pro"
+  effort?: string;        // Claude reasoning tier: low | medium | high | xhigh | max. Read from the
+                          //   transcript's top-level `effort` field (same assistant line as usage).
+                          //   OMITTED for effort-less models, non-Claude runtimes, or before the first turn.
   contextPct?: number;    // 0–100, normalized — the always-present field
   contextUsed?: number;   // token detail for the "142k / 1M" readout
   contextLimit?: number;  // model-dependent (1,000,000 for [1m] variants, else 200,000)
@@ -781,6 +1100,7 @@ export interface ThreadSummary {
 /** GET /threads/{thread_id} -> ThreadDetail */
 export interface ThreadDetail extends ThreadSummary {
   transcript: Turn[];           // ONE ts-ordered authored list, all participants interleaved
+  goal?: AgentGoal;             // the /goal condition being enforced (§4.3) — Claude, GET only
   pendingPrompt?: PendingPrompt;
 }
 
@@ -789,9 +1109,28 @@ export interface Turn {
   thread_id: string;
   author?: Participant;         // absent => the human/user
   role: 'agent' | 'user' | 'tool' | 'system';
-  kind?: 'terminal_snapshot';   // present ONLY on the raw-scrape fallback (see below); absent => distilled turn
+  kind?: 'terminal_snapshot' | 'peer_message' | 'goal_status';  // typed turns (see below); absent => distilled turn
+  goal?: {                      // present iff kind === 'goal_status'
+    event: 'set' | 'blocked' | 'met' | 'failed' | 'cleared';
+    condition: string;
+  };
+  peer?: {                      // present iff kind === 'peer_message'
+    direction: 'in' | 'out';    // the only required field
+    name?: string;              // peer's role name; ABSENT on a 1:1 bridge with nothing to name —
+                                //   render "peer message sent/received", not a placeholder
+    topic?: string;             // mesh topic label; absent on a 1:1 bridge
+  };
   text: string;                 // source markdown (for kind:"terminal_snapshot", raw newline-delimited grid text, NOT markdown)
   ts: number;
+  queuedAt?: number;            // role:'user' only. Present when the message was typed while the
+                                //   agent was MID-TURN: Claude Code queues those and writes no
+                                //   `user` turn for them at all — only a `queued_command`
+                                //   attachment, at DRAIN time, stamped with the ENQUEUE time.
+                                //   `ts` is therefore the drain position (so the message sorts
+                                //   after the work it waited on, not above it — otherwise it
+                                //   reads as answered before it was sent) and `queuedAt` carries
+                                //   the true send time. A client can show "sent 15:25, answered
+                                //   15:26"; ignoring it is fine.
 }
 
 // kind:"terminal_snapshot" — emitted for tabs with no locatable JSONL (a pruned local session,
@@ -811,6 +1150,42 @@ export interface Turn {
 // per-agent meta) — and the snapshot turn does not appear. If the mirror can't fetch (tunnel down,
 // bridge disabled), the tab degrades to exactly the snapshot fallback above. No client-side changes
 // are required either way. Codex/Gemini SSH tabs always use the snapshot path.
+
+// kind:"peer_message" — an agent-to-agent exchange (maiTerm Agent Bridge / Mesh Workspace),
+// surfaced so a peer conversation is visible in the thread instead of silently absent. Render as a
+// THIN notification-style row ("peer message received from X" / "sent to X"), not a message bubble:
+// it is neither party of this thread's conversation. `role` is always "system" for this reason —
+// and because the WS streamer never sends `role:"user"` frames, so a user-roled peer turn would be
+// missing on the live path and appear only on the next GET.
+//
+//   * direction:"in"  — a message this agent RECEIVED. maiTerm delivers these as real user prompts
+//     wrapped in a ⟦AGENT-BRIDGE⟧ / ⟦MESH⟧ envelope; the desktop strips the routing header so `text`
+//     is the peer's actual message body. (Un-stripped, they used to render as giant fake "user"
+//     messages, so they were dropped entirely — hence previously invisible.)
+//   * direction:"out" — a message this agent SENT, from its `sendToBridgedAgent` call. This turn
+//     REPLACES that call's tool chip; the same send never appears twice. `text` is the message sent.
+//
+// Only genuine peer traffic is tagged: bridge openers, ⟦TOPIC COMPLETE⟧ notices and disconnect
+// notices remain filtered as scaffolding, and human/subagent messaging tools (postCommsReply,
+// startCommsThread, SendMessage) keep their ordinary tool chips. Emitted identically on GET and on
+// the WS `message` event, which carries `kind` and `peer` alongside the usual fields.
+
+// kind:"goal_status" — one /goal state change, in the place in the conversation where it happened.
+// The thread-level `goal` field (§4.3) says where things STAND; these rows are the history of how
+// it got there, and on a goal that has been turned around a few times they read as a genuine
+// progress log. Render as a thin marker row like peer_message, not a message bubble; `role` is
+// always "system" for the same two reasons (neither party of the conversation, and the WS streamer
+// drops role:"user" frames).
+//
+//   * event:"set" / "cleared" — the operator installing or removing the goal. No verdict prose
+//     exists for these, so `text` is the condition itself.
+//   * event:"blocked" — the judge refused to let the turn end. `text` is its explanation of what is
+//     still outstanding, which is the single most useful thing in the transcript when you are away
+//     from the desk. NOT an ending: the agent was sent straight back to work.
+//   * event:"met" / "failed" — the goal was satisfied, or ruled impossible. Terminal either way.
+//
+// `event` is deliberately finer-grained than the thread field's `state`: a row is a moment
+// ("blocked"), the field is a condition ("active").
 
 export interface AskOption { label: string; description?: string; }
 export interface AskQuestion {
@@ -913,8 +1288,14 @@ export interface WsAttentionEvent {
   (`mailink/transcript.rs`, dispatched by runtime):
   - *Claude*: the last JSONL line carrying `message.usage`, summed
     `input_tokens + cache_read_input_tokens + cache_creation_input_tokens`, over a
-    model-dependent limit (1,000,000 for `[1m]`/`-1m` model ids, else 200,000). `model`
-    normalized from `message.model` ("claude-opus-4-8" → "Opus 4.8").
+    model-dependent limit, and `model` normalized from `message.model`
+    ("claude-opus-5" → "Opus 5"). The limit is 1,000,000 for `[1m]`/`-1m` ids — but note the
+    transcript's `message.model` NEVER carries that marker (Claude Code exposes it only on the
+    statusLine input, which maiTerm doesn't receive), so a 1M session and a 200k one report the
+    same bare id. The desktop therefore infers it: an allowlist of ids whose 1M variant is the
+    one in use (`ASSUMED_1M_MODELS` in `mailink/mod.rs`), plus a backstop that treats any
+    session already past 200,000 tokens as 1M. Clients should treat `contextLimit` as
+    authoritative and not re-derive it from the model name.
   - *Codex*: the rollout's last `token_count` — `last_token_usage.total_tokens` over the
     stated `model_context_window` — and `turn_context.model` ("gpt-5.5" → "GPT-5.5").
   Emitted on the `/chats` object, in `chat_detail`, and on the WS `chat_state` event (so the

@@ -74,6 +74,49 @@ fn cleanup_cm_socket(host_key: &str) {
     let _ = host_key;
 }
 
+/// Ask the host's ControlMaster (if any) whether it is alive: `ssh -O check` against the
+/// maiTerm-owned socket. A tunnel entry whose pid is gone can still be fully functional —
+/// a CM mux client exits as soon as the master holds its forwarding — so pid liveness
+/// alone under-reports. Cheap (local socket round-trip), bounded at 3s.
+async fn cm_master_alive(host_key: &str, ssh_args: &str) -> bool {
+    #[cfg(unix)]
+    {
+        let Some(sock) = cm_socket_path(host_key) else {
+            return false;
+        };
+        if !sock.exists() {
+            return false;
+        }
+        let mut args: Vec<String> = vec![
+            "-o".into(),
+            format!("ControlPath={}", sock.display()),
+            "-O".into(),
+            "check".into(),
+        ];
+        for arg in ssh_args.split_whitespace() {
+            args.push(arg.to_string());
+        }
+        matches!(
+            tokio::time::timeout(
+                std::time::Duration::from_secs(3),
+                tokio::process::Command::new("ssh")
+                    .args(&args)
+                    .stdin(std::process::Stdio::null())
+                    .stdout(std::process::Stdio::null())
+                    .stderr(std::process::Stdio::null())
+                    .status(),
+            )
+            .await,
+            Ok(Ok(status)) if status.success()
+        )
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = (host_key, ssh_args);
+        false
+    }
+}
+
 #[derive(serde::Serialize)]
 pub struct SshTunnelInfo {
     pub tunnel_id: String,
@@ -94,11 +137,21 @@ pub async fn start_ssh_tunnel(
     tab_id: String,
     local_port: u16,
 ) -> Result<SshTunnelInfo, String> {
-    // Check if tunnel already exists for this host
+    // Serialize same-host starts (single-flight): an app restart re-bridges dozens of
+    // tabs at once, many to the same server. Without this they all pass the exists-check
+    // below before any has stored an entry, and every tab spawns its own redundant
+    // tunnel with its own remote port. With it, the first caller establishes the tunnel
+    // and the rest fall into the reuse paths.
+    let start_lock = {
+        let mut locks = state.ssh_tunnel_start_locks.lock();
+        locks.entry(host_key.clone()).or_default().clone()
+    };
+    let _start_guard = start_lock.lock().await;
+
+    // Fast path: a tracked tunnel whose process is still alive.
     {
         let mut tunnels = state.ssh_tunnels.write();
         if let Some(tunnel) = tunnels.get_mut(&host_key) {
-            // Verify the process is still alive
             if is_process_alive(tunnel.pid) {
                 tunnel.tab_ids.insert(tab_id);
                 return Ok(SshTunnelInfo {
@@ -107,10 +160,34 @@ pub async fn start_ssh_tunnel(
                     host_key,
                 });
             }
-            // Process died — remove stale entry and create new tunnel
-            tunnels.remove(&host_key);
         }
     }
+
+    // Tracked entry with a dead pid is often NOT a dead tunnel: a CM mux client exits as
+    // soon as the master holds its forwarding. Ask the master directly before respawning.
+    let has_entry = state.ssh_tunnels.read().contains_key(&host_key);
+    if has_entry && cm_master_alive(&host_key, &ssh_args).await {
+        let mut tunnels = state.ssh_tunnels.write();
+        if let Some(tunnel) = tunnels.get_mut(&host_key) {
+            tunnel.tab_ids.insert(tab_id);
+            return Ok(SshTunnelInfo {
+                tunnel_id: host_key.clone(),
+                remote_port: tunnel.remote_port,
+                host_key,
+            });
+        }
+    }
+
+    // Genuinely stale (or first start for this host): replace the entry, but carry its
+    // tab_ids over — dropping them silently strips those tabs of every tunnel-keyed
+    // feature (comms attachment staging, maiLink image sends).
+    let inherited_tab_ids: std::collections::HashSet<String> = {
+        let mut tunnels = state.ssh_tunnels.write();
+        tunnels
+            .remove(&host_key)
+            .map(|t| t.tab_ids)
+            .unwrap_or_default()
+    };
 
     // Build SSH command args
     // ssh_args is already cleaned (e.g. "user@host" or "-p 2222 user@host")
@@ -192,18 +269,25 @@ pub async fn start_ssh_tunnel(
 
     log::info!("SSH tunnel established: {} → remote port {}", host_key, remote_port);
 
-    // Store the tunnel (don't store the Child — we track by PID)
+    // Store the tunnel (don't store the Child — we track by PID).
+    // Merge, never blind-insert: N tabs bridging the same host at once (typical right
+    // after an app restart) all pass the exists-check above before any has stored, and
+    // a plain insert() would leave only the last writer's tab_id in the entry.
     {
         let mut tunnels = state.ssh_tunnels.write();
-        let mut tab_ids = std::collections::HashSet::new();
-        tab_ids.insert(tab_id);
-        tunnels.insert(host_key.clone(), crate::state::app_state::SshTunnel {
-            pid,
-            remote_port,
-            host_key: host_key.clone(),
-            tab_ids,
-            ssh_args: ssh_args.clone(),
-        });
+        let entry = tunnels
+            .entry(host_key.clone())
+            .or_insert_with(|| crate::state::app_state::SshTunnel {
+                pid,
+                remote_port,
+                host_key: host_key.clone(),
+                tab_ids: Default::default(),
+                ssh_args: ssh_args.clone(),
+            });
+        entry.pid = pid;
+        entry.remote_port = remote_port;
+        entry.tab_ids.extend(inherited_tab_ids);
+        entry.tab_ids.insert(tab_id);
     }
 
     // Spawn background task to monitor the process and clean up on exit.

@@ -75,6 +75,7 @@ Claude Code CLI ←→ WebSocket/SSE ←→ axum server (Rust) ←→ Tauri even
 | bindCommsThread | Comms (/maiterm resolve): bind this tab to a Mattermost thread by permalink; returns the thread as a [REPORT]-tagged transcript, the bot's `bot_username`, and records `Tab.comms_binding`. Backend-only |
 | readCommsThread | Comms: re-fetch the full bound thread on demand (only @mentions of the bot are auto-injected; the rest is read-on-demand). Backend-only |
 | postCommsReply | Comms: post Mattermost markdown to the bound thread; `resolve: true` clears the binding after posting. Backend-only |
+| startCommsThread | Comms: open a NEW thread in one of this tab's monitored channels (agent-initiated) and bind to it; `bind: false` posts without binding. Backend-only |
 | unbindCommsThread | Comms: clear the tab's thread binding without posting (idempotent). Backend-only |
 
 ## Comms Integration (/maiterm resolve)
@@ -111,6 +112,43 @@ agent can pull a bug-report thread as a work item and post a resolution back. Mo
   the summon (one-time in-thread "at capacity" reply + operator `comms-summon` notification) and
   retries when the tab frees; unauthorized mentions notify the operator only, nothing in-thread.
   Pickup users are summon-only — their messages stay [support]-tier during the work.
+  Summon candidates require `create_at` past the cursor: Mattermost's `?since=` is
+  **update_at-based**, so an EDIT of an old post is re-served — without the guard, editing the
+  root of a just-resolved (unbound) thread re-picked the whole thread up as fresh work.
+- **Agent-initiated threads**: `startCommsThread` lets the agent OPEN a thread rather than only
+  answer one — an incident it found, a heads-up, a question for the channel. Scoped to the tab's
+  `comms_monitor` channels (an agent can't post into arbitrary channels it discovers), posts a
+  root post (`create_post` with an empty root_id), and binds the tab to it unless `bind: false`.
+  Enforces the same `comms::MAX_TAB_BINDINGS` cap as summons, and seeds the binding cursor at the
+  new post's `create_at` so the bot's own opener is never injected back into its session. The
+  summon walk can't double-pick it either — bot-authored posts are not summon candidates.
+  Attachment-only replies (3 screenshots, no caption) are delivered too: the empty-body filter in
+  `new_addressed_posts` exists for join/leave noise and was silently eating them — dropped AND
+  cursor-advanced, so they never reached the session and only surfaced on a manual
+  `readCommsThread`. `post_has_content` now counts files as content, and on a mention-gated thread
+  a caption-less upload rides along when the same author @mentioned the bot within 5 minutes
+  (Mattermost splits a drag-and-drop upload from its accompanying text).
+  Such bindings carry `deliver_all_replies: true`: `new_addressed_posts` drops the @mention gate
+  for them, so EVERY human reply is injected (the agent asked the question — nobody should have to
+  @mention a bot they didn't summon). Bot-authored/empty/already-delivered posts are still excluded,
+  or the agent would answer itself in a loop. Summon- and permalink-bound threads stay mention-gated.
+- **Escalation targets**: comms tool results and the summon payload carry `authorized_users` — the
+  agent can't ask for sign-off without knowing whom to @mention. Deliberately read-only exposure:
+  `comms_authorized_users` remains absent from `preference_meta()`, so the list can be seen but
+  never edited by anything the chat can reach. The support-tier rule the agent is given (SKILL.md
+  + every injected header) is **read vs. change**: read-only work on a support/pickup user's
+  say-so needs no confirmation (investigate, read code, explain, reproduce, confirm a bug, answer);
+  anything that changes code/data/config/scope requires an @mentioned authorized user's go-ahead.
+- **Image attachments (both directions)**: incoming — `Post.file_ids`/`metadata.files` are
+  deserialized; `comms::stage_attachments` downloads image files (png/jpg/gif/webp, ≤10 MB,
+  ≤8/call) and stages them where the tab's agent can Read them (`staging_target_for_tab`:
+  local temp dir, or remote /tmp over the bridge tunnel via `mailink::push_bytes_remote` for
+  SSH tabs; SSH-without-tunnel degrades to a "cannot be staged" note). Staged paths appear as
+  `[attached image … staged at <path> — view it with the Read tool]` lines in bind/read
+  transcripts, watcher injections, and summon pickups. Outgoing — `postCommsReply` takes
+  `attachments: [paths]` (max 5, ≤20 MB): local tabs read the files directly; SSH tabs fetch
+  the agent's remote paths back over the tunnel (`mailink::fetch_bytes_remote`), then
+  `upload_file` (multipart POST /api/v4/files) → `create_post` with `file_ids`.
 - **Watcher** (`comms::watcher_loop`, spawned unconditionally in `lib.rs` setup): every 5s scans
   tabs for bindings, fetches each bound thread, and injects **only posts that @mention the bot's
   own username** (`mentions_username`, cursor-newer, not-the-bot, non-empty) into the tab's PTY
@@ -124,11 +162,40 @@ agent can pull a bug-report thread as a work item and post a resolution back. Mo
   failures logged once per config fingerprint.
 - **Authority tiers**: each injected message is stamped `[AUTHORIZED]` or `[support]`. Authorized
   = author's username is in `Preferences.comms_authorized_users` (matched case-insensitively);
-  those messages carry full operator authority. Everyone else is scoped (investigate + reply
-  only; destructive/scope-expanding actions need operator confirmation — enforced by SKILL.md
-  framing, not a hard sandbox, since the agent runs in a PTY maiTerm can't intercept).
+  those messages carry full operator authority. Everyone else is scoped by a **read vs. change**
+  line: read-only work (investigating, explaining, reproducing, confirming a bug, answering,
+  replying) needs no confirmation, while anything that CHANGES things (editing code, committing,
+  deploying, migrations, deleting/resetting data, config changes, work beyond the reported issue)
+  needs an authorized user's go-ahead — enforced by SKILL.md framing and the injected payload
+  text, not a hard sandbox, since the agent runs in a PTY maiTerm can't intercept.
+  The rule is stated canonically in SKILL.md step 4 and mirrored in the injected payload
+  (`comms/mod.rs`); a delegate (mesh peer / subagent) never receives that payload, so SKILL.md
+  requires the dispatcher to relay step 4 **verbatim** rather than paraphrase it. If you change
+  the rule, change all three together.
   **`comms_authorized_users` is deliberately absent from `preference_meta()`** so no chat message
   can edit who is trusted — only the human via Preferences → Integrations.
+- **Binding-set changes must emit**: the `@` badge and its count read `Tab.comms_bindings`, but the
+  Svelte store loads workspaces ONCE at startup and owns its copy — so every binding the backend
+  creates (summon pickup, `startCommsThread`, `bindCommsThread`) or clears (`resolve: true`,
+  `unbindCommsThread`) was invisible to the operator, who saw a stale count while the tab sat at
+  `MAX_TAB_BINDINGS` refusing summons. `comms::emit_bindings_changed` fires `comms-bindings-changed`
+  ({tab_id, bindings}) on every set change (not cursor bumps) → `workspacesStore.applyCommsBindings`.
+  Same class as the maiLink rule: a backend mutation of tab state needs a frontend event.
+  Binding lifecycle is also logged (bind/raise/release + resulting `n/3` occupancy) — previously
+  only summon pickups logged, so slots appeared to be taken and never released.
+- **Never inject over an open prompt**: `injection_blocked_by_prompt` holds BOTH watcher phases
+  (reply delivery and summon pickup) while the tab's session has an open `pending_question`
+  (AskUserQuestion) or is `WaitingPermission`. Those are modal selection UIs — an injected paste's
+  trailing CR picks an option, so a chat message arriving mid-question answered it on the
+  operator's behalf and was swallowed (both lost). Holding leaves the cursor unadvanced, so the
+  message lands after the human answers. Same rule the bridge/mesh already enforce via
+  `isAwaitingHumanInput` (`agents/adapter.ts`) → `deliverable()` (`agentDelivery.ts`); comms was
+  the only automatic injector missing it. Prompt-holds stay quiet (no toast, no in-channel busy
+  notice) since they clear in seconds — unlike the capacity/offline holds.
+- **Queue reasons are distinct**: a held summon logs and notifies as `at_capacity` /`no_session`
+  /`no_pty`, never one merged "busy/offline" — they need different operator actions (close a thread
+  vs. resume the session), and the merged wording had operators waiting on a queue that only a
+  closed thread could drain.
 - **Operator kill switch**: a bound tab shows a green `@` indicator in `TerminalTabs.svelte`; its
   context menu gains "End thread binding" → `clear_tab_comms_binding` command, which clears
   `Tab.comms_binding` directly (no agent involvement, posts nothing). The watcher re-reads
@@ -137,8 +204,9 @@ agent can pull a bug-report thread as a work item and post a resolution back. Mo
 - **Async dispatch**: the comms tools made `handle_backend_tool` async (awaited at its single
   call site in `process_message`). New arms must never hold a lock guard across an await.
 - **Skill**: the `resolve` section of `resources/maiterm-skill/SKILL.md` is the agent-facing
-  orchestration (silent-while-working, one `**@Support:**`/`**@Dev:**`-addressed question when
-  blocked, two-part resolution post: plain-language for support staff, `---`, technical bullets
+  orchestration (ack-before-investigating — the summon payload repeats it as `FIRST ACTION` since
+  agents act on the injected text, not the skill file; then silent-while-working, one
+  `**@Support:**`/`**@Dev:**`-addressed question when blocked, two-part resolution post: plain-language for support staff, `---`, technical bullets
   for devs). Posting the resolution does NOT unbind — the thread stays bound until a human
   confirms it's resolved; only then does the agent close it (`postCommsReply` with `resolve:true`,
   which posts-and-clears). A still-broken reply keeps the binding live so work continues.
@@ -335,7 +403,7 @@ Remote Claude Code → discovers ~/.claude/ide/{port}.lock → connects through 
 
 **Remote setup:** Lockfile, `~/.claude.json`, hooks (`~/.claude/settings.json`), skill (`~/.claude/skills/maiterm/SKILL.md` + `bin/` statusline helper scripts, fetched via `get_maiterm_skill_scripts`), and `~/.aiterm` env file are written via a separate background SSH connection (`ssh_run_setup`), **not** through the user's interactive PTY. This prevents command injection into running programs (e.g. Claude Code). The setup script uses shell variables for JSON data to avoid nested quoting issues, and pipes JSON to python3/jq via stdin. After setup, `MAITERM_TAB_ID` and `MAITERM_PORT` env vars are injected into the remote shell via PTY write (leading space suppresses shell history).
 
-**`~/.aiterm` env file:** Written during bridge setup with `export MAITERM_TAB_ID=... MAITERM_PORT=...`. Sourced as a fallback by the SessionStart hook when `$MAITERM_TAB_ID` is empty (e.g. inside tmux where env vars weren't inherited). Users can manually `source ~/.aiterm` in any shell. Overwritten on each bridge connect — self-correcting for stale values.
+**`~/.aiterm` env file:** Written during bridge setup with `export MAITERM_TAB_ID=... MAITERM_PORT=...`. Sourced as a fallback by the SessionStart hook (and the Codex `agent-hook.sh` shim) when `$MAITERM_TAB_ID` is empty (e.g. inside tmux where env vars weren't inherited). Users can manually `source ~/.aiterm` in any shell. **Sole-tab gated:** the file is per-ACCOUNT, but all tabs on one host share ONE reverse tunnel/port, so an env-less agent on a shared account can't be disambiguated — a stale file would hand it whichever tab connected most recently, corrupting session/tab identity (the wrong tab gets the session registered + `claudeSessionId` + auto-resume repointed). So `buildSetupScript` writes it only when this maiTerm is the *sole* bridged tab on that host (`isSharedHost(hostKey, tabId)` false); on shared hosts it runs `rm -f ~/.aiterm` (also scrubbing stale pre-fix files) and env-less agents fail closed to a visible "needs init" rather than silently mis-registering.
 
 **Context menu items (SSH tabs with active bridge):**
 - "Inject maiTerm Env Vars" — re-writes `export MAITERM_TAB_ID=... MAITERM_PORT=...` to the PTY for the current shell (useful after tmux attach, sudo, su)

@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import type { AgentRuntime } from '$lib/agents/types';
 import type {
   AgentBridge,
   AppData,
@@ -283,6 +284,13 @@ export async function getAppData(): Promise<AppData> {
   return invoke('get_app_data');
 }
 
+/** How many live tabs (any window) claim this session id via their runtime's session-id
+ *  trigger var. >1 ⇒ contested (a duplicated tab still holds a copy) — auto-resume forks
+ *  instead of plain-resuming. */
+export async function countSessionIdClaimants(sessionId: string): Promise<number> {
+  return invoke('count_session_id_claimants', { sessionId });
+}
+
 export async function createWorkspace(name: string): Promise<Workspace> {
   return invoke('create_workspace', { name });
 }
@@ -407,6 +415,13 @@ export async function setTabComposerDraft(workspaceId: string, paneId: string, t
 
 export async function setTabMeshPurpose(workspaceId: string, paneId: string, tabId: string, purpose: string | null): Promise<void> {
   return invoke('set_tab_mesh_purpose', { workspaceId, paneId, tabId, purpose });
+}
+
+/** Declare a tab's agent runtime before any agent has registered — see the Rust command. Used
+ *  when we deliberately launch an agent into a fresh tab, so it's maiLink-visible immediately
+ *  instead of only once initSession lands (and visibly dormant if the launch fails). */
+export async function setTabRuntime(workspaceId: string, paneId: string, tabId: string, runtime: AgentRuntime): Promise<void> {
+  return invoke('set_tab_runtime', { workspaceId, paneId, tabId, runtime });
 }
 
 export async function reorderTabs(workspaceId: string, paneId: string, tabIds: string[]): Promise<void> {
@@ -714,6 +729,11 @@ export async function revealInFileManager(path: string): Promise<void> {
 /** SCP a remote file into the local Downloads directory; returns the saved path. */
 export async function downloadRemoteFile(sshCommand: string, remotePath: string): Promise<string> {
   return invoke('download_remote_file', { sshCommand, remotePath });
+}
+
+/** SCP a remote file to a stable local temp path (on demand); returns that path. */
+export async function stageRemoteFileTemp(sshCommand: string, remotePath: string): Promise<string> {
+  return invoke('stage_remote_file_temp', { sshCommand, remotePath });
 }
 
 export async function scpUploadFiles(sshCommand: string, localPaths: string[], remoteDir: string, uploadId: string): Promise<void> {

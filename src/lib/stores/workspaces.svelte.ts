@@ -1,7 +1,8 @@
 import type { Terminal } from '@xterm/xterm';
-import type { SplitDirection, SplitNode, Tab, Pane, Workspace, WorkspaceNote, EditorFileInfo, DiffContext, CommsMonitorChannel } from '$lib/tauri/types';
+import type { SplitDirection, SplitNode, Tab, Pane, Workspace, WorkspaceNote, EditorFileInfo, DiffContext, CommsMonitorChannel, CommsBinding } from '$lib/tauri/types';
 import type { AgentRuntime } from '$lib/agents/types';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+import { launchCommand } from '$lib/agents/descriptor';
 import * as commands from '$lib/tauri/commands';
 import { terminalsStore } from '$lib/stores/terminals.svelte';
 import { preferencesStore } from '$lib/stores/preferences.svelte';
@@ -1381,6 +1382,37 @@ function createWorkspacesStore() {
       });
     },
 
+    // Locate a live tab's (workspace, pane) by id alone — for maiLink phone actions that address a
+    // tab without knowing its container. Returns null if it isn't a live tab in this window.
+    _locateTab(tabId: string): { workspaceId: string; paneId: string; tab: Tab } | null {
+      for (const ws of workspaces) {
+        for (const pane of ws.panes) {
+          const tab = pane.tabs.find(t => t.id === tabId);
+          if (tab) return { workspaceId: ws.id, paneId: pane.id, tab };
+        }
+      }
+      return null;
+    },
+
+    // maiLink "Archive" — archive a live tab by id (recoverable). Resolves the container and the
+    // display label (approximating the tab strip's displayName: an OSC title stands in for a
+    // non-custom name), then delegates to the full archiveTab path.
+    async archiveTabById(tabId: string) {
+      const loc = this._locateTab(tabId);
+      if (!loc) return;
+      const osc = terminalsStore.getOsc(tabId);
+      const name = loc.tab.custom_name ? loc.tab.name : (osc?.title || loc.tab.name);
+      await this.archiveTab(loc.workspaceId, loc.paneId, tabId, name);
+    },
+
+    // maiLink "Close" — permanently end a live tab by id (destructive; deleteTab kills the PTY,
+    // tears down bridges, and removes it with no archive entry).
+    async closeTabById(tabId: string) {
+      const loc = this._locateTab(tabId);
+      if (!loc) return;
+      await this.deleteTab(loc.workspaceId, loc.paneId, tabId);
+    },
+
     async deleteArchivedTab(workspaceId: string, tabId: string) {
       await commands.deleteArchivedTab(workspaceId, tabId);
       const ws = workspaces.find((w) => w.id === workspaceId);
@@ -1446,6 +1478,26 @@ function createWorkspacesStore() {
         ? tab.comms_bindings.filter(b => b.root_id !== rootId)
         : [];
       await commands.clearTabCommsBinding(workspaceId, paneId, tabId, rootId);
+    },
+
+    /**
+     * Backend told us a tab's comms bindings changed (summon pickup, startCommsThread,
+     * bindCommsThread, resolve/unbind). The store loads workspaces once at startup and
+     * owns its copy, so without this the `@` badge and its count stay frozen at the
+     * startup snapshot — the operator sees 2 threads while the tab sits at the 3-thread
+     * cap refusing new summons. No command call: the backend already persisted it.
+     * Silently ignores tabs in other windows (the event is broadcast to all of them).
+     */
+    applyCommsBindings(tabId: string, bindings: CommsBinding[]) {
+      for (const ws of workspaces) {
+        for (const pane of ws.panes) {
+          const tab = pane.tabs.find(t => t.id === tabId);
+          if (tab) {
+            tab.comms_bindings = bindings;
+            return;
+          }
+        }
+      }
     },
 
     /** Enable/update (channels) or disable (null) chat monitoring on a tab. */
@@ -1520,6 +1572,24 @@ function createWorkspacesStore() {
       if (tab) {
         tab.name = name;
         if (customName !== undefined) tab.custom_name = customName;
+      }
+    },
+
+    /**
+     * Apply a rename that originated in the backend (e.g. a maiLink phone rename). The backend
+     * already mutated app_data and persisted, so this only syncs the in-memory store so the live
+     * tab strip reflects the new title without a reload. No command call — that would double-write.
+     */
+    applyExternalRename(tabId: string, name: string) {
+      for (const ws of workspaces) {
+        for (const pane of ws.panes) {
+          const tab = pane.tabs.find(t => t.id === tabId);
+          if (tab) {
+            tab.name = name;
+            tab.custom_name = true;
+            return;
+          }
+        }
       }
     },
 
@@ -2051,6 +2121,70 @@ function createWorkspacesStore() {
         const idx = workspaces.findIndex((w) => w.id === workspaceId);
         if (idx >= 0) workspaces[idx] = updatedWs;
       }
+    },
+
+    /**
+     * Start a NEW conversation from an existing tab: a light clone that carries only WHERE to
+     * run — SSH host + cwd — and launches a FRESH agent session there.
+     *
+     * Deliberately not `duplicateTab`, even shallow: duplication copies the session-id trigger
+     * variable (intended, for reload and `/branch` forks), which would make the new tab re-render
+     * the SAME conversation instead of starting one. Same primitive, opposite requirement.
+     *
+     * The runtime launch rides the existing auto-resume replay: the spawn path already sends
+     * `auto_resume_command` after a local shell settles, or after the SSH bridge connects — so a
+     * bare `claude` there yields a tab that comes up connected, in the right directory, with a
+     * live agent. `/maiterm init` needs no help; the SessionStart hook injects it.
+     *
+     * Returns the new tab id, or null if the source tab is gone.
+     */
+    async newConversationFrom(tabId: string): Promise<string | null> {
+      const loc = this._locateTab(tabId);
+      if (!loc) return null;
+      const { workspaceId, paneId, tab: sourceTab } = loc;
+      if (sourceTab.tab_type !== 'terminal') return null;
+
+      const { instance, cwd, sshCommand } = await this._gatherTabContext(tabId);
+      const newTab = await commands.createTab(workspaceId, paneId, sourceTab.name);
+
+      // Where to run — the ONLY thing inherited. Nothing else: no scrollback, notes, history,
+      // trigger variables (so no session id) or the source's own auto-resume command.
+      terminalsStore.markSpawning(newTab.id);
+      this._storeSplitContext(tabId, newTab.id, cwd, sshCommand, instance);
+      // _storeSplitContext is pref-gated (clone_cwd/clone_ssh) and skips writing a context when
+      // both are off; re-read it so the auto-resume fields agree with what will actually be used.
+      const ctx = terminalsStore.peekSplitContext(newTab.id);
+      if (ctx) {
+        terminalsStore.setSplitContext(newTab.id, { ...ctx, fireAutoResume: true });
+      }
+
+      const runtime = sourceTab.runtime ?? 'claude';
+      await this.setTabAutoResumeContext(
+        workspaceId, paneId, newTab.id,
+        ctx?.sshCommand ? null : (ctx?.cwd ?? null),
+        ctx?.sshCommand ?? null,
+        ctx?.remoteCwd ?? null,
+        launchCommand(runtime),
+        false,
+      );
+      // Claim the runtime now rather than waiting for the new agent's initSession to write it.
+      // maiLink designates tabs by `runtime`, so without this the id we hand the phone isn't
+      // addressable yet — and if the launch never lands it never becomes addressable at all.
+      await commands.setTabRuntime(workspaceId, paneId, newTab.id, runtime);
+
+      const data = await commands.getWindowData();
+      const updatedWs = data.workspaces.find(w => w.id === workspaceId);
+      if (updatedWs) {
+        const idx = workspaces.findIndex(w => w.id === workspaceId);
+        if (idx >= 0) workspaces[idx] = updatedWs;
+      }
+      // A tab only spawns its PTY when its TerminalPane mounts, and that only happens for a
+      // pane's ACTIVE tab. This one is created in the background — deliberately, so a remote
+      // action doesn't yank the desktop's view out from under whoever is using it — so nothing
+      // would ever mount it: the record would sit there with no terminal attached, forever.
+      // Activate it explicitly (mounts + spawns, stays invisible) rather than stealing focus.
+      window.dispatchEvent(new CustomEvent('activate-tab', { detail: newTab.id }));
+      return newTab.id;
     },
 
     async reloadTab(workspaceId: string, paneId: string, tabId: string) {

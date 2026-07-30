@@ -86,6 +86,21 @@ function extractHostKey(sshArgs: string): string {
 }
 
 /**
+ * Whether this maiTerm has another (non-failed) bridged tab on the same host.
+ * All tabs on one host share ONE reverse tunnel/port, so an env-less agent can't be
+ * disambiguated — the shared `~/.aiterm` fallback would hand it a sibling tab's
+ * identity (see buildSetupScript). Gates that file: write it only on a sole-tab host.
+ * `excludeTabId` skips self (already in bridgeStates as 'pending' at the call site).
+ */
+function isSharedHost(hostKey: string, excludeTabId: string): boolean {
+  for (const [id, state] of bridgeStates) {
+    if (id === excludeTabId) continue;
+    if (state.hostKey === hostKey && state.status !== 'failed') return true;
+  }
+  return false;
+}
+
+/**
  * SSH short flags that take a following argument.
  * See `man ssh` OPTIONS section.
  */
@@ -150,7 +165,13 @@ export async function isRemoteShellForeground(ptyId: string): Promise<boolean> {
  * This runs as a non-interactive command, not through the user's PTY.
  * Sets up: lockfile, MCP entry in ~/.claude.json, hooks in ~/.claude/settings.json.
  */
-function buildSetupScript(remotePort: number, authToken: string, tabId: string, scripts: commands.MaitermSkillScripts): string {
+function buildSetupScript(
+  remotePort: number,
+  authToken: string,
+  tabId: string,
+  scripts: commands.MaitermSkillScripts,
+  sharedHost: boolean,
+): string {
   const lockContent = JSON.stringify({
     pid: 0, // Background SSH — no persistent PID on remote
     transport: 'ws',
@@ -182,7 +203,9 @@ function buildSetupScript(remotePort: number, authToken: string, tabId: string, 
   // extracts session_id from hook stdin, echoes both into Claude's context.
   // Uses double-quoted JS string to avoid template literal ${} interpolation of bash vars.
   // SessionStart hook: reads $MAITERM_TAB_ID from env, falls back to ~/.aiterm file
-  // (needed when Claude runs inside tmux where env vars weren't inherited).
+  // (needed when Claude runs inside tmux where env vars weren't inherited). That file
+  // only exists on sole-tab hosts — on shared hosts it's removed to avoid handing this
+  // env-less agent a sibling tab's identity, so those agents fail closed to "needs init".
   const sessionStartCmd =
     "{ [ -z \"$MAITERM_TAB_ID\" ] && [ -f ~/.aiterm ] && . ~/.aiterm; } 2>/dev/null; " +
     "{ [ \"$MAITERM_PORT\" = \"" + remotePort + "\" ] || [ -z \"$MAITERM_PORT\" ]; } && " +
@@ -273,8 +296,15 @@ function buildSetupScript(remotePort: number, authToken: string, tabId: string, 
     'else',
     "[ -f ~/.claude.json ] || echo '{}' > ~/.claude.json",
     'fi',
-    // Write tab ID + port to ~/.aiterm so tmux/new shells can source it
-    `printf 'export MAITERM_TAB_ID=${tabId}\\nexport MAITERM_PORT=${remotePort}\\n' > ~/.aiterm`,
+    // Per-ACCOUNT fallback for env-less shells (tmux/su) so hooks still know their
+    // tab. The file is shared by every bridge to this account: on a host where this
+    // maiTerm has multiple bridged tabs it would hand a sibling tab's identity to any
+    // env-less agent (session/tab identity cross-pollution), so write it only when this
+    // tab is the sole bridge to the host; on shared hosts remove it (also scrubs stale
+    // pre-fix files) and let those agents fail closed to a visible "needs init".
+    sharedHost
+      ? 'rm -f ~/.aiterm'
+      : `printf 'export MAITERM_TAB_ID=${tabId}\\nexport MAITERM_PORT=${remotePort}\\n' > ~/.aiterm`,
     // Install /maiterm skill on the remote (drop any legacy /aiterm one)
     'rm -rf ~/.claude/skills/aiterm',
     'mkdir -p ~/.claude/skills/maiterm',
@@ -391,7 +421,8 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
     const setupPromises: Promise<void>[] = [];
     if (claudeOn) {
       const skillScripts = await commands.getMaitermSkillScripts();
-      const setupScript = buildSetupScript(tunnelInfo.remote_port, authToken, tabId, skillScripts);
+      const setupScript = buildSetupScript(
+        tunnelInfo.remote_port, authToken, tabId, skillScripts, isSharedHost(hostKey, tabId));
       setupPromises.push(commands.sshRunSetup(sshArgs, setupScript));
     }
     if (codexOn) {
@@ -497,7 +528,8 @@ export async function buildUserSetupScript(tabId: string): Promise<string | null
   const parts: string[] = [];
   if (claudeOn) {
     const skillScripts = await commands.getMaitermSkillScripts();
-    parts.push(buildSetupScript(bridge.remotePort, authToken, tabId, skillScripts));
+    parts.push(buildSetupScript(
+      bridge.remotePort, authToken, tabId, skillScripts, isSharedHost(bridge.hostKey, tabId)));
   }
   if (codexOn) {
     parts.push(await commands.buildCodexSetupScript(bridge.remotePort, authToken, tabId));

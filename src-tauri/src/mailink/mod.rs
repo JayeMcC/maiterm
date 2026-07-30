@@ -27,12 +27,15 @@ use axum_server::tls_rustls::RustlsConfig;
 use base64::Engine as _;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
+use tauri::Emitter;
 
 use crate::state::app_state::AgentSessionState;
 use crate::state::workspace::TabType;
 use crate::state::{AgentRuntime, AppState, MailinkDevice};
 
 pub(crate) mod mirror;
+pub(crate) mod shells;
+pub(crate) mod tasks;
 pub(crate) mod transcript;
 
 /// Default LAN port. The pairing QR carries the actual host:port, so this is just a
@@ -57,6 +60,10 @@ pub struct MailinkConfig {
 #[derive(Clone)]
 struct ApiState {
     app: Arc<AppState>,
+    /// Emit target for desktop-side reflection of backend-initiated mutations (e.g. a phone
+    /// rename must update the live tab title in every open window, not just on next reload).
+    /// `None` only in router unit tests, which construct `ApiState` directly and never emit.
+    app_handle: Option<tauri::AppHandle>,
     server_name: String,
     fingerprint: String,
     dev_token: String,
@@ -195,7 +202,7 @@ fn load_or_generate_dev_token() -> Result<String, String> {
 /// Start the bridge if it isn't already running. Idempotent (a no-op if `mailink_info` is
 /// already published). Called at boot when the pref is on, and on a runtime enable toggle.
 /// Returns `Err` (already logged) if cert/token/TLS init fails.
-pub fn start(app_state: &Arc<AppState>) -> Result<(), String> {
+pub fn start(app_state: &Arc<AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     if app_state.mailink_info.read().is_some() {
         return Ok(()); // already running
     }
@@ -203,7 +210,7 @@ pub fn start(app_state: &Arc<AppState>) -> Result<(), String> {
     mirror::prune_stale_shadows();
     let st = Arc::clone(app_state);
     tauri::async_runtime::spawn(async move {
-        serve(st, cfg).await;
+        serve(st, cfg, app_handle).await;
     });
     Ok(())
 }
@@ -262,6 +269,8 @@ fn build_router(api: ApiState) -> Router {
     Router::new()
         .route("/mailink/v1/heartbeat", get(heartbeat))
         .route("/mailink/v1/chats", get(chats_list))
+        // Static segment — must be registered before `/chats/{tab_id}` so it isn't shadowed.
+        .route("/mailink/v1/chats/archived", get(chats_archived))
         .route("/mailink/v1/chats/{tab_id}", get(chat_detail))
         .route("/mailink/v1/chats/{tab_id}/context", get(chat_context))
         // Image sends carry base64 inline (mailink-protocol §12), so this is the one route that
@@ -273,6 +282,28 @@ fn build_router(api: ApiState) -> Router {
         )
         .route("/mailink/v1/chats/{tab_id}/respond", post(post_respond))
         .route("/mailink/v1/chats/{tab_id}/interrupt", post(post_interrupt))
+        .route(
+            "/mailink/v1/chats/{tab_id}/shells/{shell_id}/stop",
+            post(post_shell_stop),
+        )
+        .route("/mailink/v1/chats/{tab_id}/wake", post(post_wake))
+        .route(
+            "/mailink/v1/chats/{tab_id}/queue/cancel",
+            post(post_queue_cancel),
+        )
+        .route("/mailink/v1/chats/{tab_id}/new", post(post_new_conversation))
+        .route("/mailink/v1/chats/{tab_id}/rename", post(post_rename))
+        .route(
+            "/mailink/v1/chats/{tab_id}/resume-workspace",
+            post(post_resume_workspace),
+        )
+        .route(
+            "/mailink/v1/chats/{tab_id}/mesh-init",
+            post(post_mesh_init),
+        )
+        .route("/mailink/v1/chats/{tab_id}/archive", post(post_archive))
+        .route("/mailink/v1/chats/{tab_id}/close", post(post_close))
+        .route("/mailink/v1/chats/{tab_id}/restore", post(post_restore))
         .route("/mailink/v1/ws", get(ws_handler))
         .route("/mailink/v1/pair", post(post_pair))
         .route("/mailink/v1/push-register", post(post_push_register))
@@ -280,7 +311,7 @@ fn build_router(api: ApiState) -> Router {
 }
 
 /// Background task: install the rustls crypto provider, build the router, and serve over TLS.
-pub async fn serve(app_state: Arc<AppState>, cfg: MailinkConfig) {
+pub async fn serve(app_state: Arc<AppState>, cfg: MailinkConfig, app_handle: tauri::AppHandle) {
     // rustls 0.23 needs a process-default crypto provider before any TLS config is built.
     // Pin ring explicitly (idempotent; ignore the Err if another component already set one).
     let _ = rustls::crypto::ring::default_provider().install_default();
@@ -296,6 +327,7 @@ pub async fn serve(app_state: Arc<AppState>, cfg: MailinkConfig) {
 
     let api = ApiState {
         app: app_state,
+        app_handle: Some(app_handle),
         server_name: "maiTerm".to_string(),
         fingerprint: cfg.fingerprint.clone(),
         dev_token: cfg.dev_token.clone(),
@@ -423,6 +455,20 @@ async fn post_message(
     }
     let pty = pty_for_tab(&s.app, &tab_id).ok_or(StatusCode::CONFLICT)?;
 
+    // Auto-wake. An unregistered tab isn't merely untracked — if its agent EXITED, the PTY is a
+    // bash prompt and injecting the message would run it as a shell command. So bring the tab
+    // back to a state where typing is safe before typing (no-op for a registered tab, which is
+    // the whole point: never touch a live, possibly-mid-turn agent).
+    let woke = match wake_tab(&s, &tab_id).await {
+        Wake::AlreadyRegistered => None,
+        Wake::Woke(action) => Some(action),
+        Wake::Unreachable(reason) => {
+            return Ok(Json(
+                json!({ "status": "unreachable", "reason": reason, "detail": wake_detail(reason) }),
+            ))
+        }
+    };
+
     // Image attach: Claude only. Gate BEFORE touching the PTY and return a machine-readable
     // `status:"unsupported"` (HTTP 200) so the phone reframes it as an in-app notice — never a
     // "do it on the desktop" deferral. Text-only messages are unchanged for all runtimes.
@@ -471,13 +517,178 @@ async fn post_message(
         inject_image_paths_and_text(&s.app, &pty, &paths, &body)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        return Ok(Json(json!({ "status": "delivered", "msg_id": format!("m_{}", now_ms()) })));
+        return Ok(Json(
+            json!({ "status": "delivered", "msg_id": format!("m_{}", now_ms()), "woke": woke }),
+        ));
     }
 
     inject_text(&s.app, &pty, &body.text, body.submit)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    Ok(Json(json!({ "status": "delivered", "msg_id": format!("m_{}", now_ms()) })))
+    Ok(Json(
+        json!({ "status": "delivered", "msg_id": format!("m_{}", now_ms()), "woke": woke }),
+    ))
+}
+
+/// How long a wake holds its caller. A local `claude --resume` is usually up inside 10 s; an
+/// ssh hop plus a remote agent boot can take 20–30 s. Past this we stop waiting and say so —
+/// the wake itself keeps going, so a retry a few seconds later normally delivers instantly.
+const WAKE_BUDGET_MS: u64 = 45_000;
+/// Registration poll interval. Cheap — an in-memory `agent_sessions` scan, no process probe.
+const WAKE_POLL_MS: u64 = 400;
+
+/// Outcome of a wake attempt (see `wake_tab`).
+enum Wake {
+    /// A tracked session already exists — nothing was done, nothing needed doing.
+    AlreadyRegistered,
+    /// The tab is now reachable. Carries the remedy that was applied, for the wire.
+    Woke(&'static str),
+    /// The tab could not be made safe to type into. Carries the wire `reason`.
+    Unreachable(&'static str),
+}
+
+/// Human-readable companion to an `unreachable` reason. The phone renders these verbatim, so
+/// they must read as a state the user can act on — never as an instruction to go to the desktop.
+fn wake_detail(reason: &str) -> &'static str {
+    match reason {
+        "no-pty" => "This tab has no live terminal — resume its workspace first.",
+        "no-agent" => "This tab's agent has exited and it has no resume command to restart it.",
+        _ => "The agent is still starting up — try again in a moment.",
+    }
+}
+
+/// Which remedy an unregistered tab needs (unit-tested; `wake_tab` wires the real probes).
+///
+/// A live agent ALWAYS takes `init`, even when the tab also has a resume command — replaying
+/// ssh+resume into a running agent injects junk and nests ssh, and no amount of "it also has a
+/// resume stored" makes that the right move. Only a tab whose agent is gone gets `resume`.
+fn wake_remedy(agent_up: bool, has_resume: bool) -> Result<&'static str, &'static str> {
+    if agent_up {
+        Ok("init")
+    } else if has_resume {
+        Ok("resume")
+    } else {
+        Err("no-agent")
+    }
+}
+
+/// Bring an unregistered tab back to a state where a remote message can land in its agent.
+///
+/// The remedy depends on whether the agent PROCESS is still alive, and getting it wrong is
+/// destructive both ways — an ssh+resume replay typed into a running agent injects junk and
+/// nests ssh, `/maiterm init` typed at a bare shell just runs as a command — so the choice is
+/// made here, from a process-tree probe, and the frontend only executes it (`mailink-wake-tab`
+/// → `wakeTab`, which owns the PTY and the dialog-safe delivery).
+///
+/// Four rules, in order:
+///  1. A registered tab is never touched. It may be mid-turn, and typing into a running turn is
+///     the one thing guaranteed to corrupt it. This is exactly the `registered:false` condition
+///     the phone already renders.
+///  2. No live PTY ⇒ unreachable. A suspended workspace has to be resumed first; there is no
+///     terminal to type into.
+///  3. Agent gone with no auto-resume ⇒ unreachable. There is nothing to restart, and typing
+///     into the shell is the bug we're here to prevent.
+///  4. Past the budget, fall back to the process probe. Registration is the goal, but delivery
+///     only needs a live agent — and for a runtime that never registers, that's the only signal
+///     there is. A live agent is safe to type into whether or not it registered.
+async fn wake_tab(s: &ApiState, tab_id: &str) -> Wake {
+    if tab_registered(&s.app, tab_id) {
+        return Wake::AlreadyRegistered;
+    }
+    let Some(pty) = pty_for_tab(&s.app, tab_id) else {
+        return Wake::Unreachable("no-pty");
+    };
+    let action = match wake_remedy(
+        agent_is_up(&s.app, &pty).await,
+        tab_has_resume(&s.app, tab_id),
+    ) {
+        Ok(action) => action,
+        Err(reason) => return Wake::Unreachable(reason),
+    };
+    let Some(h) = s.app_handle.as_ref() else {
+        return Wake::Unreachable("no-pty");
+    };
+    // tab ids are app-unique — the owning window acts, every other window finds no instance.
+    // budgetMs travels with the event so the frontend's settle-wait can't outlive our wait and
+    // paste `/maiterm init` on top of the message we deliver once the budget is spent.
+    let _ = h.emit(
+        "mailink-wake-tab",
+        json!({ "tabId": tab_id, "action": action, "budgetMs": WAKE_BUDGET_MS }),
+    );
+    log::info!("[maiLink] waking tab {tab_id} via {action}");
+    let deadline = std::time::Instant::now() + std::time::Duration::from_millis(WAKE_BUDGET_MS);
+    while std::time::Instant::now() < deadline {
+        tokio::time::sleep(std::time::Duration::from_millis(WAKE_POLL_MS)).await;
+        if tab_registered(&s.app, tab_id) {
+            return Wake::Woke(action);
+        }
+    }
+    if agent_is_up(&s.app, &pty).await {
+        log::info!("[maiLink] tab {tab_id} woke but never registered — delivering anyway");
+        return Wake::Woke(action);
+    }
+    Wake::Unreachable("wake-timeout")
+}
+
+/// POST /chats/{tabId}/wake — the per-tab Initialize the phone offers on `registered:false`.
+/// Same machinery and same rules as the auto-wake on send, exposed on its own because
+/// `mesh-init` is workspace-scoped AND mesh-only: a lone unregistered tab had no affordance.
+/// Always 200 (`404` only if the tab isn't maiLink-available); `woke` is null when nothing was
+/// done, with `reason` saying why.
+async fn post_wake(
+    State(s): State<ApiState>,
+    headers: HeaderMap,
+    Path(tab_id): Path<String>,
+) -> Result<Json<Value>, StatusCode> {
+    authorize(&s, &headers)?;
+    if !is_designated(&s.app, &tab_id) {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    Ok(Json(match wake_tab(&s, &tab_id).await {
+        Wake::AlreadyRegistered => {
+            json!({ "ok": true, "woke": null, "reason": "already-registered" })
+        }
+        Wake::Woke(action) => json!({ "ok": true, "woke": action }),
+        Wake::Unreachable(reason) => {
+            json!({ "ok": true, "woke": null, "reason": reason, "detail": wake_detail(reason) })
+        }
+    }))
+}
+
+/// Whether a tab has a tracked agent session — the same predicate that produces the wire's
+/// `registered` flag, so "the phone shows Initialize" and "a wake will fire" can't disagree.
+fn tab_registered(app: &AppState, tab_id: &str) -> bool {
+    app.agent_sessions
+        .read()
+        .values()
+        .any(|s| s.tab_id == tab_id)
+}
+
+/// Whether the tab has something to replay when its agent is gone. Mirrors what
+/// `replayAutoResume` will actually act on — either arm alone is enough (an ssh command with no
+/// agent command still puts the tab back on the remote host).
+fn tab_has_resume(app: &AppState, tab_id: &str) -> bool {
+    let data = app.app_data.read();
+    data.windows
+        .iter()
+        .flat_map(|w| &w.workspaces)
+        .flat_map(|ws| &ws.panes)
+        .flat_map(|p| &p.tabs)
+        .find(|t| t.id == tab_id)
+        .is_some_and(|t| t.auto_resume_command.is_some() || t.auto_resume_ssh_command.is_some())
+}
+
+/// Is an agent CLI still alive in this PTY? `ssh_foreground` stands in for a REMOTE agent, whose
+/// process isn't in the local tree. Spawns `ps`, so it runs on the blocking pool and is called
+/// twice per wake at most — never on a poll path (see the mesh-liveness pinwheel).
+async fn agent_is_up(app: &Arc<AppState>, pty_id: &str) -> bool {
+    let app = app.clone();
+    let pty_id = pty_id.to_string();
+    tauri::async_runtime::spawn_blocking(move || crate::pty::get_agent_liveness(&app, &pty_id))
+        .await
+        .ok()
+        .and_then(|r| r.ok())
+        .is_some_and(|l| l.agent_running || l.ssh_foreground)
 }
 
 /// The persisted runtime for a tab (Claude/Codex/Gemini), or None if it isn't/was never an agent
@@ -608,7 +819,598 @@ async fn post_interrupt(
     }
     let pty = pty_for_tab(&s.app, &tab_id).ok_or(StatusCode::CONFLICT)?;
     crate::pty::write_pty(&s.app, &pty, b"\x1b").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    // Claude Code does NOT fire its Stop hook on a user interrupt (ESC) — only on a normal turn
+    // completion. Our whole chat-state machine is hook-driven, so after an interrupt the session
+    // stays `Active` forever and the tab latches "Working" on the phone. We caused the interrupt,
+    // so we authoritatively settle the tab's running sessions to `Stopped` (mirroring the Stop
+    // hook): the next WS tick / REST poll then reports `idle`. Fixing the SOURCE — not emitting a
+    // transient event — is what survives the phone's 2s REST-poll floor; an event would be
+    // overwritten within a tick. If the ESC didn't actually land (agent keeps working), the next
+    // real PreToolUse hook flips it back to `Active`, so a spurious idle self-heals.
+    let settled = settle_tab_interrupt(&s.app, &tab_id);
+
+    // Cancelling a running turn makes Claude Code RESTORE that turn's prompt into the composer so
+    // a human can edit and resubmit it. Our injects are a bracketed paste APPENDED to whatever the
+    // composer holds, so the next message from the phone lands on the restored text and the CR
+    // submits both as ONE concatenated prompt (observed: "what's that show running?what's that
+    // shell running?" as a single user turn). Clear the composer so a remote stop leaves it empty.
+    //
+    // Only when `settled` — i.e. we actually cancelled a running turn, which is exactly when the
+    // restore happens. An already-idle tab is left alone, so a phone Stop can never wipe a draft
+    // the desktop operator is typing at an idle prompt. (With a turn running, a draft could still
+    // be lost — but today it would instead be merged into the next phone message and submitted,
+    // which is worse.) Desktop-side ESC is deliberately untouched: the operator SEES the restored
+    // text and can edit it; only a blind remote send has the merge problem.
+    // Logged because `settled` is the whole gate, and when a merge is reported afterwards this
+    // line is what says whether the gate was even reached. `registered` distinguishes the two
+    // ways it can read false: a genuinely idle tab, versus a tab with no tracked session at all
+    // (per-turn hooks only mutate an existing row, so an unregistered tab can never go Active and
+    // can never settle). Without this, diagnosing a merge means guessing between them.
+    log::info!(
+        "[maiLink] interrupt {tab_id}: settled={settled} registered={}",
+        tab_registered(&s.app, &tab_id)
+    );
+    let cleared = if settled {
+        clear_composer_after_cancel(&s.app, &pty).await
+    } else {
+        false
+    };
+    Ok(Json(json!({ "ok": true, "settled": settled, "composerCleared": cleared })))
+}
+
+/// Send the composer clear once the cancel's repaint has landed and finished.
+///
+/// Two phases, both bounded. First wait for the ESC to actually produce output — that repaint IS
+/// the restore, and clearing before it arrives is the bug this exists to fix. Then wait for the
+/// output to stop, so the clear isn't swallowed mid-redraw. No output at all within the cap means
+/// nothing was cancelled and nothing was restored, so we leave the composer alone rather than
+/// wipe whatever is in it.
+///
+/// Returns whether the clear was sent, which the caller reports as `composerCleared` — without it
+/// a merge report can't distinguish "we never cleared" from "we cleared and it didn't take".
+async fn clear_composer_after_cancel(app: &Arc<AppState>, pty: &str) -> bool {
+    let before = crate::pty::last_output_ms(app, pty);
+    let start = std::time::Instant::now();
+    let cap = std::time::Duration::from_millis(COMPOSER_SETTLE_CAP_MS);
+    let poll = std::time::Duration::from_millis(COMPOSER_POLL_MS);
+
+    let mut repainted = false;
+    while start.elapsed() < cap {
+        tokio::time::sleep(poll).await;
+        if crate::pty::last_output_ms(app, pty) != before {
+            repainted = true;
+            break;
+        }
+    }
+    if !repainted {
+        log::info!("[maiLink] interrupt: no repaint after ESC — leaving the composer untouched");
+        return false;
+    }
+    while start.elapsed() < cap {
+        tokio::time::sleep(poll).await;
+        let quiet_for = crate::pty::last_output_ms(app, pty)
+            .map_or(u64::MAX, |last| now_ms().saturating_sub(last));
+        if quiet_for >= COMPOSER_QUIET_MS {
+            break;
+        }
+    }
+    crate::pty::write_pty(app, pty, COMPOSER_CLEAR).is_ok()
+}
+
+/// Tail scanned for the pending input queue. Queue traffic sits near the end of the file, and an
+/// entry older than this window has almost certainly been consumed already.
+const QUEUE_SCAN_BYTES: u64 = 2 * 1024 * 1024;
+
+/// Cursor-up. In Claude Code's chat input this recalls the input queue when one exists (falling
+/// back to prompt history when it doesn't) — see `post_queue_cancel` for why that matters.
+const QUEUE_RECALL: &[u8] = b"\x1b[A";
+/// How long to wait for the recall to show up in the transcript as the queue emptying.
+const QUEUE_RECALL_WAIT_MS: u64 = 2500;
+const QUEUE_RECALL_POLL_MS: u64 = 150;
+
+/// POST /chats/{tabId}/queue/cancel — pull back the message waiting in this tab's input queue,
+/// before the agent gets to it.
+///
+/// **Only when EXACTLY ONE message is queued**, and that isn't caution — it's the contract.
+/// Reading Claude Code 2.1.220: cursor-up in the chat input calls `popAllEditable`, which recalls
+/// the WHOLE queue into the composer as one blob. There is a per-message variant
+/// (`popEditableAt`, driven by a `queueEditIndex` the arrow keys move), but it's behind
+/// `CLAUDE_CODE_KB_COHESION_FIXES`, which is unset by default. So with two messages queued, one
+/// cursor-up recalls BOTH, and clearing the composer would silently destroy the one the user
+/// didn't choose. With exactly one, "pop all" and "pop that one" are the same operation.
+///
+/// It also verifies rather than assumes. We do not depend on knowing which recall variant is
+/// live, or on a keystroke landing: after the cursor-up we watch the transcript for the queue to
+/// actually empty, and the composer is only cleared once it has. If the recall didn't happen the
+/// composer is left untouched and the caller is told `cancelled:false` — never a false success,
+/// and never a clear that could wipe something we didn't put there.
+async fn post_queue_cancel(
+    State(s): State<ApiState>,
+    headers: HeaderMap,
+    Path(tab_id): Path<String>,
+) -> Result<Json<Value>, StatusCode> {
+    authorize(&s, &headers)?;
+    if !is_designated(&s.app, &tab_id) {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    // Typing into a tab whose agent isn't there is the failure mode the wake work exists to
+    // prevent; here there's nothing to cancel anyway, so refuse rather than wake.
+    if !tab_registered(&s.app, &tab_id) {
+        return Ok(Json(
+            json!({ "ok": true, "cancelled": false, "reason": "not-registered" }),
+        ));
+    }
+    let pty = pty_for_tab(&s.app, &tab_id).ok_or(StatusCode::CONFLICT)?;
+    let Some((AgentRuntime::Claude, sid)) = resolved_session_for_tab(&s.app, &tab_id) else {
+        return Ok(Json(
+            json!({ "ok": true, "cancelled": false, "reason": "unsupported_runtime" }),
+        ));
+    };
+
+    let queued = transcript::pending_queue(&sid, QUEUE_SCAN_BYTES);
+    let text = match queued.len() {
+        1 => queued[0].0.clone(),
+        // Consumed between the phone rendering the affordance and the tap landing. Expected, not
+        // an error — the message is already a real turn by now.
+        0 => {
+            return Ok(Json(
+                json!({ "ok": true, "cancelled": false, "reason": "already-consumed" }),
+            ))
+        }
+        n => {
+            return Ok(Json(json!({ "ok": true, "cancelled": false,
+                "reason": "multiple-queued", "queuedCount": n })))
+        }
+    };
+
+    send_key(&s.app, &pty, QUEUE_RECALL, 0)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // The recall is observable: emptying the queue writes a `popAll` op, which the replay reads.
+    let deadline =
+        std::time::Instant::now() + std::time::Duration::from_millis(QUEUE_RECALL_WAIT_MS);
+    let mut recalled = false;
+    while std::time::Instant::now() < deadline {
+        tokio::time::sleep(std::time::Duration::from_millis(QUEUE_RECALL_POLL_MS)).await;
+        if transcript::pending_queue(&sid, QUEUE_SCAN_BYTES).is_empty() {
+            recalled = true;
+            break;
+        }
+    }
+    if !recalled {
+        log::info!("[maiLink] queue cancel on {tab_id}: queue never emptied — composer untouched");
+        return Ok(Json(
+            json!({ "ok": true, "cancelled": false, "reason": "not-recalled" }),
+        ));
+    }
+
+    // It's out of the queue and sitting in the composer now; clearing is what makes it cancelled
+    // rather than merely deferred. Same settle-then-clear the interrupt uses, for the same reason.
+    let cleared = clear_composer_after_cancel(&s.app, &pty).await;
+    Ok(Json(
+        json!({ "ok": true, "cancelled": true, "text": text, "composerCleared": cleared }),
+    ))
+}
+
+/// A tab's background-shell roster (mailink/shells.rs), or empty when it has none / can't be
+/// determined. Claude + LOCAL only: an SSH tab's background shells are the REMOTE host's
+/// processes, invisible to the local process table, so their liveness can't be confirmed and a
+/// Stop button couldn't signal them — a roster we can't stand behind is worse than none, so SSH
+/// tabs report nothing (the phone renders no strip).
+fn shell_roster(app: &AppState, tab_id: &str) -> Vec<shells::AgentShell> {
+    let Some((AgentRuntime::Claude, sid)) = resolved_session_for_tab(app, tab_id) else {
+        return Vec::new();
+    };
+    let Some(pty) = pty_for_tab(app, tab_id) else { return Vec::new() };
+    if tab_is_ssh(app, tab_id) {
+        return Vec::new();
+    }
+    shells::roster(&sid, crate::pty::manager::pty_child_pid_of(app, &pty)).unwrap_or_default()
+}
+
+/// Whether the tab rides a live SSH/mosh session (its agent runs on another host).
+fn tab_is_ssh(app: &AppState, tab_id: &str) -> bool {
+    let tunnels = app.ssh_tunnels.read();
+    tunnels.values().any(|t| t.tab_ids.contains(tab_id))
+}
+
+/// POST /chats/{tabId}/new — start a NEW conversation from this one.
+///
+/// A LIGHT clone: the source tab is a template for WHERE to run (SSH host + cwd) and nothing
+/// else — the new tab gets a fresh agent session, not a copy of this one. Deliberately not the
+/// duplicate path, which copies the session-id variable (right for reload/`/branch`, exactly
+/// wrong here — the copy would re-render the same conversation instead of starting one).
+///
+/// The source is never touched and needn't be idle. Creation happens in the owning window (the
+/// Svelte store owns tab state), so this emits and then waits for the new tab to appear, and
+/// returns its id only once the phone can actually navigate to it.
+async fn post_new_conversation(
+    State(s): State<ApiState>,
+    headers: HeaderMap,
+    Path(tab_id): Path<String>,
+) -> Result<Json<Value>, StatusCode> {
+    authorize(&s, &headers)?;
+    if !is_designated(&s.app, &tab_id) {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    // Snapshot the owning pane's tabs so the newcomer can be identified by difference — the id is
+    // minted by createTab in the frontend, so there's nothing to pass in.
+    let before = sibling_tab_ids(&s.app, &tab_id);
+    let h = s.app_handle.as_ref().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let _ = h.emit("mailink-new-conversation", json!({ "tabId": tab_id }));
+
+    // Spawning involves a round trip through the store and a PTY create; poll briefly rather than
+    // returning an id the phone would 404 on. Failure here is a timeout, not an error state — the
+    // tab may still appear a moment later and the roster will pick it up via chats_changed.
+    //
+    // Existing in state is NOT the readiness condition: a tab record with no runtime isn't
+    // designated, so GET /chats/{id} 404s on it. Wait for designated — the same predicate the
+    // phone's first read will apply — so the id we hand back is addressable when it arrives.
+    for _ in 0..NEW_TAB_WAIT_TICKS {
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        let new_id = sibling_tab_ids(&s.app, &tab_id)
+            .into_iter()
+            .find(|id| !before.contains(id));
+        if let Some(new_id) = new_id {
+            if is_designated(&s.app, &new_id) {
+                return Ok(Json(json!({ "ok": true, "tabId": new_id })));
+            }
+        }
+    }
+    log::warn!("[maiLink] new conversation from {tab_id}: no new tab appeared within the wait window");
+    Ok(Json(json!({ "ok": false, "reason": "timeout" })))
+}
+
+/// How long `post_new_conversation` waits for the frontend to mint the tab (ticks × 100 ms).
+const NEW_TAB_WAIT_TICKS: u32 = 50;
+
+/// Every tab id in the pane that owns `tab_id` (including it). Used to spot a newly created tab.
+fn sibling_tab_ids(app: &AppState, tab_id: &str) -> Vec<String> {
+    let data = app.app_data.read();
+    for win in &data.windows {
+        for ws in &win.workspaces {
+            for pane in &ws.panes {
+                if pane.tabs.iter().any(|t| t.id == tab_id) {
+                    return pane.tabs.iter().map(|t| t.id.clone()).collect();
+                }
+            }
+        }
+    }
+    Vec::new()
+}
+
+/// POST /chats/{tabId}/shells/{shellId}/stop — terminate one background shell.
+///
+/// IDEMPOTENT by design: a shell that has already exited (or was never live) returns `ok:true`
+/// rather than 404. The phone's roster is up to ~2 s stale, so "stop something that just finished"
+/// is the normal race, not a client error — and reporting failure would only invite a retry loop.
+/// Signals the shell's own pid (SIGTERM, then SIGKILL if it lingers): a real signal to the process
+/// rather than driving the TUI's `/bashes` picker blind. 404 only for an unknown/undesignated tab.
+async fn post_shell_stop(
+    State(s): State<ApiState>,
+    headers: HeaderMap,
+    Path((tab_id, shell_id)): Path<(String, String)>,
+) -> Result<Json<Value>, StatusCode> {
+    authorize(&s, &headers)?;
+    if !is_designated(&s.app, &tab_id) {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let target = shell_roster(&s.app, &tab_id)
+        .into_iter()
+        .find(|sh| sh.id == shell_id)
+        .and_then(|sh| sh.pid);
+    let Some(pid) = target else {
+        // Unknown id, or known but no longer running — nothing to signal, and that IS the
+        // requested end state.
+        return Ok(Json(json!({ "ok": true, "stopped": false })));
+    };
+    let stopped = kill_pid(pid).await;
+    Ok(Json(json!({ "ok": true, "stopped": stopped })))
+}
+
+/// SIGTERM a pid, escalating to SIGKILL if it's still there shortly after. Returns whether the
+/// process is gone by the end. Unix-only signalling; a no-op elsewhere (background shells are a
+/// unix construct here).
+async fn kill_pid(pid: u32) -> bool {
+    #[cfg(unix)]
+    {
+        let alive = || {
+            // signal 0 probes existence without delivering anything.
+            unsafe { libc::kill(pid as libc::pid_t, 0) == 0 }
+        };
+        unsafe { libc::kill(pid as libc::pid_t, libc::SIGTERM) };
+        for _ in 0..10 {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            if !alive() {
+                return true;
+            }
+        }
+        unsafe { libc::kill(pid as libc::pid_t, libc::SIGKILL) };
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        !alive()
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = pid;
+        false
+    }
+}
+
+/// Ctrl+L — Claude Code's `chat:clearInput` binding (its Chat keymap is
+/// `{escape:"chat:cancel", "ctrl+l":"chat:clearInput", "cmd+k":"chat:clearScreen"}`). A single
+/// unambiguous keystroke, unlike the discoverable double-tap-escape, which is overloaded. A no-op
+/// on an already-empty composer.
+const COMPOSER_CLEAR: &[u8] = b"\x0c";
+
+/// The composer clear has to land AFTER Claude Code has finished cancelling and repainted the
+/// restored prompt — clear too early and it no-ops on a still-empty composer, the restore paints
+/// afterwards, and the next remote message merges into it.
+///
+/// This was a fixed 150 ms delay, and in the field it lost the race: three phone sends, each
+/// followed by Stop, concatenated into one prompt (`test message onetest message twotest message
+/// three`) on a registered tab where `settled` was true and the clear had definitely fired. So
+/// don't guess the interval — watch the PTY. Wait for the cancel to actually produce output, then
+/// for that output to stop, then clear.
+const COMPOSER_QUIET_MS: u64 = 250;
+const COMPOSER_POLL_MS: u64 = 50;
+const COMPOSER_SETTLE_CAP_MS: u64 = 3000;
+
+/// Settle a tab's mid-turn agent sessions to `Stopped` after an interrupt, mirroring the Stop
+/// hook's reset (state + tool + pending-question cleared). Only touches sessions that are actually
+/// running (`Active` / `WaitingPermission`) so an already-idle tab is left alone. Returns true if
+/// any session was transitioned — i.e. the interrupt settled a running turn.
+fn settle_tab_interrupt(app: &AppState, tab_id: &str) -> bool {
+    let mut sessions = app.agent_sessions.write();
+    let mut changed = false;
+    for sess in sessions.values_mut() {
+        if sess.tab_id == tab_id
+            && matches!(
+                sess.state,
+                AgentSessionState::Active | AgentSessionState::WaitingPermission
+            )
+        {
+            sess.state = AgentSessionState::Stopped;
+            sess.tool_name = None;
+            sess.tool_detail = None;
+            sess.pending_question = None;
+            sess.pending_question_at = None;
+            changed = true;
+        }
+    }
+    changed
+}
+
+/// Max tab title accepted from the phone. Titles are one-line chat labels; a runaway string would
+/// wreck the desktop tab strip. We normalize rather than reject on length: trim, then cap by CHAR
+/// count (not bytes — never split a multibyte grapheme's code point).
+const MAX_TAB_TITLE_CHARS: usize = 120;
+
+/// Normalize a phone-supplied tab title: trim surrounding whitespace, then cap by CHAR count so a
+/// runaway string can't wreck the desktop tab strip. Returns `None` for empty/whitespace-only
+/// input (the caller rejects with 400 — an empty title is a client bug, not a way to clear it).
+fn normalize_tab_title(raw: &str) -> Option<String> {
+    let t: String = raw.trim().chars().take(MAX_TAB_TITLE_CHARS).collect();
+    if t.is_empty() {
+        None
+    } else {
+        Some(t)
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct RenameBody {
+    title: String,
+}
+
+/// POST /chats/{tabId}/rename — set the tab's title from the phone. Sets `custom_name` so the
+/// chosen title pins against later OSC/agent title overrides (same semantics as a desktop rename),
+/// persists it (survives resume/restart), and emits `mailink-tab-renamed` so every open desktop
+/// window updates the live tab strip. The WS poller carries the new label to the phone as
+/// `chats_changed` within one tick. Returns the normalized title actually stored.
+async fn post_rename(
+    State(s): State<ApiState>,
+    headers: HeaderMap,
+    Path(tab_id): Path<String>,
+    Json(body): Json<RenameBody>,
+) -> Result<Json<Value>, StatusCode> {
+    authorize(&s, &headers)?;
+    if !is_designated(&s.app, &tab_id) {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let title = normalize_tab_title(&body.title).ok_or(StatusCode::BAD_REQUEST)?;
+    if !set_tab_name(&s.app, &tab_id, &title) {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    // Reflect on every open desktop window's tab strip immediately (the frontend store owns its
+    // own copy of tab.name and has no other signal that the backend changed it).
+    if let Some(h) = &s.app_handle {
+        let _ = h.emit("mailink-tab-renamed", json!({ "tabId": tab_id, "name": title }));
+    }
+    Ok(Json(json!({ "ok": true, "title": title })))
+}
+
+/// Find the terminal tab `tab_id` across all windows and set its name + `custom_name`, persisting
+/// eagerly (like the frontend `rename_tab` command). Returns false if the tab id isn't found.
+fn set_tab_name(app: &AppState, tab_id: &str, name: &str) -> bool {
+    let data_clone = {
+        let mut data = app.app_data.write();
+        let mut found = false;
+        'outer: for win in &mut data.windows {
+            for ws in &mut win.workspaces {
+                for pane in &mut ws.panes {
+                    if let Some(tab) = pane.tabs.iter_mut().find(|t| t.id == tab_id) {
+                        tab.name = name.to_string();
+                        tab.custom_name = true;
+                        found = true;
+                        break 'outer;
+                    }
+                }
+            }
+        }
+        if !found {
+            return false;
+        }
+        data.clone()
+    };
+    let _ = crate::state::save_state(&data_clone);
+    true
+}
+
+/// POST /chats/{tabId}/resume-workspace — wake the SUSPENDED workspace that owns this tab so its
+/// tabs come back live. Tab-scoped (not workspace-scoped) so the phone keeps addressing everything
+/// by tabId; the server resolves tab → workspace. Suspension is a frontend-driven operation (the
+/// PTY respawn + agent auto-resume lives in the Svelte store, which the backend can't do), so this
+/// emits `mailink-resume-workspace` and the owning window's frontend runs `resumeWorkspace()` —
+/// which respawns exactly the tabs that were live at suspend and re-inits their agents. After that
+/// the tab is live on its own; the phone does NOT need a separate per-tab Initialize.
+///
+/// Returns `{ ok, resumed }`: `resumed=false` (200) when the workspace was already awake (nothing
+/// to do — the phone can Initialize per-tab as usual); `resumed=true` when a resume was kicked off.
+/// `404` if the tab isn't maiLink-available.
+async fn post_resume_workspace(
+    State(s): State<ApiState>,
+    headers: HeaderMap,
+    Path(tab_id): Path<String>,
+) -> Result<Json<Value>, StatusCode> {
+    authorize(&s, &headers)?;
+    let meta = designated_tabs(&s.app)
+        .into_iter()
+        .find(|t| t.tab_id == tab_id)
+        .ok_or(StatusCode::NOT_FOUND)?;
+    if !meta.workspace_suspended {
+        return Ok(Json(json!({ "ok": true, "resumed": false })));
+    }
+    // Workspace ids are app-unique (uuid), so a global emit reaches exactly one owning window; the
+    // store's `resumeWorkspace` guards `!ws || !ws.suspended` → every other window no-ops.
+    let h = s.app_handle.as_ref().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let _ = h.emit(
+        "mailink-resume-workspace",
+        json!({ "workspaceId": meta.workspace_id }),
+    );
+    Ok(Json(json!({
+        "ok": true,
+        "resumed": true,
+        "workspaceId": meta.workspace_id,
+    })))
+}
+
+/// POST /chats/{tabId}/mesh-init — bring the MESH workspace that owns this tab back to ready
+/// (the phone's one-tap "Initialize all", typically after a maiTerm restart). Tab-scoped like
+/// resume-workspace: the phone addresses by tabId, the server resolves tab → workspace.
+///
+/// The triage is frontend-owned — per member: a running agent that lost its registration gets
+/// `/maiterm init` typed into its PTY (dialog-safe delivery), an exited agent gets its
+/// auto-resume replayed, live members are untouched — so this emits `mailink-mesh-init` and the
+/// owning window's `agentMeshStore.initializeMesh()` does the work headlessly. Progress is
+/// observable on the phone as members re-register: chat_state flips dormant → active/idle.
+///
+/// Returns `{ ok, initiated }`: `initiated=false` (200, with `reason`) when the workspace isn't
+/// a mesh (`"not-mesh"`) or is suspended (`"workspace-suspended"` — resume it first; mesh-init
+/// needs live PTYs). `404` if the tab isn't maiLink-available.
+async fn post_mesh_init(
+    State(s): State<ApiState>,
+    headers: HeaderMap,
+    Path(tab_id): Path<String>,
+) -> Result<Json<Value>, StatusCode> {
+    authorize(&s, &headers)?;
+    let meta = designated_tabs(&s.app)
+        .into_iter()
+        .find(|t| t.tab_id == tab_id)
+        .ok_or(StatusCode::NOT_FOUND)?;
+    if !meta.mesh {
+        return Ok(Json(json!({ "ok": true, "initiated": false, "reason": "not-mesh" })));
+    }
+    if meta.workspace_suspended {
+        return Ok(Json(
+            json!({ "ok": true, "initiated": false, "reason": "workspace-suspended" }),
+        ));
+    }
+    // Workspace ids are app-unique, so a global emit reaches exactly one owning window; the
+    // store's `initializeMesh` guards `!ws?.bridge_all` → every other window no-ops.
+    let h = s.app_handle.as_ref().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let _ = h.emit(
+        "mailink-mesh-init",
+        json!({ "workspaceId": meta.workspace_id }),
+    );
+    Ok(Json(json!({
+        "ok": true,
+        "initiated": true,
+        "workspaceId": meta.workspace_id,
+    })))
+}
+
+/// POST /chats/{tabId}/archive — archive a live tab (RECOVERABLE). The tab leaves the workspace's
+/// live tabs into its `archived_tabs`; scrollback + restore context (cwd, ssh) are preserved and
+/// it can be restored later. Archiving needs the frontend (serialize the live xterm buffer, kill
+/// the PTY, reselect the active tab), so — like resume-workspace — this emits and the owning
+/// window's `workspacesStore.archiveTab(...)` does the work. It drops from GET /chats and a
+/// `chats_changed` follows on the next WS tick (≤1.5 s).
+async fn post_archive(
+    State(s): State<ApiState>,
+    headers: HeaderMap,
+    Path(tab_id): Path<String>,
+) -> Result<Json<Value>, StatusCode> {
+    authorize(&s, &headers)?;
+    // Must be a currently-live maiLink tab (archive/close operate on GET /chats entries).
+    if !designated_tabs(&s.app).iter().any(|t| t.tab_id == tab_id) {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let h = s.app_handle.as_ref().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+    // tab ids are app-unique — the owning window resolves ws+pane and acts; others no-op.
+    let _ = h.emit("mailink-archive-tab", json!({ "tabId": tab_id }));
     Ok(Json(json!({ "ok": true })))
+}
+
+/// POST /chats/{tabId}/close — end a tab permanently (DESTRUCTIVE, NOT recoverable). This is the
+/// genuine-close path (desktop Cmd+W / × button): the PTY is killed, the tab is removed from
+/// state, its scrollback is deleted, and any agent bridge on it is torn down — there is no
+/// archive entry afterward. Frontend-driven for the same reasons as archive; emits
+/// `mailink-close-tab`. The phone should confirm before calling this.
+async fn post_close(
+    State(s): State<ApiState>,
+    headers: HeaderMap,
+    Path(tab_id): Path<String>,
+) -> Result<Json<Value>, StatusCode> {
+    authorize(&s, &headers)?;
+    if !designated_tabs(&s.app).iter().any(|t| t.tab_id == tab_id) {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let h = s.app_handle.as_ref().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let _ = h.emit("mailink-close-tab", json!({ "tabId": tab_id }));
+    Ok(Json(json!({ "ok": true })))
+}
+
+/// POST /chats/{tabId}/restore — un-archive a tab back into its workspace (reverses archive). The
+/// tab id here is an ARCHIVED tab (from GET /chats/archived), not a live one, so it's resolved
+/// against `archived_tabs` rather than `designated_tabs`. Restoring respawns the PTY + replays
+/// auto-resume (frontend), so this emits `mailink-restore-tab` with the resolved workspace id and
+/// the owning window runs `workspacesStore.restoreArchivedTab(...)`. It reappears in GET /chats on
+/// the next `chats_changed`.
+async fn post_restore(
+    State(s): State<ApiState>,
+    headers: HeaderMap,
+    Path(tab_id): Path<String>,
+) -> Result<Json<Value>, StatusCode> {
+    authorize(&s, &headers)?;
+    let workspace_id = archived_workspace_of(&s.app, &tab_id).ok_or(StatusCode::NOT_FOUND)?;
+    let h = s.app_handle.as_ref().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let _ = h.emit(
+        "mailink-restore-tab",
+        json!({ "workspaceId": workspace_id, "tabId": tab_id }),
+    );
+    Ok(Json(json!({ "ok": true, "workspaceId": workspace_id })))
+}
+
+/// GET /chats/archived — the flat list of archived tabs across every window/workspace (they're
+/// NOT in GET /chats, which only lists live/designated tabs). `workspaceId` on each entry lets the
+/// phone group by workspace client-side; the id is what POST /chats/{tabId}/restore takes.
+async fn chats_archived(
+    State(s): State<ApiState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, StatusCode> {
+    authorize(&s, &headers)?;
+    Ok(Json(json!(archived_chats(&s.app))))
 }
 
 #[derive(serde::Deserialize)]
@@ -746,10 +1548,29 @@ async fn ws_event_loop(mut socket: WebSocket, s: ApiState) {
     let _coverage = WsCoverageGuard(s.app.clone());
 
     let mut last: HashMap<String, String> = HashMap::new();
+    // Per-tab last-seen title. A rename doesn't move `state`/`prompt` (the attn_key), so it needs
+    // its own diff to trigger a `chats_changed` and re-fetch the label on the phone.
+    let mut titles: HashMap<String, String> = HashMap::new();
+    // Per-tab last-seen workspace-suspended flag. Suspending/resuming a workspace doesn't move any
+    // tab's state either (its sessions were already dormant), so it too needs its own diff to fire
+    // `chats_changed` → the phone re-GETs /chats and swaps Initialize ⇄ Resume-workspace.
+    let mut suspended: HashMap<String, bool> = HashMap::new();
+    // Per-tab last-seen mesh flag — enabling/disabling a Mesh Workspace from the desktop must
+    // re-badge the phone's inbox group the same way (state/prompt don't move).
+    let mut mesh: HashMap<String, bool> = HashMap::new();
+    // Per-tab last-seen registration flag. A tab registering (or losing its registration) changes
+    // the re-initialize affordance without moving state/prompt, so it needs its own diff.
+    let mut registered: HashMap<String, bool> = HashMap::new();
     // Streaming state (mailink-protocol §12): per-tab last-window msg_ids + transcript mtime, so the
     // message ticker diffs cheaply and emits only newly-appended turns.
     let mut seen: HashMap<String, std::collections::HashSet<String>> = HashMap::new();
     let mut mtimes: HashMap<String, u64> = HashMap::new();
+    // Per-tab task-board change key (tasks::change_key) — the `tasks` WS event fires only when a
+    // board actually changed. Baseline emission on connect is deliberate: the phone gets every
+    // existing board without opening threads, and a reconnect catches changes it slept through.
+    let mut task_keys: HashMap<String, u64> = HashMap::new();
+    // Same discipline for the background-shell roster.
+    let mut shell_keys: HashMap<String, u64> = HashMap::new();
 
     // initial snapshot: one chat_state per chat
     for c in build_chats(&s.app) {
@@ -758,6 +1579,10 @@ async fn ws_event_loop(mut socket: WebSocket, s: ApiState) {
         if socket.send(Message::Text(chat_state_event(&c).to_string().into())).await.is_err() {
             return;
         }
+        titles.insert(tab.clone(), c["title"].as_str().unwrap_or_default().to_string());
+        suspended.insert(tab.clone(), c["workspaceSuspended"].as_bool().unwrap_or(false));
+        mesh.insert(tab.clone(), c["mesh"].as_bool().unwrap_or(false));
+        registered.insert(tab.clone(), c["registered"].as_bool().unwrap_or(true));
         last.insert(tab, key);
     }
 
@@ -773,7 +1598,7 @@ async fn ws_event_loop(mut socket: WebSocket, s: ApiState) {
     loop {
         tokio::select! {
             _ = msg_ticker.tick() => {
-                if stream_new_messages(&mut socket, &s.app, &mut seen, &mut mtimes).await.is_err() {
+                if stream_new_messages(&mut socket, &s.app, &mut seen, &mut mtimes, &mut task_keys, &mut shell_keys).await.is_err() {
                     return;
                 }
             }
@@ -782,7 +1607,10 @@ async fn ws_event_loop(mut socket: WebSocket, s: ApiState) {
                 mirror::refresh_tabs(&s.app, &tabs);
             }
             _ = ticker.tick() => {
-                let chats = build_chats(&s.app);
+                // Summaries, not full chats: this fires forever at 1.5s, and the full build's
+                // scrollback + per-tab transcript reads were constant background lock pressure.
+                // The rare transitioning tab is enriched below.
+                let chats = build_chat_summaries(&s.app);
                 let mut current_ids = std::collections::HashSet::new();
                 let mut roster_changed = false;
                 for c in &chats {
@@ -794,8 +1622,35 @@ async fn ws_event_loop(mut socket: WebSocket, s: ApiState) {
                     if prev.is_none() {
                         roster_changed = true;
                     }
+                    // A rename of an already-known tab changes the label but not state/prompt —
+                    // fire `chats_changed` so the inbox + open thread re-fetch the new title.
+                    let title = c["title"].as_str().unwrap_or_default().to_string();
+                    if prev.is_some() && titles.get(&tab).map(String::as_str) != Some(title.as_str()) {
+                        roster_changed = true;
+                    }
+                    titles.insert(tab.clone(), title);
+                    // Workspace suspend/resume flips this without touching state/prompt — diff it
+                    // so the phone re-fetches and swaps the Initialize ⇄ Resume-workspace control.
+                    let ws_susp = c["workspaceSuspended"].as_bool().unwrap_or(false);
+                    if prev.is_some() && suspended.get(&tab) != Some(&ws_susp) {
+                        roster_changed = true;
+                    }
+                    suspended.insert(tab.clone(), ws_susp);
+                    // Same for the mesh flag (toggled from the desktop's mesh setup modal).
+                    let ws_mesh = c["mesh"].as_bool().unwrap_or(false);
+                    if prev.is_some() && mesh.get(&tab) != Some(&ws_mesh) {
+                        roster_changed = true;
+                    }
+                    mesh.insert(tab.clone(), ws_mesh);
+                    // Registration flips when an agent finally re-registers (or a restart drops
+                    // its session entry) — the phone must re-render the re-initialize control.
+                    let reg = c["registered"].as_bool().unwrap_or(true);
+                    if prev.is_some() && registered.get(&tab) != Some(&reg) {
+                        roster_changed = true;
+                    }
+                    registered.insert(tab.clone(), reg);
                     if prev.as_deref() != Some(key.as_str()) {
-                        if socket.send(Message::Text(chat_state_event(c).to_string().into())).await.is_err() {
+                        if socket.send(Message::Text(enriched_chat_state_event(&s.app, c).to_string().into())).await.is_err() {
                             return;
                         }
                         // Attention only on an OBSERVED transition into an attention state. A tab
@@ -815,7 +1670,7 @@ async fn ws_event_loop(mut socket: WebSocket, s: ApiState) {
                 let removed: Vec<String> = last.keys().filter(|k| !current_ids.contains(*k)).cloned().collect();
                 if !removed.is_empty() {
                     roster_changed = true;
-                    for k in removed { last.remove(&k); }
+                    for k in removed { last.remove(&k); titles.remove(&k); suspended.remove(&k); mesh.remove(&k); registered.remove(&k); }
                 }
                 if roster_changed {
                     let _ = socket.send(Message::Text(json!({ "type": "chats_changed" }).to_string().into())).await;
@@ -831,6 +1686,24 @@ async fn ws_event_loop(mut socket: WebSocket, s: ApiState) {
             }
         }
     }
+}
+
+/// `chat_state_event` for a ticker SUMMARY row (build_chat_summaries): fills in the two fields
+/// the summary deliberately omits — lastActivityTs and meta — for just this one transitioning
+/// tab, so the per-tick cost of the heavy sources is paid only on actual state changes.
+fn enriched_chat_state_event(app: &AppState, c: &Value) -> Value {
+    let tab_id = c["tabId"].as_str().unwrap_or_default();
+    let mut c = c.clone();
+    c["lastActivityTs"] = json!(last_activity_ts(
+        app,
+        tab_id,
+        scrollback_time_for(app, tab_id),
+        now_ms(),
+    ));
+    if let Some(meta) = build_meta(app, tab_id) {
+        c["meta"] = meta;
+    }
+    chat_state_event(&c)
 }
 
 fn chat_state_event(c: &Value) -> Value {
@@ -859,14 +1732,23 @@ fn chat_state_event(c: &Value) -> Value {
 /// the SAME msg_id/role/text/ts that GET returns for this turn (turns_for_session), so the phone's
 /// dedup-by-msg_id collapses the streamed frame and the REST re-fetch into one entry.
 fn message_event(tab_id: &str, turn: &Value) -> Value {
-    json!({
+    let mut ev = json!({
         "type": "message",
         "tabId": tab_id,
         "role": turn.get("role"),
         "text": turn.get("text"),
         "msg_id": turn.get("msg_id"),
         "ts": turn.get("ts"),
-    })
+    });
+    // Typed turns (`peer_message`, …) must carry their tag on the LIVE path too: a streamed turn
+    // that arrives untagged renders as a plain message and then silently changes shape when the
+    // next GET returns the tagged version.
+    for key in ["kind", "peer"] {
+        if let Some(v) = turn.get(key) {
+            ev[key] = v.clone();
+        }
+    }
+    ev
 }
 
 /// Stream newly-appended agent/tool turns for every designated tab as `message` frames. Never
@@ -880,9 +1762,21 @@ async fn stream_new_messages(
     app: &AppState,
     seen: &mut HashMap<String, std::collections::HashSet<String>>,
     mtimes: &mut HashMap<String, u64>,
+    task_keys: &mut HashMap<String, u64>,
+    shell_keys: &mut HashMap<String, u64>,
 ) -> Result<(), ()> {
     for t in designated_tabs(app) {
         let Some((rt, sid)) = resolved_session_for_tab(app, &t.tab_id) else { continue };
+        // Task-board diff — BEFORE the transcript-mtime gate: a subagent claiming/completing
+        // tasks rewrites board files without appending to the MAIN transcript, so the board
+        // needs its own change key. Cost per tick per tab is one readdir of a tiny dir (or one
+        // ENOENT stat for the no-board majority). Claude only — no board elsewhere.
+        if rt == AgentRuntime::Claude {
+            stream_tasks_if_changed(socket, &t.tab_id, &sid, task_keys).await?;
+            // Background shells: also outside the transcript-mtime gate — a shell EXITING appends
+            // nothing to the transcript, and that transition is exactly what the strip must show.
+            stream_shells_if_changed(socket, app, &t.tab_id, shell_keys).await?;
+        }
         // mtime gate: an unchanged transcript means no new turns, so skip the tail re-parse.
         if let Some(mt) = transcript::mtime_for(rt, &sid) {
             if mtimes.get(&t.tab_id) == Some(&mt) {
@@ -921,6 +1815,86 @@ async fn stream_new_messages(
         *entry = window;
     }
     Ok(())
+}
+
+/// Emit a `shells` WS frame when the tab's background-shell roster changed. Same full-array
+/// replace + baseline-on-connect discipline as `tasks`; `[]` clears the strip. The change key
+/// folds in each shell's status and pid, so a shell EXITING (which appends nothing to the
+/// transcript) still fires — that transition is the whole point of the strip.
+async fn stream_shells_if_changed(
+    socket: &mut WebSocket,
+    app: &AppState,
+    tab_id: &str,
+    shell_keys: &mut HashMap<String, u64>,
+) -> Result<(), ()> {
+    use std::hash::{Hash, Hasher};
+    let roster = shell_roster(app, tab_id);
+    let key = {
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        for sh in &roster {
+            sh.id.hash(&mut h);
+            sh.status.as_str().hash(&mut h);
+            sh.pid.hash(&mut h);
+            sh.tail.hash(&mut h);
+        }
+        roster.len().hash(&mut h);
+        h.finish()
+    };
+    if roster.is_empty() {
+        // Nothing to report: emit one clearing frame only if this tab previously had a roster.
+        if shell_keys.remove(tab_id).is_none() {
+            return Ok(());
+        }
+        let ev = json!({ "type": "shells", "tabId": tab_id, "shells": [], "ts": now_ms() });
+        return socket.send(Message::Text(ev.to_string().into())).await.map_err(|_| ());
+    }
+    if shell_keys.get(tab_id) == Some(&key) {
+        return Ok(());
+    }
+    shell_keys.insert(tab_id.to_string(), key);
+    let ev = json!({
+        "type": "shells",
+        "tabId": tab_id,
+        "shells": roster.iter().map(|s| s.to_json()).collect::<Vec<_>>(),
+        "ts": now_ms(),
+    });
+    socket.send(Message::Text(ev.to_string().into())).await.map_err(|_| ())
+}
+
+/// Emit a `tasks` WS frame when the tab's Claude task board changed (mailink/tasks.rs).
+/// Full-array replace semantics — boards are tiny, so no per-task diffing. A board that
+/// disappears (session ended, tasks all deleted) emits one final empty array so the phone
+/// clears its strip.
+async fn stream_tasks_if_changed(
+    socket: &mut WebSocket,
+    tab_id: &str,
+    session_id: &str,
+    task_keys: &mut HashMap<String, u64>,
+) -> Result<(), ()> {
+    let event = match tasks::change_key(session_id) {
+        Some(key) => {
+            if task_keys.get(tab_id) == Some(&key) {
+                return Ok(());
+            }
+            task_keys.insert(tab_id.to_string(), key);
+            json!({
+                "type": "tasks",
+                "tabId": tab_id,
+                "tasks": tasks::tasks_for_session(session_id).unwrap_or_default(),
+                "ts": now_ms(),
+            })
+        }
+        None => {
+            if task_keys.remove(tab_id).is_none() {
+                return Ok(());
+            }
+            json!({ "type": "tasks", "tabId": tab_id, "tasks": [], "ts": now_ms() })
+        }
+    };
+    socket
+        .send(Message::Text(event.to_string().into()))
+        .await
+        .map_err(|_| ())
 }
 
 /// Build an `attention` event for a tab, inlining the open prompt (delta 1) so the client can
@@ -1076,7 +2050,8 @@ async fn stage_images_remote(
 
 /// Write `bytes` to `remote_path` on an SSH bridge host via `cat > path` with the bytes on
 /// stdin. ~tens of ms over the mux socket; BatchMode direct fallback when the socket is dead.
-async fn push_bytes_remote(
+/// pub(crate): the comms attachment staging (screenshots → SSH tabs) reuses it.
+pub(crate) async fn push_bytes_remote(
     host_key: &str,
     ssh_args: &str,
     bytes: &[u8],
@@ -1121,6 +2096,44 @@ async fn push_bytes_remote(
         ));
     }
     Ok(())
+}
+
+/// Read `remote_path`'s bytes from an SSH bridge host via `cat < path` — the pull mirror
+/// of push_bytes_remote, muxing over the same tunnel-owned CM socket. Used by the comms
+/// integration to fetch an SSH-tab agent's screenshot before uploading it to the chat.
+pub(crate) async fn fetch_bytes_remote(
+    host_key: &str,
+    ssh_args: &str,
+    remote_path: &str,
+) -> Result<Vec<u8>, String> {
+    let quoted = format!("'{}'", remote_path.replace('\'', "'\\''"));
+    let mut cmd_args = crate::commands::ssh_tunnel::mux_client_args(host_key);
+    for arg in ssh_args.split_whitespace() {
+        cmd_args.push(arg.to_string());
+    }
+    cmd_args.push(format!("cat < {quoted}"));
+
+    let output = tokio::time::timeout(
+        tokio::time::Duration::from_secs(30),
+        tokio::process::Command::new("ssh")
+            .args(&cmd_args)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .output(),
+    )
+    .await
+    .map_err(|_| "remote read timed out (30s)".to_string())?
+    .map_err(|e| format!("ssh spawn failed: {e}"))?;
+
+    if !output.status.success() {
+        return Err(format!(
+            "remote read failed (exit {:?}): {}",
+            output.status.code(),
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    Ok(output.stdout)
 }
 
 /// Settle delays so the TUI redraws between keystrokes (mirrors inject_text's paste settle).
@@ -1394,6 +2407,16 @@ struct TabMeta {
     tab_id: String,
     title: String,
     workspace: String,
+    /// Owning workspace id — lets the phone resolve tab → workspace for the resume flow without
+    /// having to model workspace ids itself (it resumes by tabId; the server does the lookup).
+    workspace_id: String,
+    /// Whether the owning workspace is suspended (PTYs killed, tabs restore-on-demand). A tab in a
+    /// suspended workspace can't be Initialized per-tab — the workspace must be resumed first — so
+    /// the phone shows a "Resume workspace" affordance instead of a dead-end Initialize button.
+    workspace_suspended: bool,
+    /// Whether the owning workspace is a Mesh Workspace (`Workspace.bridge_all`). The phone
+    /// badges the workspace group and offers the mesh Initialize-all action on it.
+    mesh: bool,
     runtime: AgentRuntime,
 }
 
@@ -1428,12 +2451,60 @@ fn designated_tabs(app: &AppState) -> Vec<TabMeta> {
                         tab_id: tab.id.clone(),
                         title: tab.name.clone(),
                         workspace: ws.name.clone(),
+                        workspace_id: ws.id.clone(),
+                        workspace_suspended: ws.suspended,
+                        mesh: ws.bridge_all,
                         runtime: tab.runtime.unwrap_or_default(),
                     });
                 }
             }
         }
     }
+    out
+}
+
+/// Resolve an ARCHIVED tab id → its owning workspace id (searching every window/workspace's
+/// `archived_tabs`). `None` if no archived tab has that id. Used by POST /chats/{tabId}/restore.
+fn archived_workspace_of(app: &AppState, tab_id: &str) -> Option<String> {
+    let data = app.app_data.read();
+    for win in &data.windows {
+        for ws in &win.workspaces {
+            if ws.archived_tabs.iter().any(|t| t.id == tab_id) {
+                return Some(ws.id.clone());
+            }
+        }
+    }
+    None
+}
+
+/// The flat archived-tab list for GET /chats/archived — every workspace's `archived_tabs` across
+/// all windows, newest-archived first. Only terminal tabs are exposed (editor/diff archives aren't
+/// maiLink chats). `runtime` is best-effort (persisted from when it was live); `cwd` is the
+/// restore cwd captured at archive time.
+fn archived_chats(app: &AppState) -> Vec<Value> {
+    let data = app.app_data.read();
+    let mut out = Vec::new();
+    for win in &data.windows {
+        for ws in &win.workspaces {
+            for tab in &ws.archived_tabs {
+                if !matches!(tab.tab_type, TabType::Terminal) {
+                    continue;
+                }
+                out.push(json!({
+                    "tabId": tab.id,
+                    // The resolved name shown in the archive list (falls back to the raw tab name).
+                    "name": tab.archived_name.clone().unwrap_or_else(|| tab.name.clone()),
+                    "workspace": ws.name,
+                    "workspaceId": ws.id,
+                    "runtime": tab.runtime.map(runtime_key),
+                    "archivedAt": tab.archived_at,
+                    "cwd": tab.restore_cwd,
+                }));
+            }
+        }
+    }
+    // Newest archived first; entries without a timestamp sort last.
+    out.sort_by(|a, b| b["archivedAt"].as_str().cmp(&a["archivedAt"].as_str()));
     out
 }
 
@@ -1462,6 +2533,36 @@ fn session_states(app: &AppState) -> HashMap<String, (AgentSessionState, AgentRu
             .or_insert(candidate);
     }
     map
+}
+
+/// How recently a tab's transcript must have produced a REAL turn for the live-agent fallback to
+/// override "dormant". Long enough to bridge a slow tool call / thinking gap, short enough that a
+/// genuinely finished-and-quiet agent reverts to dormant so the operator sees the real state.
+const LIVE_STATE_FALLBACK_MS: u64 = 10 * 60 * 1000;
+
+/// Pure decision for the dormant→live fallback (unit-tested; the impl below wires the real reads).
+fn live_fallback_decision(has_live_pty: bool, last_turn_ts: Option<u64>, now: u64) -> bool {
+    has_live_pty && last_turn_ts.is_some_and(|ts| now.saturating_sub(ts) <= LIVE_STATE_FALLBACK_MS)
+}
+
+/// Self-correcting liveness fallback for a designated tab that has NO tracked `agent_sessions`
+/// entry (would report "dormant"). Such a tab can still be a fully-live, producing agent whose
+/// session entry was simply never created: on a mesh/SSH resume, SessionStart buffers to `pending`
+/// (Claude http hooks carry no tab_id to insert directly) and initSession may catch neither a
+/// sessionId nor a still-unclaimed pending entry (the pending pool is shared across all tabs, so a
+/// sibling's init can consume it) — and once no entry exists, the running agent's per-turn hooks
+/// only MUTATE an existing entry, so they can never heal it. When such a tab has a LIVE PTY and its
+/// transcript produced a real turn within LIVE_STATE_FALLBACK_MS, report "active" (NOT "idle":
+/// active is not an attention state, so this drops the phone's dormant/Initialize banner without
+/// firing a phantom "done" doorbell). Self-correcting: PTY death or a transcript that stops
+/// advancing reverts to "dormant". Cheap: an in-memory PTY-map lookup + a bounded transcript tail
+/// read (the same read `last_activity_ts` already does per tab) — no process scan.
+fn tab_looks_live_despite_no_session(app: &AppState, tab_id: &str, now: u64) -> bool {
+    live_fallback_decision(
+        pty_for_tab(app, tab_id).is_some(),
+        resolved_session_for_tab(app, tab_id).and_then(|(rt, sid)| transcript::last_turn_ts_for(rt, &sid)),
+        now,
+    )
 }
 
 fn rank(s: AgentSessionState) -> u8 {
@@ -1515,6 +2616,7 @@ fn live_session_for_tab(app: &AppState, tab_id: &str) -> Option<(AgentRuntime, S
 /// the app shows stale/duplicated detail.
 fn persisted_session_for_tab(app: &AppState, tab_id: &str) -> Option<(AgentRuntime, String)> {
     let data = app.app_data.read();
+    let mut found: Option<(AgentRuntime, String)> = None;
     for win in &data.windows {
         for ws in &win.workspaces {
             for pane in &ws.panes {
@@ -1524,7 +2626,7 @@ fn persisted_session_for_tab(app: &AppState, tab_id: &str) -> Option<(AgentRunti
                         // app versions predating Tab.runtime can still carry claudeSessionId.
                         let rt = tab.runtime.unwrap_or_default();
                         let var = crate::state::agent_runtime::descriptor(rt).session_id_var;
-                        return tab
+                        found = tab
                             .trigger_variables
                             .get(var)
                             .cloned()
@@ -1535,7 +2637,25 @@ fn persisted_session_for_tab(app: &AppState, tab_id: &str) -> Option<(AgentRunti
             }
         }
     }
-    None
+    let (rt, sid) = found?;
+    // Contested-sid resolution: tab duplication copies the session-id var ON PURPOSE (reload =
+    // duplicate + close original; fork = duplicate + branch), so two tabs claiming one sid is a
+    // legitimate transient state — but only ONE of them may render the conversation, or both
+    // tabs show the same (possibly someone else's) transcript. The transcript itself names its
+    // rightful renderer: the SessionStart hook echoes the hosting tab id into the JSONL on
+    // every start/resume/compact, so the last marker follows actual usage — the original keeps
+    // rendering until the duplicate actually resumes the session, then it flips. Unknown host
+    // (unlocatable transcript, marker out of tail range, non-Claude runtime) → None for every
+    // claimant: the snapshot fallback beats rendering someone else's conversation. A LIVE
+    // registration (live_session_for_tab, tried before this fn) is unaffected.
+    if data.session_id_claimants(&sid) > 1 {
+        let owns = rt == AgentRuntime::Claude
+            && transcript::claude_session_host_tab(&sid).as_deref() == Some(tab_id);
+        if !owns {
+            return None;
+        }
+    }
+    Some((rt, sid))
 }
 
 /// (runtime, session id) for reading a tab's transcript: the LIVE session if one is registered,
@@ -1753,17 +2873,36 @@ fn preview_for(state: &str, tool: Option<&str>) -> String {
     }
 }
 
-/// The context window for a model id: 1M-context variants vs the 200k default. The transcript/hook
-/// model id never carries the `[1m]` variant marker (Claude Code exposure gap — see
-/// SessionMeta::model_id), so we can't detect the 1M variant from the id alone. Opus 4.8 defaults to
-/// the 1M variant in this deployment, so assume 1M whenever Opus 4.8 is in use. Mirrors the maiTerm
-/// statusline's limit derivation.
-fn context_limit_for(model_id: &str) -> u64 {
-    if model_id.contains("[1m]") || model_id.contains("-1m") || model_id.contains("opus-4-8") {
-        1_000_000
-    } else {
-        200_000
+/// Model families whose 1M-context variant is the one in use here, keyed by the id as it appears
+/// in the transcript. Needed only because of the exposure gap below; entries are deliberately
+/// specific (`opus-5`, not `opus`) — a blanket family rule would also claim 1M for older Opus
+/// releases that don't have it, and being wrong in that direction UNDERSTATES context usage,
+/// which is the harmful direction (no warning before a surprise compaction).
+const ASSUMED_1M_MODELS: [&str; 2] = ["opus-4-8", "opus-5"];
+
+/// The context window for a model id: 1M-context variants vs the 200k default.
+///
+/// The `[1m]` variant marker exists in Claude Code — its statusLine input carries it on
+/// `.model.id` — but NOT in the transcript's `message.model`, which reports a bare
+/// `claude-opus-5` for 1M and 200k sessions alike (verified across live transcripts). maiTerm
+/// never receives the statusLine, so the transcript is all we have and the variant has to be
+/// inferred. Hence [`ASSUMED_1M_MODELS`].
+///
+/// `observed_tokens` is the session's current context usage and acts as a self-correcting
+/// backstop: a session that has already exceeded 200k is definitively on a larger window,
+/// whatever its id says. That keeps an unrecognized future 1M model merely wrong-until-200k
+/// rather than permanently pegged at 100%, without needing a code change per model.
+fn context_limit_for(model_id: &str, observed_tokens: u64) -> u64 {
+    if model_id.contains("[1m]") || model_id.contains("-1m") {
+        return 1_000_000;
     }
+    if ASSUMED_1M_MODELS.iter().any(|m| model_id.contains(m)) {
+        return 1_000_000;
+    }
+    if observed_tokens > 200_000 {
+        return 1_000_000;
+    }
+    200_000
 }
 
 /// Normalize a model id to a friendly display string, per runtime. Claude ids go through
@@ -1811,15 +2950,17 @@ fn display_model(model_id: &str) -> String {
 /// from the session's transcript file — Claude JSONL `message.usage` (the SessionStart hook's
 /// model is often null), or a Codex rollout's `token_count`/`turn_context` (which state the
 /// window and model directly). Live/persisted session id so it also resolves during the
-/// resume-before-init window. `effort` is intentionally omitted — it's only in Claude Code's
-/// statusLine payload, which maiTerm doesn't receive. None for Gemini tabs (no transcript
-/// source) or before the first assistant turn.
+/// resume-before-init window. `effort` (Claude-only reasoning level) rides the same assistant
+/// JSONL line as the usage block. None for Gemini tabs (no transcript source) or before the
+/// first assistant turn.
 fn build_meta(app: &AppState, tab_id: &str) -> Option<Value> {
     let (rt, sid) = resolved_session_for_tab(app, tab_id)?;
     let meta = transcript::meta_for(rt, &sid)?;
     let model_id = meta.model_id.as_deref().unwrap_or("");
     // Codex rollouts carry the window; Claude's is derived from the model id.
-    let limit = meta.context_window.unwrap_or_else(|| context_limit_for(model_id));
+    let limit = meta
+        .context_window
+        .unwrap_or_else(|| context_limit_for(model_id, meta.context_tokens));
     let pct = ((meta.context_tokens as f64 / limit as f64) * 100.0)
         .round()
         .clamp(0.0, 100.0) as u64;
@@ -1830,6 +2971,11 @@ fn build_meta(app: &AppState, tab_id: &str) -> Option<Value> {
     });
     if !model_id.is_empty() {
         m["model"] = json!(display_model_for(rt, model_id));
+    }
+    // Reasoning-effort level (Claude-only; low/medium/high/xhigh/max) read from the transcript's
+    // top-level `effort` field. Optional — omitted for effort-less models and non-Claude runtimes.
+    if let Some(effort) = meta.effort {
+        m["effort"] = json!(effort);
     }
     Some(m)
 }
@@ -1842,13 +2988,26 @@ fn scrollback_times(app: &AppState) -> HashMap<String, u64> {
     let mut out = HashMap::new();
     if let Ok(rows) = app.scrollback_db.tab_times() {
         for (tab, updated) in rows {
-            let ms = transcript::rfc3339_to_ms(&format!("{}Z", updated.replace(' ', "T")));
+            let ms = scrollback_ts_to_ms(&updated);
             if ms > 0 {
                 out.insert(tab, ms as u64);
             }
         }
     }
     out
+}
+
+/// SQLite `datetime('now')` (`YYYY-MM-DD HH:MM:SS` UTC) → unix ms via the shared RFC3339 parser.
+fn scrollback_ts_to_ms(updated: &str) -> i64 {
+    transcript::rfc3339_to_ms(&format!("{}Z", updated.replace(' ', "T")))
+}
+
+/// Single-tab scrollback `updated_at` in unix ms — chat_detail's counterpart to
+/// `scrollback_times`, so a one-tab build doesn't scan the whole roster.
+fn scrollback_time_for(app: &AppState, tab_id: &str) -> Option<u64> {
+    let updated = app.scrollback_db.tab_time(tab_id).ok().flatten()?;
+    let ms = scrollback_ts_to_ms(&updated);
+    (ms > 0).then_some(ms as u64)
 }
 
 /// Per-tab last-activity timestamp (unix ms) that the phone's inbox sorts by. A REAL signal, not
@@ -1861,23 +3020,90 @@ fn scrollback_times(app: &AppState) -> HashMap<String, u64> {
 /// exactly the recency clump this signal exists to prevent. The last-real-turn ts does not advance
 /// on a pure resume. (mtime is still the right change-gate for WS streaming, where "anything
 /// appended → re-scan" is the intended semantics — see stream_new_messages.)
-fn last_activity_ts(app: &AppState, tab_id: &str, scrollback: &HashMap<String, u64>, now: u64) -> u64 {
+fn last_activity_ts(app: &AppState, tab_id: &str, scrollback_ts: Option<u64>, now: u64) -> u64 {
     resolved_session_for_tab(app, tab_id)
         .and_then(|(rt, sid)| transcript::last_turn_ts_for(rt, &sid))
-        .or_else(|| scrollback.get(tab_id).copied())
+        .or(scrollback_ts)
         .unwrap_or(now)
 }
 
-fn build_chats(app: &AppState) -> Vec<Value> {
-    let tabs = designated_tabs(app);
+/// The in-memory-only slice of `build_chats` that the periodic tickers (WS diff loop, doorbell)
+/// actually consume: identity + the diffed flags + state/prompt. Deliberately NO lastActivityTs,
+/// meta, or preview — those need the scrollback DB and transcript tails, and rebuilding them for
+/// every tab every ~2s was the permanent background load that kept the scrollback mutex ~40%
+/// held and made human-initiated fetches queue for seconds (the "chat-list storm" was maiTerm's
+/// own tickers, not the phone). The one per-tab I/O left is the dormant fallback's stat-gated
+/// tail read, and only for tabs with no session entry. Tabs that actually transition get
+/// enriched on demand (enriched_chat_state_event); full builds remain for REST + the
+/// once-per-connection WS snapshot.
+fn build_chat_summaries(app: &AppState) -> Vec<Value> {
     let states = session_states(app);
     let now = now_ms();
-    let scrollback = scrollback_times(app);
-    tabs.into_iter()
+    designated_tabs(app)
+        .into_iter()
         .map(|t| {
-            let (state, runtime, tool) = match states.get(&t.tab_id) {
-                Some((st, rt, tool)) => (map_state(*st), runtime_key(*rt), tool.clone()),
-                None => ("dormant", runtime_key(t.runtime), None),
+            let (state, runtime, tool, registered) = match states.get(&t.tab_id) {
+                Some((st, rt, tool)) => (map_state(*st), runtime_key(*rt), tool.clone(), true),
+                None => {
+                    let st = if tab_looks_live_despite_no_session(app, &t.tab_id, now) {
+                        "active"
+                    } else {
+                        "dormant"
+                    };
+                    (st, runtime_key(t.runtime), None, false)
+                }
+            };
+            // Same prompt-kind rule as build_chats: an open AskUserQuestion outranks permission.
+            let prompt_kind = if tool.as_deref() == Some("AskUserQuestion") {
+                Some("question")
+            } else if state == "permission" {
+                Some("permission")
+            } else {
+                None
+            };
+            json!({
+                "tabId": t.tab_id,
+                "title": t.title,
+                "workspaceSuspended": t.workspace_suspended,
+                "mesh": t.mesh,
+                "runtime": runtime,
+                "state": state,
+                // Diffed by the WS ticker like the other flags, so a tab that registers (or
+                // loses its registration) re-renders the re-initialize affordance promptly.
+                "registered": registered,
+                "prompt": prompt_kind,
+            })
+        })
+        .collect()
+}
+
+fn build_chats(app: &AppState) -> Vec<Value> {
+    let t_total = std::time::Instant::now();
+    let ph = std::time::Instant::now();
+    let tabs = designated_tabs(app);
+    let ms_tabs = ph.elapsed().as_millis(); // app_data read lock + workspace scan
+    let ph = std::time::Instant::now();
+    let states = session_states(app);
+    let ms_states = ph.elapsed().as_millis();
+    let now = now_ms();
+    let ph = std::time::Instant::now();
+    let scrollback = scrollback_times(app);
+    let ms_scrollback = ph.elapsed().as_millis(); // scrollback_db mutex + one SQLite query
+    let tab_count = tabs.len();
+    let ph = std::time::Instant::now();
+    let chats: Vec<Value> = tabs
+        .into_iter()
+        .map(|t| {
+            let (state, runtime, tool, registered) = match states.get(&t.tab_id) {
+                Some((st, rt, tool)) => (map_state(*st), runtime_key(*rt), tool.clone(), true),
+                None => {
+                    let st = if tab_looks_live_despite_no_session(app, &t.tab_id, now) {
+                        "active"
+                    } else {
+                        "dormant"
+                    };
+                    (st, runtime_key(t.runtime), None, false)
+                }
             };
             let ask_open = tool.as_deref() == Some("AskUserQuestion");
             // The kind of prompt currently open, if any. An open AskUserQuestion outranks the
@@ -1893,6 +3119,11 @@ fn build_chats(app: &AppState) -> Vec<Value> {
                 "tabId": t.tab_id,
                 "title": t.title,
                 "workspace": t.workspace,
+                "workspaceId": t.workspace_id,
+                // Surfaced so the phone shows "Resume workspace" instead of a dead-end Initialize.
+                "workspaceSuspended": t.workspace_suspended,
+                // Mesh Workspace flag — the phone badges the group and offers Initialize-all.
+                "mesh": t.mesh,
                 "runtime": runtime,
                 "state": state,
                 // Additive field: lets clients (and our own tickers) see prompt-kind changes
@@ -1901,7 +3132,14 @@ fn build_chats(app: &AppState) -> Vec<Value> {
                 // ask_open guards the case where a build leaves an open AskUserQuestion at
                 // state=="active" — it still needs to surface as unread in the inbox.
                 "unread": ask_open || state == "permission" || state == "idle",
-                "lastActivityTs": last_activity_ts(app, &t.tab_id, &scrollback, now),
+                // `state` alone can't express "a live agent that never registered": the fallback
+                // has to pick a word, and both are wrong — it isn't dormant (there's a live agent)
+                // and it isn't working (it's sitting at a prompt). Reporting it as active also hid
+                // the Initialize affordance, which is the fix for exactly this state. So the claim
+                // is split out: `registered:false` means the state came from the liveness fallback
+                // rather than a tracked session, and the client should offer re-initialize.
+                "registered": registered,
+                "lastActivityTs": last_activity_ts(app, &t.tab_id, scrollback.get(&t.tab_id).copied(), now),
                 "preview": preview_for(state, tool.as_deref()),
             });
             if let Some(meta) = build_meta(app, &t.tab_id) {
@@ -1909,28 +3147,71 @@ fn build_chats(app: &AppState) -> Vec<Value> {
             }
             chat
         })
-        .collect()
+        .collect();
+    let ms_loop = ph.elapsed().as_millis(); // per-tab: locate_jsonl + last-turn + meta tail reads
+    let ms_total = t_total.elapsed().as_millis();
+    if ms_total > SLOW_BUILD_LOG_MS {
+        log::warn!(
+            "mailink slow chat-list tabs={} total={}ms [tabs(app_data)={} states(sessions)={} scrollback(db)={} per_tab_loop={}]",
+            tab_count, ms_total, ms_tabs, ms_states, ms_scrollback, ms_loop,
+        );
+    }
+    chats
 }
 
+/// A chat_detail / chat-list build slower than this logs a per-phase WARN breakdown. Opening a
+/// thread is a handful of ms of CPU (transcript tail read + parse), so anything past this is
+/// almost always LOCK-WAIT — an `app_data.read()` queued behind a `save_state` writer, or the
+/// `scrollback_db` mutex behind a scrollback `save()`. The per-phase timings localize which lock.
+const SLOW_BUILD_LOG_MS: u128 = 500;
+
 fn build_chat_detail(app: &AppState, tab_id: &str) -> Option<Value> {
+    let t_total = std::time::Instant::now();
+
+    let ph = std::time::Instant::now();
     let meta = designated_tabs(app).into_iter().find(|t| t.tab_id == tab_id)?;
+    let ms_tabs = ph.elapsed().as_millis(); // app_data read lock + workspace scan
+
+    let ph = std::time::Instant::now();
     let states = session_states(app);
+    let ms_states = ph.elapsed().as_millis(); // agent_sessions read lock
+
     let now = now_ms();
-    let last_activity = last_activity_ts(app, tab_id, &scrollback_times(app), now);
-    let (state, runtime, tool) = match states.get(tab_id) {
-        Some((st, rt, tool)) => (map_state(*st), runtime_key(*rt), tool.clone()),
-        None => ("dormant", runtime_key(meta.runtime), None),
+
+    let ph = std::time::Instant::now();
+    // Single-row lookup — a one-tab build has no business scanning the whole roster's times.
+    let scrollback_ts = scrollback_time_for(app, tab_id);
+    let ms_scrollback = ph.elapsed().as_millis(); // scrollback_db read conn + one indexed row
+
+    let ph = std::time::Instant::now();
+    let last_activity = last_activity_ts(app, tab_id, scrollback_ts, now);
+    let ms_activity = ph.elapsed().as_millis(); // locate_jsonl + last-turn tail read
+    let (state, runtime, tool, registered) = match states.get(tab_id) {
+        Some((st, rt, tool)) => (map_state(*st), runtime_key(*rt), tool.clone(), true),
+        None => {
+            let st = if tab_looks_live_despite_no_session(app, tab_id, now) {
+                "active"
+            } else {
+                "dormant"
+            };
+            (st, runtime_key(meta.runtime), None, false)
+        }
     };
 
     // Per-turn source markdown from the session transcript (Claude) so the phone's GFM renderer
     // lights up; falls back to the distilled terminal scrape for other runtimes / when no
     // transcript is found. See mailink/transcript.rs.
+    let ph = std::time::Instant::now();
     let transcript = build_transcript(app, tab_id, now);
+    let ms_transcript = ph.elapsed().as_millis(); // 8 MiB tail read + distill
 
     let mut detail = json!({
         "tabId": meta.tab_id,
         "title": meta.title,
         "workspace": meta.workspace,
+        "workspaceId": meta.workspace_id,
+        "workspaceSuspended": meta.workspace_suspended,
+        "mesh": meta.mesh,
         "runtime": runtime,
         "state": state,
         // Same rule as build_chats: an open AskUserQuestion is unread even if a build leaves
@@ -1938,14 +3219,58 @@ fn build_chat_detail(app: &AppState, tab_id: &str) -> Option<Value> {
         "unread": tool.as_deref() == Some("AskUserQuestion")
             || state == "permission"
             || state == "idle",
+        "registered": registered,
         "lastActivityTs": last_activity,
         "transcript": transcript,
     });
 
     // Per-agent telemetry strip (model + context gauge). See build_meta.
+    let ph = std::time::Instant::now();
     if let Some(agent_meta) = build_meta(app, tab_id) {
         detail["meta"] = agent_meta;
     }
+    let ms_meta = ph.elapsed().as_millis(); // locate_jsonl + meta tail read
+
+    // The session's Claude Code task board (TaskCreate/TaskUpdate — the strip above the prompt
+    // in the TUI), invisible in structured chat without this. Present only when non-empty;
+    // live updates ride the WS `tasks` event (see stream_new_messages). mailink/tasks.rs.
+    if let Some((AgentRuntime::Claude, sid)) = resolved_session_for_tab(app, tab_id) {
+        if let Some(board) = tasks::tasks_for_session(&sid) {
+            detail["tasks"] = json!(board);
+        }
+    }
+
+    // Messages typed while the agent was busy and NOT yet consumed. The phone renders these as
+    // genuinely "queued" rather than a spinner, and it's the precondition for offering to pull one
+    // back — an already-consumed message can't be recalled. Same text the queued turn will echo.
+    if let Some((AgentRuntime::Claude, sid)) = resolved_session_for_tab(app, tab_id) {
+        let queued: Vec<Value> = transcript::pending_queue(&sid, QUEUE_SCAN_BYTES)
+            .into_iter()
+            .map(|(text, ts)| json!({ "text": text, "queuedAt": ts }))
+            .collect();
+        if !queued.is_empty() {
+            detail["queued"] = json!(queued);
+        }
+    }
+
+    // The `/goal` condition the agent is being held to, if any — the answer to "is it actually
+    // going to finish, and what's left" from a phone. Detail-only on purpose: it costs a tail read
+    // per call, which is fine for one open thread and is exactly what must never go near the
+    // roster tickers. See transcript::goal_for_session.
+    if let Some((AgentRuntime::Claude, sid)) = resolved_session_for_tab(app, tab_id) {
+        if let Some(goal) = transcript::goal_for_session(&sid) {
+            detail["goal"] = json!(goal);
+        }
+    }
+
+    // Background shells (`Bash run_in_background` — the TUI's /bashes list), with liveness settled
+    // against the process table so no Stop button is offered for a dead process. mailink/shells.rs.
+    let ph = std::time::Instant::now();
+    let shells = shell_roster(app, tab_id);
+    if !shells.is_empty() {
+        detail["shells"] = json!(shells.iter().map(|s| s.to_json()).collect::<Vec<_>>());
+    }
+    let ms_shells = ph.elapsed().as_millis(); // transcript scan + cached ps sweep
 
     // pendingPrompt: the agent's native human ask (mailink-protocol §12). thread_id == tab_id
     // for a solo thread.
@@ -2003,6 +3328,24 @@ fn build_chat_detail(app: &AppState, tab_id: &str) -> Option<Value> {
             "text": text,
             "options": ["Yes", "Yes, don't ask again", "No"],
         });
+    }
+
+    let ms_total = t_total.elapsed().as_millis();
+    if ms_total > SLOW_BUILD_LOG_MS {
+        // A slow open is near-always lock-wait, not CPU: whichever phase dominates names the
+        // contended lock (tabs=app_data, scrollback=scrollback_db) vs real work (transcript/meta).
+        log::warn!(
+            "mailink slow chat_detail tab={} total={}ms [tabs(app_data)={} states(sessions)={} scrollback(db)={} activity={} transcript={} meta={} shells={}]",
+            &tab_id[..tab_id.len().min(8)],
+            ms_total,
+            ms_tabs,
+            ms_states,
+            ms_scrollback,
+            ms_activity,
+            ms_transcript,
+            ms_meta,
+            ms_shells,
+        );
     }
 
     Some(detail)
@@ -2102,7 +3445,12 @@ async fn doorbell_loop(app: Arc<AppState>) {
             now_ms(),
         );
 
-        let chats = build_chats(&app);
+        // Summaries only — the doorbell consumes tabId/title/state/prompt and nothing else, and
+        // this loop runs forever at 2s whether or not a phone exists (being UNcovered is exactly
+        // when it must ring). The full build_chats here was the fixed-interval "chat-list storm":
+        // scrollback + per-tab transcript reads for 100 tabs, every 2s, holding the scrollback
+        // mutex ~40% of wall-clock so every human-initiated fetch queued behind it.
+        let chats = build_chat_summaries(&app);
         let mut current = std::collections::HashSet::new();
         for c in &chats {
             let tab = c["tabId"].as_str().unwrap_or_default().to_string();
@@ -2196,6 +3544,7 @@ mod tests {
 
         let api = ApiState {
             app: Arc::new(AppState::new()),
+            app_handle: None,
             server_name: "maiTerm".to_string(),
             fingerprint: "sha256/test".to_string(),
             dev_token: "correct-token".to_string(),
@@ -2253,6 +3602,7 @@ mod tests {
 
         let api = ApiState {
             app: Arc::new(AppState::new()),
+            app_handle: None,
             server_name: "maiTerm".to_string(),
             fingerprint: "sha256/test".to_string(),
             dev_token: "correct-token".to_string(),
@@ -2266,6 +3616,20 @@ mod tests {
             .unwrap();
         let status = build_router(api).oneshot(req).await.unwrap().status();
         assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
+    }
+
+    #[test]
+    fn normalize_tab_title_trims_rejects_empty_and_caps_length() {
+        // trims surrounding whitespace
+        assert_eq!(normalize_tab_title("  deploy box  ").as_deref(), Some("deploy box"));
+        // empty / whitespace-only → None (handler turns this into 400)
+        assert_eq!(normalize_tab_title(""), None);
+        assert_eq!(normalize_tab_title("   \t\n "), None);
+        // capped by CHAR count, and the cap never splits a multibyte code point
+        let long = "é".repeat(MAX_TAB_TITLE_CHARS + 40);
+        let out = normalize_tab_title(&long).unwrap();
+        assert_eq!(out.chars().count(), MAX_TAB_TITLE_CHARS);
+        assert!(out.chars().all(|c| c == 'é'), "must not split a multibyte grapheme");
     }
 
     /// The one subtle, breakage-prone property: our PEM→DER extraction (which feeds the
@@ -2342,12 +3706,22 @@ mod tests {
         assert_eq!(display_model("claude-sonnet-4-5"), "Sonnet 4.5");
         assert_eq!(display_model("claude-haiku-4-5-20251001"), "Haiku 4.5.20251001");
         assert_eq!(display_model("opus-4-8-1m"), "Opus 4.8");
-        // 1M-context variants vs the 200k default. Opus 4.8 is assumed 1M even without a marker
-        // (the transcript id never carries one), so the bare id also resolves to 1M.
-        assert_eq!(context_limit_for("claude-opus-4-8[1m]"), 1_000_000);
-        assert_eq!(context_limit_for("claude-opus-4-8-1m"), 1_000_000);
-        assert_eq!(context_limit_for("claude-opus-4-8"), 1_000_000);
-        assert_eq!(context_limit_for("claude-sonnet-4-5"), 200_000);
+        assert_eq!(display_model("claude-opus-5[1m]"), "Opus 5");
+        assert_eq!(display_model("claude-opus-5"), "Opus 5");
+        // 1M-context variants vs the 200k default. The marker resolves 1M outright…
+        assert_eq!(context_limit_for("claude-opus-4-8[1m]", 0), 1_000_000);
+        assert_eq!(context_limit_for("claude-opus-4-8-1m", 0), 1_000_000);
+        // …and the assumed-1M ids resolve without one, since the transcript id never carries it.
+        assert_eq!(context_limit_for("claude-opus-4-8", 0), 1_000_000);
+        assert_eq!(context_limit_for("claude-opus-5", 0), 1_000_000);
+        // Everything else defaults to 200k — including other Opus releases, which a blanket
+        // "any opus is 1M" rule would have wrongly promoted.
+        assert_eq!(context_limit_for("claude-sonnet-4-5", 0), 200_000);
+        assert_eq!(context_limit_for("claude-opus-4-7", 0), 200_000);
+        // Backstop: an unrecognized model already past 200k is definitively on a bigger window,
+        // so the gauge self-corrects instead of pegging at 100% forever.
+        assert_eq!(context_limit_for("claude-something-new", 200_000), 200_000);
+        assert_eq!(context_limit_for("claude-something-new", 200_001), 1_000_000);
     }
 
     #[test]
@@ -2411,6 +3785,280 @@ mod tests {
         // than a missing one, which degrades to stale-guard + composer fallback).
         assert_eq!(ask_deadline_ms(None, Some("60s")), None);
         assert_eq!(ask_deadline_ms(Some("weird"), Some("60s")), None);
+    }
+
+    #[test]
+    fn interrupt_settles_only_the_targeted_tabs_running_sessions() {
+        use crate::state::app_state::AgentSessionInfo;
+        let app = AppState::new();
+        let mk = |tab: &str, state: AgentSessionState| AgentSessionInfo {
+            runtime: AgentRuntime::Claude,
+            tab_id: tab.to_string(),
+            cwd: None,
+            state,
+            tool_name: Some("Bash".into()),
+            tool_detail: Some("ls".into()),
+            pending_question: Some(json!({ "q": 1 })),
+            pending_question_at: Some(123),
+            model: None,
+            transcript_path: None,
+            connection_id: None,
+        };
+        {
+            let mut s = app.agent_sessions.write();
+            s.insert("a".into(), mk("tab-1", AgentSessionState::Active));
+            s.insert("b".into(), mk("tab-1", AgentSessionState::WaitingInput)); // already idle
+            s.insert("c".into(), mk("tab-2", AgentSessionState::Active)); // other tab
+        }
+
+        // Interrupting tab-1 settles its running session and clears its tool/question, but leaves
+        // the already-idle session and the other tab untouched.
+        assert!(settle_tab_interrupt(&app, "tab-1"));
+        {
+            let s = app.agent_sessions.read();
+            assert!(matches!(s["a"].state, AgentSessionState::Stopped));
+            assert!(s["a"].tool_name.is_none() && s["a"].tool_detail.is_none());
+            assert!(s["a"].pending_question.is_none() && s["a"].pending_question_at.is_none());
+            assert!(matches!(s["b"].state, AgentSessionState::WaitingInput));
+            assert!(s["b"].tool_name.is_some()); // untouched — we only reset running sessions
+            assert!(matches!(s["c"].state, AgentSessionState::Active));
+        }
+
+        // Nothing left running on tab-1 → no-op, reported as false (nothing was interrupted).
+        assert!(!settle_tab_interrupt(&app, "tab-1"));
+
+        // An open permission gate counts as running and settles too (ESC dismisses it).
+        app.agent_sessions
+            .write()
+            .insert("d".into(), mk("tab-3", AgentSessionState::WaitingPermission));
+        assert!(settle_tab_interrupt(&app, "tab-3"));
+        assert!(matches!(
+            app.agent_sessions.read()["d"].state,
+            AgentSessionState::Stopped
+        ));
+    }
+
+    #[test]
+    fn designated_tabs_surface_workspace_id_and_suspension() {
+        use crate::state::workspace::{WindowData, Workspace};
+        let app = AppState::new();
+        let (ws_id, tab_id) = {
+            let mut data = app.app_data.write();
+            data.preferences.mailink_expose_all = true;
+            let mut win = WindowData::new("main".into());
+            let mut ws = Workspace::new("ENAGIC".into());
+            ws.suspended = true;
+            ws.bridge_all = true;
+            // The auto-created Terminal tab needs a detected runtime to be exposed in expose-all.
+            ws.panes[0].tabs[0].runtime = Some(AgentRuntime::Claude);
+            let ids = (ws.id.clone(), ws.panes[0].tabs[0].id.clone());
+            win.workspaces.push(ws);
+            data.windows.push(win);
+            ids
+        };
+        let metas = designated_tabs(&app);
+        let m = metas
+            .iter()
+            .find(|m| m.tab_id == tab_id)
+            .expect("suspended-workspace tab is still exposed to maiLink");
+        assert!(m.workspace_suspended);
+        assert_eq!(m.workspace_id, ws_id);
+        assert!(m.mesh, "bridge_all surfaces as the mesh flag");
+    }
+
+    #[test]
+    fn contested_session_id_resolves_only_to_the_transcript_named_host() {
+        // Tab duplication copies the session-id var on purpose (reload / fork workflows), so
+        // two claimants is a legitimate transient state — but only the transcript-named host
+        // may render the conversation. Unknown host (no locatable transcript) → None for BOTH:
+        // rendering nothing beats rendering someone else's conversation. Unique sids resolve
+        // as before.
+        use crate::state::workspace::{WindowData, Workspace};
+        let app = AppState::new();
+        let sid = "contested-0000-4000-8000-aiterm-test000";
+        let (dup_a, dup_b, solo) = {
+            let mut data = app.app_data.write();
+            let mut win = WindowData::new("main".into());
+            let mut ws = Workspace::new("ENAGIC".into());
+            while ws.panes[0].tabs.len() < 3 {
+                let n = ws.panes[0].tabs.len();
+                ws.panes[0].tabs.push(crate::state::workspace::Tab::new(format!("t{n}")));
+            }
+            for tab in &mut ws.panes[0].tabs {
+                tab.runtime = Some(AgentRuntime::Claude);
+            }
+            ws.panes[0].tabs[0].trigger_variables.insert("claudeSessionId".into(), sid.into());
+            ws.panes[0].tabs[1].trigger_variables.insert("claudeSessionId".into(), sid.into());
+            ws.panes[0].tabs[2].trigger_variables.insert("claudeSessionId".into(), "sid-solo".into());
+            let ids = (
+                ws.panes[0].tabs[0].id.clone(),
+                ws.panes[0].tabs[1].id.clone(),
+                ws.panes[0].tabs[2].id.clone(),
+            );
+            win.workspaces.push(ws);
+            data.windows.push(win);
+            ids
+        };
+
+        // Phase 1 — no transcript anywhere: unknown host, both claimants refuse.
+        assert_eq!(persisted_session_for_tab(&app, &dup_a), None);
+        assert_eq!(persisted_session_for_tab(&app, &dup_b), None);
+        assert_eq!(
+            persisted_session_for_tab(&app, &solo),
+            Some((AgentRuntime::Claude, "sid-solo".to_string()))
+        );
+
+        // Phase 2 — a transcript whose SessionStart hook line names dup_b as the most recent
+        // host: dup_b resolves, dup_a still refuses. (Shadow-mirror dir, same resolution path
+        // as the locate_jsonl test.)
+        let dir = super::mirror::shadow_dir().expect("data dir resolvable");
+        std::fs::create_dir_all(&dir).expect("create shadow dir");
+        let path = dir.join(format!("{sid}.jsonl"));
+        let line = json!({
+            "type": "user",
+            "message": { "content": format!(
+                "SessionStart hook success: Your maiTerm tab ID is {dup_b}. Your session ID is {sid}."
+            )}
+        });
+        std::fs::write(&path, format!("{line}\n")).expect("write shadow transcript");
+        let resolved_a = persisted_session_for_tab(&app, &dup_a);
+        let resolved_b = persisted_session_for_tab(&app, &dup_b);
+        let _ = std::fs::remove_file(&path); // clean up before asserting
+        assert_eq!(resolved_a, None, "non-host claimant refuses");
+        assert_eq!(
+            resolved_b,
+            Some((AgentRuntime::Claude, sid.to_string())),
+            "transcript-named host renders"
+        );
+    }
+
+    #[test]
+    fn chat_summaries_carry_every_field_the_tickers_diff() {
+        // The WS ticker diffs title/workspaceSuspended/mesh/registered and keys on attn_key(state,
+        // prompt);
+        // the doorbell needs tabId/title/state/prompt; chat_state events need runtime. If a field
+        // the tickers consume ever drops out of the summary shape, the diff silently degrades
+        // (e.g. every tick looks like a rename) — pin the shape here.
+        use crate::state::workspace::{WindowData, Workspace};
+        let app = AppState::new();
+        let tab_id = {
+            let mut data = app.app_data.write();
+            data.preferences.mailink_expose_all = true;
+            let mut win = WindowData::new("main".into());
+            let mut ws = Workspace::new("ENAGIC".into());
+            ws.suspended = true;
+            ws.bridge_all = true;
+            ws.panes[0].tabs[0].runtime = Some(AgentRuntime::Claude);
+            let id = ws.panes[0].tabs[0].id.clone();
+            win.workspaces.push(ws);
+            data.windows.push(win);
+            id
+        };
+        let summaries = build_chat_summaries(&app);
+        let s = summaries
+            .iter()
+            .find(|c| c["tabId"] == json!(tab_id))
+            .expect("designated tab summarized");
+        assert!(s["title"].is_string());
+        assert_eq!(s["workspaceSuspended"], json!(true));
+        assert_eq!(s["mesh"], json!(true));
+        assert_eq!(s["runtime"], json!("claude"));
+        assert_eq!(s["state"], json!("dormant"), "no session entry, no live PTY");
+        assert_eq!(
+            s["registered"], json!(false),
+            "no tracked session ⇒ the state came from the fallback, so the phone must be able to \
+             offer re-initialize instead of trusting the word in `state`"
+        );
+        assert!(s["prompt"].is_null());
+        // And the heavy fields must NOT be here — their absence is the whole point.
+        assert!(s.get("lastActivityTs").is_none() && s.get("meta").is_none());
+    }
+
+    #[test]
+    fn archived_chats_lists_and_resolves_by_tab_id() {
+        use crate::state::workspace::{Tab, WindowData, Workspace};
+        let app = AppState::new();
+        let (ws_id, older_id, newer_id) = {
+            let mut data = app.app_data.write();
+            let mut win = WindowData::new("main".into());
+            let mut ws = Workspace::new("ENAGIC".into());
+            let mut older = Tab::new("agent-old".into());
+            older.runtime = Some(AgentRuntime::Claude);
+            older.archived_name = Some("Old Agent".into());
+            older.archived_at = Some("2026-07-20T10:00:00Z".into());
+            older.restore_cwd = Some("/tmp/old".into());
+            let mut newer = Tab::new("agent-new".into());
+            newer.archived_at = Some("2026-07-22T10:00:00Z".into());
+            let ids = (ws.id.clone(), older.id.clone(), newer.id.clone());
+            ws.archived_tabs.push(older);
+            ws.archived_tabs.push(newer);
+            win.workspaces.push(ws);
+            data.windows.push(win);
+            ids
+        };
+
+        let list = archived_chats(&app);
+        assert_eq!(list.len(), 2);
+        // Newest-archived first.
+        assert_eq!(list[0]["tabId"].as_str(), Some(newer_id.as_str()));
+        assert_eq!(list[1]["tabId"].as_str(), Some(older_id.as_str()));
+        // Resolved name + workspace + captured cwd surface on the older entry.
+        assert_eq!(list[1]["name"].as_str(), Some("Old Agent"));
+        assert_eq!(list[1]["workspaceId"].as_str(), Some(ws_id.as_str()));
+        assert_eq!(list[1]["runtime"].as_str(), Some("claude"));
+        assert_eq!(list[1]["cwd"].as_str(), Some("/tmp/old"));
+
+        // restore resolves an archived tab id → its owning workspace; unknown ids → None.
+        assert_eq!(archived_workspace_of(&app, &older_id).as_deref(), Some(ws_id.as_str()));
+        assert_eq!(archived_workspace_of(&app, "nope"), None);
+    }
+
+    #[test]
+    fn live_fallback_flips_dormant_only_for_a_live_pty_with_a_recent_turn() {
+        let now = 10_000_000u64;
+        let recent = now - 1000; // 1s ago
+        let stale = now - (LIVE_STATE_FALLBACK_MS + 1); // just past the window
+        // Live PTY + a recent real turn → treat as active (drops the dormant banner).
+        assert!(live_fallback_decision(true, Some(recent), now));
+        // No live PTY → genuinely dormant regardless of transcript recency (e.g. suspended).
+        assert!(!live_fallback_decision(false, Some(recent), now));
+        // Live PTY but the last real turn aged out → revert to dormant (self-correcting).
+        assert!(!live_fallback_decision(true, Some(stale), now));
+        // Live PTY but no resolvable transcript turn at all → dormant.
+        assert!(!live_fallback_decision(true, None, now));
+        // A turn timestamp slightly in the future (clock skew) is still "recent", not underflow.
+        assert!(live_fallback_decision(true, Some(now + 5000), now));
+    }
+
+    #[test]
+    fn wake_never_replays_a_resume_into_a_running_agent() {
+        // Agent alive → re-register it. Never a resume replay, even with one stored: that would
+        // type an ssh+resume line into the running agent's composer and nest ssh.
+        assert_eq!(wake_remedy(true, true), Ok("init"));
+        assert_eq!(wake_remedy(true, false), Ok("init"));
+        // Agent gone → restart it. `/maiterm init` here would just be run by the shell.
+        assert_eq!(wake_remedy(false, true), Ok("resume"));
+        // Agent gone with nothing to restart → refuse. This is the case that used to type the
+        // user's message straight into bash, which then executed it.
+        assert_eq!(wake_remedy(false, false), Err("no-agent"));
+    }
+
+    #[test]
+    fn every_unreachable_reason_explains_itself_without_deferring_to_the_desktop() {
+        let details: Vec<&str> = ["no-pty", "no-agent", "wake-timeout"]
+            .iter()
+            .map(|r| wake_detail(r))
+            .collect();
+        for d in &details {
+            assert!(!d.is_empty());
+            // maiLink's standing rule: a phone-reachable flow never tells the user to go to the
+            // desktop — that defeats the point of the app.
+            assert!(!d.to_lowercase().contains("desktop"), "{d}");
+        }
+        // Distinct reasons must not collapse to the same sentence — the fallback arm is
+        // wake-timeout's, and a new reason added without a match arm would silently inherit it.
+        let unique: std::collections::HashSet<&&str> = details.iter().collect();
+        assert_eq!(unique.len(), details.len());
     }
 
     #[test]

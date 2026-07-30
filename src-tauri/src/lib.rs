@@ -424,7 +424,7 @@ pub fn run() {
             // opt-in TLS listener — only started when the user has enabled it. Kept distinct
             // from the localhost-only Claude-Code server above.
             if app_state.app_data.read().preferences.mailink_enabled {
-                if let Err(e) = mailink::start(&app_state) {
+                if let Err(e) = mailink::start(&app_state, app.handle().clone()) {
                     log::error!("[maiLink] {e}");
                 }
             }
@@ -606,6 +606,7 @@ pub fn run() {
             commands::terminal::get_saved_scrollback_text,
             commands::terminal::get_saved_terminal_size,
             commands::workspace::get_app_data,
+            commands::workspace::count_session_id_claimants,
             commands::workspace::create_workspace,
             commands::workspace::delete_workspace,
             commands::workspace::rename_workspace,
@@ -638,6 +639,7 @@ pub fn run() {
             commands::workspace::set_tab_composer_open,
             commands::workspace::set_tab_composer_draft,
             commands::workspace::set_tab_mesh_purpose,
+            commands::workspace::set_tab_runtime,
             commands::workspace::reorder_tabs,
             commands::workspace::reorder_workspaces,
             commands::workspace::duplicate_workspace,
@@ -700,6 +702,7 @@ pub fn run() {
             commands::editor::save_clipboard_image,
             commands::editor::reveal_in_file_manager,
             commands::editor::download_remote_file,
+            commands::editor::stage_remote_file_temp,
             commands::editor::scp_upload_files,
             commands::editor::cancel_scp_upload,
             commands::editor::create_editor_tab,

@@ -48,7 +48,7 @@ pub fn tool_list_response() -> Value {
     // Tools are built in batches to stay under the serde_json::json! macro recursion limit (128).
     // Each batch is a small Vec<Value> that gets extended into the final tools array.
 
-    let mut tools: Vec<Value> = Vec::with_capacity(50);
+    let mut tools: Vec<Value> = Vec::with_capacity(51);
 
     // Batch 1: Session, info, notification, logs, document tools
     tools.extend(serde_json::json!([
@@ -586,7 +586,7 @@ pub fn tool_list_response() -> Value {
     tools.extend(serde_json::json!([
         {
             "name": "bindCommsThread",
-            "description": "Bind this tab to a Mattermost thread (/maiterm resolve). Fetches the whole thread via the configured bot account and returns it as a transcript ([REPORT] marks the root post — the work item), plus `bot_username` (how humans reach you) and, if the operator configured any, `operator_instructions` (their guidance for how to communicate — follow it). While bound, new human replies that @mention you are injected into this session. Rebinding replaces any prior binding on this tab.",
+            "description": "Bind this tab to a Mattermost thread (/maiterm resolve). Fetches the whole thread via the configured bot account and returns it as a transcript ([REPORT] marks the root post — the work item), plus `bot_username` (how humans reach you) and, if the operator configured any, `operator_instructions` (their guidance for how to communicate — follow it). Image attachments (screenshots) are staged to temp files whose paths appear in the transcript — view them with the Read tool. While bound, new human replies that @mention you are injected into this session. Rebinding replaces any prior binding on this tab. After binding, your FIRST action is a short ack posted to the thread (postCommsReply) — before investigating — so the humans know it was picked up.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -598,7 +598,7 @@ pub fn tool_list_response() -> Value {
         },
         {
             "name": "readCommsThread",
-            "description": "Re-fetch the full current Mattermost thread this tab is bound to, as a transcript. Use this to catch up on ambient discussion — only messages that @mention the bot are auto-injected into your session, so the rest of the thread is read-on-demand.",
+            "description": "Re-fetch the full current Mattermost thread this tab is bound to, as a transcript. Use this to catch up on ambient discussion — only messages that @mention the bot are auto-injected into your session, so the rest of the thread is read-on-demand. Image attachments are staged to temp files whose paths appear in the transcript — view them with the Read tool.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -617,7 +617,23 @@ pub fn tool_list_response() -> Value {
                     "tabId": { "type": "string", "description": "Tab ID (auto-injected after initSession)" },
                     "message": { "type": "string", "description": "The message to post (Mattermost markdown)" },
                     "root_id": { "type": "string", "description": "Which bound thread to post to — REQUIRED when this tab is bound to more than one thread; omit with a single binding" },
-                    "resolve": { "type": "boolean", "description": "true = this is the confirmed-close post; clears that thread's binding after posting" }
+                    "resolve": { "type": "boolean", "description": "true = this is the confirmed-close post; clears that thread's binding after posting" },
+                    "attachments": { "type": "array", "items": { "type": "string" }, "description": "Absolute file paths (screenshots/images) to upload and attach to the post — max 5, 20 MB each. Use YOUR paths: local files normally; on an SSH tab, paths on the remote host (fetched back over the bridge)" }
+                },
+                "required": ["message"]
+            }
+        },
+        {
+            "name": "startCommsThread",
+            "description": "Open a NEW Mattermost thread in a channel this tab monitors — for raising something yourself (an incident you found, a heads-up, a question for the channel) rather than replying to an existing thread. Posts a root message and binds this tab to the new thread, so replies that @mention the bot come back to you like any other bound thread (pass bind: false to post without binding — then you won't see replies). Only channels the operator put on this tab's monitor list are allowed. Counts against the same 3-thread cap as summons.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "tabId": { "type": "string", "description": "Tab ID (auto-injected after initSession)" },
+                    "message": { "type": "string", "description": "The opening post (Mattermost markdown). @mention the people who should see it — a new thread notifies nobody otherwise" },
+                    "channel": { "type": "string", "description": "Which monitored channel — REQUIRED when this tab monitors more than one; omit with a single channel" },
+                    "bind": { "type": "boolean", "description": "Default true: bind this tab to the new thread so replies are delivered. false = fire-and-forget post" },
+                    "attachments": { "type": "array", "items": { "type": "string" }, "description": "Absolute file paths (screenshots/images) to attach — max 5, 20 MB each. Use YOUR paths: local files normally; on an SSH tab, paths on the remote host" }
                 },
                 "required": ["message"]
             }

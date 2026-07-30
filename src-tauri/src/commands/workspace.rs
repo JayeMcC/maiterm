@@ -115,6 +115,15 @@ pub fn get_app_data(state: State<'_, Arc<AppState>>) -> crate::state::AppData {
     state.app_data.read().clone()
 }
 
+/// How many live tabs (any window) claim `session_id` via their runtime's session-id trigger
+/// var. The frontend's contested-resume probe: auto-resume replays fork (`--fork-session`)
+/// instead of plain-resuming a sid another tab still claims — two tabs running one session is
+/// never intended, even though duplication copying the sid is (reload / fork workflows).
+#[tauri::command]
+pub fn count_session_id_claimants(state: State<'_, Arc<AppState>>, session_id: String) -> usize {
+    state.app_data.read().session_id_claimants(&session_id)
+}
+
 #[tauri::command]
 pub fn create_workspace(window: tauri::Window, state: State<'_, Arc<AppState>>, name: String) -> Result<Workspace, String> {
     let label = window.label().to_string();
@@ -1049,6 +1058,37 @@ pub fn set_tab_mesh_purpose(
         if let Some(pane) = workspace.panes.iter_mut().find(|p| p.id == pane_id) {
             if let Some(tab) = pane.tabs.iter_mut().find(|t| t.id == tab_id) {
                 tab.mesh_purpose = purpose;
+            }
+        }
+    }
+    save_state(&app_data)?;
+    Ok(())
+}
+
+/// Declare a tab's agent runtime up front, before any agent has registered.
+///
+/// Normally `runtime` is written by `initSession` once the agent is up. That's too late for a tab
+/// we are DELIBERATELY launching an agent into (maiLink's "new conversation"): until it's set the
+/// tab isn't maiLink-designated, so the id the phone was just handed 404s — and if the launch
+/// never lands, it 404s forever and the thread is permanently unreadable. Claiming the runtime we
+/// are about to start makes the tab visible immediately, and visibly dormant if the launch fails
+/// rather than invisible.
+#[tauri::command]
+pub fn set_tab_runtime(
+    window: tauri::Window,
+    state: State<'_, Arc<AppState>>,
+    workspace_id: String,
+    pane_id: String,
+    tab_id: String,
+    runtime: crate::state::AgentRuntime,
+) -> Result<(), String> {
+    let label = window.label().to_string();
+    let mut app_data = state.app_data.write();
+    let win = app_data.window_mut(&label).ok_or("Window not found")?;
+    if let Some(workspace) = win.workspaces.iter_mut().find(|w| w.id == workspace_id) {
+        if let Some(pane) = workspace.panes.iter_mut().find(|p| p.id == pane_id) {
+            if let Some(tab) = pane.tabs.iter_mut().find(|t| t.id == tab_id) {
+                tab.runtime = Some(runtime);
             }
         }
     }

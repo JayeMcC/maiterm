@@ -755,3 +755,4 @@ pub fn reconcile_tab_liveness(data: &mut AppData, db: &super::scrollback_db::Scr
         log::info!("Tab-liveness: normalized {} limbo tab(s) to suspended", normalized);
     }
 }
+

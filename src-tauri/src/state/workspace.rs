@@ -598,6 +598,26 @@ impl AppData {
         self.windows.iter_mut().find(|w| w.label == label)
     }
 
+    /// How many live tabs (any window) claim `session_id` via their OWN runtime's session-id
+    /// trigger var. Duplicating a tab intentionally copies the var (reload = duplicate + close
+    /// original; fork = duplicate + branch), so >1 claimant is a legitimate TRANSIENT state —
+    /// but two tabs actually RUNNING one session is never intended. Callers use this to
+    /// disambiguate: maiLink resolves a contested sid to the transcript-named host, and
+    /// auto-resume replays fork (`--fork-session`) instead of plain-resuming a contested sid.
+    pub fn session_id_claimants(&self, session_id: &str) -> usize {
+        self.windows
+            .iter()
+            .flat_map(|w| &w.workspaces)
+            .flat_map(|ws| &ws.panes)
+            .flat_map(|p| &p.tabs)
+            .filter(|t| {
+                let var = crate::state::agent_runtime::descriptor(t.runtime.unwrap_or_default())
+                    .session_id_var;
+                t.trigger_variables.get(var).map(String::as_str) == Some(session_id)
+            })
+            .count()
+    }
+
     /// Collect every tab ID across all windows (live + archived). Used to
     /// identify orphan rows in side tables (e.g. scrollback DB).
     pub fn all_tab_ids(&self) -> std::collections::HashSet<String> {
@@ -1155,6 +1175,13 @@ pub struct CommsBinding {
     /// only forwards posts newer than this.
     pub last_seen_create_at: i64,
     pub bound_at: i64,
+    /// Deliver EVERY human reply on this thread, not just @mentions of the bot. Set on
+    /// threads the agent itself opened (startCommsThread): it asked the question, so the
+    /// answers are for it — humans shouldn't have to @mention a bot they didn't summon.
+    /// Summoned/resolve-bound threads stay mention-gated (they're humans' threads; the
+    /// bot is a participant, not the owner).
+    #[serde(default)]
+    pub deliver_all_replies: bool,
 }
 
 /// A paired maiLink mobile device. The bearer token is stored hashed (never raw); deleting

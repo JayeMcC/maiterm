@@ -4,7 +4,7 @@
   import { claudeStateStore } from '$lib/stores/agentState.svelte';
   import { agentMeshStore } from '$lib/stores/agentMesh.svelte';
   import { bracketedPasteSubmit } from '$lib/utils/agentPrompt';
-  import { getAgentLiveness } from '$lib/tauri/commands';
+  import { getAgentLiveness, writeTerminal } from '$lib/tauri/commands';
   import { replayAutoResume } from '$lib/stores/triggers.svelte';
   import StatusDot from '$lib/components/ui/StatusDot.svelte';
   import { error as logError } from '@tauri-apps/plugin-log';
@@ -19,10 +19,17 @@
 
   type Status = 'ready' | 'not-registered' | 'needs-init' | 'dropped' | 'suspended' | 'unnamed';
   const WAIT_TIMEOUT_MS = 30_000;
+  // Output-quiescence gate for sending init (see sendInit). The TUI counts as settled once
+  // its PTY has been silent this long — a compaction/thinking spinner repaints every ~100ms,
+  // so any in-flight work holds the gate closed. Cap bounds a pathological never-quiet tab.
+  const QUIET_MS = 1500;
+  const QUIET_POLL_MS = 300;
+  const QUIET_CAP_MS = 120_000;
 
-  // Tabs that have a pending action (init sent / wake fired), → start time. A row clears when
-  // it reaches 'ready'; it flips to a timeout warning if it never comes online.
-  let pending = $state<Record<string, number>>({});
+  // Tabs that have a pending action (init sent / wake fired) → start time + when the init
+  // paste was actually delivered (null while still settling). A row clears when it reaches
+  // 'ready'; it flips to a timeout warning if it never comes online.
+  let pending = $state<Record<string, { started: number; sentAt: number | null }>>({});
   // Inline-rename buffer for unnamed tabs.
   let renaming = $state<Record<string, string>>({});
   let busy = $state(false);
@@ -129,10 +136,15 @@
   // Per-row waiter state derived from `pending` + the tick. (Resolved entries are pruned in an
   // effect, not here — mutating state during render would loop.)
   function waitState(r: Row): 'waiting' | 'timeout' | null {
-    const started = pending[r.tabId];
-    if (started === undefined || r.status === 'ready') return null;
+    const p = pending[r.tabId];
+    if (p === undefined || r.status === 'ready') return null;
     void tick;
-    return Date.now() - started > WAIT_TIMEOUT_MS ? 'timeout' : 'waiting';
+    // The 30s answer window starts when the init paste was actually delivered; while the
+    // tab is still settling (dialog answered → compaction draining), allow up to the
+    // quiescence cap on top so a long compaction doesn't read as "no response".
+    const since = Date.now() - (p.sentAt ?? p.started);
+    const limit = p.sentAt !== null ? WAIT_TIMEOUT_MS : QUIET_CAP_MS + WAIT_TIMEOUT_MS;
+    return since > limit ? 'timeout' : 'waiting';
   }
 
   // Prune pending entries once their tab reaches 'ready' (keeps the map from lingering).
@@ -141,22 +153,48 @@
     for (const id of Object.keys(pending)) if (readyIds.has(id)) delete pending[id];
   });
 
+  const sleep = (ms: number) => new Promise<void>((res) => setTimeout(res, ms));
+
+  // Block until the tab's PTY has produced no output for QUIET_MS (or the cap expires).
+  // Spinners (compaction, thinking) repaint continuously, so "quiet" ⇒ the TUI is at rest.
+  async function waitForQuiet(tabId: string) {
+    const t0 = Date.now();
+    while (Date.now() - t0 < QUIET_CAP_MS) {
+      const last = terminalsStore.getLastOutputAt(tabId) ?? 0;
+      if (Date.now() - last >= QUIET_MS) return;
+      await sleep(QUIET_POLL_MS);
+    }
+  }
+
+  // Sending `/maiterm init` straight in can lose the whole paste: if the agent is sitting at
+  // a startup dialog (e.g. Claude Code's "restore as is / compact first" resume prompt), the
+  // submit CR answers the DIALOG — possibly kicking off a minutes-long compaction — and the
+  // init text is swallowed with it. So: (1) send a bare CR, a no-op at an idle REPL or shell
+  // prompt but the same dialog-answer the old paste caused anyway; (2) wait for the PTY to go
+  // quiet (dialog resolution / compaction spinner drains); (3) deliver the init exactly once
+  // into a settled TUI. In the common no-dialog case this adds ~2s, nothing more.
   async function sendInit(r: Row) {
     if (!r.ptyId) return;
-    pending[r.tabId] = Date.now();
-    try { await bracketedPasteSubmit(r.ptyId, '/maiterm init'); }
-    catch (e) { logError(`mesh setup: send init failed for ${r.tabId.slice(0, 8)}: ${e}`); delete pending[r.tabId]; }
+    pending[r.tabId] = { started: Date.now(), sentAt: null };
+    const entry = pending[r.tabId]!; // proxy identity — detects supersede/resolve below (just assigned above, non-null)
+    try {
+      await writeTerminal(r.ptyId, [0x0d]);
+      await waitForQuiet(r.tabId);
+      if (pending[r.tabId] !== entry) return; // resolved (went ready) or a newer send took over
+      await bracketedPasteSubmit(r.ptyId, '/maiterm init');
+      entry.sentAt = Date.now();
+    } catch (e) { logError(`mesh setup: send init failed for ${r.tabId.slice(0, 8)}: ${e}`); delete pending[r.tabId]; }
   }
   function wake(r: Row) {
-    pending[r.tabId] = Date.now();
-    window.dispatchEvent(new CustomEvent('mesh-activate-tab', { detail: r.tabId }));
+    pending[r.tabId] = { started: Date.now(), sentAt: Date.now() };
+    window.dispatchEvent(new CustomEvent('activate-tab', { detail: r.tabId }));
   }
   // Dropped = live shell, agent gone (auto-resume failed/ended). Re-run the tab's auto-resume
   // in its live PTY (same path as the tab context-menu "replay auto-resume" — handles SSH, cwd,
   // and %var interpolation). The agent re-registers + rejoins once its session comes back up.
   async function resumeDropped(r: Row) {
     if (!r.hasResume) return;
-    pending[r.tabId] = Date.now();
+    pending[r.tabId] = { started: Date.now(), sentAt: Date.now() };
     try { await replayAutoResume(r.tabId); }
     catch (e) { logError(`mesh setup: resume failed for ${r.tabId.slice(0, 8)}: ${e}`); delete pending[r.tabId]; }
   }
@@ -254,7 +292,10 @@
               {#if w === 'waiting'}
                 <span class="waiting">waiting…</span>
               {:else if w === 'timeout'}
-                <span class="timeout" title="Didn't come online in 30s — check the tab">no response</span>
+                <span class="timeout" title="Didn't come online — check the tab">no response</span>
+                {#if r.status === 'not-registered' || r.status === 'needs-init'}
+                  <button class="mini" onclick={() => sendInit(r)} disabled={!r.ptyId}>Retry</button>
+                {/if}
               {:else if r.status === 'not-registered' || r.status === 'needs-init'}
                 <button class="mini" onclick={() => sendInit(r)} disabled={!r.ptyId}>Send init</button>
               {:else if r.status === 'dropped'}
