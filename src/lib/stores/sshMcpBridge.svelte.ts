@@ -228,6 +228,10 @@ function buildSetupScript(
       PreToolUse: [httpHook],
       PostToolUse: [httpHook],
       PreCompact: [httpHook],
+      // Task-tool fan-out lifecycle — mirrors build_our_hooks() in claude_code/lockfile.rs
+      // (the local install path). Keep both in sync.
+      SubagentStart: [httpHook],
+      SubagentStop: [httpHook],
     },
   });
   const escapedHooksData = hooksData.replace(/'/g, "'\\''");

@@ -20,6 +20,7 @@
   import type { ImportPreview } from '$lib/tauri/commands';
   import { claudeCodeStore } from '$lib/stores/claudeCode.svelte';
   import { claudeStateStore } from '$lib/stores/agentState.svelte';
+  import { subagentStore } from '$lib/stores/subagents.svelte';
   import { agentBridgeStore } from '$lib/stores/agentBridge.svelte';
   import { agentMeshStore } from '$lib/stores/agentMesh.svelte';
   import { toastStore } from '$lib/stores/toasts.svelte';
@@ -34,6 +35,7 @@
   import CommsMonitorModal from '$lib/components/CommsMonitorModal.svelte';
   import MeshCockpit from '$lib/components/MeshCockpit.svelte';
   import MeshSetupModal from '$lib/components/MeshSetupModal.svelte';
+  import SubagentPanel from '$lib/components/SubagentPanel.svelte';
   import { detectLanguageFromPath, isImageFile, isPdfFile } from '$lib/utils/languageDetect';
   import { readFile } from '$lib/tauri/commands';
   import type { EditorFileInfo } from '$lib/tauri/types';
@@ -55,6 +57,7 @@
   let showMeshCockpit = $state(false);
   let meshSetupWorkspaceId = $state<string | null>(null);
   let agentBridgeCallerTabId = $state<string | null>(null);
+  let showSubagentPanel = $state(false);
 
   // Cmd+W two-press confirmation: first press arms closeConfirmTabId for 2s,
   // a second press while armed (on the same tab) actually closes.
@@ -541,6 +544,8 @@
 
     // Claude Code state tracking (hook events → per-tab Claude state)
     claudeStateStore.init();
+    // Subagent (Task-tool fan-out) tracking (hook events → per-tab subagent list)
+    subagentStore.init();
 
     // Agent Bridge (hook events → cross-agent message delivery)
     agentBridgeStore.init();
@@ -685,7 +690,8 @@
             (!e.shiftKey && key === 'o') || // Cmd+O open file
             (!e.shiftKey && key === 'b') || // Cmd+B toggle sidebar
             (!e.shiftKey && key === 'e') || // Cmd+E toggle notes
-            (e.shiftKey && key === 'm'); // Cmd+Shift+M mesh cockpit
+            (e.shiftKey && key === 'm') || // Cmd+Shift+M mesh cockpit
+            (e.shiftKey && key === 'a'); // Cmd+Shift+A subagent panel
           if (!isAppShortcut) return; // Let CodeMirror handle it
         } else if (e.altKey) {
           // Alt+Arrow keys etc — let editor handle
@@ -1043,6 +1049,14 @@
         return;
       }
 
+      // Cmd+Shift+A - Toggle the subagent panel (live view of the active tab's Task-tool fan-out)
+      if (isMeta && e.shiftKey && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        e.stopPropagation();
+        showSubagentPanel = !showSubagentPanel;
+        return;
+      }
+
       // Cmd+, - Open preferences window
       if (isMeta && e.key === ',') {
         e.preventDefault();
@@ -1151,6 +1165,7 @@
       unlistenCommsSummon?.();
       unlistenCommsBindings?.();
       claudeStateStore.destroy();
+      subagentStore.destroy();
       agentBridgeStore.destroy();
       agentMeshStore.destroy();
       unlistenNotificationAction?.unregister();
@@ -1227,6 +1242,16 @@
   open={showMeshCockpit}
   onclose={() => {
     showMeshCockpit = false;
+    const tab = workspacesStore.activeTab;
+    if (tab?.tab_type === 'terminal') terminalsStore.focusTerminal(tab.id);
+  }}
+/>
+<SubagentPanel
+  open={showSubagentPanel}
+  tabId={workspacesStore.activeTab?.id ?? null}
+  tabName={workspacesStore.activeTab?.name}
+  onclose={() => {
+    showSubagentPanel = false;
     const tab = workspacesStore.activeTab;
     if (tab?.tab_type === 'terminal') terminalsStore.focusTerminal(tab.id);
   }}

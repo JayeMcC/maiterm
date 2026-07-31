@@ -340,7 +340,11 @@ You MUST immediately call the {mcp_key} initSession tool with this tabId and ses
         "UserPromptSubmit": http_hook(&hooks_url),
         "PreToolUse": http_hook(&hooks_url),
         "PostToolUse": http_hook(&hooks_url),
-        "PreCompact": http_hook(&hooks_url)
+        "PreCompact": http_hook(&hooks_url),
+        // Task-tool fan-out lifecycle — lets the subagent panel show live spawn/finish
+        // instead of only the parent's own PreToolUse/PostToolUse for the Task call.
+        "SubagentStart": http_hook(&hooks_url),
+        "SubagentStop": http_hook(&hooks_url)
     })
 }
 
