@@ -52,14 +52,16 @@ fn legacy_mcp_server_key() -> &'static str {
     if cfg!(debug_assertions) { "aiterm-dev" } else { "aiterm" }
 }
 
-/// Check if a process is alive by PID.
+/// Check if a process is alive by PID. `pub(crate)` — also used by
+/// `commands::voice::get_voice_speaking_sessions` to check the barge-in pid
+/// files under `$TMPDIR/maiterm-voice-pids/` (see scripts/voice-status/*.sh).
 #[cfg(unix)]
-fn is_process_alive(pid: u32) -> bool {
+pub(crate) fn is_process_alive(pid: u32) -> bool {
     unsafe { libc::kill(pid as i32, 0) == 0 }
 }
 
 #[cfg(windows)]
-fn is_process_alive(pid: u32) -> bool {
+pub(crate) fn is_process_alive(pid: u32) -> bool {
     use std::process::Command;
     Command::new("tasklist")
         .args(["/FI", &format!("PID eq {}", pid), "/NH"])

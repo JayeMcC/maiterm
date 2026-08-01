@@ -31,7 +31,8 @@
     | 'arrow-right'
     | 'search'
     | 'pin'
-    | 'bookmark';
+    | 'bookmark'
+    | 'volume';
 
   interface Props {
     name: IconName;
@@ -179,4 +180,8 @@
   >
 {:else if name === 'bookmark'}
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4 2h8a1 1 0 0 1 1 1v11l-5-3-5 3V3a1 1 0 0 1 1-1z" /></svg>
+{:else if name === 'volume'}
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+    ><path d="M1.5 6h2.5l4-3.2v10.4l-4-3.2H1.5V6Z" /><path d="M11 5.5a3.2 3.2 0 0 1 0 5" /><path d="M13 3.7a6 6 0 0 1 0 8.6" /></svg
+  >
 {/if}

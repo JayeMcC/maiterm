@@ -355,6 +355,15 @@ tick (~30s) via `hooks_are_current()`'s exact-match check, same as every
 other maiTerm-owned hook. **Not yet mirrored to `sshMcpBridge.svelte.ts::buildSetupScript`**
 — voice mode only speaks/barges-in for local Claude Code sessions today.
 
+**Voice live UI indicator (read-only, local-only):** the same pid-file
+directory is read (never written) by `commands::voice::get_voice_speaking_sessions`
+— a batched, best-effort check of which of a set of `session_id`s currently
+have a live `say` process — polled every ~1s by `voiceStatus.svelte.ts` for
+every tab `agentState.svelte.ts` is tracking a session for, and rendered as a
+"Speaking" tag in `TerminalPane.svelte` next to the existing tool-activity
+tag. Since voice mode is local-only (previous paragraph), this naturally
+shows nothing for SSH-bridged tabs — no separate gating needed.
+
 **Subagent tracking (Task-tool fan-out):** Claude Code fires `SubagentStart`/`SubagentStop`
 around each subagent spawned via the Task tool, and tags `PreToolUse`/`PostToolUse` fired
 *inside* a subagent with `agent_id`/`agent_type` (same `session_id` as the parent — no
