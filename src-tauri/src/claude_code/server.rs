@@ -1994,6 +1994,7 @@ async fn process_message(
                                     pending_question_at: existing.as_ref().and_then(|e| e.pending_question_at),
                                     transcript_path: existing.as_ref().and_then(|e| e.transcript_path.clone()),
                                     subagents: existing.as_ref().map(|e| e.subagents.clone()).unwrap_or_default(),
+                                    error_counts: existing.as_ref().map(|e| e.error_counts.clone()).unwrap_or_default(),
                                     model: existing.and_then(|e| e.model),
                                     connection_id: Some(connection_id.to_string()),
                                 },
@@ -2045,6 +2046,7 @@ async fn process_message(
                                     pending_question_at: None,
                                     transcript_path: None,
                                     subagents: HashMap::new(),
+                                    error_counts: HashMap::new(),
                                     model: None,
                                     connection_id: Some(connection_id.to_string()),
                                 },
@@ -2542,6 +2544,7 @@ async fn hooks_handler(
                         pending_question_at: None,
                         transcript_path: transcript_path.clone(),
                         subagents: HashMap::new(),
+                        error_counts: HashMap::new(),
                         model: model.clone(),
                         connection_id: None,
                     },
@@ -2619,6 +2622,10 @@ async fn hooks_handler(
                 sessions.remove(&session_id).map(|s| s.tab_id)
             }
             .or(tab_id_from_param);
+
+            // Drop this session's live error-tailer bookkeeping (offset + classifier state)
+            // alongside its agent_sessions entry, or a long-lived app accumulates one forever.
+            crate::claude_code::model_errors::forget_session(&srv.state, &session_id);
 
             log::info!("Claude hook: session {} ended (tab {:?})", session_id, tab_id);
 
@@ -2998,6 +3005,27 @@ async fn hooks_handler(
             if let Some(tab_id) = tab_id.filter(|t| !t.is_empty()) {
                 crate::mailink::mirror::schedule_fetch(&srv.state, &tab_id, &session_id, tp);
             }
+        }
+    }
+
+    // Live per-model error-class tailer (claude_code/model_errors.rs): the SAME "hook event =
+    // read signal" trigger as the SSH mirror above, but classifies the transcript delta instead
+    // of just copying bytes. Runs unconditionally for every Claude hook on a known session — it
+    // resolves its own path via `locate_jsonl(session_id)` rather than depending on this
+    // payload's transcript_path, and a local read is cheap enough (stat + seek, no ssh round
+    // trip) to not need the SSH-only gating `schedule_fetch` has.
+    if runtime == crate::state::AgentRuntime::Claude && !session_id.is_empty() {
+        if let Some(counts) = crate::claude_code::model_errors::on_hook_event(&srv.state, &session_id) {
+            let tab_id = srv.state.agent_sessions.read().get(&session_id).map(|s| s.tab_id.clone());
+            let summaries = crate::claude_code::model_errors::to_summaries(&counts);
+            let _ = srv.app_handle.emit(
+                "agent-model-errors-updated",
+                serde_json::json!({
+                    "session_id": session_id,
+                    "tab_id": tab_id,
+                    "summaries": summaries,
+                }),
+            );
         }
     }
 

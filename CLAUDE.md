@@ -229,6 +229,7 @@ Controlled by `cfg!(debug_assertions)` in `state/persistence.rs` → `app_data_s
 | Cmd+E           | Toggle notes panel                                               |
 | Cmd+Shift+C     | Toggle composer dock                                             |
 | Cmd+Shift+A     | Toggle subagent panel (active tab's Task-tool fan-out)           |
+| Cmd+Shift+E     | Toggle model error panel (live per-model error-class counts)     |
 | Cmd+,           | Preferences                                                      |
 | Cmd+/           | Help                                                             |
 

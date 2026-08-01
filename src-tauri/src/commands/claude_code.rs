@@ -69,6 +69,21 @@ pub fn claude_code_notify_selection(
     }
 }
 
+/// Live per-model error-class counts for a tab's current agent session (API errors, refusal
+/// fallbacks, `max_tokens` truncation, tool-call failures — see `claude_code::model_errors`).
+/// Initial snapshot for `ModelErrorPanel.svelte`; subsequent updates arrive via the
+/// `agent-model-errors-updated` event so the panel doesn't need to poll this command.
+#[tauri::command]
+pub fn get_tab_model_errors(
+    state: State<'_, Arc<AppState>>,
+    tab_id: String,
+) -> Vec<Value> {
+    crate::claude_code::model_errors::tab_summaries(&state, &tab_id)
+        .into_iter()
+        .map(|s| serde_json::to_value(s).unwrap_or(Value::Null))
+        .collect()
+}
+
 /// Re-apply on-disk integration for non-Claude runtimes after a preference toggle.
 /// Claude is managed at startup + by the re-assert timer, so it's skipped here. Each
 /// enabled runtime is (idempotently) installed and each disabled one unregistered, using

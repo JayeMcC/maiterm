@@ -384,6 +384,23 @@ whatever fires next (no backend rehydration command exists for `agent_sessions`,
 existing precedent). UI: `SubagentPanel.svelte` (Cmd+Shift+A), one row per subagent
 (type, state, current/last tool), expandable to its tool-call log.
 
+**Live per-model error tracking (`claude_code/model_errors.rs`):** pairs with
+`scripts/claude-model-error-rates.mjs` (an offline batch pass over `~/.claude/projects/**/*.jsonl`
+computing a per-model × error-class breakdown: hard `system/api_error` transport failures,
+synthetic `isApiErrorMessage:true` soft-blocks, `system/model_refusal_fallback`, assistant
+`stop_reason:"max_tokens"` truncation, and `tool_result.is_error` tool failures). None of those
+signals are hook events — they live only in the transcript JSONL — so `model_errors.rs` tails
+each session's transcript directly (via `mailink::transcript::locate_jsonl`, the SAME resolver
+the chat distiller uses: local `~/.claude/projects/*/<sid>.jsonl`, falling back to the SSH
+shadow-mirror copy when maiLink is bridging a remote tab) and reuses the script's classifier
+logic verbatim — same class name strings, so live counts are directly comparable to a batch run
+over the same file. Reading is triggered off the EXISTING hook lifecycle, the same spot
+`mailink::mirror::schedule_fetch` already fires from in `hooks_handler` — no polling loop.
+Counts land on `AgentSessionInfo.error_counts` (cleared on `SessionEnd`, same no-rehydration
+precedent as `subagents` above) and are pushed live via the `agent-model-errors-updated` event;
+`get_tab_model_errors` serves the initial snapshot on panel open. UI: `ModelErrorPanel.svelte`
+(Cmd+Shift+E), modeled directly on `SubagentPanel.svelte`.
+
 **Connection tab affinity (`initSession`):**
 
 - Claude calls `initSession({ tabId, sessionId })` as its first MCP tool call

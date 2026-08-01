@@ -664,7 +664,9 @@ fn read_tail_bytes(path: &std::path::Path, max: u64) -> Option<(Vec<u8>, u64)> {
 static CLAUDE_PATHS: std::sync::OnceLock<std::sync::Mutex<HashMap<String, PathBuf>>> =
     std::sync::OnceLock::new();
 
-fn locate_jsonl(session_id: &str) -> Option<PathBuf> {
+/// `pub(crate)`: also used by `claude_code::model_errors` to tail the same file the chat
+/// distiller reads (local + SSH-shadow-mirror resolution, one cache for both consumers).
+pub(crate) fn locate_jsonl(session_id: &str) -> Option<PathBuf> {
     let cache = CLAUDE_PATHS.get_or_init(|| std::sync::Mutex::new(HashMap::new()));
     if let Some(p) = cache.lock().ok()?.get(session_id) {
         if p.is_file() {

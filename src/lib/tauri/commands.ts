@@ -11,6 +11,7 @@ import type {
   MailinkDevice,
   MailinkPairingPayload,
   MeshTopic,
+  ModelErrorSummary,
   Pane,
   Preferences,
   ScrollInfo,
@@ -449,6 +450,12 @@ export async function setPreferences(preferences: Preferences): Promise<void> {
  *  ~/.codex immediately without a restart. */
 export async function refreshAgentIntegrations(): Promise<void> {
   return invoke('refresh_agent_integrations');
+}
+
+/** Initial snapshot of a tab's live per-model error-class counts (ModelErrorPanel.svelte);
+ *  subsequent updates arrive via the `agent-model-errors-updated` event. */
+export async function getTabModelErrors(tabId: string): Promise<ModelErrorSummary[]> {
+  return invoke('get_tab_model_errors', { tabId });
 }
 
 export async function copyTabHistory(sourceTabId: string, destTabId: string): Promise<void> {

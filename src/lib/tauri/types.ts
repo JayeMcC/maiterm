@@ -331,6 +331,27 @@ export interface MailinkPairingPayload {
   name: string;
 }
 
+/**
+ * Live per-model error-class counts for one model observed in a tab's current agent session —
+ * API errors, refusal fallbacks, `max_tokens` truncation, tool-call failures. Tailed from the
+ * session's transcript JSONL by `claude_code::model_errors` (Rust), reusing the SAME
+ * classification as `scripts/claude-model-error-rates.mjs`'s offline batch pass — the
+ * `errors_by_class` keys are that script's class names (e.g. `network_error`,
+ * `truncation_max_tokens`, `refusal_fallback`, `spend_limit_soft_block`). Same shape whether it
+ * arrived via `getTabModelErrors` (initial snapshot) or the `agent-model-errors-updated` event
+ * (live delta) — one merge path in `modelErrors.svelte.ts`.
+ */
+export interface ModelErrorSummary {
+  model: string;
+  /** Coarse human-readable label, e.g. "Sonnet 5", "Opus 4-8". */
+  family: string;
+  turns: number;
+  tool_calls: number;
+  tool_errors: number;
+  errors_by_class: Record<string, number>;
+  retry_events: number;
+}
+
 /** A paired maiLink device, sanitized for the Preferences list (no token hash / capability). */
 export interface MailinkDevice {
   id: string;

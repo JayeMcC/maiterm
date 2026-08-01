@@ -22,6 +22,7 @@
   import { claudeStateStore } from '$lib/stores/agentState.svelte';
   import { voiceStatusStore } from '$lib/stores/voiceStatus.svelte';
   import { subagentStore } from '$lib/stores/subagents.svelte';
+  import { modelErrorStore } from '$lib/stores/modelErrors.svelte';
   import { agentBridgeStore } from '$lib/stores/agentBridge.svelte';
   import { agentMeshStore } from '$lib/stores/agentMesh.svelte';
   import { toastStore } from '$lib/stores/toasts.svelte';
@@ -37,6 +38,7 @@
   import MeshCockpit from '$lib/components/MeshCockpit.svelte';
   import MeshSetupModal from '$lib/components/MeshSetupModal.svelte';
   import SubagentPanel from '$lib/components/SubagentPanel.svelte';
+  import ModelErrorPanel from '$lib/components/ModelErrorPanel.svelte';
   import { detectLanguageFromPath, isImageFile, isPdfFile } from '$lib/utils/languageDetect';
   import { readFile } from '$lib/tauri/commands';
   import type { EditorFileInfo } from '$lib/tauri/types';
@@ -59,6 +61,7 @@
   let meshSetupWorkspaceId = $state<string | null>(null);
   let agentBridgeCallerTabId = $state<string | null>(null);
   let showSubagentPanel = $state(false);
+  let showModelErrorPanel = $state(false);
 
   // Cmd+W two-press confirmation: first press arms closeConfirmTabId for 2s,
   // a second press while armed (on the same tab) actually closes.
@@ -550,6 +553,8 @@
     voiceStatusStore.init();
     // Subagent (Task-tool fan-out) tracking (hook events → per-tab subagent list)
     subagentStore.init();
+    // Live per-model error-class tracking (hook-triggered transcript tail → per-tab counts)
+    modelErrorStore.init();
 
     // Agent Bridge (hook events → cross-agent message delivery)
     agentBridgeStore.init();
@@ -695,7 +700,8 @@
             (!e.shiftKey && key === 'b') || // Cmd+B toggle sidebar
             (!e.shiftKey && key === 'e') || // Cmd+E toggle notes
             (e.shiftKey && key === 'm') || // Cmd+Shift+M mesh cockpit
-            (e.shiftKey && key === 'a'); // Cmd+Shift+A subagent panel
+            (e.shiftKey && key === 'a') || // Cmd+Shift+A subagent panel
+            (e.shiftKey && key === 'e'); // Cmd+Shift+E model error panel
           if (!isAppShortcut) return; // Let CodeMirror handle it
         } else if (e.altKey) {
           // Alt+Arrow keys etc — let editor handle
@@ -1061,6 +1067,15 @@
         return;
       }
 
+      // Cmd+Shift+E - Toggle the model error panel (live per-model error-class counts for the
+      // active tab's session)
+      if (isMeta && e.shiftKey && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        e.stopPropagation();
+        showModelErrorPanel = !showModelErrorPanel;
+        return;
+      }
+
       // Cmd+, - Open preferences window
       if (isMeta && e.key === ',') {
         e.preventDefault();
@@ -1171,6 +1186,7 @@
       claudeStateStore.destroy();
       voiceStatusStore.destroy();
       subagentStore.destroy();
+      modelErrorStore.destroy();
       agentBridgeStore.destroy();
       agentMeshStore.destroy();
       unlistenNotificationAction?.unregister();
@@ -1257,6 +1273,16 @@
   tabName={workspacesStore.activeTab?.name}
   onclose={() => {
     showSubagentPanel = false;
+    const tab = workspacesStore.activeTab;
+    if (tab?.tab_type === 'terminal') terminalsStore.focusTerminal(tab.id);
+  }}
+/>
+<ModelErrorPanel
+  open={showModelErrorPanel}
+  tabId={workspacesStore.activeTab?.id ?? null}
+  tabName={workspacesStore.activeTab?.name}
+  onclose={() => {
+    showModelErrorPanel = false;
     const tab = workspacesStore.activeTab;
     if (tab?.tab_type === 'terminal') terminalsStore.focusTerminal(tab.id);
   }}
