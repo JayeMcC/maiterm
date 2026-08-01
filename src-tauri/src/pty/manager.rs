@@ -313,6 +313,14 @@ pub fn spawn_pty(
     cmd.env("TERM", "xterm-256color");
     cmd.env("COLORTERM", "truecolor");
     cmd.env("TERM_PROGRAM", "aiterm");
+    // Opt-in narration: scripts/voice-status/speak-status.sh (installed as the /maiterm
+    // skill's speak-status.sh, wired as a Stop/Notification hook when `claude_hooks` is
+    // also on — see claude_code/lockfile.rs) gates on this var. Setting it here means any
+    // `claude` process started in this shell — and thus its hook subprocesses, which
+    // inherit shell env — gets narrated, without the user hand-exporting it per tab.
+    if state.app_data.read().preferences.voice_status {
+        cmd.env("MAITERM_VOICE_STATUS", "1");
+    }
     for m in crate::state::agent_runtime::AGENT_ENV_MARKERS {
         cmd.env_remove(m);
     }

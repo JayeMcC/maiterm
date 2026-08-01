@@ -1001,6 +1001,16 @@ pub struct Preferences {
     /// Enable hooks-based auto-resume (initSession sets session ID, auto-configures resume).
     #[serde(default = "default_true", alias = "claude_code_auto_resume")]
     pub claude_auto_resume: bool,
+    /// Speak turn-completion/notification status aloud (macOS `say`, via the bundled
+    /// scripts/voice-status/speak-status.sh). Off by default — opt-in. When on: (1) every
+    /// spawned PTY's shell gets `MAITERM_VOICE_STATUS=1` in its env, which the hook script
+    /// gates on before speaking (so narration follows sessions started under THIS maiTerm
+    /// instance), and (2) — when `claude_hooks` is also on — a command-hook entry running
+    /// the installed script is registered on Stop/Notification alongside our existing HTTP
+    /// hooks for those events. Global rather than per-tab: the PTY-env plumbing has no
+    /// existing per-tab override path, and a global default keeps this slice simple.
+    #[serde(default)]
+    pub voice_status: bool,
     /// Enable the Codex IDE/MCP integration (writes ~/.codex/config.toml). Default on.
     #[serde(default = "default_true")]
     pub codex_ide: bool,
@@ -1265,6 +1275,7 @@ impl Default for Preferences {
             claude_ide_ssh: true,
             claude_hooks: true,
             claude_auto_resume: true,
+            voice_status: false,
             codex_ide: true,
             codex_ide_ssh: true,
             codex_hooks: true,
