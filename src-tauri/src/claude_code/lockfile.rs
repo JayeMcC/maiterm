@@ -31,6 +31,14 @@ pub const AGENT_HOOK_SHIM: &str =
 pub const VOICE_STATUS_SCRIPT: &str =
     include_str!("../../../scripts/voice-status/speak-status.sh");
 
+/// Voice barge-in hook script (UserPromptSubmit -> kill any live `say` narration for
+/// the current session). Complements VOICE_STATUS_SCRIPT: that script records the
+/// `say` PID it starts, keyed by session_id, under a well-known pid dir; this one
+/// kills it the moment the operator submits a new prompt, so narration never talks
+/// over them. Same bundling/install/gating pattern (see `build_our_hooks`).
+pub const VOICE_BARGE_IN_SCRIPT: &str =
+    include_str!("../../../scripts/voice-status/barge-in.sh");
+
 fn mcp_server_key() -> &'static str {
     crate::state::agent_runtime::mcp_server_name(crate::state::AgentRuntime::Claude)
 }
@@ -332,6 +340,19 @@ You MUST immediately call the {mcp_key} initSession tool with this tabId and ses
         }
     }
 
+    // UserPromptSubmit optionally gains a second entry alongside our own HTTP hook: a
+    // command hook that runs the bundled barge-in script (see VOICE_BARGE_IN_SCRIPT),
+    // killing any `say` narration still running for this session the instant the
+    // operator submits a new prompt. Same `voice_status` gate as the speak entries
+    // above — narration and its interrupt travel together.
+    let mut user_prompt_submit_entries =
+        http_hook(&hooks_url).as_array().cloned().unwrap_or_default();
+    if voice_status_enabled {
+        if let Some(entry) = voice_barge_in_hook_entry() {
+            user_prompt_submit_entries.push(entry);
+        }
+    }
+
     serde_json::json!({
         "SessionStart": [
             // Command hook: echo tab ID into Claude's context + background curl for tab mapping
@@ -358,7 +379,7 @@ You MUST immediately call the {mcp_key} initSession tool with this tabId and ses
         "SessionEnd": http_hook(&hooks_url),
         "Notification": notification_entries,
         "Stop": stop_entries,
-        "UserPromptSubmit": http_hook(&hooks_url),
+        "UserPromptSubmit": user_prompt_submit_entries,
         "PreToolUse": http_hook(&hooks_url),
         "PostToolUse": http_hook(&hooks_url),
         "PreCompact": http_hook(&hooks_url),
@@ -399,6 +420,45 @@ fn voice_status_hook_entry() -> Option<serde_json::Value> {
 /// every time the preference round-trips on/off.
 fn is_voice_status_hook(entry: &serde_json::Value) -> bool {
     let Some(path) = voice_status_script_path() else { return false };
+    let path_str = path.to_string_lossy();
+    if let Some(hooks) = entry.get("hooks").and_then(|v| v.as_array()) {
+        for hook in hooks {
+            if hook.get("command").and_then(|v| v.as_str()) == Some(path_str.as_ref()) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Absolute path to the installed voice barge-in hook script (in the /maiterm
+/// skill's bin dir, alongside speak-status.sh), or None when the home dir can't
+/// be resolved.
+fn voice_barge_in_script_path() -> Option<PathBuf> {
+    maiterm_skill_dir().map(|d| d.join("bin").join("barge-in.sh"))
+}
+
+/// The voice barge-in command-hook entry we register on UserPromptSubmit when the
+/// `voice_status` preference is on. Killing a `say` process is near-instant, so the
+/// timeout is short and bounded — a hung hook must never delay prompt submission.
+fn voice_barge_in_hook_entry() -> Option<serde_json::Value> {
+    let path = voice_barge_in_script_path()?;
+    Some(serde_json::json!({
+        "matcher": "",
+        "hooks": [{
+            "type": "command",
+            "command": path.to_string_lossy(),
+            "timeout": 5
+        }]
+    }))
+}
+
+/// True when `entry` is our voice barge-in command hook — identified by its command
+/// matching the installed script's absolute path exactly. Same rationale as
+/// `is_voice_status_hook`: no URL, no port-gated marker, so it needs its own
+/// signature check or reasserts would pile up duplicates.
+fn is_voice_barge_in_hook(entry: &serde_json::Value) -> bool {
+    let Some(path) = voice_barge_in_script_path() else { return false };
     let path_str = path.to_string_lossy();
     if let Some(hooks) = entry.get("hooks").and_then(|v| v.as_array()) {
         for hook in hooks {
@@ -547,6 +607,7 @@ fn write_hook_settings(port: u16, auth: &str, voice_status_enabled: bool) -> Res
                         !entry_matches_url(entry, &hooks_url)
                             && !command_hook_is_ours_to_sweep(entry, port, &local_instance_ports)
                             && !is_voice_status_hook(entry)
+                            && !is_voice_barge_in_hook(entry)
                     });
                     // Add our entries
                     if let Some(our_arr) = our_entries.as_array() {
@@ -614,6 +675,18 @@ fn hooks_are_current(path: &std::path::Path, port: u16, auth: &str, voice_status
         if has_entry != voice_status_enabled {
             return false;
         }
+    }
+
+    // Same exact-match rule for the barge-in hook (UserPromptSubmit) — it travels
+    // with the speak entries above, so toggling the preference off must sweep it
+    // within one reassert tick too, not leave a stale kill-switch nobody can reach.
+    let has_barge_in_entry = hooks
+        .get("UserPromptSubmit")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().any(is_voice_barge_in_hook))
+        .unwrap_or(false);
+    if has_barge_in_entry != voice_status_enabled {
+        return false;
     }
 
     // Exactly one SessionStart command hook that we manage may exist. Two or more
@@ -997,6 +1070,10 @@ fn write_aiterm_skill() -> Result<(), String> {
         &bin_dir.join("speak-status.sh"),
         VOICE_STATUS_SCRIPT,
     )?;
+    write_executable(
+        &bin_dir.join("barge-in.sh"),
+        VOICE_BARGE_IN_SCRIPT,
+    )?;
 
     Ok(())
 }
@@ -1301,6 +1378,93 @@ mod voice_status_hook_tests {
         assert!(!hooks_are_current(&scratch, port, auth, false));
 
         // Entry absent + disabled -> current. Entry absent but now enabled -> drift.
+        write_settings(false);
+        assert!(hooks_are_current(&scratch, port, auth, false));
+        assert!(!hooks_are_current(&scratch, port, auth, true));
+
+        let _ = fs::remove_file(&scratch);
+    }
+}
+
+#[cfg(test)]
+mod voice_barge_in_hook_tests {
+    use super::*;
+
+    #[test]
+    fn build_our_hooks_omits_barge_in_entry_when_disabled() {
+        let hooks = build_our_hooks(56820, "auth-token", false);
+        let prompt_submit = hooks["UserPromptSubmit"].as_array().unwrap();
+        assert_eq!(prompt_submit.len(), 1, "no barge-in entry when disabled");
+        assert!(!prompt_submit.iter().any(is_voice_barge_in_hook));
+    }
+
+    #[test]
+    fn build_our_hooks_adds_barge_in_entry_when_enabled() {
+        // Same resolvable-home-dir caveat as the voice-status tests above.
+        if voice_barge_in_script_path().is_none() {
+            return;
+        }
+        let hooks = build_our_hooks(56820, "auth-token", true);
+        let prompt_submit = hooks["UserPromptSubmit"].as_array().unwrap();
+        assert_eq!(prompt_submit.len(), 2, "http hook + barge-in command hook");
+        assert!(prompt_submit.iter().any(is_voice_barge_in_hook));
+        // Every other event stays untouched by the barge-in entry specifically.
+        assert!(!hooks["PreToolUse"].as_array().unwrap().iter().any(is_voice_barge_in_hook));
+    }
+
+    #[test]
+    fn voice_barge_in_script_is_bundled_and_gates_on_the_env_var() {
+        // Compile-time include_str! already proves the file exists; this checks it's
+        // the script we expect (shebang + the same opt-in gate speak-status.sh uses,
+        // plus the pid-dir convention the two scripts must agree on).
+        assert!(VOICE_BARGE_IN_SCRIPT.starts_with("#!/bin/bash"));
+        assert!(VOICE_BARGE_IN_SCRIPT.contains("MAITERM_VOICE_STATUS"));
+        assert!(VOICE_BARGE_IN_SCRIPT.contains("maiterm-voice-pids"));
+        assert!(VOICE_STATUS_SCRIPT.contains("maiterm-voice-pids"));
+    }
+
+    #[test]
+    fn is_voice_barge_in_hook_rejects_unrelated_command_entries() {
+        let other = serde_json::json!({
+            "matcher": "",
+            "hooks": [{ "type": "command", "command": "/some/other/script.sh" }]
+        });
+        assert!(!is_voice_barge_in_hook(&other));
+        // Also doesn't cross-match the sibling voice-status hook.
+        if let Some(entry) = voice_status_hook_entry() {
+            assert!(!is_voice_barge_in_hook(&entry));
+        }
+    }
+
+    /// Same rationale as `hooks_are_current_detects_voice_status_drift_both_directions`:
+    /// exercises the real drift-detection function against a scratch file, this time
+    /// for the UserPromptSubmit barge-in entry specifically.
+    #[test]
+    fn hooks_are_current_detects_barge_in_drift_both_directions() {
+        if voice_barge_in_script_path().is_none() {
+            return; // no resolvable home dir in this environment — matches prod fallback
+        }
+        let port: u16 = 61235;
+        let auth = "test-auth-token";
+        let scratch = std::env::temp_dir().join(format!(
+            "maiterm-voice-barge-in-test-{}-{}.json",
+            std::process::id(),
+            port
+        ));
+
+        let write_settings = |voice_status_enabled: bool| {
+            let hooks = build_our_hooks(port, auth, voice_status_enabled);
+            let settings = serde_json::json!({
+                "hooks": hooks,
+                "allowedHttpHookUrls": [format!("http://127.0.0.1:{}/*", port)],
+            });
+            fs::write(&scratch, serde_json::to_string_pretty(&settings).unwrap()).unwrap();
+        };
+
+        write_settings(true);
+        assert!(hooks_are_current(&scratch, port, auth, true));
+        assert!(!hooks_are_current(&scratch, port, auth, false));
+
         write_settings(false);
         assert!(hooks_are_current(&scratch, port, auth, false));
         assert!(!hooks_are_current(&scratch, port, auth, true));
