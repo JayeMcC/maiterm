@@ -725,6 +725,7 @@ pub fn run() {
             commands::claude_code::refresh_agent_integrations,
             commands::claude_code::mark_frontend_ready,
             commands::claude_code::get_tab_model_errors,
+            commands::voice::get_voice_speaking_sessions,
             commands::ssh_tunnel::start_ssh_tunnel,
             commands::ssh_tunnel::detach_ssh_tunnel,
             commands::ssh_tunnel::get_ssh_tunnel,

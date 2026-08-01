@@ -10,20 +10,44 @@
 #   STT (talk to it)  -> adopt native Claude Code `/voice` (NOT built here)
 #   TTS (hear it)      -> THIS script (Stop -> spoken turn summary,
 #                         Notification -> spoken "needs your input" alert)
+#                         + stream-speak.sh (real-time assistant-text
+#                         streaming for a `claude -p` run — see that
+#                         script's header) for the "hear it as it types"
+#                         half of the same TTS-out slice.
 #
-# Deliberately thin: no assistant-text *streaming* (that's a follow-up
-# slice), no barge-in/interrupt handling, no continuously-listening daemon.
-# It only ever runs once per hook event, and only when explicitly opted in
-# (see MAITERM_VOICE_STATUS below) — never a background process burning
-# credits or attention on its own.
+# Deliberately thin: no continuously-listening daemon, and not wired to a
+# *running* interactive tab's `claude` process (see stream-speak.sh's header
+# — that's a separate, still-open concern). It only ever runs once per hook
+# event, and only when explicitly opted in (see MAITERM_VOICE_STATUS below)
+# — never a background process burning credits or attention on its own.
 #
-# NOT auto-registered by maiTerm yet. This is a manually-wired prototype to
-# prove the mechanism; wiring it into maiTerm's own hook registration
-# (src-tauri/src/claude_code/lockfile.rs) + a preferences toggle + a
-# push-to-talk button is future work. To try it today, add to
-# ~/.claude/settings.json (merge with any existing Stop/Notification hooks
-# rather than replacing them — see src-tauri/src/claude_code/CLAUDE.md for
-# how maiTerm's own hooks are structured):
+# Barge-in: the `say` process is backgrounded and its PID recorded (keyed by
+# session_id, under $TMPDIR/maiterm-voice-pids/) so
+# scripts/voice-status/barge-in.sh — a UserPromptSubmit hook — can kill it
+# the instant the operator submits a new prompt, so narration never talks
+# over a user who has already moved on. See that script's header for the
+# mechanism; the two are registered together (same `voice_status` preference
+# gate) by `build_our_hooks()` in `src-tauri/src/claude_code/lockfile.rs`.
+#
+# Auto-registered by maiTerm when the "Speak Status Aloud" preference
+# (`voice_status`, Preferences -> Integrations -> Claude Code) is on and
+# "Enable Hooks Integration" (`claude_hooks`) is also on: maiTerm bundles this
+# exact file (see VOICE_STATUS_SCRIPT in src-tauri/src/claude_code/lockfile.rs),
+# installs it to ~/.claude/skills/maiterm2/bin/speak-status.sh, and registers it
+# as a second Stop/Notification command hook alongside its own HTTP hooks
+# (build_our_hooks in lockfile.rs). Toggling the preference is picked up within
+# one reassert tick (~30s) or on next app start — no manual settings.json
+# editing needed. The opt-in gate below stays per-shell: with the preference on,
+# maiTerm exports MAITERM_VOICE_STATUS=1 into every newly spawned PTY's shell
+# env (src-tauri/src/pty/manager.rs), so `claude` processes started in those
+# tabs — and thus their hook subprocesses, which inherit shell env — narrate.
+# Already-open tabs need to be reopened to pick up the env var.
+#
+# You can still wire this manually (e.g. to test a local edit before it's
+# picked up by the bundled copy, or in a shell maiTerm didn't spawn) by adding
+# to ~/.claude/settings.json (merge with any existing Stop/Notification hooks
+# rather than replacing them — see src-tauri/src/claude_code/CLAUDE.md for how
+# maiTerm's own hooks are structured):
 #
 #   "hooks": {
 #     "Stop": [
@@ -78,6 +102,14 @@ command -v jq >/dev/null 2>&1 || exit 0
 
 input="$(cat)"
 event="$(printf '%s' "$input" | jq -r '.hook_event_name // empty' 2>/dev/null)"
+# Barge-in key. Every event we handle here carries session_id — using it
+# (rather than $MAITERM_TAB_ID) means the pid file works even where env vars
+# don't reliably propagate to the hook subprocess (e.g. inside tmux — see the
+# ~/.aiterm fallback note in claude_code/CLAUDE.md). Sanitized defensively;
+# a session id we can't read just means no barge-in for this utterance, never
+# a reason to skip speaking.
+session_id="$(printf '%s' "$input" | jq -r '.session_id // empty' 2>/dev/null)"
+session_id="${session_id//\//_}"
 
 text=""
 case "$event" in
@@ -105,22 +137,15 @@ esac
 # Clean markdown noise out of the text so it reads as speech, not as a
 # rendered document: drop fenced code blocks (reading code aloud is
 # useless), strip inline emphasis/heading/code markers, collapse
-# whitespace. python3 is already a soft dependency elsewhere in this repo's
+# whitespace. Shared with stream-speak.sh (the streaming sibling of this
+# script) via lib/clean_text.py so the cleanup rules only live in one
+# place. python3 is already a soft dependency elsewhere in this repo's
 # Claude Code tooling (see claude_code/CLAUDE.md, SSH hook setup) — but
 # degrade gracefully to whitespace-only cleanup if it's missing so this
 # never hard-fails.
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if command -v python3 >/dev/null 2>&1; then
-  clean="$(printf '%s' "$text" | python3 -c '
-import re
-import sys
-
-t = sys.stdin.read()
-t = re.sub(r"```.*?```", " code omitted ", t, flags=re.S)
-t = re.sub(r"`([^`]*)`", r"\1", t)
-t = re.sub(r"[*_#>]+", " ", t)
-t = re.sub(r"\s+", " ", t).strip()
-sys.stdout.write(t)
-' 2>/dev/null)"
+  clean="$(printf '%s' "$text" | python3 "$script_dir/lib/clean_text.py" 2>/dev/null)"
 else
   clean="$(printf '%s' "$text" | tr '\n\t' '  ' | sed -E 's/  +/ /g')"
 fi
@@ -140,7 +165,22 @@ say_args=()
 [ -n "${MAITERM_VOICE_RATE:-}" ] && say_args+=(-r "$MAITERM_VOICE_RATE")
 [ -n "${MAITERM_VOICE_OUTFILE:-}" ] && say_args+=(-o "$MAITERM_VOICE_OUTFILE")
 
-say "${say_args[@]}" "$clean" >/dev/null 2>&1 || true
+# Record the live `say` PID for barge-in before speaking. Must match
+# barge-in.sh's pid_dir exactly — the two scripts are standalone (not
+# sourced from a shared file, on purpose — see the header) so keep this path
+# in sync if it ever changes.
+pid_dir="${TMPDIR:-/tmp}/maiterm-voice-pids"
+pid_file=""
+if [ -n "$session_id" ]; then
+  mkdir -p -m 700 "$pid_dir" 2>/dev/null
+  pid_file="$pid_dir/$session_id.pid"
+fi
+
+say "${say_args[@]}" "$clean" >/dev/null 2>&1 &
+say_pid=$!
+[ -n "$pid_file" ] && printf '%s' "$say_pid" >"$pid_file" 2>/dev/null
+wait "$say_pid" 2>/dev/null
+[ -n "$pid_file" ] && rm -f "$pid_file"
 
 # Always a valid no-op decision — this hook never blocks or influences the
 # turn, it only observes.

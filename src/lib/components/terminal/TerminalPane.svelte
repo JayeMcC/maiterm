@@ -62,6 +62,7 @@
   import { openFileFromTerminal } from '$lib/utils/openFile';
   import { enableBridge, disableBridge, hasBridge, getBridgeInfo, getBridgeStatus, buildUserSetupScript, isInteractiveSshSession, isRemoteShellForeground } from '$lib/stores/sshMcpBridge.svelte';
   import { claudeStateStore } from '$lib/stores/agentState.svelte';
+  import { voiceStatusStore } from '$lib/stores/voiceStatus.svelte';
   import { sshDisconnectStore } from '$lib/stores/sshDisconnect.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import Button from '$lib/components/ui/Button.svelte';
@@ -2130,11 +2131,21 @@
       </div>
     </div>
   {/if}
-  {#if claudeStateStore.getState(tabId)?.toolName}
-    {@const cs = claudeStateStore.getState(tabId)!}
-    <div class="claude-action-tag">
-      <span class="claude-action-dot"><Icon name="circle" size={6} /></span>
-      {cs.toolName}{#if cs.toolDetail}: <span class="claude-action-detail">{cs.toolDetail}</span>{/if}
+  {#if claudeStateStore.getState(tabId)?.toolName || voiceStatusStore.isSpeaking(tabId)}
+    <div class="tab-status-tags">
+      {#if claudeStateStore.getState(tabId)?.toolName}
+        {@const cs = claudeStateStore.getState(tabId)!}
+        <div class="claude-action-tag">
+          <span class="claude-action-dot"><Icon name="circle" size={6} /></span>
+          {cs.toolName}{#if cs.toolDetail}: <span class="claude-action-detail">{cs.toolDetail}</span>{/if}
+        </div>
+      {/if}
+      {#if voiceStatusStore.isSpeaking(tabId)}
+        <div class="voice-speaking-tag" title="Narrating this turn aloud (Preferences → Integrations → Speak Status Aloud). Submitting a new prompt interrupts it.">
+          <span class="voice-speaking-icon"><Icon name="volume" size={11} /></span>
+          Speaking
+        </div>
+      {/if}
     </div>
   {/if}
   <!-- Hidden while the search bar is open — it occupies the same corner -->
@@ -2267,10 +2278,19 @@
     overflow: hidden !important;
   }
 
-  .claude-action-tag {
+  .tab-status-tags {
     position: absolute;
     bottom: 6px;
     left: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 70%;
+    pointer-events: none;
+    z-index: 4;
+  }
+
+  .claude-action-tag {
     display: flex;
     align-items: center;
     gap: 5px;
@@ -2281,12 +2301,45 @@
     line-height: 1;
     padding: 3px 8px;
     border-radius: 4px;
-    pointer-events: none;
-    z-index: 4;
-    max-width: 50%;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  .voice-speaking-tag {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--bg-medium);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-size: 0.77rem;
+    line-height: 1;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    /* Wrapper is pointer-events:none (matches the sibling action tag, so
+       neither blocks clicks into the terminal below); re-enable just this
+       tag so its `title` hover tooltip actually fires. */
+    pointer-events: auto;
+  }
+
+  .voice-speaking-icon {
+    display: flex;
+    align-items: center;
+    animation: voice-speaking-pulse 1.1s ease-in-out infinite;
+  }
+
+  @keyframes voice-speaking-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.4;
+    }
   }
 
   .claude-action-dot {

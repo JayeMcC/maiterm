@@ -20,6 +20,7 @@
   import type { ImportPreview } from '$lib/tauri/commands';
   import { claudeCodeStore } from '$lib/stores/claudeCode.svelte';
   import { claudeStateStore } from '$lib/stores/agentState.svelte';
+  import { voiceStatusStore } from '$lib/stores/voiceStatus.svelte';
   import { subagentStore } from '$lib/stores/subagents.svelte';
   import { modelErrorStore } from '$lib/stores/modelErrors.svelte';
   import { agentBridgeStore } from '$lib/stores/agentBridge.svelte';
@@ -547,6 +548,9 @@
 
     // Claude Code state tracking (hook events → per-tab Claude state)
     claudeStateStore.init();
+    // Voice status ("is this tab's agent currently speaking?" poll — see
+    // scripts/voice-status/speak-status.sh + barge-in.sh)
+    voiceStatusStore.init();
     // Subagent (Task-tool fan-out) tracking (hook events → per-tab subagent list)
     subagentStore.init();
     // Live per-model error-class tracking (hook-triggered transcript tail → per-tab counts)
@@ -1180,6 +1184,7 @@
       unlistenCommsSummon?.();
       unlistenCommsBindings?.();
       claudeStateStore.destroy();
+      voiceStatusStore.destroy();
       subagentStore.destroy();
       modelErrorStore.destroy();
       agentBridgeStore.destroy();

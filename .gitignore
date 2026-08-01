@@ -12,6 +12,10 @@ node_modules/
 src-tauri/target/
 src-tauri/gen/
 
+# Python (scripts/voice-status/lib and friends)
+__pycache__/
+*.pyc
+
 # Environment
 .env
 .env.*

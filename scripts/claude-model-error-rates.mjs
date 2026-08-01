@@ -59,6 +59,41 @@
  *     genuine tool-plumbing failures. Reported separately from the
  *     "hard" API-reliability classes for that reason; see --help.
  *
+ * Task-shape slicing (--by-shape):
+ *
+ *   The project/cwd breakdown (topProjects, still always collected) is a
+ *   coarse proxy for "what kind of work was this" — two very different
+ *   turns in the same repo land in the same bucket. --by-shape adds a
+ *   real behavioral signal instead: each real (non-synthetic) assistant
+ *   turn is classified by the tool_use blocks it actually emitted.
+ *
+ *   Turn (not session) is the classification unit — a session mixes read,
+ *   edit, and bash turns freely, and per-turn is what lets us pin a
+ *   specific error (a max_tokens truncation, a tool_result is_error) to
+ *   the specific kind of work that turn was doing, rather than smearing
+ *   it across a session-wide average.
+ *
+ *   Tool names seen in Claude Code transcripts are bucketed into coarse
+ *   categories (see TOOL_SHAPE_CATEGORIES below): read_search (Read,
+ *   Grep, Glob, WebFetch, WebSearch, ToolSearch, ...), edit_write (Edit,
+ *   Write, MultiEdit, NotebookEdit), bash (Bash, BashOutput, KillShell),
+ *   subagent_orchestration (Agent/Task, TaskCreate/Update/List/Get/
+ *   Output/Stop, SendMessage, Monitor, Workflow, ScheduleWakeup,
+ *   EnterWorktree/ExitWorktree), mcp (any "mcp__*" tool), and a catch-all
+ *   other_meta (Skill, Artifact, StructuredOutput, unrecognized names).
+ *   A turn's shape is "<category>_heavy" if every tool_use block in that
+ *   turn falls in one category, "mixed" if it spans more than one, or
+ *   "no_tool_call" if the turn emitted no tool_use blocks at all (pure
+ *   reasoning/text turns — plausibly a distinct reliability profile in
+ *   their own right, e.g. more prone to refusal fallbacks).
+ *
+ *   Errors that aren't turn-scoped (system/api_error, refusal fallbacks,
+ *   synthetic soft-blocks) are attributed to the session's *last known*
+ *   shape, exactly the way they're already attributed to the session's
+ *   last known model (see currentModel above) — same reasoning, same
+ *   caveat. Tool-result errors are attributed to the shape of the turn
+ *   that issued the matching tool_use block.
+ *
  * Usage:
  *   node scripts/claude-model-error-rates.mjs [options]
  *
@@ -85,6 +120,7 @@ function parseArgs(argv) {
     project: null,
     json: false,
     samples: 3,
+    byShape: false,
     help: false,
   };
   for (let i = 0; i < argv.length; i++) {
@@ -94,6 +130,7 @@ function parseArgs(argv) {
     else if (a === "--project") opts.project = argv[++i];
     else if (a === "--json") opts.json = true;
     else if (a === "--samples") opts.samples = Number(argv[++i]);
+    else if (a === "--by-shape") opts.byShape = true;
     else if (a === "--help" || a === "-h") opts.help = true;
   }
   return opts;
@@ -113,6 +150,14 @@ Options:
   --project <substr> Only scan project dirs whose name contains this
   --json             Emit raw JSON instead of formatted tables
   --samples <n>      Sample error snippets per class in JSON (default 3)
+  --by-shape         Also break down error rates by per-turn tool-use
+                       task shape (read/search-heavy, edit/write-heavy,
+                       bash-heavy, subagent-orchestration-heavy, mcp-
+                       heavy, other-heavy, mixed, no-tool-call) — a
+                       behavioral task-shape signal, richer than the
+                       project/cwd proxy. Adds a model x shape table
+                       (text mode) or a shapeBreakdown array per model
+                       plus a shapeLeaderboard (JSON mode).
   --help             Show this help
 `);
 }
@@ -149,6 +194,52 @@ function classifySyntheticErrorText(text) {
   return "other_synthetic_error";
 }
 
+// ---- task-shape classification (--by-shape) --------------------------------
+
+/**
+ * Coarse tool-name -> category buckets, derived from tool_use.name values
+ * actually observed across a real ~/.claude/projects corpus (Bash, Read,
+ * Edit, Write dominate; Agent, the Task-family tools, SendMessage,
+ * Monitor and Workflow handle orchestration; mcp__ prefixed names cover
+ * MCP servers). Unrecognized names fall into other_meta rather than
+ * silently disappearing.
+ */
+const TOOL_SHAPE_CATEGORIES = {
+  read_search: new Set([
+    "Read", "Grep", "Glob", "WebFetch", "WebSearch", "ToolSearch", "NotebookRead",
+  ]),
+  edit_write: new Set(["Edit", "Write", "MultiEdit", "NotebookEdit"]),
+  bash: new Set(["Bash", "BashOutput", "KillShell"]),
+  subagent_orchestration: new Set([
+    "Agent", "Task", "TaskCreate", "TaskUpdate", "TaskList", "TaskGet", "TaskOutput",
+    "TaskStop", "SendMessage", "Monitor", "Workflow", "ScheduleWakeup",
+    "EnterWorktree", "ExitWorktree",
+  ]),
+};
+
+/** Which coarse category a single tool_use.name belongs to. */
+function categoryForTool(name) {
+  if (!name) return "other_meta";
+  if (name.startsWith("mcp__")) return "mcp";
+  for (const [cat, names] of Object.entries(TOOL_SHAPE_CATEGORIES)) {
+    if (names.has(name)) return cat;
+  }
+  return "other_meta";
+}
+
+/**
+ * Classify one turn's task shape from the list of tool_use.name values it
+ * emitted (may be empty for a pure-text/reasoning turn). Single-category
+ * turns get "<category>_heavy"; turns spanning multiple categories are
+ * "mixed"; turns with no tool_use blocks are "no_tool_call".
+ */
+function classifyToolShape(toolNames) {
+  if (!toolNames || toolNames.length === 0) return "no_tool_call";
+  const cats = new Set(toolNames.map(categoryForTool));
+  if (cats.size === 1) return `${[...cats][0]}_heavy`;
+  return "mixed";
+}
+
 /** Coarse model "family" for the human-readable rollup the todo item asks for. */
 function modelFamily(model) {
   if (!model) return "unknown";
@@ -166,8 +257,19 @@ function newModelBucket() {
     toolErrors: 0,
     errors: {}, // class -> count (turn-level "hard" classes)
     retryEvents: 0, // count of system/api_error retry attempts
-    projects: {}, // cwd -> turns (task-shape proxy)
+    projects: {}, // cwd -> turns (coarse task-shape proxy)
+    shapes: {}, // tool-use task shape -> newShapeBucket() (--by-shape)
   };
+}
+
+function newShapeBucket() {
+  return { turns: 0, toolCalls: 0, toolErrors: 0, errors: {} };
+}
+
+/** Get-or-create the per-shape bucket nested inside a model bucket. */
+function getShapeBucket(modelBucket, shape) {
+  if (!modelBucket.shapes[shape]) modelBucket.shapes[shape] = newShapeBucket();
+  return modelBucket.shapes[shape];
 }
 
 function bump(obj, key, n = 1) {
@@ -225,7 +327,9 @@ async function main() {
     sessionsScanned++;
 
     let currentModel = null; // last real model observed in this session
+    let currentShape = "no_tool_call"; // last turn's tool-use task shape (--by-shape)
     const toolUseModel = new Map(); // tool_use_id -> model that issued it
+    const toolUseShape = new Map(); // tool_use_id -> task shape of the turn that issued it
 
     const rl = createInterface({
       input: createReadStream(file, { encoding: "utf8" }),
@@ -260,15 +364,32 @@ async function main() {
           const b = getBucket(model);
           b.turns++;
           if (cwd) bump(b.projects, cwd);
+
+          // Classify this turn's task shape from the tool_use blocks it
+          // emitted (empty content / no tool_use blocks -> "no_tool_call").
+          const toolNames = [];
+          if (Array.isArray(msg.content)) {
+            for (const c of msg.content) {
+              if (c && c.type === "tool_use" && c.id) toolNames.push(c.name);
+            }
+          }
+          const shape = classifyToolShape(toolNames);
+          currentShape = shape;
+          const sb = getShapeBucket(b, shape);
+          sb.turns++;
+
           if (msg.stop_reason === "max_tokens") {
             bump(b.errors, "truncation_max_tokens");
-            addSample("truncation_max_tokens", { file, model, requestId: d.requestId });
+            bump(sb.errors, "truncation_max_tokens");
+            addSample("truncation_max_tokens", { file, model, shape, requestId: d.requestId });
           }
           if (Array.isArray(msg.content)) {
             for (const c of msg.content) {
               if (c && c.type === "tool_use" && c.id) {
                 toolUseModel.set(c.id, model);
+                toolUseShape.set(c.id, shape);
                 b.toolCalls++;
+                sb.toolCalls++;
               }
             }
           }
@@ -286,6 +407,7 @@ async function main() {
           if (!currentModel) unattributedErrorEvents++;
           const b = getBucket(attrModel);
           bump(b.errors, cls);
+          bump(getShapeBucket(b, currentShape).errors, cls);
           addSample(cls, { file, attrModel, text: (text || "").slice(0, 160) });
         }
       } else if (d.type === "user") {
@@ -294,8 +416,10 @@ async function main() {
           for (const c of content) {
             if (c && c.type === "tool_result" && c.is_error === true) {
               const model = toolUseModel.get(c.tool_use_id) || currentModel || "unknown";
+              const shape = toolUseShape.get(c.tool_use_id) || currentShape;
               const b = getBucket(model);
               b.toolErrors++;
+              getShapeBucket(b, shape).toolErrors++;
             }
           }
         }
@@ -306,6 +430,7 @@ async function main() {
           if (!currentModel) unattributedErrorEvents++;
           const b = getBucket(attrModel);
           bump(b.errors, cls);
+          bump(getShapeBucket(b, currentShape).errors, cls);
           b.retryEvents++;
           addSample(cls, {
             file,
@@ -318,6 +443,7 @@ async function main() {
           const origModel = d.originalModel || currentModel || "unknown";
           const b = getBucket(origModel);
           bump(b.errors, cls);
+          bump(getShapeBucket(b, currentShape).errors, cls);
           addSample(cls, {
             file,
             originalModel: d.originalModel,
@@ -365,6 +491,23 @@ async function main() {
         .slice(0, 5)
         .map(([p, n]) => ({ project: path.basename(p), turns: n })),
     };
+    if (opts.byShape) {
+      summary.models[model].shapeBreakdown = Object.entries(b.shapes)
+        .sort((a, z) => z[1].turns - a[1].turns)
+        .map(([shape, sb]) => {
+          const shapeHardErrorTotal = Object.values(sb.errors).reduce((a, n) => a + n, 0);
+          return {
+            shape,
+            turns: sb.turns,
+            hardErrorTotal: shapeHardErrorTotal,
+            hardErrorRatePct: sb.turns ? +((shapeHardErrorTotal / sb.turns) * 100).toFixed(3) : null,
+            toolCalls: sb.toolCalls,
+            toolErrors: sb.toolErrors,
+            toolErrorRatePct: sb.toolCalls ? +((sb.toolErrors / sb.toolCalls) * 100).toFixed(3) : null,
+            errorsByClass: sb.errors,
+          };
+        });
+    }
   }
   if (models.has("unknown")) {
     const b = models.get("unknown");
@@ -373,6 +516,29 @@ async function main() {
       errorsByClass: b.errors,
       retryEvents: b.retryEvents,
     };
+  }
+
+  // Shape-first leaderboard: for each task shape, rank models by hard
+  // error rate (only models with turns>0 for that shape) — this is the
+  // "which model is least reliable for WHICH KIND of work" answer.
+  if (opts.byShape) {
+    const byShape = {};
+    for (const [model, m] of Object.entries(summary.models)) {
+      for (const s of m.shapeBreakdown) {
+        if (!s.turns) continue;
+        (byShape[s.shape] ||= []).push({
+          model,
+          turns: s.turns,
+          hardErrorTotal: s.hardErrorTotal,
+          hardErrorRatePct: s.hardErrorRatePct,
+          toolErrorRatePct: s.toolErrorRatePct,
+        });
+      }
+    }
+    for (const shape of Object.keys(byShape)) {
+      byShape[shape].sort((a, z) => (z.hardErrorRatePct ?? -1) - (a.hardErrorRatePct ?? -1));
+    }
+    summary.shapeLeaderboard = byShape;
   }
 
   if (opts.json) {
@@ -435,6 +601,64 @@ async function main() {
   if (summary.unknownModelBucket) {
     console.log("");
     console.log("Unattributed (no model known yet in session):", JSON.stringify(summary.unknownModelBucket.errorsByClass));
+  }
+
+  if (opts.byShape) {
+    console.log("");
+    console.log("Per-model error rates by tool-use task shape (--by-shape)");
+    console.log("Shape = per-turn tool_use profile: read_search/edit_write/bash/");
+    console.log("subagent_orchestration/mcp/other_meta-heavy, mixed (multiple categories");
+    console.log("in one turn), or no_tool_call (pure text/reasoning turn).");
+    console.log("-".repeat(100));
+    console.log(
+      padCols(
+        ["Model", "Shape", "Turns", "Errors", "Error%", "ToolCalls", "ToolErr", "ToolErr%"],
+        [26, 26, 8, 8, 8, 10, 8, 9]
+      )
+    );
+    for (const [model, m] of rows) {
+      for (const s of m.shapeBreakdown) {
+        console.log(
+          padCols(
+            [
+              model,
+              s.shape,
+              String(s.turns),
+              String(s.hardErrorTotal),
+              s.hardErrorRatePct != null ? `${s.hardErrorRatePct}%` : "-",
+              String(s.toolCalls),
+              String(s.toolErrors),
+              s.toolErrorRatePct != null ? `${s.toolErrorRatePct}%` : "-",
+            ],
+            [26, 26, 8, 8, 8, 10, 8, 9]
+          )
+        );
+      }
+    }
+
+    console.log("");
+    console.log("Shape leaderboard — models ranked by hard error rate, per task shape");
+    console.log("(least reliable model for that kind of work is listed first)");
+    console.log("-".repeat(100));
+    const shapeNames = Object.keys(summary.shapeLeaderboard).sort();
+    for (const shape of shapeNames) {
+      const entries = summary.shapeLeaderboard[shape];
+      console.log(`  ${shape}:`);
+      for (const e of entries) {
+        console.log(
+          "    " +
+            padCols(
+              [
+                e.model,
+                `turns=${e.turns}`,
+                `errors=${e.hardErrorTotal}`,
+                e.hardErrorRatePct != null ? `error%=${e.hardErrorRatePct}%` : "error%=-",
+              ],
+              [26, 10, 10, 12]
+            )
+        );
+      }
+    }
   }
 
   console.log("");

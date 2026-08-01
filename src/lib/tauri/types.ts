@@ -272,6 +272,8 @@ export interface Preferences {
   claude_ide_ssh: boolean;
   claude_hooks: boolean;
   claude_auto_resume: boolean;
+  /** Speak turn-completion/notification status aloud (macOS `say`). Off by default. */
+  voice_status: boolean;
   codex_ide: boolean;
   codex_ide_ssh: boolean;
   codex_hooks: boolean;

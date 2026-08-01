@@ -332,6 +332,38 @@ Hooks registered in `~/.claude/settings.json` on MCP server startup, cleaned up 
 - `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PreCompact` (HTTP): drive the per-tab active/idle/tool state (`agentState.svelte.ts`).
 - `SubagentStart`, `SubagentStop` (HTTP): Task-tool fan-out lifecycle — see "Subagent tracking" below. `build_our_hooks()` in `lockfile.rs` is the single source for the full local hook set; `sshMcpBridge.svelte.ts::buildSetupScript` mirrors it for remote (SSH) installs — keep both in sync when adding an event.
 
+**Voice mode (TTS-out + barge-in), local-only — no SSH mirror yet:** when
+`Preferences.voice_status` is on, `Stop`/`Notification` each gain a second
+**command** hook (alongside their HTTP hook) running the bundled
+`scripts/voice-status/speak-status.sh`, which speaks the turn/notification
+text via macOS `say`. `UserPromptSubmit` gains a matching command hook,
+`scripts/voice-status/barge-in.sh` — the moment the operator submits a new
+prompt, it kills the `say` process still narrating the previous turn, so
+narration never talks over someone who's already moved on. The two scripts
+coordinate through a session-scoped pid file (`speak-status.sh` backgrounds
+`say`, records its pid to `$TMPDIR/maiterm-voice-pids/<session_id>.pid`,
+removes it on exit; `barge-in.sh` reads and kills that pid, keyed by the
+same `session_id` off hook stdin — not `$MAITERM_TAB_ID`, so it isn't
+sensitive to env vars not propagating to a hook subprocess, e.g. inside
+tmux). Both scripts are bundled via `include_str!` (`VOICE_STATUS_SCRIPT` /
+`VOICE_BARGE_IN_SCRIPT` in `lockfile.rs`) and installed to the `/maiterm`
+skill's `bin/` dir on every startup; `is_voice_status_hook()` /
+`is_voice_barge_in_hook()` give each its own sweep/drift signature (no URL,
+no port marker) since `entry_matches_url` / `command_hook_is_ours_to_sweep`
+can't see them. Toggling `voice_status` off sweeps both within one reassert
+tick (~30s) via `hooks_are_current()`'s exact-match check, same as every
+other maiTerm-owned hook. **Not yet mirrored to `sshMcpBridge.svelte.ts::buildSetupScript`**
+— voice mode only speaks/barges-in for local Claude Code sessions today.
+
+**Voice live UI indicator (read-only, local-only):** the same pid-file
+directory is read (never written) by `commands::voice::get_voice_speaking_sessions`
+— a batched, best-effort check of which of a set of `session_id`s currently
+have a live `say` process — polled every ~1s by `voiceStatus.svelte.ts` for
+every tab `agentState.svelte.ts` is tracking a session for, and rendered as a
+"Speaking" tag in `TerminalPane.svelte` next to the existing tool-activity
+tag. Since voice mode is local-only (previous paragraph), this naturally
+shows nothing for SSH-bridged tabs — no separate gating needed.
+
 **Subagent tracking (Task-tool fan-out):** Claude Code fires `SubagentStart`/`SubagentStop`
 around each subagent spawned via the Task tool, and tags `PreToolUse`/`PostToolUse` fired
 *inside* a subagent with `agent_id`/`agent_type` (same `session_id` as the parent — no

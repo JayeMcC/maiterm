@@ -1018,3 +1018,12 @@ export async function readRailConfig(): Promise<string | null> {
 export async function setTerminalPalette(palette: TerminalPalette): Promise<void> {
   return invoke('set_terminal_palette', { palette });
 }
+
+/** Given a batch of Claude Code session IDs, return the subset currently being
+ *  narrated aloud by the voice-status Stop/Notification hook (see
+ *  scripts/voice-status/speak-status.sh + barge-in.sh) — i.e. those with a
+ *  live `say` pid file under `$TMPDIR/maiterm-voice-pids/`. Used by
+ *  voiceStatus.svelte.ts to drive the per-tab "speaking" indicator. */
+export async function getVoiceSpeakingSessions(sessionIds: string[]): Promise<string[]> {
+  return invoke('get_voice_speaking_sessions', { sessionIds });
+}

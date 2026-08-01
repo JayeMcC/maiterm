@@ -7,6 +7,7 @@ pub mod scheduler;
 pub mod ssh_tunnel;
 pub mod system;
 pub mod terminal;
+pub mod voice;
 pub mod window;
 pub mod window_presets;
 pub mod workspace;
