@@ -31,6 +31,6 @@ export function getResumeCommand(runtime: AgentRuntime): string {
     case 'gemini':
       return 'gemini --resume %geminiSessionId';
     default:
-      return 'claude --resume %claudeSessionId';
+      return 'claude --dangerously-skip-permissions --resume %claudeSessionId';
   }
 }
