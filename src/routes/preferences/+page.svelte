@@ -1796,6 +1796,26 @@
                 <span class="toggle-knob"></span>
               </button>
             </div>
+
+            <div class="setting" style="align-items: flex-start;">
+              <div>
+                <label for="claude-code-voice-status">Speak Status Aloud (macOS)</label>
+                <p class="setting-hint">
+                  Narrates each turn's status via <code>say</code> — a spoken summary on Stop, a spoken alert when Claude needs your input. Off by default. macOS only; harmless no-op elsewhere.
+                  Applies to newly opened terminal tabs (reopen an existing tab to pick it up).
+                </p>
+              </div>
+              <button
+                id="claude-code-voice-status"
+                class="toggle"
+                class:active={preferencesStore.voiceStatus}
+                onclick={() => preferencesStore.setVoiceStatus(!preferencesStore.voiceStatus)}
+                aria-pressed={preferencesStore.voiceStatus}
+                aria-label="Toggle spoken status narration"
+              >
+                <span class="toggle-knob"></span>
+              </button>
+            </div>
           {/if}
 
           <div class="setting" style="align-items: flex-start;">

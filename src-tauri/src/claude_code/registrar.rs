@@ -25,7 +25,7 @@ impl Registrar for ClaudeRegistrar {
     fn runtime(&self) -> AgentRuntime { AgentRuntime::Claude }
     fn enabled(&self, prefs: &Preferences) -> bool { prefs.claude_ide }
     fn install(&self, port: u16, auth: &str, workspace_folders: &[String], prefs: &Preferences) {
-        if let Err(e) = lockfile::write_lockfile(port, auth, workspace_folders.to_vec(), prefs.claude_hooks) {
+        if let Err(e) = lockfile::write_lockfile(port, auth, workspace_folders.to_vec(), prefs.claude_hooks, prefs.voice_status) {
             log::warn!("Failed to write Claude Code lock file: {}", e);
         }
     }
@@ -35,9 +35,10 @@ impl Registrar for ClaudeRegistrar {
         }
         // Hooks live in ~/.claude/settings.json, which is just as clobber-prone
         // (claude CLI rewrites; an SSH-bridge setup script landing in a local
-        // shell overwrites them with dead remote-tunnel ports).
+        // shell overwrites them with dead remote-tunnel ports). Also picks up a
+        // live `voice_status` toggle within one reassert tick (no restart needed).
         if prefs.claude_hooks {
-            if let Err(e) = lockfile::ensure_hook_settings(port, auth) {
+            if let Err(e) = lockfile::ensure_hook_settings(port, auth, prefs.voice_status) {
                 log::warn!("Hook settings re-assert failed: {}", e);
             }
         }

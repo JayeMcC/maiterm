@@ -56,6 +56,7 @@ function createPreferencesStore() {
   let claudeCodeIdeSsh = $state(true);
   let claudeCodeHooks = $state(true);
   let claudeCodeAutoResume = $state(true);
+  let voiceStatus = $state(false);
   let codexIde = $state(true);
   let codexIdeSsh = $state(true);
   let codexHooks = $state(true);
@@ -138,6 +139,7 @@ function createPreferencesStore() {
     get claudeCodeIdeSsh() { return claudeCodeIdeSsh; },
     get claudeCodeHooks() { return claudeCodeHooks; },
     get claudeCodeAutoResume() { return claudeCodeAutoResume; },
+    get voiceStatus() { return voiceStatus; },
     get codexIde() { return codexIde; },
     get codexIdeSsh() { return codexIdeSsh; },
     get codexHooks() { return codexHooks; },
@@ -230,6 +232,7 @@ function createPreferencesStore() {
       claudeCodeIdeSsh = prefs.claude_ide_ssh ?? true;
       claudeCodeHooks = prefs.claude_hooks ?? true;
       claudeCodeAutoResume = prefs.claude_auto_resume ?? true;
+      voiceStatus = prefs.voice_status ?? false;
       codexIde = prefs.codex_ide ?? true;
       codexIdeSsh = prefs.codex_ide_ssh ?? true;
       codexHooks = prefs.codex_hooks ?? true;
@@ -482,6 +485,10 @@ function createPreferencesStore() {
       claudeCodeAutoResume = value;
       await this.save();
     },
+    async setVoiceStatus(value: boolean) {
+      voiceStatus = value;
+      await this.save();
+    },
     async setCodexIde(value: boolean) {
       codexIde = value;
       await this.save();
@@ -725,6 +732,7 @@ function createPreferencesStore() {
       claudeCodeIdeSsh = prefs.claude_ide_ssh ?? true;
       claudeCodeHooks = prefs.claude_hooks ?? true;
       claudeCodeAutoResume = prefs.claude_auto_resume ?? true;
+      voiceStatus = prefs.voice_status ?? false;
       codexIde = prefs.codex_ide ?? true;
       codexIdeSsh = prefs.codex_ide_ssh ?? true;
       codexHooks = prefs.codex_hooks ?? true;
@@ -808,6 +816,7 @@ function createPreferencesStore() {
         claude_ide_ssh: claudeCodeIdeSsh,
         claude_hooks: claudeCodeHooks,
         claude_auto_resume: claudeCodeAutoResume,
+        voice_status: voiceStatus,
         codex_ide: codexIde,
         codex_ide_ssh: codexIdeSsh,
         codex_hooks: codexHooks,

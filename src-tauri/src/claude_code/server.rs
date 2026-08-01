@@ -520,6 +520,7 @@ fn preference_meta() -> Vec<(&'static str, PrefMeta)> {
         ("claude_ide_ssh", PrefMeta { description: "Enable MCP bridge over SSH (reverse tunnel for remote Claude Code)", ptype: "boolean", category: "Integration", read_only: false }),
         ("claude_hooks", PrefMeta { description: "Enable hooks integration (session lifecycle events, tab indicators)", ptype: "boolean", category: "Integration", read_only: false }),
         ("claude_auto_resume", PrefMeta { description: "Enable hooks-based auto-resume (programmatic session ID capture)", ptype: "boolean", category: "Integration", read_only: false }),
+        ("voice_status", PrefMeta { description: "Speak turn-completion/notification status aloud via say (macOS only)", ptype: "boolean", category: "Integration", read_only: false }),
         ("codex_ide", PrefMeta { description: "Enable Codex IDE integration (MCP server in ~/.codex/config.toml)", ptype: "boolean", category: "Integration", read_only: false }),
         ("codex_ide_ssh", PrefMeta { description: "Enable Codex MCP bridge over SSH", ptype: "boolean", category: "Integration", read_only: false }),
         ("codex_hooks", PrefMeta { description: "Enable Codex lifecycle hooks", ptype: "boolean", category: "Integration", read_only: false }),

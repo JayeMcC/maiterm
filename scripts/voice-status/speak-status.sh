@@ -17,13 +17,25 @@
 # (see MAITERM_VOICE_STATUS below) — never a background process burning
 # credits or attention on its own.
 #
-# NOT auto-registered by maiTerm yet. This is a manually-wired prototype to
-# prove the mechanism; wiring it into maiTerm's own hook registration
-# (src-tauri/src/claude_code/lockfile.rs) + a preferences toggle + a
-# push-to-talk button is future work. To try it today, add to
-# ~/.claude/settings.json (merge with any existing Stop/Notification hooks
-# rather than replacing them — see src-tauri/src/claude_code/CLAUDE.md for
-# how maiTerm's own hooks are structured):
+# Auto-registered by maiTerm when the "Speak Status Aloud" preference
+# (`voice_status`, Preferences -> Integrations -> Claude Code) is on and
+# "Enable Hooks Integration" (`claude_hooks`) is also on: maiTerm bundles this
+# exact file (see VOICE_STATUS_SCRIPT in src-tauri/src/claude_code/lockfile.rs),
+# installs it to ~/.claude/skills/maiterm2/bin/speak-status.sh, and registers it
+# as a second Stop/Notification command hook alongside its own HTTP hooks
+# (build_our_hooks in lockfile.rs). Toggling the preference is picked up within
+# one reassert tick (~30s) or on next app start — no manual settings.json
+# editing needed. The opt-in gate below stays per-shell: with the preference on,
+# maiTerm exports MAITERM_VOICE_STATUS=1 into every newly spawned PTY's shell
+# env (src-tauri/src/pty/manager.rs), so `claude` processes started in those
+# tabs — and thus their hook subprocesses, which inherit shell env — narrate.
+# Already-open tabs need to be reopened to pick up the env var.
+#
+# You can still wire this manually (e.g. to test a local edit before it's
+# picked up by the bundled copy, or in a shell maiTerm didn't spawn) by adding
+# to ~/.claude/settings.json (merge with any existing Stop/Notification hooks
+# rather than replacing them — see src-tauri/src/claude_code/CLAUDE.md for how
+# maiTerm's own hooks are structured):
 #
 #   "hooks": {
 #     "Stop": [
