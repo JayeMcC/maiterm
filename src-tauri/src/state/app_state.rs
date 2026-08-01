@@ -84,6 +84,34 @@ pub struct RemoteMirrorEntry {
     pub backoff_until_ms: u64,
 }
 
+/// Per-model error-class counters — the live counterpart of one row of Slice 1's offline batch
+/// pass (`scripts/claude-model-error-rates.mjs`) `summary.models[model]`. Field names/semantics
+/// mirror that script exactly (classification lives in `claude_code::model_errors`, ported
+/// 1:1 from the script's `classify*` functions) so a fixture run through both produces the
+/// same numbers.
+#[derive(Clone, Default, serde::Serialize)]
+pub struct ModelErrorCounts {
+    pub turns: u64,
+    pub tool_calls: u64,
+    pub tool_errors: u64,
+    pub errors_by_class: HashMap<String, u64>,
+    pub retry_events: u64,
+}
+
+/// Per-session live-transcript-tailer bookkeeping for `claude_code::model_errors`: how far the
+/// session's transcript JSONL has been read (byte offset, like `RemoteMirrorEntry` above but for
+/// a direct local read instead of an ssh round trip) plus the classifier's own running state
+/// (current model, in-flight `tool_use_id` → model correlation). Unlike the offline script's
+/// `Map` — fine for a one-shot batch pass — `tool_use_model` is pruned the moment a `tool_use` is
+/// matched to its `tool_result`, so a long-running live session doesn't accumulate unbounded
+/// state for calls that already resolved.
+#[derive(Default)]
+pub struct ErrorTailState {
+    pub offset: u64,
+    pub current_model: Option<String>,
+    pub tool_use_model: HashMap<String, String>,
+}
+
 /// Tracked Claude Code session (registered via hooks).
 pub struct AgentSessionInfo {
     /// Which agent runtime owns this session; detected at initSession (Stage 3 sets Claude everywhere as a placeholder).
@@ -126,6 +154,13 @@ pub struct AgentSessionInfo {
     /// `tool_name`/`tool_detail` can't represent (those track only ONE in-flight
     /// tool at a time — a subagent's tool calls would otherwise clobber them).
     pub subagents: HashMap<String, SubagentInfo>,
+    /// Live per-model error-class counts for this session (API errors, refusal fallbacks,
+    /// `max_tokens` truncation, tool-call failures — see `claude_code::model_errors`),
+    /// incrementally tailed from this session's own transcript JSONL on every hook event.
+    /// Scoped to the CURRENT session only, same precedent as `subagents` above: cleared when the
+    /// session ends, not carried over to a resumed session (see that module's doc comment for
+    /// the cross-resume follow-up).
+    pub error_counts: HashMap<String, ModelErrorCounts>,
 }
 
 impl AgentSessionInfo {
@@ -246,6 +281,10 @@ pub struct AppState {
     // SSH transcript mirror fetch coalescing: keyed by session_id
     pub remote_mirrors: RwLock<HashMap<String, RemoteMirrorEntry>>,
     pub remote_watcher_running: std::sync::atomic::AtomicBool,
+    // Live per-model error-class tailer bookkeeping (claude_code::model_errors), keyed by
+    // session_id — parallel to remote_mirrors above, but for the local classification tailer
+    // (offset + classifier running state) rather than an ssh mirror fetch.
+    pub error_tail_state: RwLock<HashMap<String, ErrorTailState>>,
     // Resizes deferred while the PTY is actively streaming (keyed by pty_id)
     pub pending_resizes: RwLock<HashMap<String, PendingResize>>,
     // Diagnostics
@@ -316,6 +355,7 @@ impl AppState {
             remote_file_watchers: RwLock::new(HashMap::new()),
             remote_mirrors: RwLock::new(HashMap::new()),
             remote_watcher_running: std::sync::atomic::AtomicBool::new(false),
+            error_tail_state: RwLock::new(HashMap::new()),
             pending_resizes: RwLock::new(HashMap::new()),
             pty_stats: RwLock::new(HashMap::new()),
             memory_samples: RwLock::new(Vec::new()),
@@ -361,6 +401,7 @@ mod subagent_tests {
             transcript_path: None,
             connection_id: None,
             subagents: HashMap::new(),
+            error_counts: HashMap::new(),
         }
     }
 
