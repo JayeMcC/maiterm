@@ -10,12 +10,17 @@
 #   STT (talk to it)  -> adopt native Claude Code `/voice` (NOT built here)
 #   TTS (hear it)      -> THIS script (Stop -> spoken turn summary,
 #                         Notification -> spoken "needs your input" alert)
+#                         + stream-speak.sh (real-time assistant-text
+#                         streaming for a `claude -p` run — see that
+#                         script's header) for the "hear it as it types"
+#                         half of the same TTS-out slice.
 #
-# Deliberately thin: no assistant-text *streaming* (that's a follow-up
-# slice), no barge-in/interrupt handling, no continuously-listening daemon.
-# It only ever runs once per hook event, and only when explicitly opted in
-# (see MAITERM_VOICE_STATUS below) — never a background process burning
-# credits or attention on its own.
+# Deliberately thin: no barge-in/interrupt handling, no
+# continuously-listening daemon, and not wired to a *running* interactive
+# tab's `claude` process (see stream-speak.sh's header — that's a separate,
+# still-open concern). It only ever runs once per hook event, and only when
+# explicitly opted in (see MAITERM_VOICE_STATUS below) — never a background
+# process burning credits or attention on its own.
 #
 # Auto-registered by maiTerm when the "Speak Status Aloud" preference
 # (`voice_status`, Preferences -> Integrations -> Claude Code) is on and
@@ -117,22 +122,15 @@ esac
 # Clean markdown noise out of the text so it reads as speech, not as a
 # rendered document: drop fenced code blocks (reading code aloud is
 # useless), strip inline emphasis/heading/code markers, collapse
-# whitespace. python3 is already a soft dependency elsewhere in this repo's
+# whitespace. Shared with stream-speak.sh (the streaming sibling of this
+# script) via lib/clean_text.py so the cleanup rules only live in one
+# place. python3 is already a soft dependency elsewhere in this repo's
 # Claude Code tooling (see claude_code/CLAUDE.md, SSH hook setup) — but
 # degrade gracefully to whitespace-only cleanup if it's missing so this
 # never hard-fails.
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if command -v python3 >/dev/null 2>&1; then
-  clean="$(printf '%s' "$text" | python3 -c '
-import re
-import sys
-
-t = sys.stdin.read()
-t = re.sub(r"```.*?```", " code omitted ", t, flags=re.S)
-t = re.sub(r"`([^`]*)`", r"\1", t)
-t = re.sub(r"[*_#>]+", " ", t)
-t = re.sub(r"\s+", " ", t).strip()
-sys.stdout.write(t)
-' 2>/dev/null)"
+  clean="$(printf '%s' "$text" | python3 "$script_dir/lib/clean_text.py" 2>/dev/null)"
 else
   clean="$(printf '%s' "$text" | tr '\n\t' '  ' | sed -E 's/  +/ /g')"
 fi
