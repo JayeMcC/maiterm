@@ -171,6 +171,13 @@ function createAgentStateStore() {
       return sessions.get(tabId);
     },
 
+    /** Snapshot of every tracked tab's session ID, for the voice-status poller
+     *  (voiceStatus.svelte.ts) — it needs to know which session IDs to ask the
+     *  backend about without duplicating this store's own hook-driven tracking. */
+    getActiveSessions(): { tabId: string; sessionId: string }[] {
+      return [...sessions.entries()].map(([tabId, s]) => ({ tabId, sessionId: s.sessionId }));
+    },
+
     /** Check if any tab in the list has a Claude session needing attention. */
     hasAttention(tabIds: string[]): boolean {
       for (const id of tabIds) {

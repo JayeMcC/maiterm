@@ -15,12 +15,19 @@
 #                         script's header) for the "hear it as it types"
 #                         half of the same TTS-out slice.
 #
-# Deliberately thin: no barge-in/interrupt handling, no
-# continuously-listening daemon, and not wired to a *running* interactive
-# tab's `claude` process (see stream-speak.sh's header — that's a separate,
-# still-open concern). It only ever runs once per hook event, and only when
-# explicitly opted in (see MAITERM_VOICE_STATUS below) — never a background
-# process burning credits or attention on its own.
+# Deliberately thin: no continuously-listening daemon, and not wired to a
+# *running* interactive tab's `claude` process (see stream-speak.sh's header
+# — that's a separate, still-open concern). It only ever runs once per hook
+# event, and only when explicitly opted in (see MAITERM_VOICE_STATUS below)
+# — never a background process burning credits or attention on its own.
+#
+# Barge-in: the `say` process is backgrounded and its PID recorded (keyed by
+# session_id, under $TMPDIR/maiterm-voice-pids/) so
+# scripts/voice-status/barge-in.sh — a UserPromptSubmit hook — can kill it
+# the instant the operator submits a new prompt, so narration never talks
+# over a user who has already moved on. See that script's header for the
+# mechanism; the two are registered together (same `voice_status` preference
+# gate) by `build_our_hooks()` in `src-tauri/src/claude_code/lockfile.rs`.
 #
 # Auto-registered by maiTerm when the "Speak Status Aloud" preference
 # (`voice_status`, Preferences -> Integrations -> Claude Code) is on and
@@ -95,6 +102,14 @@ command -v jq >/dev/null 2>&1 || exit 0
 
 input="$(cat)"
 event="$(printf '%s' "$input" | jq -r '.hook_event_name // empty' 2>/dev/null)"
+# Barge-in key. Every event we handle here carries session_id — using it
+# (rather than $MAITERM_TAB_ID) means the pid file works even where env vars
+# don't reliably propagate to the hook subprocess (e.g. inside tmux — see the
+# ~/.aiterm fallback note in claude_code/CLAUDE.md). Sanitized defensively;
+# a session id we can't read just means no barge-in for this utterance, never
+# a reason to skip speaking.
+session_id="$(printf '%s' "$input" | jq -r '.session_id // empty' 2>/dev/null)"
+session_id="${session_id//\//_}"
 
 text=""
 case "$event" in
@@ -150,7 +165,22 @@ say_args=()
 [ -n "${MAITERM_VOICE_RATE:-}" ] && say_args+=(-r "$MAITERM_VOICE_RATE")
 [ -n "${MAITERM_VOICE_OUTFILE:-}" ] && say_args+=(-o "$MAITERM_VOICE_OUTFILE")
 
-say "${say_args[@]}" "$clean" >/dev/null 2>&1 || true
+# Record the live `say` PID for barge-in before speaking. Must match
+# barge-in.sh's pid_dir exactly — the two scripts are standalone (not
+# sourced from a shared file, on purpose — see the header) so keep this path
+# in sync if it ever changes.
+pid_dir="${TMPDIR:-/tmp}/maiterm-voice-pids"
+pid_file=""
+if [ -n "$session_id" ]; then
+  mkdir -p -m 700 "$pid_dir" 2>/dev/null
+  pid_file="$pid_dir/$session_id.pid"
+fi
+
+say "${say_args[@]}" "$clean" >/dev/null 2>&1 &
+say_pid=$!
+[ -n "$pid_file" ] && printf '%s' "$say_pid" >"$pid_file" 2>/dev/null
+wait "$say_pid" 2>/dev/null
+[ -n "$pid_file" ] && rm -f "$pid_file"
 
 # Always a valid no-op decision — this hook never blocks or influences the
 # turn, it only observes.
