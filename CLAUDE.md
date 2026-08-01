@@ -228,6 +228,7 @@ Controlled by `cfg!(debug_assertions)` in `state/persistence.rs` → `app_data_s
 | Cmd+G           | Goto line (editor tabs; find-next while search panel is open)    |
 | Cmd+E           | Toggle notes panel                                               |
 | Cmd+Shift+C     | Toggle composer dock                                             |
+| Cmd+Shift+A     | Toggle subagent panel (active tab's Task-tool fan-out)           |
 | Cmd+,           | Preferences                                                      |
 | Cmd+/           | Help                                                             |
 

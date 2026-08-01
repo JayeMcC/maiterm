@@ -3803,6 +3803,7 @@ mod tests {
             model: None,
             transcript_path: None,
             connection_id: None,
+            subagents: HashMap::new(),
         };
         {
             let mut s = app.agent_sessions.write();

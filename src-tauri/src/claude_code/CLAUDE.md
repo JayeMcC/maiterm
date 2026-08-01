@@ -329,6 +329,28 @@ Hooks registered in `~/.claude/settings.json` on MCP server startup, cleaned up 
 - `SessionEnd` (HTTP): Removes session from mapping.
 - `Notification` (HTTP): Receives Claude Code notification events.
 - `Stop` (HTTP): Receives stop events.
+- `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PreCompact` (HTTP): drive the per-tab active/idle/tool state (`agentState.svelte.ts`).
+- `SubagentStart`, `SubagentStop` (HTTP): Task-tool fan-out lifecycle — see "Subagent tracking" below. `build_our_hooks()` in `lockfile.rs` is the single source for the full local hook set; `sshMcpBridge.svelte.ts::buildSetupScript` mirrors it for remote (SSH) installs — keep both in sync when adding an event.
+
+**Subagent tracking (Task-tool fan-out):** Claude Code fires `SubagentStart`/`SubagentStop`
+around each subagent spawned via the Task tool, and tags `PreToolUse`/`PostToolUse` fired
+*inside* a subagent with `agent_id`/`agent_type` (same `session_id` as the parent — no
+separate routing). `hooks_handler` (`server.rs`) uses `agent_id`'s presence to route a
+tool-use update into `AgentSessionInfo::subagents` (keyed by `agent_id`, capped at
+`MAX_TRACKED_SUBAGENTS`, each entry's tool-call trail capped at `SUBAGENT_LOG_CAP`)
+instead of the parent session's own `tool_name`/`tool_detail` — **this is a correctness
+fix, not just new tracking**: before this routing existed, a subagent's own tool calls
+(e.g. a background recon agent's `Read`/`Grep`) clobbered the parent tab's displayed
+"what's this tab doing" state, which the Task-tool call itself (a normal top-level
+`PreToolUse`/`PostToolUse` with no `agent_id`) had already set correctly. `Failed` state
+is inferred only when the parent session ends while a subagent is still `Running`
+(Claude Code has no explicit subagent-failure signal). Frontend: `subagents.svelte.ts`
+listens to the raw `agent-hook-*` events directly (same event bus as `agentState.svelte.ts`,
+no shared listener) and keeps its own per-tab live map — purely event-driven like every
+other agent-state store here, so a fresh app launch/reload starts empty and rebuilds from
+whatever fires next (no backend rehydration command exists for `agent_sessions`, matching
+existing precedent). UI: `SubagentPanel.svelte` (Cmd+Shift+A), one row per subagent
+(type, state, current/last tool), expandable to its tool-call log.
 
 **Connection tab affinity (`initSession`):**
 
@@ -409,7 +431,7 @@ Remote Claude Code → discovers ~/.claude/ide/{port}.lock → connects through 
 - "Inject maiTerm Env Vars" — re-writes `export MAITERM_TAB_ID=... MAITERM_PORT=...` to the PTY for the current shell (useful after tmux attach, sudo, su)
 - "Install MCP for Current User" — writes the full setup script (lockfile, MCP, hooks, skill) to the PTY, executing as the current user. Needed after `sudo -i` or `su -l otheruser` where `~/` changed but the tunnel is still accessible on localhost.
 
-**Remote hooks:** All hook events (SessionStart, SessionEnd, Notification, Stop, UserPromptSubmit, PreToolUse, PostToolUse, PreCompact) are registered on the remote with HTTP hooks pointing to `127.0.0.1:{remotePort}/hooks`. These tunnel back through the SSH reverse tunnel to the local MCP server's hooks handler. A command hook on SessionStart reads `$MAITERM_TAB_ID` (from env var injection) and echoes the tab ID into Claude's context. Hooks require python3 on the remote for the settings.json merge.
+**Remote hooks:** All hook events (SessionStart, SessionEnd, Notification, Stop, UserPromptSubmit, PreToolUse, PostToolUse, PreCompact, SubagentStart, SubagentStop) are registered on the remote with HTTP hooks pointing to `127.0.0.1:{remotePort}/hooks`. These tunnel back through the SSH reverse tunnel to the local MCP server's hooks handler. A command hook on SessionStart reads `$MAITERM_TAB_ID` (from env var injection) and echoes the tab ID into Claude's context. Hooks require python3 on the remote for the settings.json merge.
 
 **Remote cleanup:** Stale lockfile detection on reconnect tests dead ports via `/dev/tcp/localhost/{port}`. No EXIT trap (background SSH has no persistent shell on remote). Stale hooks with dead port URLs are NOT silent — Claude Code prints `hook error / connect ECONNREFUSED` in every session until they're removed. On an ordinary remote they linger until the next bridge setup rewrites them; when the "remote" is itself a maiTerm machine, its own hook self-heal sweeps them (tunnel lockfiles have `pid: 0`, so liveness is the port probe in `lockfile_is_live()`).
 

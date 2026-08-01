@@ -1992,6 +1992,7 @@ async fn process_message(
                                     pending_question: existing.as_ref().and_then(|e| e.pending_question.clone()),
                                     pending_question_at: existing.as_ref().and_then(|e| e.pending_question_at),
                                     transcript_path: existing.as_ref().and_then(|e| e.transcript_path.clone()),
+                                    subagents: existing.as_ref().map(|e| e.subagents.clone()).unwrap_or_default(),
                                     model: existing.and_then(|e| e.model),
                                     connection_id: Some(connection_id.to_string()),
                                 },
@@ -2042,6 +2043,7 @@ async fn process_message(
                                     pending_question: None,
                                     pending_question_at: None,
                                     transcript_path: None,
+                                    subagents: HashMap::new(),
                                     model: None,
                                     connection_id: Some(connection_id.to_string()),
                                 },
@@ -2358,6 +2360,15 @@ async fn process_message(
 
 // ─── Agent Hooks ────────────────────────────────────────────────────────────
 
+/// Unix-ms now. Shared by every hook arm that stamps a timestamp (pending_question_at,
+/// subagent started_at_ms/updated_at_ms/log entry times).
+fn now_ms() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0)
+}
+
 /// Canonical, runtime-neutral meaning of a raw hook event. Each runtime's wire
 /// event names normalize into one of these (see `normalize_hook_event`) so the
 /// handler logic is written once. Claude expresses "waiting for the human" as a
@@ -2375,6 +2386,8 @@ enum HookPhase {
     ToolPost,
     Notification { notification_type: String },
     Compact,
+    SubagentStart,
+    SubagentStop,
     Other,
 }
 
@@ -2392,6 +2405,13 @@ fn normalize_hook_event(_runtime: crate::state::AgentRuntime, name: &str, event:
         "PreToolUse" => HookPhase::ToolPre,
         "PostToolUse" => HookPhase::ToolPost,
         "PreCompact" => HookPhase::Compact,
+        // A Task-tool fan-out: SubagentStart fires when the spawn begins, SubagentStop
+        // when it finishes. Both carry `agent_id`/`agent_type` (see claude_code/CLAUDE.md);
+        // PreToolUse/PostToolUse fired for the subagent's OWN tool calls carry the same
+        // `agent_id`, which is how those are routed into `AgentSessionInfo::subagents`
+        // instead of clobbering the parent session's single tool_name/tool_detail.
+        "SubagentStart" => HookPhase::SubagentStart,
+        "SubagentStop" => HookPhase::SubagentStop,
         "Notification" => HookPhase::Notification {
             notification_type: event
                 .get("notification_type")
@@ -2520,6 +2540,7 @@ async fn hooks_handler(
                         pending_question: None,
                         pending_question_at: None,
                         transcript_path: transcript_path.clone(),
+                        subagents: HashMap::new(),
                         model: model.clone(),
                         connection_id: None,
                     },
@@ -2724,44 +2745,74 @@ async fn hooks_handler(
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
+            // Present only when this hook fired INSIDE a subagent (Task-tool fan-out) —
+            // routes the update into AgentSessionInfo::subagents instead of the parent
+            // session's single tool_name/tool_detail. See normalize_hook_event.
+            let agent_id = event.get("agent_id").and_then(|v| v.as_str()).filter(|s| !s.is_empty()).map(String::from);
+            let agent_type = event.get("agent_type").and_then(|v| v.as_str()).filter(|s| !s.is_empty()).map(String::from);
 
             // Update session state back to active + track current tool
             if !session_id.is_empty() {
-                use crate::state::app_state::AgentSessionState;
+                use crate::state::app_state::{AgentSessionState, SubagentInfo, SubagentLogEntry, SubagentState, SUBAGENT_LOG_CAP};
                 let mut sessions = srv.state.agent_sessions.write();
                 if let Some(session) = sessions.get_mut(&session_id) {
-                    session.state = AgentSessionState::Active;
-                    session.tool_name = if tool_name.is_empty() { None } else { Some(tool_name.clone()) };
                     // Compact primary-arg label (e.g. the Bash command) so a permission prompt
                     // for this tool can show WHAT is being approved (maiLink card).
-                    session.tool_detail = event
+                    let detail = event
                         .get("tool_input")
                         .and_then(crate::mailink::transcript::compact_tool_arg);
-                    // Capture the structured AskUserQuestion prompt (its tool_input.questions feed
-                    // the maiLink PendingPrompt); any other tool starting means no open question.
-                    if tool_name == "AskUserQuestion" {
-                        session.pending_question = event.get("tool_input").cloned();
-                        session.pending_question_at = Some(
-                            std::time::SystemTime::now()
-                                .duration_since(std::time::UNIX_EPOCH)
-                                .map(|d| d.as_millis() as i64)
-                                .unwrap_or(0),
-                        );
+                    if let Some(agent_id) = &agent_id {
+                        // Subagent tool call — never touch the parent session's own state.
+                        let now = now_ms();
+                        let sub = session.subagents.entry(agent_id.clone()).or_insert_with(|| SubagentInfo {
+                            agent_type: agent_type.clone().unwrap_or_else(|| "subagent".to_string()),
+                            state: SubagentState::Running,
+                            tool_name: None,
+                            tool_detail: None,
+                            log: Vec::new(),
+                            started_at_ms: now,
+                            updated_at_ms: now,
+                        });
+                        sub.tool_name = if tool_name.is_empty() { None } else { Some(tool_name.clone()) };
+                        sub.tool_detail = detail.clone();
+                        sub.updated_at_ms = now;
+                        // Logged at invocation time, not completion — a subagent that never
+                        // returns still leaves a visible trail of what it was doing.
+                        if !tool_name.is_empty() {
+                            sub.log.push(SubagentLogEntry { tool_name: tool_name.clone(), detail, at_ms: now });
+                            if sub.log.len() > SUBAGENT_LOG_CAP {
+                                let overflow = sub.log.len() - SUBAGENT_LOG_CAP;
+                                sub.log.drain(0..overflow);
+                            }
+                        }
                     } else {
-                        session.pending_question = None;
-                        session.pending_question_at = None;
+                        session.state = AgentSessionState::Active;
+                        session.tool_name = if tool_name.is_empty() { None } else { Some(tool_name.clone()) };
+                        session.tool_detail = detail;
+                        // Capture the structured AskUserQuestion prompt (its tool_input.questions
+                        // feed the maiLink PendingPrompt); any other tool starting means no open
+                        // question.
+                        if tool_name == "AskUserQuestion" {
+                            session.pending_question = event.get("tool_input").cloned();
+                            session.pending_question_at = Some(now_ms());
+                        } else {
+                            session.pending_question = None;
+                            session.pending_question_at = None;
+                        }
                     }
                 }
             }
 
-            log::debug!("Claude hook: PreToolUse tool='{}' session={} (tab {:?})",
-                tool_name, &session_id[..session_id.len().min(8)], tab_id);
+            log::debug!("Claude hook: PreToolUse tool='{}' session={} (tab {:?}) agent={:?}",
+                tool_name, &session_id[..session_id.len().min(8)], tab_id, agent_id);
             emit_dual(&srv.app_handle, "agent-hook-pre-tool-use", "claude-hook-pre-tool-use", serde_json::json!({
                 "runtime": runtime_key,
                 "session_id": session_id,
                 "tab_id": tab_id,
                 "tool_name": tool_name,
                 "tool_input": event.get("tool_input"),
+                "agent_id": agent_id,
+                "agent_type": agent_type,
             }));
         }
 
@@ -2777,40 +2828,51 @@ async fn hooks_handler(
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
+            let agent_id = event.get("agent_id").and_then(|v| v.as_str()).filter(|s| !s.is_empty()).map(String::from);
 
             // Clear current tool (back to thinking)
             if !session_id.is_empty() {
                 use crate::state::app_state::AgentSessionState;
                 let mut sessions = srv.state.agent_sessions.write();
                 if let Some(session) = sessions.get_mut(&session_id) {
-                    session.tool_name = None;
-                    session.tool_detail = None;
-                    // AskUserQuestion completing means the human answered → no open question.
-                    if tool_name == "AskUserQuestion" {
-                        session.pending_question = None;
-                        session.pending_question_at = None;
-                        // The WaitingPermission coinciding with an open ask (Claude fires a
-                        // permission_prompt Notification while AskUserQuestion waits) is spent
-                        // the moment the ask completes. Without this reset it lingers until the
-                        // NEXT hook event (seconds of post-answer thinking), and maiLink
-                        // synthesizes a ghost "permission" card from the stale state. Scoped to
-                        // AskUserQuestion so a real gate held for another (parallel) tool is
-                        // never masked.
-                        if matches!(session.state, AgentSessionState::WaitingPermission) {
-                            session.state = AgentSessionState::Active;
+                    if let Some(agent_id) = &agent_id {
+                        // Subagent tool call finished — never touch the parent session's own state.
+                        if let Some(sub) = session.subagents.get_mut(agent_id) {
+                            sub.tool_name = None;
+                            sub.tool_detail = None;
+                            sub.updated_at_ms = now_ms();
+                        }
+                    } else {
+                        session.tool_name = None;
+                        session.tool_detail = None;
+                        // AskUserQuestion completing means the human answered → no open question.
+                        if tool_name == "AskUserQuestion" {
+                            session.pending_question = None;
+                            session.pending_question_at = None;
+                            // The WaitingPermission coinciding with an open ask (Claude fires a
+                            // permission_prompt Notification while AskUserQuestion waits) is spent
+                            // the moment the ask completes. Without this reset it lingers until the
+                            // NEXT hook event (seconds of post-answer thinking), and maiLink
+                            // synthesizes a ghost "permission" card from the stale state. Scoped to
+                            // AskUserQuestion so a real gate held for another (parallel) tool is
+                            // never masked.
+                            if matches!(session.state, AgentSessionState::WaitingPermission) {
+                                session.state = AgentSessionState::Active;
+                            }
                         }
                     }
                 }
             }
 
-            log::debug!("Claude hook: PostToolUse tool='{}' session={} (tab {:?})",
-                tool_name, &session_id[..session_id.len().min(8)], tab_id);
+            log::debug!("Claude hook: PostToolUse tool='{}' session={} (tab {:?}) agent={:?}",
+                tool_name, &session_id[..session_id.len().min(8)], tab_id, agent_id);
             emit_dual(&srv.app_handle, "agent-hook-post-tool-use", "claude-hook-post-tool-use", serde_json::json!({
                 "runtime": runtime_key,
                 "session_id": session_id,
                 "tab_id": tab_id,
                 "tool_name": tool_name,
                 "tool_input": event.get("tool_input"),
+                "agent_id": agent_id,
             }));
         }
 
@@ -2834,6 +2896,84 @@ async fn hooks_handler(
                 "session_id": session_id,
                 "tab_id": tab_id,
                 "trigger": trigger,
+            }));
+        }
+
+        HookPhase::SubagentStart => {
+            let tab_id = {
+                let sessions = srv.state.agent_sessions.read();
+                sessions.get(&session_id).map(|s| s.tab_id.clone())
+            }
+            .or(tab_id_from_param);
+
+            let agent_id = event.get("agent_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let agent_type = event
+                .get("agent_type")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .unwrap_or("subagent")
+                .to_string();
+
+            if !session_id.is_empty() && !agent_id.is_empty() {
+                use crate::state::app_state::{SubagentInfo, SubagentState};
+                let now = now_ms();
+                let mut sessions = srv.state.agent_sessions.write();
+                if let Some(session) = sessions.get_mut(&session_id) {
+                    session.insert_subagent(
+                        agent_id.clone(),
+                        SubagentInfo {
+                            agent_type: agent_type.clone(),
+                            state: SubagentState::Running,
+                            tool_name: None,
+                            tool_detail: None,
+                            log: Vec::new(),
+                            started_at_ms: now,
+                            updated_at_ms: now,
+                        },
+                    );
+                }
+            }
+
+            log::debug!("Claude hook: SubagentStart type='{}' session={} (tab {:?}) agent={}",
+                agent_type, &session_id[..session_id.len().min(8)], tab_id, agent_id);
+            emit_dual(&srv.app_handle, "agent-hook-subagent-start", "claude-hook-subagent-start", serde_json::json!({
+                "runtime": runtime_key,
+                "session_id": session_id,
+                "tab_id": tab_id,
+                "agent_id": agent_id,
+                "agent_type": agent_type,
+            }));
+        }
+
+        HookPhase::SubagentStop => {
+            let tab_id = {
+                let sessions = srv.state.agent_sessions.read();
+                sessions.get(&session_id).map(|s| s.tab_id.clone())
+            }
+            .or(tab_id_from_param);
+
+            let agent_id = event.get("agent_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+            if !session_id.is_empty() && !agent_id.is_empty() {
+                use crate::state::app_state::SubagentState;
+                let mut sessions = srv.state.agent_sessions.write();
+                if let Some(session) = sessions.get_mut(&session_id) {
+                    if let Some(sub) = session.subagents.get_mut(&agent_id) {
+                        sub.state = SubagentState::Done;
+                        sub.tool_name = None;
+                        sub.tool_detail = None;
+                        sub.updated_at_ms = now_ms();
+                    }
+                }
+            }
+
+            log::debug!("Claude hook: SubagentStop session={} (tab {:?}) agent={}",
+                &session_id[..session_id.len().min(8)], tab_id, agent_id);
+            emit_dual(&srv.app_handle, "agent-hook-subagent-stop", "claude-hook-subagent-stop", serde_json::json!({
+                "runtime": runtime_key,
+                "session_id": session_id,
+                "tab_id": tab_id,
+                "agent_id": agent_id,
             }));
         }
 
@@ -2931,6 +3071,8 @@ mod tests {
         assert_eq!(norm("PreToolUse", nil.clone()), HookPhase::ToolPre);
         assert_eq!(norm("PostToolUse", nil.clone()), HookPhase::ToolPost);
         assert_eq!(norm("PreCompact", nil.clone()), HookPhase::Compact);
+        assert_eq!(norm("SubagentStart", nil.clone()), HookPhase::SubagentStart);
+        assert_eq!(norm("SubagentStop", nil.clone()), HookPhase::SubagentStop);
         // An unknown event falls through to Other (logged, no state change).
         assert_eq!(norm("Frobnicate", nil), HookPhase::Other);
     }

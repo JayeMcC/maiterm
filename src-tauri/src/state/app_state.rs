@@ -118,6 +118,34 @@ pub struct AgentSessionInfo {
     /// Used to recover affinity after SSE reconnects: if a session's
     /// connection_id is no longer in connection_tabs, it's orphaned.
     pub connection_id: Option<String>,
+    /// Subagents (Task-tool fan-out) spawned by this session, keyed by Claude's
+    /// `agent_id` — the correlation id present on SubagentStart/SubagentStop and on
+    /// PreToolUse/PostToolUse payloads fired *inside* a subagent (see
+    /// `src-tauri/src/claude_code/CLAUDE.md` § Claude Code Hooks Integration). Lets
+    /// the maiTerm UI show live fan-out progress the parent session's own
+    /// `tool_name`/`tool_detail` can't represent (those track only ONE in-flight
+    /// tool at a time — a subagent's tool calls would otherwise clobber them).
+    pub subagents: HashMap<String, SubagentInfo>,
+}
+
+impl AgentSessionInfo {
+    /// Insert a fresh subagent (SubagentStart), evicting the oldest non-`Running`
+    /// entry first if already at `MAX_TRACKED_SUBAGENTS` — bounds a long session's
+    /// map without ever dropping a still-live subagent.
+    pub fn insert_subagent(&mut self, agent_id: String, info: SubagentInfo) {
+        if self.subagents.len() >= MAX_TRACKED_SUBAGENTS && !self.subagents.contains_key(&agent_id) {
+            let oldest_finished = self
+                .subagents
+                .iter()
+                .filter(|(_, s)| s.state != SubagentState::Running)
+                .min_by_key(|(_, s)| s.started_at_ms)
+                .map(|(id, _)| id.clone());
+            if let Some(id) = oldest_finished {
+                self.subagents.remove(&id);
+            }
+        }
+        self.subagents.insert(agent_id, info);
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, serde::Serialize)]
@@ -128,6 +156,63 @@ pub enum AgentSessionState {
     WaitingPermission,
     Stopped,
 }
+
+/// One completed (or in-flight-when-logged) tool call inside a subagent — the
+/// "small log of commands / tool calls" the subagent panel expands to show.
+/// Logged at PreToolUse time (invocation), not PostToolUse, so a subagent that
+/// never returns still leaves a visible trail of what it was doing.
+#[derive(Clone, serde::Serialize)]
+pub struct SubagentLogEntry {
+    pub tool_name: String,
+    pub detail: Option<String>,
+    pub at_ms: i64,
+}
+
+/// Lifecycle of a tracked subagent. Claude Code's hooks give no explicit failure
+/// signal (SubagentStop fires the same way whether the subagent succeeded or
+/// errored) — `Failed` means "the parent session ended while this subagent was
+/// still `Running`" (interrupted, never got its Stop). Part of the shared schema
+/// with the frontend's independent `subagents.svelte.ts` map, which is what
+/// actually infers `Failed` on `agent-hook-session-end` — this server-side map
+/// entry is discarded along with the whole session at that point (see
+/// `HookPhase::SessionEnd`), so there is nothing to gain mutating it here first.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SubagentState {
+    Running,
+    Done,
+    #[allow(dead_code)] // never constructed server-side; see doc comment above
+    Failed,
+}
+
+/// A subagent (Task-tool spawn) tracked within a parent agent session. See
+/// `AgentSessionInfo::subagents` for why this exists as a separate per-agent_id
+/// map rather than reusing the session's own tool_name/tool_detail fields.
+#[derive(Clone, serde::Serialize)]
+pub struct SubagentInfo {
+    /// Claude's agent type/name, e.g. "general-purpose", "Explore", or a custom
+    /// subagent's frontmatter `name` (plugin-scoped subagents use `plugin:name`).
+    pub agent_type: String,
+    pub state: SubagentState,
+    /// Tool currently in flight inside the subagent (PreToolUse sets, PostToolUse clears).
+    pub tool_name: Option<String>,
+    pub tool_detail: Option<String>,
+    /// Bounded trail of tool invocations, oldest first, capped at SUBAGENT_LOG_CAP.
+    pub log: Vec<SubagentLogEntry>,
+    pub started_at_ms: i64,
+    pub updated_at_ms: i64,
+}
+
+/// Per-subagent tool-call log cap. Bounds memory for a long-running subagent that
+/// churns through many tool calls (e.g. a recon agent grepping repeatedly).
+pub const SUBAGENT_LOG_CAP: usize = 50;
+
+/// Cap on how many subagents (across all states) one session tracks at once.
+/// A very long conversation can fan out dozens of subagents over its lifetime;
+/// once over the cap, the oldest non-`Running` entry is evicted on next insert
+/// so the live/most-recent picture never gets crowded out. `Running` entries are
+/// never evicted.
+pub const MAX_TRACKED_SUBAGENTS: usize = 40;
 
 pub struct AppState {
     pub scrollback_db: ScrollbackDb,
@@ -255,5 +340,87 @@ impl AppState {
         let registry = self.terminal_registry.read();
         let handle = registry.get(pty_id)?;
         Some((handle.term.columns() as u16, handle.term.screen_lines() as u16))
+    }
+}
+
+#[cfg(test)]
+mod subagent_tests {
+    use super::*;
+
+    fn mk_session() -> AgentSessionInfo {
+        AgentSessionInfo {
+            runtime: crate::state::AgentRuntime::Claude,
+            tab_id: "tab-1".to_string(),
+            cwd: None,
+            state: AgentSessionState::Active,
+            tool_name: None,
+            tool_detail: None,
+            pending_question: None,
+            pending_question_at: None,
+            model: None,
+            transcript_path: None,
+            connection_id: None,
+            subagents: HashMap::new(),
+        }
+    }
+
+    fn mk_subagent(state: SubagentState, started_at_ms: i64) -> SubagentInfo {
+        SubagentInfo {
+            agent_type: "general-purpose".to_string(),
+            state,
+            tool_name: None,
+            tool_detail: None,
+            log: Vec::new(),
+            started_at_ms,
+            updated_at_ms: started_at_ms,
+        }
+    }
+
+    #[test]
+    fn insert_subagent_never_evicts_a_running_entry() {
+        let mut session = mk_session();
+        for i in 0..MAX_TRACKED_SUBAGENTS {
+            session.insert_subagent(format!("running-{i}"), mk_subagent(SubagentState::Running, i as i64));
+        }
+        assert_eq!(session.subagents.len(), MAX_TRACKED_SUBAGENTS);
+        // One more Running insert has nothing evictable — the map grows past the cap
+        // rather than dropping a live subagent.
+        session.insert_subagent("running-extra".to_string(), mk_subagent(SubagentState::Running, 999));
+        assert_eq!(session.subagents.len(), MAX_TRACKED_SUBAGENTS + 1);
+        assert!(session.subagents.values().all(|s| s.state == SubagentState::Running));
+    }
+
+    #[test]
+    fn insert_subagent_evicts_the_oldest_finished_entry_at_capacity() {
+        let mut session = mk_session();
+        // One Done subagent, started earliest — the eviction candidate.
+        session.insert_subagent("oldest-done".to_string(), mk_subagent(SubagentState::Done, 0));
+        // Fill the rest with newer Running subagents up to the cap.
+        for i in 1..MAX_TRACKED_SUBAGENTS {
+            session.insert_subagent(format!("running-{i}"), mk_subagent(SubagentState::Running, i as i64));
+        }
+        assert_eq!(session.subagents.len(), MAX_TRACKED_SUBAGENTS);
+        assert!(session.subagents.contains_key("oldest-done"));
+
+        // Inserting one more at capacity evicts the oldest non-Running entry, never a
+        // Running one.
+        session.insert_subagent("new-arrival".to_string(), mk_subagent(SubagentState::Running, 1000));
+        assert_eq!(session.subagents.len(), MAX_TRACKED_SUBAGENTS);
+        assert!(!session.subagents.contains_key("oldest-done"), "the oldest finished entry should have been evicted");
+        assert!(session.subagents.contains_key("new-arrival"));
+    }
+
+    #[test]
+    fn insert_subagent_replacing_an_existing_id_never_triggers_eviction() {
+        let mut session = mk_session();
+        for i in 0..MAX_TRACKED_SUBAGENTS {
+            session.insert_subagent(format!("id-{i}"), mk_subagent(SubagentState::Done, i as i64));
+        }
+        assert_eq!(session.subagents.len(), MAX_TRACKED_SUBAGENTS);
+        // Re-inserting an ALREADY-TRACKED id (e.g. a fresh SubagentStart reusing a
+        // stale key) is a replace, not a net-new entry — must not evict anything else.
+        session.insert_subagent("id-0".to_string(), mk_subagent(SubagentState::Running, 5000));
+        assert_eq!(session.subagents.len(), MAX_TRACKED_SUBAGENTS);
+        assert_eq!(session.subagents.get("id-0").unwrap().state, SubagentState::Running);
     }
 }
