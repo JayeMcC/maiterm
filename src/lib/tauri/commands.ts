@@ -704,6 +704,12 @@ export async function gitShowFile(filePath: string, gitRef: string): Promise<str
   return invoke('git_show_file', { filePath, gitRef });
 }
 
+/** Current git branch for a directory, or null when it isn't a repo / HEAD is detached.
+ *  Used by the session auto-namer; never throws for the not-a-repo case. */
+export async function gitCurrentBranch(cwd: string): Promise<string | null> {
+  return invoke('git_current_branch', { cwd });
+}
+
 export async function readFileBase64(path: string): Promise<ReadFileBase64Result> {
   return invoke('read_file_base64', { path });
 }

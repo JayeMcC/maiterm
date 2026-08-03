@@ -713,6 +713,7 @@ pub fn run() {
             commands::editor::unwatch_remote_file,
             commands::editor::get_remote_file_mtime,
             commands::editor::git_show_file,
+            commands::editor::git_current_branch,
             commands::editor::is_directory,
             commands::editor::ssh_is_directory,
             commands::rail::find_markers_upward,
