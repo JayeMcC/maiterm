@@ -2,7 +2,8 @@
   import { tick, onDestroy, untrack } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import type { Tab, Pane } from '$lib/tauri/types';
-  import { detachTmuxClient, getTmuxState, writeTerminal } from '$lib/tauri/commands';
+  import { detachTmuxClient, getTmuxState, writeTerminal, gitCurrentBranch } from '$lib/tauri/commands';
+  import { autoSessionName, SEPARATOR } from '$lib/agents/sessionName';
   import { toastStore } from '$lib/stores/toasts.svelte';
   import { runReportAndApply } from '$lib/utils/reportChanges';
   import { workspacesStore } from '$lib/stores/workspaces.svelte';
@@ -304,6 +305,44 @@
     editingOriginalName = editingName;
     await tick();
     editInput?.select();
+    // For a not-yet-custom-named tab, offer the structured auto-name
+    // (<stack>·<location>·<ticket>·<work-part>) as an editable default. Async and
+    // non-blocking so a slow git call never delays opening the editor.
+    void suggestAutoName(tab);
+  }
+
+  /**
+   * Pre-fill the rename box with the session auto-name derived from the tab's cwd
+   * (stack + location) and git branch (ticket + a starter work-part), then select
+   * the work-part so the user can immediately tweak the one field the auto-namer
+   * can't know. Applies only while the box is still showing the untouched default
+   * — if the user has started typing or moved on, it leaves their input alone.
+   */
+  async function suggestAutoName(tab: Tab) {
+    if (tab.custom_name) return; // respect an existing user name
+    const cwd = terminalsStore.getOsc(tab.id)?.cwd ?? tab.last_cwd ?? null;
+    if (!cwd) return; // no location context → keep the OSC-title default
+    let branch: string | null = null;
+    try {
+      branch = await gitCurrentBranch(cwd);
+    } catch {
+      branch = null; // not a repo / command unavailable → cwd-only name
+    }
+    // Bail if the editor closed, switched tabs, or the user has begun editing.
+    if (editingId !== tab.id || editingName !== editingOriginalName) return;
+    editingName = autoSessionName({ cwd, branch });
+    // Leave editingOriginalName as the pre-suggestion value so accepting the
+    // suggestion unchanged still commits it (finishEditing only skips a no-op).
+    await tick();
+    selectWorkPart();
+  }
+
+  /** Select the trailing work-part segment of the auto-name for quick editing. */
+  function selectWorkPart() {
+    if (!editInput) return;
+    const idx = editingName.lastIndexOf(SEPARATOR);
+    if (idx >= 0) editInput.setSelectionRange(idx + SEPARATOR.length, editingName.length);
+    else editInput.select();
   }
 
   async function finishEditing() {

@@ -1149,6 +1149,29 @@ pub async fn git_show_file(file_path: String, git_ref: String) -> Result<String,
         .map_err(|_| "File content is not valid UTF-8".to_string())
 }
 
+/// Current git branch for a directory, used by the session auto-namer to derive
+/// the ticket + a starter work-part. Returns `None` (not an error) when `cwd`
+/// isn't a git repo or HEAD is detached — the caller treats "no branch" as a
+/// soft, expected outcome and falls back to placeholders.
+#[command]
+pub async fn git_current_branch(cwd: String) -> Result<Option<String>, String> {
+    let cwd = expand_tilde(&cwd);
+    let output = std::process::Command::new("git")
+        .args(["symbolic-ref", "--short", "-q", "HEAD"])
+        .current_dir(&cwd)
+        .output()
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+    if !output.status.success() {
+        // Not a repo, or detached HEAD (symbolic-ref -q exits non-zero) — no branch.
+        return Ok(None);
+    }
+    let branch = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if branch.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(branch))
+}
+
 #[command]
 pub async fn is_directory(path: String) -> Result<bool, String> {
     let path = expand_tilde(&path);
