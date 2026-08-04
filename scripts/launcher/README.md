@@ -58,15 +58,15 @@ when the repo ships `require-devcontainer.sh`.
 
 **SC-007 mapping — every hotbar datum has an emitting field:**
 
-| Hotbar section datum | Source |
-|---|---|
-| task list entries, grouping | `ListReport.tasks[].label` / `.presentation.group` |
-| per-task host/container badge | `ListReport.tasks[].executionContext` |
-| fire a task | `--fire <label> --dir <cwd>` |
-| container up/down/unavailable | `ContainerStatusReport.state` |
+| Hotbar section datum                | Source                                                                                              |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------- |
+| task list entries, grouping         | `ListReport.tasks[].label` / `.presentation.group`                                                  |
+| per-task host/container badge       | `ListReport.tasks[].executionContext`                                                               |
+| fire a task                         | `--fire <label> --dir <cwd>`                                                                        |
+| container up/down/unavailable       | `ContainerStatusReport.state`                                                                       |
 | published port rows + listening dot | `ports[].service/.hostPort/.listening` (protocol-aware — docker-proxy false-positives designed out) |
-| "Forward" offers | `listeners[].containerPort/.forwardable` |
-| active forwards + stop buttons | `forwards[]` · `--forward`/`--unforward` |
+| "Forward" offers                    | `listeners[].containerPort/.forwardable`                                                            |
+| active forwards + stop buttons      | `forwards[]` · `--forward`/`--unforward`                                                            |
 
 ## Tests
 
@@ -76,6 +76,7 @@ npm run typecheck # tsc --noEmit
 ```
 
 Test scope:
+
 - `clone-resolver` unit tests cover arg/env/fallback priority and tasks.json validation.
 - `task-menu` render tests use `ink-testing-library` to drive arrow keys / Enter / `q` and assert the visible frame.
 

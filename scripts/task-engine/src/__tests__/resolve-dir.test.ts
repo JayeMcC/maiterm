@@ -58,14 +58,10 @@ describe('resolveDir', () => {
 
   it('probes .devcontainer/devcontainer.json independently of tasks.json', () => {
     const withBoth = resolveDir(join(root, 'repo/web/app'));
-    expect(withBoth.devcontainerConfigPath).toBe(
-      join(root, 'repo/.devcontainer/devcontainer.json'),
-    );
+    expect(withBoth.devcontainerConfigPath).toBe(join(root, 'repo/.devcontainer/devcontainer.json'));
     const devOnly = resolveDir(join(root, 'devonly'));
     expect(devOnly.repoRoot).toBeNull();
-    expect(devOnly.devcontainerConfigPath).toBe(
-      join(root, 'devonly/.devcontainer/devcontainer.json'),
-    );
+    expect(devOnly.devcontainerConfigPath).toBe(join(root, 'devonly/.devcontainer/devcontainer.json'));
   });
 
   it('throws on a non-existent directory', () => {

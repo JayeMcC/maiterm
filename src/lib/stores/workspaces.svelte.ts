@@ -372,7 +372,7 @@ function createWorkspacesStore() {
       // buildRestoreList skips suspended workspaces wholesale, so that window comes
       // back empty. Un-suspend it here (regardless of mode) and fold its live-at-
       // suspend tabs into the wake set so restore respawns them.
-      const activeWs = workspaces.find(w => w.id === activeWorkspaceId);
+      const activeWs = workspaces.find((w) => w.id === activeWorkspaceId);
       if (activeWs?.suspended) {
         activeWs.suspended = false;
         const wakeIds = await commands.resumeWorkspace(activeWs.id).catch(() => [] as string[]);
@@ -626,10 +626,10 @@ function createWorkspacesStore() {
         // stale pty_id and would read as "live" on the next restart (the old
         // high-watermark leak).
         const now = new Date().toISOString();
-        const marks = tornDown.map(tabId => ({ tabId, suspendedAt: now }));
+        const marks = tornDown.map((tabId) => ({ tabId, suspendedAt: now }));
         this.markTabsSuspendedLocal(marks);
-        commands.markTabsSuspended(marks.map(m => ({ tab_id: m.tabId, suspended_at: m.suspendedAt }))).catch(() => {});
-        import('$lib/stores/navHistory.svelte').then(m => {
+        commands.markTabsSuspended(marks.map((m) => ({ tab_id: m.tabId, suspended_at: m.suspendedAt }))).catch(() => {});
+        import('$lib/stores/navHistory.svelte').then((m) => {
           for (const tabId of tornDown) {
             m.navHistoryStore.removeTab(tabId);
           }
@@ -924,11 +924,11 @@ function createWorkspacesStore() {
       // the whole workspace for a "most common" setup; inheriting from the
       // immediate sibling matches the user's mental model and avoids pinning
       // every new tab to whichever directory happens to be the majority.
-      const ws = workspaces.find(w => w.id === workspaceId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
       if (ws) {
         const activePane = ws.panes.find((p) => p.id === paneId);
         const activeTabId = activePane?.active_tab_id;
-        const activeTab = activePane?.tabs.find(t => t.id === activeTabId);
+        const activeTab = activePane?.tabs.find((t) => t.id === activeTabId);
 
         let best: { cwd: string | null; sshCommand: string | null; remoteCwd: string | null } | null = null;
 
@@ -974,9 +974,7 @@ function createWorkspacesStore() {
             best = {
               cwd: activeTab.last_cwd ?? liveCwd ?? null,
               sshCommand: ssh,
-              remoteCwd: ssh
-                ? (oscState?.promptCwd ?? activeTab.auto_resume_remote_cwd ?? activeTab.restore_remote_cwd ?? null)
-                : null,
+              remoteCwd: ssh ? (oscState?.promptCwd ?? activeTab.auto_resume_remote_cwd ?? activeTab.restore_remote_cwd ?? null) : null,
             };
           }
         }
@@ -1010,7 +1008,10 @@ function createWorkspacesStore() {
           // Most common wins; ties resolve to the first-seen (insertion order).
           let bestCount = 0;
           for (const entry of setupCounts.values()) {
-            if (entry.count > bestCount) { best = entry; bestCount = entry.count; }
+            if (entry.count > bestCount) {
+              best = entry;
+              bestCount = entry.count;
+            }
           }
         }
 
@@ -1056,12 +1057,7 @@ function createWorkspacesStore() {
      * terminal, not as a tab over it. (Terminal file-link ⌘-click; the caller
      * reuses an existing editor pane instead when one is already open.)
      */
-    async splitPaneWithEditor(
-      workspaceId: string,
-      sourcePaneId: string,
-      fileInfo: EditorFileInfo,
-      direction: SplitDirection = 'horizontal',
-    ) {
+    async splitPaneWithEditor(workspaceId: string, sourcePaneId: string, fileInfo: EditorFileInfo, direction: SplitDirection = 'horizontal') {
       const newPane = await commands.splitPane(workspaceId, sourcePaneId, direction, null, fileInfo);
       // Reload window data so the new split_root + pane are reflected.
       const data = await commands.getWindowData();
@@ -1248,7 +1244,7 @@ function createWorkspacesStore() {
      * only updates the in-memory reactive copy.)
      */
     markTabsSuspendedLocal(marks: { tabId: string; suspendedAt: string }[]) {
-      const byId = new Map(marks.map(m => [m.tabId, m.suspendedAt]));
+      const byId = new Map(marks.map((m) => [m.tabId, m.suspendedAt]));
       for (const ws of workspaces) {
         for (const pane of ws.panes) {
           for (const tab of pane.tabs) {
@@ -1387,7 +1383,7 @@ function createWorkspacesStore() {
     _locateTab(tabId: string): { workspaceId: string; paneId: string; tab: Tab } | null {
       for (const ws of workspaces) {
         for (const pane of ws.panes) {
-          const tab = pane.tabs.find(t => t.id === tabId);
+          const tab = pane.tabs.find((t) => t.id === tabId);
           if (tab) return { workspaceId: ws.id, paneId: pane.id, tab };
         }
       }
@@ -1401,7 +1397,7 @@ function createWorkspacesStore() {
       const loc = this._locateTab(tabId);
       if (!loc) return;
       const osc = terminalsStore.getOsc(tabId);
-      const name = loc.tab.custom_name ? loc.tab.name : (osc?.title || loc.tab.name);
+      const name = loc.tab.custom_name ? loc.tab.name : osc?.title || loc.tab.name;
       await this.archiveTab(loc.workspaceId, loc.paneId, tabId, name);
     },
 
@@ -1449,9 +1445,9 @@ function createWorkspacesStore() {
 
     /** maiLink: toggle whether this tab is exposed to the mobile companion as a chat. */
     async setTabMailinkNative(workspaceId: string, paneId: string, tabId: string, mailinkNative: boolean) {
-      const ws = workspaces.find(w => w.id === workspaceId);
-      const pane = ws?.panes.find(p => p.id === paneId);
-      const tab = pane?.tabs.find(t => t.id === tabId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      const pane = ws?.panes.find((p) => p.id === paneId);
+      const tab = pane?.tabs.find((t) => t.id === tabId);
       if (!tab || (tab.mailink_native ?? false) === mailinkNative) return;
       tab.mailink_native = mailinkNative;
       await commands.setTabMailinkNative(workspaceId, paneId, tabId, mailinkNative);
@@ -1460,9 +1456,9 @@ function createWorkspacesStore() {
     /** maiLink: hold a tab back from (or restore it to) maiLink while the "make all tabs
      *  available" preference is on. No-op in designate-only mode (uses mailink_native). */
     async setTabMailinkExcluded(workspaceId: string, paneId: string, tabId: string, excluded: boolean) {
-      const ws = workspaces.find(w => w.id === workspaceId);
-      const pane = ws?.panes.find(p => p.id === paneId);
-      const tab = pane?.tabs.find(t => t.id === tabId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      const pane = ws?.panes.find((p) => p.id === paneId);
+      const tab = pane?.tabs.find((t) => t.id === tabId);
       if (!tab || (tab.mailink_excluded ?? false) === excluded) return;
       tab.mailink_excluded = excluded;
       await commands.setTabMailinkExcluded(workspaceId, paneId, tabId, excluded);
@@ -1470,13 +1466,11 @@ function createWorkspacesStore() {
 
     /** Operator kill switch: end a tab's comms thread binding(s). Omit rootId = all. */
     async clearTabCommsBinding(workspaceId: string, paneId: string, tabId: string, rootId?: string) {
-      const ws = workspaces.find(w => w.id === workspaceId);
-      const pane = ws?.panes.find(p => p.id === paneId);
-      const tab = pane?.tabs.find(t => t.id === tabId);
-      if (!tab || !(tab.comms_bindings?.length)) return;
-      tab.comms_bindings = rootId
-        ? tab.comms_bindings.filter(b => b.root_id !== rootId)
-        : [];
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      const pane = ws?.panes.find((p) => p.id === paneId);
+      const tab = pane?.tabs.find((t) => t.id === tabId);
+      if (!tab || !tab.comms_bindings?.length) return;
+      tab.comms_bindings = rootId ? tab.comms_bindings.filter((b) => b.root_id !== rootId) : [];
       await commands.clearTabCommsBinding(workspaceId, paneId, tabId, rootId);
     },
 
@@ -1491,7 +1485,7 @@ function createWorkspacesStore() {
     applyCommsBindings(tabId: string, bindings: CommsBinding[]) {
       for (const ws of workspaces) {
         for (const pane of ws.panes) {
-          const tab = pane.tabs.find(t => t.id === tabId);
+          const tab = pane.tabs.find((t) => t.id === tabId);
           if (tab) {
             tab.comms_bindings = bindings;
             return;
@@ -1502,9 +1496,9 @@ function createWorkspacesStore() {
 
     /** Enable/update (channels) or disable (null) chat monitoring on a tab. */
     async setTabCommsMonitor(workspaceId: string, paneId: string, tabId: string, channels: CommsMonitorChannel[] | null) {
-      const ws = workspaces.find(w => w.id === workspaceId);
-      const pane = ws?.panes.find(p => p.id === paneId);
-      const tab = pane?.tabs.find(t => t.id === tabId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      const pane = ws?.panes.find((p) => p.id === paneId);
+      const tab = pane?.tabs.find((t) => t.id === tabId);
       if (!tab) return;
       tab.comms_monitor = channels ? { channels } : null;
       await commands.setTabCommsMonitor(workspaceId, paneId, tabId, channels);
@@ -1512,7 +1506,7 @@ function createWorkspacesStore() {
 
     /** maiLink: toggle whether ALL agent tabs in a workspace are exposed as chats. */
     async setWorkspaceMailinkNative(workspaceId: string, enabled: boolean) {
-      const ws = workspaces.find(w => w.id === workspaceId);
+      const ws = workspaces.find((w) => w.id === workspaceId);
       if (!ws || (ws.mailink_native ?? false) === enabled) return;
       ws.mailink_native = enabled;
       await commands.setWorkspaceMailinkNative(workspaceId, enabled);
@@ -1583,7 +1577,7 @@ function createWorkspacesStore() {
     applyExternalRename(tabId: string, name: string) {
       for (const ws of workspaces) {
         for (const pane of ws.panes) {
-          const tab = pane.tabs.find(t => t.id === tabId);
+          const tab = pane.tabs.find((t) => t.id === tabId);
           if (tab) {
             tab.name = name;
             tab.custom_name = true;
@@ -2159,23 +2153,16 @@ function createWorkspacesStore() {
       }
 
       const runtime = sourceTab.runtime ?? 'claude';
-      await this.setTabAutoResumeContext(
-        workspaceId, paneId, newTab.id,
-        ctx?.sshCommand ? null : (ctx?.cwd ?? null),
-        ctx?.sshCommand ?? null,
-        ctx?.remoteCwd ?? null,
-        launchCommand(runtime),
-        false,
-      );
+      await this.setTabAutoResumeContext(workspaceId, paneId, newTab.id, ctx?.sshCommand ? null : (ctx?.cwd ?? null), ctx?.sshCommand ?? null, ctx?.remoteCwd ?? null, launchCommand(runtime), false);
       // Claim the runtime now rather than waiting for the new agent's initSession to write it.
       // maiLink designates tabs by `runtime`, so without this the id we hand the phone isn't
       // addressable yet — and if the launch never lands it never becomes addressable at all.
       await commands.setTabRuntime(workspaceId, paneId, newTab.id, runtime);
 
       const data = await commands.getWindowData();
-      const updatedWs = data.workspaces.find(w => w.id === workspaceId);
+      const updatedWs = data.workspaces.find((w) => w.id === workspaceId);
       if (updatedWs) {
-        const idx = workspaces.findIndex(w => w.id === workspaceId);
+        const idx = workspaces.findIndex((w) => w.id === workspaceId);
         if (idx >= 0) workspaces[idx] = updatedWs;
       }
       // A tab only spawns its PTY when its TerminalPane mounts, and that only happens for a

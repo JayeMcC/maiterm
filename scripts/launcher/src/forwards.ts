@@ -4,27 +4,14 @@
  * container's network namespace and publishes one port; Docker owns its
  * lifetime, so forwards survive the caller and terminal restarts.
  */
-import {
-  buildStatusReport,
-  cloneBasename,
-  devcontainerRoot,
-  findDevContainerId,
-  hostPortBusy,
-  listForwards,
-  realRunner,
-  type ExecRunner,
-} from './container-status.ts';
+import { buildStatusReport, cloneBasename, devcontainerRoot, findDevContainerId, hostPortBusy, listForwards, realRunner, type ExecRunner } from './container-status.ts';
 import { messageOf, type ModeResult } from './list-mode.ts';
 
 export interface ForwardDeps {
   runner?: ExecRunner;
 }
 
-export async function runForwardMode(
-  dir: string,
-  port: number,
-  deps: ForwardDeps = {},
-): Promise<ModeResult> {
+export async function runForwardMode(dir: string, port: number, deps: ForwardDeps = {}): Promise<ModeResult> {
   const runner = deps.runner ?? realRunner;
 
   const status = await buildStatusReport(dir, { runner, probeTcp: async () => false });
@@ -40,7 +27,7 @@ export async function runForwardMode(
     };
   }
 
-  const published = report.ports.find(p => p.hostPort === port || p.containerPort === port);
+  const published = report.ports.find((p) => p.hostPort === port || p.containerPort === port);
   if (published) {
     return {
       exitCode: 1,
@@ -97,16 +84,8 @@ export async function runForwardMode(
   };
 }
 
-async function devNetworkTarget(
-  runner: ExecRunner,
-  devId: string,
-): Promise<{ network: string; ip: string } | null> {
-  const r = await runner.run('docker', [
-    'inspect',
-    devId,
-    '--format',
-    '{{json .NetworkSettings.Networks}}',
-  ]);
+async function devNetworkTarget(runner: ExecRunner, devId: string): Promise<{ network: string; ip: string } | null> {
+  const r = await runner.run('docker', ['inspect', devId, '--format', '{{json .NetworkSettings.Networks}}']);
   if (r.exitCode !== 0) return null;
   try {
     const nets = JSON.parse(r.stdout.trim()) as Record<string, { IPAddress?: string }>;
@@ -119,11 +98,7 @@ async function devNetworkTarget(
   return null;
 }
 
-export async function runUnforwardMode(
-  dir: string,
-  port: number,
-  deps: ForwardDeps = {},
-): Promise<ModeResult> {
+export async function runUnforwardMode(dir: string, port: number, deps: ForwardDeps = {}): Promise<ModeResult> {
   const runner = deps.runner ?? realRunner;
   let root: string | null;
   try {
@@ -135,7 +110,7 @@ export async function runUnforwardMode(
     return { exitCode: 3, stdout: '', stderr: `No .devcontainer/devcontainer.json found walking up from ${dir}\n` };
   }
   const forwards = await listForwards(runner, root);
-  const hit = forwards.find(f => f.port === port);
+  const hit = forwards.find((f) => f.port === port);
   if (!hit) {
     return {
       exitCode: 0,

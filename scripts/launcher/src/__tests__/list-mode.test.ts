@@ -39,9 +39,7 @@ describe('runListMode', () => {
     const report = JSON.parse(r.stdout);
     expect(report.repoRoot).toBe(repo);
     expect(report.tasksJson).toBe(join(repo, '.vscode/tasks.json'));
-    const byLabel = Object.fromEntries(
-      report.tasks.map((t: { label: string }) => [t.label, t]),
-    );
+    const byLabel = Object.fromEntries(report.tasks.map((t: { label: string }) => [t.label, t]));
     expect(byLabel['API'].executionContext).toBe('container');
     expect(byLabel['Open browser'].executionContext).toBe('host');
     expect(byLabel['Require devcontainer'].executionContext).toBe('host');

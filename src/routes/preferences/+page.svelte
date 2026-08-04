@@ -102,7 +102,7 @@
   }
 
   const sectionIds = ['appearance', 'terminal', 'ui', 'tabs', 'workspace', 'notes', 'notifications', 'triggers', 'claude_code', 'integrations', 'backup', 'updates', 'permissions'] as const;
-  type SectionId = typeof sectionIds[number];
+  type SectionId = (typeof sectionIds)[number];
   const saved = localStorage.getItem('prefs-section');
   let activeSection = $state<SectionId>(saved && sectionIds.includes(saved as SectionId) ? (saved as SectionId) : 'appearance');
   $effect(() => {
@@ -168,10 +168,7 @@
     commsTestStatus = '';
     commsTestOk = null;
     try {
-      const result = await commsTestConnection(
-        preferencesStore.commsServerUrl,
-        preferencesStore.commsBotToken
-      );
+      const result = await commsTestConnection(preferencesStore.commsServerUrl, preferencesStore.commsBotToken);
       commsTestOk = true;
       commsTestStatus = `Connected — bot account @${result.bot_username}`;
     } catch (e) {
@@ -271,7 +268,11 @@
 
   function fmtDeviceTime(ms: number): string {
     if (!ms) return '—';
-    try { return new Date(ms).toLocaleString(); } catch { return '—'; }
+    try {
+      return new Date(ms).toLocaleString();
+    } catch {
+      return '—';
+    }
   }
 
   const sections = [
@@ -1801,8 +1802,8 @@
               <div>
                 <label for="claude-code-voice-status">Speak Status Aloud (macOS)</label>
                 <p class="setting-hint">
-                  Narrates each turn's status via <code>say</code> — a spoken summary on Stop, a spoken alert when Claude needs your input. Off by default. macOS only; harmless no-op elsewhere.
-                  Applies to newly opened terminal tabs (reopen an existing tab to pick it up).
+                  Narrates each turn's status via <code>say</code> — a spoken summary on Stop, a spoken alert when Claude needs your input. Off by default. macOS only; harmless no-op elsewhere. Applies
+                  to newly opened terminal tabs (reopen an existing tab to pick it up).
                 </p>
               </div>
               <button
@@ -1965,16 +1966,17 @@
 
         <h3 class="section-heading" style="margin-top: 20px;">Mesh Workspace</h3>
         <p class="section-desc">
-          Loop control for Mesh Workspaces, where every agent talks to every other over
-          topic threads. All three limits default to <strong>0 = off</strong>, so a mesh
-          flows freely. Turn one on only if you want maiTerm to pause an unwatched
-          ping-pong: a topic pauses at the soft cap (resume or complete it from the cockpit,
-          ⌘⇧M), while the hard ceiling and time limit are absolute backstops.
+          Loop control for Mesh Workspaces, where every agent talks to every other over topic threads. All three limits default to <strong>0 = off</strong>, so a mesh flows freely. Turn one on only if
+          you want maiTerm to pause an unwatched ping-pong: a topic pauses at the soft cap (resume or complete it from the cockpit, ⌘⇧M), while the hard ceiling and time limit are absolute backstops.
         </p>
         <div class="setting">
           <div>
             <label for="mesh-soft-cap">Soft turn cap (per topic)</label>
-            <p class="setting-hint">{preferencesStore.meshSoftCap === 0 ? 'Off — topics never pause on turn count.' : `Pause a topic after ${preferencesStore.meshSoftCap} turns; resume adds another ${preferencesStore.meshSoftCap}.`}</p>
+            <p class="setting-hint">
+              {preferencesStore.meshSoftCap === 0
+                ? 'Off — topics never pause on turn count.'
+                : `Pause a topic after ${preferencesStore.meshSoftCap} turns; resume adds another ${preferencesStore.meshSoftCap}.`}
+            </p>
           </div>
           <div class="number-input-wrapper">
             <button class="number-btn" onclick={() => preferencesStore.setMeshSoftCap(preferencesStore.meshSoftCap - 1)}>−</button>
@@ -1993,7 +1995,9 @@
         <div class="setting">
           <div>
             <label for="mesh-hard-cap">Hard turn ceiling (per topic)</label>
-            <p class="setting-hint">{preferencesStore.meshHardCap === 0 ? 'Off — no absolute turn ceiling.' : `Hard stop at ${preferencesStore.meshHardCap} turns; a resume can't lift it (complete the topic).`}</p>
+            <p class="setting-hint">
+              {preferencesStore.meshHardCap === 0 ? 'Off — no absolute turn ceiling.' : `Hard stop at ${preferencesStore.meshHardCap} turns; a resume can't lift it (complete the topic).`}
+            </p>
           </div>
           <div class="number-input-wrapper">
             <button class="number-btn" onclick={() => preferencesStore.setMeshHardCap(preferencesStore.meshHardCap - 5)}>−</button>
@@ -2012,7 +2016,9 @@
         <div class="setting">
           <div>
             <label for="mesh-ttl">Topic time limit (minutes)</label>
-            <p class="setting-hint">{preferencesStore.meshTopicTtlMinutes === 0 ? 'Off — topics never pause on age.' : `Pause a topic ${preferencesStore.meshTopicTtlMinutes} min after it starts (or its last resume).`}</p>
+            <p class="setting-hint">
+              {preferencesStore.meshTopicTtlMinutes === 0 ? 'Off — topics never pause on age.' : `Pause a topic ${preferencesStore.meshTopicTtlMinutes} min after it starts (or its last resume).`}
+            </p>
           </div>
           <div class="number-input-wrapper">
             <button class="number-btn" onclick={() => preferencesStore.setMeshTopicTtlMinutes(preferencesStore.meshTopicTtlMinutes - 5)}>−</button>
@@ -2031,20 +2037,15 @@
 
         <h3 class="section-heading" style="margin-top: 20px;">maiLink Mobile Companion</h3>
         <p class="section-desc">
-          maiLink is a phone app that lets you answer your agents (approve a permission, reply to
-          a question, nudge one forward) and drive them — over your local network or a
-          WireGuard tunnel, with no cloud in the data path. By default every agent tab is available;
-          use “Tab availability” below to switch to opt-in, and each tab’s right-click menu to make
-          an individual tab available or unavailable. See <code>docs/mailink-protocol.md</code>.
+          maiLink is a phone app that lets you answer your agents (approve a permission, reply to a question, nudge one forward) and drive them — over your local network or a WireGuard tunnel, with no
+          cloud in the data path. By default every agent tab is available; use “Tab availability” below to switch to opt-in, and each tab’s right-click menu to make an individual tab available or
+          unavailable. See <code>docs/mailink-protocol.md</code>.
         </p>
 
         <div class="setting" style="align-items: flex-start;">
           <div>
             <label for="mailink-enabled">Enable maiLink bridge</label>
-            <p class="setting-hint">
-              Starts the on-device LAN bridge that paired phones connect to. Off by default; no
-              device can connect until you enable it and pair one (below).
-            </p>
+            <p class="setting-hint">Starts the on-device LAN bridge that paired phones connect to. Off by default; no device can connect until you enable it and pair one (below).</p>
           </div>
           <button
             id="mailink-enabled"
@@ -2061,19 +2062,15 @@
         {#if preferencesStore.mailinkEnabled}
           <h3 class="section-heading" style="margin-top: 20px;">Tab availability</h3>
           <p class="section-desc">
-            maiLink only ever surfaces agent tabs (Claude, Codex, …) — never plain shells. A tab
-            whose agent has stopped (network drop, quit) stays available so you can auto-resume it
-            from your phone.
+            maiLink only ever surfaces agent tabs (Claude, Codex, …) — never plain shells. A tab whose agent has stopped (network drop, quit) stays available so you can auto-resume it from your phone.
           </p>
 
           <div class="setting" style="align-items: flex-start;">
             <div>
               <label for="mailink-expose-all">Make all tabs available in maiLink</label>
               <p class="setting-hint">
-                On by default: every agent tab is available, except ones you mark “Make unavailable
-                in maiLink” from the tab’s right-click menu. Turn this off to make maiLink opt-in —
-                then only tabs (or whole workspaces) you explicitly mark “Make available in maiLink”
-                appear on your phone.
+                On by default: every agent tab is available, except ones you mark “Make unavailable in maiLink” from the tab’s right-click menu. Turn this off to make maiLink opt-in — then only tabs
+                (or whole workspaces) you explicitly mark “Make available in maiLink” appear on your phone.
               </p>
             </div>
             <button
@@ -2091,10 +2088,8 @@
           <h3 class="section-heading" style="margin-top: 20px;">Doorbell (push wake)</h3>
           <p class="section-desc">
             When a designated chat needs you and no phone is actively connected, maiTerm sends a
-            <em>content-free</em> wake to your paired phones — only the tab name and kind travel,
-            never terminal content. The phone wakes and pulls the real content over your
-            LAN/WireGuard link. This works automatically once you pair a phone and allow its
-            notifications; there’s nothing to configure.
+            <em>content-free</em> wake to your paired phones — only the tab name and kind travel, never terminal content. The phone wakes and pulls the real content over your LAN/WireGuard link. This works
+            automatically once you pair a phone and allow its notifications; there’s nothing to configure.
           </p>
 
           <div class="setting" style="flex-direction: column; align-items: stretch; gap: 6px;">
@@ -2108,17 +2103,13 @@
               onchange={(e) => preferencesStore.setMailinkRelayUrl(e.currentTarget.value)}
             />
             <p class="setting-hint">
-              Leave empty to use the built-in shared relay. Only set this if you self-host your own
-              push relay. No secret is needed here — each phone mints its own device capability when
-              it pairs.
+              Leave empty to use the built-in shared relay. Only set this if you self-host your own push relay. No secret is needed here — each phone mints its own device capability when it pairs.
             </p>
           </div>
 
           <h3 class="section-heading" style="margin-top: 20px;">Paired devices</h3>
           <p class="section-desc">
-            Phones paired to this Mac. Pairing shows a one-time QR the maiLink app scans; the
-            code expires in two minutes and works once. Revoke a device to stop it connecting and
-            ringing.
+            Phones paired to this Mac. Pairing shows a one-time QR the maiLink app scans; the code expires in two minutes and works once. Revoke a device to stop it connecting and ringing.
           </p>
 
           <div class="mailink-devices">
@@ -2134,7 +2125,8 @@
                     {#if d.has_push}<span class="mailink-badge">doorbell ready</span>{/if}
                   </span>
                   <span class="mailink-device-sub">
-                    paired {fmtDeviceTime(d.created_at)}{#if d.last_seen_at} · last seen {fmtDeviceTime(d.last_seen_at)}{/if}
+                    paired {fmtDeviceTime(d.created_at)}{#if d.last_seen_at}
+                      · last seen {fmtDeviceTime(d.last_seen_at)}{/if}
                   </span>
                 </div>
                 {#if revokeConfirmId === d.id}
@@ -2161,9 +2153,8 @@
         <h3 class="section-heading">Chat Integration</h3>
         <p class="section-desc">
           Connect maiTerm to your team's chat server so agents can work threads with
-          <code>/maiterm resolve &lt;permalink&gt;</code>: the thread is pulled in as a work item,
-          replies are forwarded to the agent while it works, and the resolution is posted back.
-          The bot account must be a member of any channel it should read or post in.
+          <code>/maiterm resolve &lt;permalink&gt;</code>: the thread is pulled in as a work item, replies are forwarded to the agent while it works, and the resolution is posted back. The bot account
+          must be a member of any channel it should read or post in.
         </p>
 
         <div class="setting">
@@ -2171,11 +2162,7 @@
             <label for="comms-provider">Provider</label>
             <p class="setting-hint">Chat platform to integrate with</p>
           </div>
-          <select
-            id="comms-provider"
-            value={preferencesStore.commsProvider}
-            onchange={(e) => preferencesStore.setCommsProvider(e.currentTarget.value)}
-          >
+          <select id="comms-provider" value={preferencesStore.commsProvider} onchange={(e) => preferencesStore.setCommsProvider(e.currentTarget.value)}>
             <option value="mattermost">Mattermost</option>
           </select>
         </div>
@@ -2199,10 +2186,7 @@
         <div class="setting" style="align-items: flex-start;">
           <div>
             <label for="comms-bot-token">Bot Token</label>
-            <p class="setting-hint">
-              Token of a Mattermost bot account (System Console → Integrations → Bot Accounts).
-              Stored locally; never exposed to agents.
-            </p>
+            <p class="setting-hint">Token of a Mattermost bot account (System Console → Integrations → Bot Accounts). Stored locally; never exposed to agents.</p>
           </div>
           <input
             id="comms-bot-token"
@@ -2217,11 +2201,7 @@
         </div>
 
         <div class="setting" style="flex-direction: column; align-items: flex-start; gap: 10px;">
-          <button
-            class="backup-btn"
-            onclick={handleCommsTest}
-            disabled={commsTesting || !preferencesStore.commsServerUrl.trim() || !preferencesStore.commsBotToken.trim()}
-          >
+          <button class="backup-btn" onclick={handleCommsTest} disabled={commsTesting || !preferencesStore.commsServerUrl.trim() || !preferencesStore.commsBotToken.trim()}>
             {commsTesting ? 'Testing…' : 'Test Connection'}
           </button>
           {#if commsTestStatus}
@@ -2238,12 +2218,9 @@
             <label for="comms-authorized">Authorized usernames</label>
             <p class="setting-hint">
               When an agent is working a thread, it only acts on messages that
-              <strong>@mention the bot</strong>. Those messages are scoped by default — the agent
-              may investigate and reply, but won't take destructive or scope-expanding actions on a
-              support request without confirming with you first. Usernames listed here are trusted:
-              their @mentions carry your full authority. Matching is by Mattermost username, so this
-              is only as trustworthy as your server's identities. One per line (with or without a
-              leading <code>@</code>).
+              <strong>@mention the bot</strong>. Those messages are scoped by default — the agent may investigate and reply, but won't take destructive or scope-expanding actions on a support request
+              without confirming with you first. Usernames listed here are trusted: their @mentions carry your full authority. Matching is by Mattermost username, so this is only as trustworthy as
+              your server's identities. One per line (with or without a leading <code>@</code>).
             </p>
           </div>
           <textarea
@@ -2251,21 +2228,16 @@
             class="pattern-input comms-field-input"
             placeholder={'darryl\nlead-dev'}
             value={commsDrafts['authorized'] ?? preferencesStore.commsAuthorizedUsers.join('\n')}
-            oninput={(e) => commsEdit('authorized', e.currentTarget.value,
-              (v) => void preferencesStore.setCommsAuthorizedUsers(parseUserList(v)))}
-            onblur={() => commsFlush('authorized',
-              (v) => void preferencesStore.setCommsAuthorizedUsers(parseUserList(v)))}
-          ></textarea>
+            oninput={(e) => commsEdit('authorized', e.currentTarget.value, (v) => void preferencesStore.setCommsAuthorizedUsers(parseUserList(v)))}
+            onblur={() => commsFlush('authorized', (v) => void preferencesStore.setCommsAuthorizedUsers(parseUserList(v)))}></textarea>
         </div>
 
         <div class="setting comms-field">
           <div class="comms-field-desc">
             <label for="comms-pickup">Pickup users</label>
             <p class="setting-hint">
-              Usernames who can <strong>summon</strong> the bot — @mentioning it in a chat-monitored
-              channel assigns that thread to the monitoring tab. Their messages still carry
-              support-tier authority while the work runs. Authorized users can always summon.
-              One per line (with or without a leading <code>@</code>).
+              Usernames who can <strong>summon</strong> the bot — @mentioning it in a chat-monitored channel assigns that thread to the monitoring tab. Their messages still carry support-tier
+              authority while the work runs. Authorized users can always summon. One per line (with or without a leading <code>@</code>).
             </p>
           </div>
           <textarea
@@ -2273,19 +2245,14 @@
             class="pattern-input comms-field-input"
             placeholder={'support-jane\nsupport-bob'}
             value={commsDrafts['pickup'] ?? preferencesStore.commsPickupUsers.join('\n')}
-            oninput={(e) => commsEdit('pickup', e.currentTarget.value,
-              (v) => void preferencesStore.setCommsPickupUsers(parseUserList(v)))}
-            onblur={() => commsFlush('pickup',
-              (v) => void preferencesStore.setCommsPickupUsers(parseUserList(v)))}
-          ></textarea>
+            oninput={(e) => commsEdit('pickup', e.currentTarget.value, (v) => void preferencesStore.setCommsPickupUsers(parseUserList(v)))}
+            onblur={() => commsFlush('pickup', (v) => void preferencesStore.setCommsPickupUsers(parseUserList(v)))}></textarea>
         </div>
 
         <h3 class="section-heading">Response Instructions</h3>
         <p class="section-desc">
-          Optional guidance for how the agent should communicate on threads — tone, formatting,
-          what to include or leave out, when to post. Delivered to the agent when it picks up a
-          thread, on top of the built-in defaults. (Safety rules — what the agent may act on, and
-          who it takes orders from — are fixed and can't be changed here.)
+          Optional guidance for how the agent should communicate on threads — tone, formatting, what to include or leave out, when to post. Delivered to the agent when it picks up a thread, on top of
+          the built-in defaults. (Safety rules — what the agent may act on, and who it takes orders from — are fixed and can't be changed here.)
         </p>
 
         <div class="setting" style="flex-direction: column; align-items: flex-start; gap: 8px;">
@@ -2296,11 +2263,8 @@
             style="width: 100%; max-width: 480px; min-height: 110px;"
             placeholder={'e.g. Address the customer by name if the report includes it. Keep the support-facing summary under 4 sentences and free of jargon. Sign off as "— maiTerm bot".'}
             value={commsDrafts['instructions'] ?? preferencesStore.commsInstructions}
-            oninput={(e) => commsEdit('instructions', e.currentTarget.value,
-              (v) => void preferencesStore.setCommsInstructions(v))}
-            onblur={() => commsFlush('instructions',
-              (v) => void preferencesStore.setCommsInstructions(v))}
-          ></textarea>
+            oninput={(e) => commsEdit('instructions', e.currentTarget.value, (v) => void preferencesStore.setCommsInstructions(v))}
+            onblur={() => commsFlush('instructions', (v) => void preferencesStore.setCommsInstructions(v))}></textarea>
         </div>
       {:else if activeSection === 'backup'}
         <h3 class="section-heading">Backup Options</h3>
@@ -2496,15 +2460,7 @@
 />
 
 {#if pairing}
-  <div
-    class="pairing-backdrop"
-    role="dialog"
-    aria-modal="true"
-    aria-label="Pair a phone"
-    tabindex="-1"
-    onclick={onPairingBackdropClick}
-    onkeydown={onPairingKeydown}
-  >
+  <div class="pairing-backdrop" role="dialog" aria-modal="true" aria-label="Pair a phone" tabindex="-1" onclick={onPairingBackdropClick} onkeydown={onPairingKeydown}>
     <div class="pairing-modal">
       <h2 class="pairing-title">Scan with maiLink</h2>
       <p class="pairing-sub">Open maiLink on your phone and scan this code to pair it with this Mac.</p>
@@ -2989,8 +2945,13 @@
     color: var(--bg-dark);
     border: none;
   }
-  .mailink-pair-btn:hover { opacity: 0.9; }
-  .mailink-pair-btn:disabled { opacity: 0.55; cursor: default; }
+  .mailink-pair-btn:hover {
+    opacity: 0.9;
+  }
+  .mailink-pair-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
 
   .pairing-backdrop {
     position: fixed;
@@ -3073,7 +3034,9 @@
     font-size: 0.8rem;
     color: var(--fg-dim);
   }
-  .pairing-timer.expired { color: var(--red, #f7768e); }
+  .pairing-timer.expired {
+    color: var(--red, #f7768e);
+  }
   .pairing-actions {
     display: flex;
     gap: 8px;
@@ -3089,7 +3052,9 @@
     color: var(--fg);
     border: none;
   }
-  .pairing-done-btn:hover { background: var(--fg-dim); }
+  .pairing-done-btn:hover {
+    background: var(--fg-dim);
+  }
 
   .pattern-actions {
     display: flex;

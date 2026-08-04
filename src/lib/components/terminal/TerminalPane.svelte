@@ -53,7 +53,19 @@
   import { isModKey, modSymbol } from '$lib/utils/platform';
   import { buildShellIntegrationSnippet, buildInstallSnippet } from '$lib/utils/shellIntegration';
   import ResizableTextarea from '$lib/components/ResizableTextarea.svelte';
-  import { processOutput, cleanupTab, loadTabVariables, interpolateVariables, getVariables, clearTabVariables, suppressTab, unsuppressTab, replayAutoResume, onVariablesChange, setVariable } from '$lib/stores/triggers.svelte';
+  import {
+    processOutput,
+    cleanupTab,
+    loadTabVariables,
+    interpolateVariables,
+    getVariables,
+    clearTabVariables,
+    suppressTab,
+    unsuppressTab,
+    replayAutoResume,
+    onVariablesChange,
+    setVariable,
+  } from '$lib/stores/triggers.svelte';
   import { dispatch } from '$lib/stores/notificationDispatch';
   import { toastStore } from '$lib/stores/toasts.svelte';
   import { getResumeCommand, sessionIdVar } from '$lib/agents/resume';
@@ -1897,94 +1909,100 @@
         label: 'Suspend Other Workspaces',
         action: () => workspacesStore.suspendAllOtherWorkspaces(),
       },
-      ...(preferencesStore.shellTitleIntegration || preferencesStore.shellIntegration ? [
-        { label: '', separator: true, action: () => {} },
-        {
-          label: 'Setup Shell Integration',
-          action: async () => {
-            const snippet = buildShellIntegrationSnippet({
-              shellTitle: preferencesStore.shellTitleIntegration,
-              shellIntegration: preferencesStore.shellIntegration,
-            });
-            if (snippet) {
-              const bytes = Array.from(new TextEncoder().encode(snippet + '\n'));
-              await writeTerminal(ptyId, bytes);
-            }
-          },
-        },
-        {
-          label: 'Install Shell Integration',
-          action: async () => {
-            const snippet = buildInstallSnippet();
-            const bytes = Array.from(new TextEncoder().encode(snippet + '\n'));
-            await writeTerminal(ptyId, bytes);
-          },
-        },
-      ] : []),
-      ...(preferencesStore.claudeCodeIde && preferencesStore.claudeCodeIdeSsh ? [
-        { label: '', separator: true, action: () => {} },
-        ...(getBridgeStatus(tabId) === 'connected' ? [
-          {
-            label: 'Inject maiTerm Env Vars',
-            action: async () => {
-              // Guard: if ssh is no longer foreground, this export would land in
-              // the LOCAL shell and poison its MAITERM_* env with remote-tunnel values.
-              if (!(await isRemoteShellForeground(ptyId))) {
-                dispatch('MCP Bridge', 'No SSH session in the foreground — not injecting env vars into the local shell', 'error', { tabId });
-                return;
-              }
-              const bridge = getBridgeInfo(tabId);
-              if (bridge?.remotePort) {
-                const envCmd = " export MAITERM_TAB_ID=" + tabId + " MAITERM_PORT=" + bridge.remotePort + "\n";
-                const bytes = Array.from(new TextEncoder().encode(envCmd));
-                await writeTerminal(ptyId, bytes);
-              }
-            },
-          },
-          {
-            label: 'Install MCP for Current User',
-            action: async () => {
-              // Guard: this script is built for the REMOTE end of the tunnel. If ssh
-              // has exited, it would execute in the local shell and clobber the local
-              // ~/.claude.json / ~/.claude/settings.json / ~/.aiterm with a
-              // remote-tunnel port that is dead on this machine (hooks then fail
-              // with ECONNREFUSED in every tab).
-              if (!(await isRemoteShellForeground(ptyId))) {
-                dispatch('MCP Bridge', 'No SSH session in the foreground — refusing to run the remote MCP setup in the local shell', 'error', { tabId });
-                return;
-              }
-              const script = await buildUserSetupScript(tabId);
-              if (script) {
-                const cmd = ' ' + script + '\n';
-                const bytes = Array.from(new TextEncoder().encode(cmd));
-                await writeTerminal(ptyId, bytes);
-              }
-            },
-          },
-          {
-            label: 'Disable Remote MCP Bridge',
-            action: async () => {
-              await disableBridge(tabId);
-            },
-          },
-        ] : [
-          {
-            label: 'Enable Remote MCP Bridge',
-            action: async () => {
-              try {
-                const info = await getPtyInfo(ptyId);
-                if (info.foreground_command) {
-                  await enableBridge(tabId, info.foreground_command, ptyId);
-                } else {
-                  dispatch('MCP Bridge', 'No SSH session detected — connect via SSH first', 'info');
+      ...(preferencesStore.shellTitleIntegration || preferencesStore.shellIntegration
+        ? [
+            { label: '', separator: true, action: () => {} },
+            {
+              label: 'Setup Shell Integration',
+              action: async () => {
+                const snippet = buildShellIntegrationSnippet({
+                  shellTitle: preferencesStore.shellTitleIntegration,
+                  shellIntegration: preferencesStore.shellIntegration,
+                });
+                if (snippet) {
+                  const bytes = Array.from(new TextEncoder().encode(snippet + '\n'));
+                  await writeTerminal(ptyId, bytes);
                 }
-              } catch (e) {
-                logError(`MCP bridge failed: ${e}`);
-              }
+              },
             },
-          },
-        ]),
-      ] : []),
+            {
+              label: 'Install Shell Integration',
+              action: async () => {
+                const snippet = buildInstallSnippet();
+                const bytes = Array.from(new TextEncoder().encode(snippet + '\n'));
+                await writeTerminal(ptyId, bytes);
+              },
+            },
+          ]
+        : []),
+      ...(preferencesStore.claudeCodeIde && preferencesStore.claudeCodeIdeSsh
+        ? [
+            { label: '', separator: true, action: () => {} },
+            ...(getBridgeStatus(tabId) === 'connected'
+              ? [
+                  {
+                    label: 'Inject maiTerm Env Vars',
+                    action: async () => {
+                      // Guard: if ssh is no longer foreground, this export would land in
+                      // the LOCAL shell and poison its MAITERM_* env with remote-tunnel values.
+                      if (!(await isRemoteShellForeground(ptyId))) {
+                        dispatch('MCP Bridge', 'No SSH session in the foreground — not injecting env vars into the local shell', 'error', { tabId });
+                        return;
+                      }
+                      const bridge = getBridgeInfo(tabId);
+                      if (bridge?.remotePort) {
+                        const envCmd = ' export MAITERM_TAB_ID=' + tabId + ' MAITERM_PORT=' + bridge.remotePort + '\n';
+                        const bytes = Array.from(new TextEncoder().encode(envCmd));
+                        await writeTerminal(ptyId, bytes);
+                      }
+                    },
+                  },
+                  {
+                    label: 'Install MCP for Current User',
+                    action: async () => {
+                      // Guard: this script is built for the REMOTE end of the tunnel. If ssh
+                      // has exited, it would execute in the local shell and clobber the local
+                      // ~/.claude.json / ~/.claude/settings.json / ~/.aiterm with a
+                      // remote-tunnel port that is dead on this machine (hooks then fail
+                      // with ECONNREFUSED in every tab).
+                      if (!(await isRemoteShellForeground(ptyId))) {
+                        dispatch('MCP Bridge', 'No SSH session in the foreground — refusing to run the remote MCP setup in the local shell', 'error', { tabId });
+                        return;
+                      }
+                      const script = await buildUserSetupScript(tabId);
+                      if (script) {
+                        const cmd = ' ' + script + '\n';
+                        const bytes = Array.from(new TextEncoder().encode(cmd));
+                        await writeTerminal(ptyId, bytes);
+                      }
+                    },
+                  },
+                  {
+                    label: 'Disable Remote MCP Bridge',
+                    action: async () => {
+                      await disableBridge(tabId);
+                    },
+                  },
+                ]
+              : [
+                  {
+                    label: 'Enable Remote MCP Bridge',
+                    action: async () => {
+                      try {
+                        const info = await getPtyInfo(ptyId);
+                        if (info.foreground_command) {
+                          await enableBridge(tabId, info.foreground_command, ptyId);
+                        } else {
+                          dispatch('MCP Bridge', 'No SSH session detected — connect via SSH first', 'info');
+                        }
+                      } catch (e) {
+                        logError(`MCP bridge failed: ${e}`);
+                      }
+                    },
+                  },
+                ]),
+          ]
+        : []),
     ];
   }
 </script>

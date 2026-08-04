@@ -33,7 +33,7 @@ bash maiterm/scripts/forwood-setup.sh
 ```
 
 Docs below use `~/proj/...` in examples — that's a convention, not a
-requirement. The one place a root directory matters is *name-based* clone
+requirement. The one place a root directory matters is _name-based_ clone
 lookup (`forwood-launcher --clone developing` or `$FORWOOD_CLONE`), which
 resolves against `$PROJ_ROOT` (default `~/proj`) — set `PROJ_ROOT` if your
 clones live elsewhere, or just rely on the rail's cwd detection, which needs
@@ -48,13 +48,13 @@ it does, for manual setup or troubleshooting.
 
 ## 1. Prerequisites
 
-| Need | Why | Install |
-|---|---|---|
-| **Homebrew + Node** | The rail runs `forwood-launcher` via your login shell, which needs node ≥ 22.6 on PATH. | `brew install node` (setup script does this) |
-| **Docker Desktop** | Container tasks (API/WEB/DBs) run via `devcontainer exec`; the container section reads live status via `docker`. | Docker Desktop for Mac |
-| **`@devcontainers/cli`** | Host-side container bring-up + `devcontainer exec`. | `npm i -g @devcontainers/cli` (setup script does this) |
-| **forwood clones** | The repos whose `.vscode/tasks.json` the rail detects — anywhere on disk; detection walks up from the tab's cwd. | your usual clone setup |
-| **Xcode CLT + Rust** | Only for building the app from source (`--build`). | `xcode-select --install`, `rustup` |
+| Need                     | Why                                                                                                              | Install                                                |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| **Homebrew + Node**      | The rail runs `forwood-launcher` via your login shell, which needs node ≥ 22.6 on PATH.                          | `brew install node` (setup script does this)           |
+| **Docker Desktop**       | Container tasks (API/WEB/DBs) run via `devcontainer exec`; the container section reads live status via `docker`. | Docker Desktop for Mac                                 |
+| **`@devcontainers/cli`** | Host-side container bring-up + `devcontainer exec`.                                                              | `npm i -g @devcontainers/cli` (setup script does this) |
+| **forwood clones**       | The repos whose `.vscode/tasks.json` the rail detects — anywhere on disk; detection walks up from the tab's cwd. | your usual clone setup                                 |
+| **Xcode CLT + Rust**     | Only for building the app from source (`--build`).                                                               | `xcode-select --install`, `rustup`                     |
 
 ## 2. Install maiTerm
 
@@ -204,10 +204,10 @@ to the port. A missing or malformed file falls back to the defaults silently.
 
 ## Troubleshooting
 
-| Symptom | Likely cause / fix |
-|---|---|
-| Rail doesn't appear | Tab's cwd isn't inside a repo with `.vscode/tasks.json`. `cd` into a clone. |
-| "Provider exited …" in the rail | `forwood-launcher` not on PATH (redo step 3) or Docker not running. |
-| Container section says "Docker not running" | Start Docker Desktop. |
-| White screen after a manual copy | Don't copy the `.app` by hand — use `install-local.sh` (it re-signs). |
-| Tasks show but firing does nothing | Confirm maiTerm is the one with the lockfile the launcher targets (only run one maiTerm3). |
+| Symptom                                     | Likely cause / fix                                                                         |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Rail doesn't appear                         | Tab's cwd isn't inside a repo with `.vscode/tasks.json`. `cd` into a clone.                |
+| "Provider exited …" in the rail             | `forwood-launcher` not on PATH (redo step 3) or Docker not running.                        |
+| Container section says "Docker not running" | Start Docker Desktop.                                                                      |
+| White screen after a manual copy            | Don't copy the `.app` by hand — use `install-local.sh` (it re-signs).                      |
+| Tasks show but firing does nothing          | Confirm maiTerm is the one with the lockfile the launcher targets (only run one maiTerm3). |

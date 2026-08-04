@@ -1,23 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useApp } from 'ink';
-import {
-  listTasks,
-  resolveTask,
-  dispatchMaiterm,
-  connectMaiterm,
-  type Task,
-  type MaitermConnection,
-  type MaitermDispatchStep,
-  type VariableContext,
-} from '@forwood/task-engine';
+import { listTasks, resolveTask, dispatchMaiterm, connectMaiterm, type Task, type MaitermConnection, type MaitermDispatchStep, type VariableContext } from '@forwood/task-engine';
 import { TaskMenu } from './task-menu.tsx';
 import type { CloneInfo } from './clone-resolver.ts';
 
-type Phase =
-  | { kind: 'menu' }
-  | { kind: 'dispatching'; task: Task }
-  | { kind: 'done'; task: Task; steps: MaitermDispatchStep[] }
-  | { kind: 'error'; message: string };
+type Phase = { kind: 'menu' } | { kind: 'dispatching'; task: Task } | { kind: 'done'; task: Task; steps: MaitermDispatchStep[] } | { kind: 'error'; message: string };
 
 /**
  * Top-level launcher screen. One-shot: lists tasks for the active clone,
@@ -56,29 +43,24 @@ export function App(props: { clone: CloneInfo }): React.JSX.Element {
   }
 
   if (phase.kind === 'menu') {
-    return (
-      <TaskMenu
-        cloneName={clone.name}
-        tasks={tasks}
-        onSelect={task => fireTask(task, clone, setPhase, exit)}
-        onQuit={() => exit()}
-      />
-    );
+    return <TaskMenu cloneName={clone.name} tasks={tasks} onSelect={(task) => fireTask(task, clone, setPhase, exit)} onQuit={() => exit()} />;
   }
 
   if (phase.kind === 'dispatching') {
     return (
       <Box flexDirection="column">
-        <Text>Dispatching <Text bold>{phase.task.label}</Text>…</Text>
+        <Text>
+          Dispatching <Text bold>{phase.task.label}</Text>…
+        </Text>
         <Text dimColor>(connecting to maiTerm MCP server, opening tab)</Text>
       </Box>
     );
   }
 
   if (phase.kind === 'done') {
-    const created = phase.steps.filter(s => !s.skipped && s.result?.action === 'created').length;
-    const focused = phase.steps.filter(s => !s.skipped && s.result?.action === 'focused').length;
-    const skipped = phase.steps.filter(s => s.skipped).length;
+    const created = phase.steps.filter((s) => !s.skipped && s.result?.action === 'created').length;
+    const focused = phase.steps.filter((s) => !s.skipped && s.result?.action === 'focused').length;
+    const skipped = phase.steps.filter((s) => s.skipped).length;
     return (
       <Box flexDirection="column">
         <Text color="green">✓ Dispatched {phase.task.label}</Text>
@@ -97,12 +79,7 @@ export function App(props: { clone: CloneInfo }): React.JSX.Element {
   );
 }
 
-async function fireTask(
-  task: Task,
-  clone: CloneInfo,
-  setPhase: (p: Phase) => void,
-  exit: (err?: Error) => void,
-): Promise<void> {
+async function fireTask(task: Task, clone: CloneInfo, setPhase: (p: Phase) => void, exit: (err?: Error) => void): Promise<void> {
   setPhase({ kind: 'dispatching', task });
   let conn: MaitermConnection | null = null;
   try {

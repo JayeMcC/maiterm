@@ -92,16 +92,31 @@
     // Mirror the terminal colors into the backend so OSC 4/10/11/12 color
     // queries from programs (vim, fzf, vivid) answer with the real theme.
     const c = t.terminal;
-    commands.setTerminalPalette({
-      fg: c.foreground,
-      bg: c.background,
-      cursor: c.cursor,
-      ansi: [
-        c.black, c.red, c.green, c.yellow, c.blue, c.magenta, c.cyan, c.white,
-        c.brightBlack, c.brightRed, c.brightGreen, c.brightYellow,
-        c.brightBlue, c.brightMagenta, c.brightCyan, c.brightWhite,
-      ],
-    }).catch((e) => logError(`Failed to push terminal palette: ${e}`));
+    commands
+      .setTerminalPalette({
+        fg: c.foreground,
+        bg: c.background,
+        cursor: c.cursor,
+        ansi: [
+          c.black,
+          c.red,
+          c.green,
+          c.yellow,
+          c.blue,
+          c.magenta,
+          c.cyan,
+          c.white,
+          c.brightBlack,
+          c.brightRed,
+          c.brightGreen,
+          c.brightYellow,
+          c.brightBlue,
+          c.brightMagenta,
+          c.brightCyan,
+          c.brightWhite,
+        ],
+      })
+      .catch((e) => logError(`Failed to push terminal palette: ${e}`));
   });
 
   // Apply UI font size reactively
@@ -345,7 +360,9 @@
     let unlistenTabRenamed: (() => void) | undefined;
     listen<{ tabId: string; name: string }>('mailink-tab-renamed', (event) => {
       workspacesStore.applyExternalRename(event.payload.tabId, event.payload.name);
-    }).then(unlisten => { unlistenTabRenamed = unlisten; });
+    }).then((unlisten) => {
+      unlistenTabRenamed = unlisten;
+    });
 
     // A maiLink phone tapped "Resume workspace" on a suspended workspace. Only the window that
     // owns the workspace acts — resumeWorkspace() no-ops when the id isn't a suspended workspace
@@ -354,14 +371,18 @@
     let unlistenResumeWorkspace: (() => void) | undefined;
     listen<{ workspaceId: string }>('mailink-resume-workspace', (event) => {
       workspacesStore.resumeWorkspace(event.payload.workspaceId);
-    }).then(unlisten => { unlistenResumeWorkspace = unlisten; });
+    }).then((unlisten) => {
+      unlistenResumeWorkspace = unlisten;
+    });
 
     // A maiLink phone tapped "Initialize all" on a mesh workspace. Same global-emit contract:
     // initializeMesh() no-ops unless this window owns a live (non-suspended) mesh with that id.
     let unlistenMeshInit: (() => void) | undefined;
     listen<{ workspaceId: string }>('mailink-mesh-init', (event) => {
       agentMeshStore.initializeMesh(event.payload.workspaceId);
-    }).then(unlisten => { unlistenMeshInit = unlisten; });
+    }).then((unlisten) => {
+      unlistenMeshInit = unlisten;
+    });
 
     // maiLink tab-lifecycle actions. Each is tab-scoped and globally emitted; the store methods
     // no-op in windows that don't own the tab (archive/close resolve the live tab by id; restore
@@ -369,7 +390,9 @@
     let unlistenArchiveTab: (() => void) | undefined;
     listen<{ tabId: string }>('mailink-archive-tab', (event) => {
       workspacesStore.archiveTabById(event.payload.tabId);
-    }).then(unlisten => { unlistenArchiveTab = unlisten; });
+    }).then((unlisten) => {
+      unlistenArchiveTab = unlisten;
+    });
 
     // A maiLink phone tapped "New conversation" on a thread. Light clone of WHERE the source
     // runs (SSH host + cwd) with a fresh agent session — no scrollback, notes or session id.
@@ -377,7 +400,9 @@
     let unlistenNewConversation: (() => void) | undefined;
     listen<{ tabId: string }>('mailink-new-conversation', (event) => {
       workspacesStore.newConversationFrom(event.payload.tabId);
-    }).then(unlisten => { unlistenNewConversation = unlisten; });
+    }).then((unlisten) => {
+      unlistenNewConversation = unlisten;
+    });
 
     // maiLink is waking one unregistered tab — either explicitly (its Initialize button) or
     // implicitly, because a message is about to be delivered to it. The backend already probed
@@ -386,17 +411,23 @@
     let unlistenWakeTab: (() => void) | undefined;
     listen<{ tabId: string; action: WakeAction; budgetMs: number }>('mailink-wake-tab', (event) => {
       void wakeTab(event.payload.tabId, event.payload.action, event.payload.budgetMs);
-    }).then(unlisten => { unlistenWakeTab = unlisten; });
+    }).then((unlisten) => {
+      unlistenWakeTab = unlisten;
+    });
 
     let unlistenCloseTab: (() => void) | undefined;
     listen<{ tabId: string }>('mailink-close-tab', (event) => {
       workspacesStore.closeTabById(event.payload.tabId);
-    }).then(unlisten => { unlistenCloseTab = unlisten; });
+    }).then((unlisten) => {
+      unlistenCloseTab = unlisten;
+    });
 
     let unlistenRestoreTab: (() => void) | undefined;
     listen<{ workspaceId: string; tabId: string }>('mailink-restore-tab', (event) => {
       workspacesStore.restoreArchivedTab(event.payload.workspaceId, event.payload.tabId);
-    }).then(unlisten => { unlistenRestoreTab = unlisten; });
+    }).then((unlisten) => {
+      unlistenRestoreTab = unlisten;
+    });
 
     // Check for updates menu event
     let unlistenCheckUpdates: (() => void) | undefined;
@@ -503,48 +534,62 @@
     // running to receive them — ring the operator (dispatch scopes to the
     // window owning the tab; clicking the toast deep-links to it).
     let unlistenCommsPending: (() => void) | undefined;
-    appWindow.listen<{ tab_id: string; count: number; preview: string; reason?: string }>('comms-reply-pending', async (event) => {
-      const { dispatch } = await import('$lib/stores/notificationDispatch');
-      const p = event.payload;
-      dispatch(
-        'Thread reply waiting',
-        `${p.count > 1 ? `${p.count} replies` : 'A reply'} arrived on a bound thread ("${p.preview}") but ${p.reason ?? 'no agent session is running in that tab'}. It will be delivered once that clears.`,
-        'info',
-        { tabId: p.tab_id },
-      );
-    }).then(unlisten => { unlistenCommsPending = unlisten; });
+    appWindow
+      .listen<{ tab_id: string; count: number; preview: string; reason?: string }>('comms-reply-pending', async (event) => {
+        const { dispatch } = await import('$lib/stores/notificationDispatch');
+        const p = event.payload;
+        dispatch(
+          'Thread reply waiting',
+          `${p.count > 1 ? `${p.count} replies` : 'A reply'} arrived on a bound thread ("${p.preview}") but ${p.reason ?? 'no agent session is running in that tab'}. It will be delivered once that clears.`,
+          'info',
+          { tabId: p.tab_id },
+        );
+      })
+      .then((unlisten) => {
+        unlistenCommsPending = unlisten;
+      });
 
     // Backend-side binding changes (summon pickup, startCommsThread, bindCommsThread,
     // resolve/unbind) — the store owns its copy of the tab, so the `@` badge would
     // otherwise show whatever was bound at startup.
     let unlistenCommsBindings: (() => void) | undefined;
-    appWindow.listen<{ tab_id: string; bindings: CommsBinding[] }>('comms-bindings-changed', (event) => {
-      workspacesStore.applyCommsBindings(event.payload.tab_id, event.payload.bindings ?? []);
-    }).then(unlisten => { unlistenCommsBindings = unlisten; });
+    appWindow
+      .listen<{ tab_id: string; bindings: CommsBinding[] }>('comms-bindings-changed', (event) => {
+        workspacesStore.applyCommsBindings(event.payload.tab_id, event.payload.bindings ?? []);
+      })
+      .then((unlisten) => {
+        unlistenCommsBindings = unlisten;
+      });
 
     // Chat-monitor summon events: pickups, queued summons, unauthorized attempts.
     let unlistenCommsSummon: (() => void) | undefined;
-    appWindow.listen<{ tab_id: string; kind: string; channel: string; from: string; preview: string; reason?: string; reason_detail?: string }>('comms-summon', async (event) => {
-      const { dispatch } = await import('$lib/stores/notificationDispatch');
-      const p = event.payload;
-      if (p.kind === 'picked_up') {
-        dispatch('Thread picked up', `${p.from} summoned the bot in ${p.channel}: "${p.preview}"`, 'info', { tabId: p.tab_id });
-      } else if (p.kind === 'queued') {
-        // At-capacity needs the operator to close a thread; waiting won't help. The
-        // other reasons do resolve on their own once the session is back.
-        const atCapacity = p.reason === 'at_capacity';
-        dispatch(
-          atCapacity ? 'Summon waiting — tab is full' : 'Summon queued',
-          `${p.from} summoned the bot in ${p.channel}: "${p.preview}". ${
-            p.reason_detail ? `${p.reason_detail.charAt(0).toUpperCase()}${p.reason_detail.slice(1)}.` : 'The monitoring tab is busy or offline.'
-          } ${atCapacity ? 'It stays queued until a thread is closed out.' : 'It will be picked up when the tab frees up.'}`,
-          'info',
-          { tabId: p.tab_id },
-        );
-      } else if (p.kind === 'unauthorized') {
-        dispatch('Summon not allowed', `${p.from} @mentioned the bot in ${p.channel} but isn't on the pickup or authorized list: "${p.preview}". Nothing was posted in the thread.`, 'info', { tabId: p.tab_id });
-      }
-    }).then(unlisten => { unlistenCommsSummon = unlisten; });
+    appWindow
+      .listen<{ tab_id: string; kind: string; channel: string; from: string; preview: string; reason?: string; reason_detail?: string }>('comms-summon', async (event) => {
+        const { dispatch } = await import('$lib/stores/notificationDispatch');
+        const p = event.payload;
+        if (p.kind === 'picked_up') {
+          dispatch('Thread picked up', `${p.from} summoned the bot in ${p.channel}: "${p.preview}"`, 'info', { tabId: p.tab_id });
+        } else if (p.kind === 'queued') {
+          // At-capacity needs the operator to close a thread; waiting won't help. The
+          // other reasons do resolve on their own once the session is back.
+          const atCapacity = p.reason === 'at_capacity';
+          dispatch(
+            atCapacity ? 'Summon waiting — tab is full' : 'Summon queued',
+            `${p.from} summoned the bot in ${p.channel}: "${p.preview}". ${
+              p.reason_detail ? `${p.reason_detail.charAt(0).toUpperCase()}${p.reason_detail.slice(1)}.` : 'The monitoring tab is busy or offline.'
+            } ${atCapacity ? 'It stays queued until a thread is closed out.' : 'It will be picked up when the tab frees up.'}`,
+            'info',
+            { tabId: p.tab_id },
+          );
+        } else if (p.kind === 'unauthorized') {
+          dispatch('Summon not allowed', `${p.from} @mentioned the bot in ${p.channel} but isn't on the pickup or authorized list: "${p.preview}". Nothing was posted in the thread.`, 'info', {
+            tabId: p.tab_id,
+          });
+        }
+      })
+      .then((unlisten) => {
+        unlistenCommsSummon = unlisten;
+      });
 
     // Claude Code state tracking (hook events → per-tab Claude state)
     claudeStateStore.init();
@@ -1146,9 +1191,7 @@
     // window that still shows blank AFTER this line means paint/layout, not
     // boot logic — check the first-paint line below and CSS/geometry.
     logInfo('[BOOT] layout onMount body complete').catch(() => {});
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => logInfo('[BOOT] first paint (2 rAF after mount)').catch(() => {})),
-    );
+    requestAnimationFrame(() => requestAnimationFrame(() => logInfo('[BOOT] first paint (2 rAF after mount)').catch(() => {})));
 
     return () => {
       window.removeEventListener('open-agent-bridge-picker', onOpenAgentBridgePicker);
@@ -1257,7 +1300,9 @@
   workspaceId={commsMonitorTarget?.workspaceId ?? null}
   paneId={commsMonitorTarget?.paneId ?? null}
   tabId={commsMonitorTarget?.tabId ?? null}
-  onclose={() => { commsMonitorTarget = null; }}
+  onclose={() => {
+    commsMonitorTarget = null;
+  }}
 />
 <MeshCockpit
   open={showMeshCockpit}

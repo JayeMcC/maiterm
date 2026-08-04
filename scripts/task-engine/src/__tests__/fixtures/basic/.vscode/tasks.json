@@ -16,8 +16,8 @@
         "group": "API",
         "panel": "dedicated",
         "reveal": "always",
-        "close": false,
-      },
+        "close": false
+      }
     },
     {
       "label": "WEB",

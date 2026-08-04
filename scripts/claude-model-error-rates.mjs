@@ -108,14 +108,14 @@
  *   --help             Show this help and exit
  */
 
-import { createReadStream, promises as fs } from "node:fs";
-import { createInterface } from "node:readline";
-import path from "node:path";
-import os from "node:os";
+import { createReadStream, promises as fs } from 'node:fs';
+import { createInterface } from 'node:readline';
+import path from 'node:path';
+import os from 'node:os';
 
 function parseArgs(argv) {
   const opts = {
-    dir: path.join(os.homedir(), ".claude", "projects"),
+    dir: path.join(os.homedir(), '.claude', 'projects'),
     since: null,
     project: null,
     json: false,
@@ -125,13 +125,13 @@ function parseArgs(argv) {
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--dir") opts.dir = argv[++i];
-    else if (a === "--since") opts.since = argv[++i];
-    else if (a === "--project") opts.project = argv[++i];
-    else if (a === "--json") opts.json = true;
-    else if (a === "--samples") opts.samples = Number(argv[++i]);
-    else if (a === "--by-shape") opts.byShape = true;
-    else if (a === "--help" || a === "-h") opts.help = true;
+    if (a === '--dir') opts.dir = argv[++i];
+    else if (a === '--since') opts.since = argv[++i];
+    else if (a === '--project') opts.project = argv[++i];
+    else if (a === '--json') opts.json = true;
+    else if (a === '--samples') opts.samples = Number(argv[++i]);
+    else if (a === '--by-shape') opts.byShape = true;
+    else if (a === '--help' || a === '-h') opts.help = true;
   }
   return opts;
 }
@@ -166,32 +166,32 @@ Options:
 
 /** Classify a system/api_error record's structured error into a class. */
 function classifyApiErrorEvent(err) {
-  const code = err?.connection?.code || "";
-  const formatted = (err?.formatted || err?.message || "").toLowerCase();
+  const code = err?.connection?.code || '';
+  const formatted = (err?.formatted || err?.message || '').toLowerCase();
   if (/econnreset|econnrefused|enotfound|etimedout|epipe|eai_again/i.test(code)) {
-    return "network_error";
+    return 'network_error';
   }
-  if (/overloaded/.test(formatted)) return "overloaded";
-  if (/500|internal server error/.test(formatted)) return "server_5xx";
-  if (/rate.?limit|429|temporarily limiting/.test(formatted)) return "rate_limited_429";
-  if (/connect/.test(formatted)) return "network_error";
-  return "api_error_other";
+  if (/overloaded/.test(formatted)) return 'overloaded';
+  if (/500|internal server error/.test(formatted)) return 'server_5xx';
+  if (/rate.?limit|429|temporarily limiting/.test(formatted)) return 'rate_limited_429';
+  if (/connect/.test(formatted)) return 'network_error';
+  return 'api_error_other';
 }
 
 /** Classify a synthetic isApiErrorMessage:true assistant text into a class. */
 function classifySyntheticErrorText(text) {
-  const t = (text || "").toLowerCase();
-  if (/monthly spend limit/.test(t)) return "spend_limit_soft_block";
-  if (/usage credit/.test(t)) return "usage_credits_soft_block";
-  if (/prompt is too long/.test(t)) return "context_too_long";
-  if (/not logged in/.test(t)) return "auth_error";
-  if (/could not be processed/.test(t)) return "input_processing_error";
-  if (/connection closed mid-response/.test(t)) return "connection_closed_mid_response";
-  if (/overloaded/.test(t)) return "overloaded";
-  if (/temporarily limiting requests/.test(t)) return "rate_limited_429";
-  if (/500 internal server error/.test(t)) return "server_5xx";
-  if (/unable to connect to api/.test(t)) return "network_error";
-  return "other_synthetic_error";
+  const t = (text || '').toLowerCase();
+  if (/monthly spend limit/.test(t)) return 'spend_limit_soft_block';
+  if (/usage credit/.test(t)) return 'usage_credits_soft_block';
+  if (/prompt is too long/.test(t)) return 'context_too_long';
+  if (/not logged in/.test(t)) return 'auth_error';
+  if (/could not be processed/.test(t)) return 'input_processing_error';
+  if (/connection closed mid-response/.test(t)) return 'connection_closed_mid_response';
+  if (/overloaded/.test(t)) return 'overloaded';
+  if (/temporarily limiting requests/.test(t)) return 'rate_limited_429';
+  if (/500 internal server error/.test(t)) return 'server_5xx';
+  if (/unable to connect to api/.test(t)) return 'network_error';
+  return 'other_synthetic_error';
 }
 
 // ---- task-shape classification (--by-shape) --------------------------------
@@ -205,26 +205,35 @@ function classifySyntheticErrorText(text) {
  * silently disappearing.
  */
 const TOOL_SHAPE_CATEGORIES = {
-  read_search: new Set([
-    "Read", "Grep", "Glob", "WebFetch", "WebSearch", "ToolSearch", "NotebookRead",
-  ]),
-  edit_write: new Set(["Edit", "Write", "MultiEdit", "NotebookEdit"]),
-  bash: new Set(["Bash", "BashOutput", "KillShell"]),
+  read_search: new Set(['Read', 'Grep', 'Glob', 'WebFetch', 'WebSearch', 'ToolSearch', 'NotebookRead']),
+  edit_write: new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']),
+  bash: new Set(['Bash', 'BashOutput', 'KillShell']),
   subagent_orchestration: new Set([
-    "Agent", "Task", "TaskCreate", "TaskUpdate", "TaskList", "TaskGet", "TaskOutput",
-    "TaskStop", "SendMessage", "Monitor", "Workflow", "ScheduleWakeup",
-    "EnterWorktree", "ExitWorktree",
+    'Agent',
+    'Task',
+    'TaskCreate',
+    'TaskUpdate',
+    'TaskList',
+    'TaskGet',
+    'TaskOutput',
+    'TaskStop',
+    'SendMessage',
+    'Monitor',
+    'Workflow',
+    'ScheduleWakeup',
+    'EnterWorktree',
+    'ExitWorktree',
   ]),
 };
 
 /** Which coarse category a single tool_use.name belongs to. */
 function categoryForTool(name) {
-  if (!name) return "other_meta";
-  if (name.startsWith("mcp__")) return "mcp";
+  if (!name) return 'other_meta';
+  if (name.startsWith('mcp__')) return 'mcp';
   for (const [cat, names] of Object.entries(TOOL_SHAPE_CATEGORIES)) {
     if (names.has(name)) return cat;
   }
-  return "other_meta";
+  return 'other_meta';
 }
 
 /**
@@ -234,18 +243,18 @@ function categoryForTool(name) {
  * "mixed"; turns with no tool_use blocks are "no_tool_call".
  */
 function classifyToolShape(toolNames) {
-  if (!toolNames || toolNames.length === 0) return "no_tool_call";
+  if (!toolNames || toolNames.length === 0) return 'no_tool_call';
   const cats = new Set(toolNames.map(categoryForTool));
   if (cats.size === 1) return `${[...cats][0]}_heavy`;
-  return "mixed";
+  return 'mixed';
 }
 
 /** Coarse model "family" for the human-readable rollup the todo item asks for. */
 function modelFamily(model) {
-  if (!model) return "unknown";
+  if (!model) return 'unknown';
   const m = model.match(/^claude-(opus|sonnet|haiku|fable)-(\d[\w.-]*)/);
   if (!m) return model;
-  return `${m[1][0].toUpperCase()}${m[1].slice(1)} ${m[2].replace(/-\d{8}$/, "")}`;
+  return `${m[1][0].toUpperCase()}${m[1].slice(1)} ${m[2].replace(/-\d{8}$/, '')}`;
 }
 
 // ---- aggregation state ------------------------------------------------------
@@ -287,7 +296,7 @@ async function* walkJsonlFiles(dir) {
     const full = path.join(dir, e.name);
     if (e.isDirectory()) {
       yield* walkJsonlFiles(full);
-    } else if (e.isFile() && e.name.endsWith(".jsonl")) {
+    } else if (e.isFile() && e.name.endsWith('.jsonl')) {
       yield full;
     }
   }
@@ -327,12 +336,12 @@ async function main() {
     sessionsScanned++;
 
     let currentModel = null; // last real model observed in this session
-    let currentShape = "no_tool_call"; // last turn's tool-use task shape (--by-shape)
+    let currentShape = 'no_tool_call'; // last turn's tool-use task shape (--by-shape)
     const toolUseModel = new Map(); // tool_use_id -> model that issued it
     const toolUseShape = new Map(); // tool_use_id -> task shape of the turn that issued it
 
     const rl = createInterface({
-      input: createReadStream(file, { encoding: "utf8" }),
+      input: createReadStream(file, { encoding: 'utf8' }),
       crlfDelay: Infinity,
     });
 
@@ -355,11 +364,11 @@ async function main() {
 
       const cwd = d.cwd || null;
 
-      if (d.type === "assistant") {
+      if (d.type === 'assistant') {
         const msg = d.message || {};
         const model = msg.model || null;
 
-        if (model && model !== "<synthetic>") {
+        if (model && model !== '<synthetic>') {
           currentModel = model;
           const b = getBucket(model);
           b.turns++;
@@ -370,7 +379,7 @@ async function main() {
           const toolNames = [];
           if (Array.isArray(msg.content)) {
             for (const c of msg.content) {
-              if (c && c.type === "tool_use" && c.id) toolNames.push(c.name);
+              if (c && c.type === 'tool_use' && c.id) toolNames.push(c.name);
             }
           }
           const shape = classifyToolShape(toolNames);
@@ -378,14 +387,14 @@ async function main() {
           const sb = getShapeBucket(b, shape);
           sb.turns++;
 
-          if (msg.stop_reason === "max_tokens") {
-            bump(b.errors, "truncation_max_tokens");
-            bump(sb.errors, "truncation_max_tokens");
-            addSample("truncation_max_tokens", { file, model, shape, requestId: d.requestId });
+          if (msg.stop_reason === 'max_tokens') {
+            bump(b.errors, 'truncation_max_tokens');
+            bump(sb.errors, 'truncation_max_tokens');
+            addSample('truncation_max_tokens', { file, model, shape, requestId: d.requestId });
           }
           if (Array.isArray(msg.content)) {
             for (const c of msg.content) {
-              if (c && c.type === "tool_use" && c.id) {
+              if (c && c.type === 'tool_use' && c.id) {
                 toolUseModel.set(c.id, model);
                 toolUseShape.set(c.id, shape);
                 b.toolCalls++;
@@ -397,25 +406,25 @@ async function main() {
           const content = msg.content;
           let text = null;
           if (Array.isArray(content)) {
-            const t = content.find((c) => c && c.type === "text");
+            const t = content.find((c) => c && c.type === 'text');
             text = t ? t.text : null;
-          } else if (typeof content === "string") {
+          } else if (typeof content === 'string') {
             text = content;
           }
           const cls = classifySyntheticErrorText(text);
-          const attrModel = currentModel || "unknown";
+          const attrModel = currentModel || 'unknown';
           if (!currentModel) unattributedErrorEvents++;
           const b = getBucket(attrModel);
           bump(b.errors, cls);
           bump(getShapeBucket(b, currentShape).errors, cls);
-          addSample(cls, { file, attrModel, text: (text || "").slice(0, 160) });
+          addSample(cls, { file, attrModel, text: (text || '').slice(0, 160) });
         }
-      } else if (d.type === "user") {
+      } else if (d.type === 'user') {
         const content = d.message?.content;
         if (Array.isArray(content)) {
           for (const c of content) {
-            if (c && c.type === "tool_result" && c.is_error === true) {
-              const model = toolUseModel.get(c.tool_use_id) || currentModel || "unknown";
+            if (c && c.type === 'tool_result' && c.is_error === true) {
+              const model = toolUseModel.get(c.tool_use_id) || currentModel || 'unknown';
               const shape = toolUseShape.get(c.tool_use_id) || currentShape;
               const b = getBucket(model);
               b.toolErrors++;
@@ -423,10 +432,10 @@ async function main() {
             }
           }
         }
-      } else if (d.type === "system") {
-        if (d.subtype === "api_error") {
+      } else if (d.type === 'system') {
+        if (d.subtype === 'api_error') {
           const cls = classifyApiErrorEvent(d.error);
-          const attrModel = currentModel || "unknown";
+          const attrModel = currentModel || 'unknown';
           if (!currentModel) unattributedErrorEvents++;
           const b = getBucket(attrModel);
           bump(b.errors, cls);
@@ -438,9 +447,9 @@ async function main() {
             formatted: d.error?.formatted,
             retryAttempt: d.retryAttempt,
           });
-        } else if (d.subtype === "model_refusal_fallback" || d.subtype === "model_consent_fallback") {
-          const cls = d.subtype === "model_refusal_fallback" ? "refusal_fallback" : "consent_fallback";
-          const origModel = d.originalModel || currentModel || "unknown";
+        } else if (d.subtype === 'model_refusal_fallback' || d.subtype === 'model_consent_fallback') {
+          const cls = d.subtype === 'model_refusal_fallback' ? 'refusal_fallback' : 'consent_fallback';
+          const origModel = d.originalModel || currentModel || 'unknown';
           const b = getBucket(origModel);
           bump(b.errors, cls);
           bump(getShapeBucket(b, currentShape).errors, cls);
@@ -474,7 +483,7 @@ async function main() {
   };
 
   for (const [model, b] of models) {
-    if (model === "unknown") continue;
+    if (model === 'unknown') continue;
     const hardErrorTotal = Object.values(b.errors).reduce((a, n) => a + n, 0);
     summary.models[model] = {
       family: modelFamily(model),
@@ -509,10 +518,10 @@ async function main() {
         });
     }
   }
-  if (models.has("unknown")) {
-    const b = models.get("unknown");
+  if (models.has('unknown')) {
+    const b = models.get('unknown');
     summary.unknownModelBucket = {
-      note: "Errors observed before any real model was seen in that session (e.g. error is the first event, or session log starts mid-stream).",
+      note: 'Errors observed before any real model was seen in that session (e.g. error is the first event, or session log starts mid-stream).',
       errorsByClass: b.errors,
       retryEvents: b.retryEvents,
     };
@@ -547,22 +556,20 @@ async function main() {
   }
 
   // ---- formatted table output ----
-  console.log("Claude Code per-model error-rate report");
-  console.log("========================================");
+  console.log('Claude Code per-model error-rate report');
+  console.log('========================================');
   console.log(`Scanned dir:      ${summary.scannedDir}`);
   console.log(`Sessions scanned: ${summary.sessionsScanned}  (${summary.filesScanned} files, ${summary.linesScanned} lines)`);
   console.log(`Date range:       ${summary.dateRange.first} .. ${summary.dateRange.last}`);
   console.log(`Unattributed error events (no known model yet): ${summary.unattributedErrorEvents}`);
-  console.log("");
+  console.log('');
 
   const rows = Object.entries(summary.models).sort((a, z) => z[1].turns - a[1].turns);
 
-  console.log("Overview (hard API-reliability errors: network/5xx/overloaded/rate-limited,");
-  console.log("refusal fallbacks, spend/usage soft-blocks, max_tokens truncation)");
-  console.log("-".repeat(100));
-  console.log(
-    padCols(["Model", "Family", "Turns", "Errors", "Error%", "Retries", "ToolCalls", "ToolErr", "ToolErr%"], [26, 14, 8, 8, 8, 8, 10, 8, 9])
-  );
+  console.log('Overview (hard API-reliability errors: network/5xx/overloaded/rate-limited,');
+  console.log('refusal fallbacks, spend/usage soft-blocks, max_tokens truncation)');
+  console.log('-'.repeat(100));
+  console.log(padCols(['Model', 'Family', 'Turns', 'Errors', 'Error%', 'Retries', 'ToolCalls', 'ToolErr', 'ToolErr%'], [26, 14, 8, 8, 8, 8, 10, 8, 9]));
   for (const [model, m] of rows) {
     console.log(
       padCols(
@@ -571,51 +578,41 @@ async function main() {
           m.family,
           String(m.turns),
           String(m.hardErrorTotal),
-          m.hardErrorRatePct != null ? `${m.hardErrorRatePct}%` : "-",
+          m.hardErrorRatePct != null ? `${m.hardErrorRatePct}%` : '-',
           String(m.retryEvents),
           String(m.toolCalls),
           String(m.toolErrors),
-          m.toolErrorRatePct != null ? `${m.toolErrorRatePct}%` : "-",
+          m.toolErrorRatePct != null ? `${m.toolErrorRatePct}%` : '-',
         ],
-        [26, 14, 8, 8, 8, 8, 10, 8, 9]
-      )
+        [26, 14, 8, 8, 8, 8, 10, 8, 9],
+      ),
     );
   }
 
-  console.log("");
-  console.log("Per-model error-class breakdown (counts)");
-  console.log("-".repeat(100));
+  console.log('');
+  console.log('Per-model error-class breakdown (counts)');
+  console.log('-'.repeat(100));
   const allClasses = new Set();
   for (const [, m] of rows) for (const c of Object.keys(m.errorsByClass)) allClasses.add(c);
   const classList = [...allClasses].sort();
-  console.log(padCols(["Model", ...classList], [26, ...classList.map(() => 14)]));
+  console.log(padCols(['Model', ...classList], [26, ...classList.map(() => 14)]));
   for (const [model, m] of rows) {
-    console.log(
-      padCols(
-        [model, ...classList.map((c) => String(m.errorsByClass[c] || 0))],
-        [26, ...classList.map(() => 14)]
-      )
-    );
+    console.log(padCols([model, ...classList.map((c) => String(m.errorsByClass[c] || 0))], [26, ...classList.map(() => 14)]));
   }
 
   if (summary.unknownModelBucket) {
-    console.log("");
-    console.log("Unattributed (no model known yet in session):", JSON.stringify(summary.unknownModelBucket.errorsByClass));
+    console.log('');
+    console.log('Unattributed (no model known yet in session):', JSON.stringify(summary.unknownModelBucket.errorsByClass));
   }
 
   if (opts.byShape) {
-    console.log("");
-    console.log("Per-model error rates by tool-use task shape (--by-shape)");
-    console.log("Shape = per-turn tool_use profile: read_search/edit_write/bash/");
-    console.log("subagent_orchestration/mcp/other_meta-heavy, mixed (multiple categories");
-    console.log("in one turn), or no_tool_call (pure text/reasoning turn).");
-    console.log("-".repeat(100));
-    console.log(
-      padCols(
-        ["Model", "Shape", "Turns", "Errors", "Error%", "ToolCalls", "ToolErr", "ToolErr%"],
-        [26, 26, 8, 8, 8, 10, 8, 9]
-      )
-    );
+    console.log('');
+    console.log('Per-model error rates by tool-use task shape (--by-shape)');
+    console.log('Shape = per-turn tool_use profile: read_search/edit_write/bash/');
+    console.log('subagent_orchestration/mcp/other_meta-heavy, mixed (multiple categories');
+    console.log('in one turn), or no_tool_call (pure text/reasoning turn).');
+    console.log('-'.repeat(100));
+    console.log(padCols(['Model', 'Shape', 'Turns', 'Errors', 'Error%', 'ToolCalls', 'ToolErr', 'ToolErr%'], [26, 26, 8, 8, 8, 10, 8, 9]));
     for (const [model, m] of rows) {
       for (const s of m.shapeBreakdown) {
         console.log(
@@ -625,50 +622,39 @@ async function main() {
               s.shape,
               String(s.turns),
               String(s.hardErrorTotal),
-              s.hardErrorRatePct != null ? `${s.hardErrorRatePct}%` : "-",
+              s.hardErrorRatePct != null ? `${s.hardErrorRatePct}%` : '-',
               String(s.toolCalls),
               String(s.toolErrors),
-              s.toolErrorRatePct != null ? `${s.toolErrorRatePct}%` : "-",
+              s.toolErrorRatePct != null ? `${s.toolErrorRatePct}%` : '-',
             ],
-            [26, 26, 8, 8, 8, 10, 8, 9]
-          )
+            [26, 26, 8, 8, 8, 10, 8, 9],
+          ),
         );
       }
     }
 
-    console.log("");
-    console.log("Shape leaderboard — models ranked by hard error rate, per task shape");
-    console.log("(least reliable model for that kind of work is listed first)");
-    console.log("-".repeat(100));
+    console.log('');
+    console.log('Shape leaderboard — models ranked by hard error rate, per task shape');
+    console.log('(least reliable model for that kind of work is listed first)');
+    console.log('-'.repeat(100));
     const shapeNames = Object.keys(summary.shapeLeaderboard).sort();
     for (const shape of shapeNames) {
       const entries = summary.shapeLeaderboard[shape];
       console.log(`  ${shape}:`);
       for (const e of entries) {
-        console.log(
-          "    " +
-            padCols(
-              [
-                e.model,
-                `turns=${e.turns}`,
-                `errors=${e.hardErrorTotal}`,
-                e.hardErrorRatePct != null ? `error%=${e.hardErrorRatePct}%` : "error%=-",
-              ],
-              [26, 10, 10, 12]
-            )
-        );
+        console.log('    ' + padCols([e.model, `turns=${e.turns}`, `errors=${e.hardErrorTotal}`, e.hardErrorRatePct != null ? `error%=${e.hardErrorRatePct}%` : 'error%=-'], [26, 10, 10, 12]));
       }
     }
   }
 
-  console.log("");
-  console.log("NOTE: ToolErr/ToolErr% is a noisy bucket — it includes routine command");
-  console.log("failures (bad path, non-zero exit, no grep match) alongside genuine tool-");
-  console.log("plumbing failures, so it is reported separately from the hard error rate.");
+  console.log('');
+  console.log('NOTE: ToolErr/ToolErr% is a noisy bucket — it includes routine command');
+  console.log('failures (bad path, non-zero exit, no grep match) alongside genuine tool-');
+  console.log('plumbing failures, so it is reported separately from the hard error rate.');
 }
 
 function padCols(cells, widths) {
-  return cells.map((c, i) => String(c).padEnd(widths[i] ?? 12)).join(" ");
+  return cells.map((c, i) => String(c).padEnd(widths[i] ?? 12)).join(' ');
 }
 
 main().catch((err) => {

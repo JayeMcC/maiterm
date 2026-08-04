@@ -44,9 +44,7 @@ if (!BIN) {
     async function waitForTabContent(tabId: string, needle: string, timeoutMs = 20_000): Promise<boolean> {
       const start = Date.now();
       while (Date.now() - start < timeoutMs) {
-        const res = client.parseToolResult<{ tabs: Array<{ id?: string; content?: string }> }>(
-          await client.callTool('getTabContext', { tabIds: [tabId], lines: 50 }),
-        );
+        const res = client.parseToolResult<{ tabs: Array<{ id?: string; content?: string }> }>(await client.callTool('getTabContext', { tabIds: [tabId], lines: 50 }));
         if (res.tabs?.some((t) => t.content?.includes(needle))) return true;
         await new Promise((r) => setTimeout(r, 500));
       }
@@ -70,20 +68,13 @@ if (!BIN) {
       // Query with BEL terminator so the reply is BEL-terminated too; read
       // up to the BEL and echo the payload after the `11;` prefix.
       const cmd = "printf '\\033]11;?\\007'; IFS= read -r -s -t 8 -d $'\\007' r; echo \"OSCREPLY-${r#*;}\"";
-      const opened = client.parseToolResult<{ tabId: string }>(
-        await client.callTool('openTab', { name: 'e2e-osc-colorquery', command: cmd }),
-      );
+      const opened = client.parseToolResult<{ tabId: string }>(await client.callTool('openTab', { name: 'e2e-osc-colorquery', command: cmd }));
       expect(opened.tabId).toBeTruthy();
-      expect(
-        await waitForTabContent(opened.tabId, 'OSCREPLY-rgb:'),
-        'color query must be answered with an rgb: payload',
-      ).toBe(true);
+      expect(await waitForTabContent(opened.tabId, 'OSCREPLY-rgb:'), 'color query must be answered with an rgb: payload').toBe(true);
     });
 
     it('OSC 1337 SetUserVar lands in the tab trigger variables', async () => {
-      const opened = client.parseToolResult<{ tabId: string }>(
-        await client.callTool('openTab', { name: 'e2e-osc-uservar', command: 'echo osc-tab-ready' }),
-      );
+      const opened = client.parseToolResult<{ tabId: string }>(await client.callTool('openTab', { name: 'e2e-osc-uservar', command: 'echo osc-tab-ready' }));
       expect(opened.tabId).toBeTruthy();
       expect(await waitForTabContent(opened.tabId, 'osc-tab-ready')).toBe(true);
 
@@ -92,9 +83,7 @@ if (!BIN) {
       // sequence into the live shell. "hello" base64-encoded.
       await new Promise((r) => setTimeout(r, 3000));
       const cmd = "printf '\\033]1337;SetUserVar=e2evar=aGVsbG8=\\007'; echo osc-uservar-sent\n";
-      const sent = client.parseToolResult<{ success?: boolean }>(
-        await client.callTool('sendKeysToTab', { tabId: opened.tabId, text: cmd }),
-      );
+      const sent = client.parseToolResult<{ success?: boolean }>(await client.callTool('sendKeysToTab', { tabId: opened.tabId, text: cmd }));
       expect(sent.success).toBe(true);
       expect(await waitForTabContent(opened.tabId, 'osc-uservar-sent')).toBe(true);
 

@@ -24,59 +24,59 @@ Claude Code CLI ←→ WebSocket/SSE ←→ axum server (Rust) ←→ Tauri even
 
 ## Tools Exposed
 
-| Tool | Description |
-|------|-------------|
-| initSession | **REQUIRED first call.** Registers tab ID + session ID → enables auto-inject of tabId on all subsequent calls. Safe to run in parallel with non-maiterm opening tool calls (file reads, grep) to save a round-trip — but never batched with other maiterm calls, which would race the registration |
-| getOpenEditors | List open editor tabs (path, language, dirty state) |
-| getWorkspaceFolders | Workspace root paths |
-| getDiagnostics | App version, tab/PTY counts, WebGL status, FPS, memory/CPU, performance metrics |
-| checkDocumentDirty | Check if file has unsaved changes |
-| saveDocument | Save file to disk |
-| getCurrentSelection | Active editor selection + cursor |
-| getLatestSelection | Most recent selection in any tab |
-| openFile | Open file in editor tab (with optional line/text selection) |
-| openDiff | Show side-by-side diff for review (blocking) |
-| showDiff | Open read-only diff tab comparing file to a git ref (default HEAD) |
-| closeAllDiffTabs | Close all pending diff tabs |
-| listWindows | List all maiTerm windows with IDs, labels, and workspace summaries |
-| listWorkspaces | List all workspaces with panes, tabs, archived tab count (IDs, display names, types, active state, notes, Claude state) |
-| switchTab | Navigate to a tab by ID (auto-resolves workspace/pane) |
-| getTabNotes | Read notes for a tab (optional tabId, defaults to active) |
-| setTabNotes | Write/clear notes for a tab |
-| editTabNotes | Precision edit: find old_string in notes, replace with new_string (must match uniquely) |
-| listWorkspaceNotes | List workspace-level notes (IDs, previews, timestamps) |
-| readWorkspaceNote | Read full content of a workspace note |
-| writeWorkspaceNote | Create or update a workspace note |
-| deleteWorkspaceNote | Delete a workspace note |
-| moveNote | Move note between tab and workspace (with conflict detection) |
-| getTabContext | Get recent terminal output/editor content for tab discovery |
-| openNotesPanel | Open/close/toggle the notes panel for the active tab |
-| setNotesScope | Switch notes panel between 'tab' and 'workspace' views |
-| getActiveTab | Get the currently active workspace, pane, and tab info |
-| setTriggerVariable | Set/clear a trigger variable (e.g. claudeSessionId) for a tab |
-| getTriggerVariables | Read all trigger variables for a tab |
-| setAutoResume | Enable/disable auto-resume with optional command/cwd/ssh overrides |
-| getAutoResume | Get current auto-resume configuration for a tab |
-| findNotes | Search all tabs and workspaces for notes, returns previews |
-| sendNotification | Send in-app toast notification (title, body, type) |
-| readLogs | Read recent maiTerm log entries (filterable by level, search string) |
-| getPreferences | Return current preferences with metadata (filterable by query) |
-| setPreference | Update a single preference by key |
-| createBackup | Create gzip-compressed backup of entire maiTerm state |
-| getClaudeSessions | All active Claude sessions across tabs (state, tool, model, cwd) — multi-agent coordination |
-| listArchivedTabs | List archived (suspended) tabs with names, dates, restore context |
-| restoreArchivedTab | Restore an archived tab back into the active workspace |
-| sendToBridgedAgent | Send a message to a peer agent. 1:1 bridge: omit recipient/topic. Mesh Workspace: recipient (role/handle) + topic required. Async — reply arrives as a new prompt turn |
-| getBridgedAgent | Report whether this tab is bridged and, if so, the partner's label/cwd (in a mesh, returns the roster) |
-| listBridgedPeers | Mesh only: roster of reachable peers — handle (tabId), role, cwd, purpose, live |
-| listTopics | Mesh only: conversation topics — id, label, state, owner, participants, turn count |
-| startTopic | Mesh only: start/reuse a topic (caller becomes owner); returns the topic id |
-| completeTopic | Mesh only: owner marks a topic complete; signals participants, rejects further sends |
-| bindCommsThread | Comms (/maiterm resolve): bind this tab to a Mattermost thread by permalink; returns the thread as a [REPORT]-tagged transcript, the bot's `bot_username`, and records `Tab.comms_binding`. Backend-only |
-| readCommsThread | Comms: re-fetch the full bound thread on demand (only @mentions of the bot are auto-injected; the rest is read-on-demand). Backend-only |
-| postCommsReply | Comms: post Mattermost markdown to the bound thread; `resolve: true` clears the binding after posting. Backend-only |
-| startCommsThread | Comms: open a NEW thread in one of this tab's monitored channels (agent-initiated) and bind to it; `bind: false` posts without binding. Backend-only |
-| unbindCommsThread | Comms: clear the tab's thread binding without posting (idempotent). Backend-only |
+| Tool                | Description                                                                                                                                                                                                                                                                                        |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| initSession         | **REQUIRED first call.** Registers tab ID + session ID → enables auto-inject of tabId on all subsequent calls. Safe to run in parallel with non-maiterm opening tool calls (file reads, grep) to save a round-trip — but never batched with other maiterm calls, which would race the registration |
+| getOpenEditors      | List open editor tabs (path, language, dirty state)                                                                                                                                                                                                                                                |
+| getWorkspaceFolders | Workspace root paths                                                                                                                                                                                                                                                                               |
+| getDiagnostics      | App version, tab/PTY counts, WebGL status, FPS, memory/CPU, performance metrics                                                                                                                                                                                                                    |
+| checkDocumentDirty  | Check if file has unsaved changes                                                                                                                                                                                                                                                                  |
+| saveDocument        | Save file to disk                                                                                                                                                                                                                                                                                  |
+| getCurrentSelection | Active editor selection + cursor                                                                                                                                                                                                                                                                   |
+| getLatestSelection  | Most recent selection in any tab                                                                                                                                                                                                                                                                   |
+| openFile            | Open file in editor tab (with optional line/text selection)                                                                                                                                                                                                                                        |
+| openDiff            | Show side-by-side diff for review (blocking)                                                                                                                                                                                                                                                       |
+| showDiff            | Open read-only diff tab comparing file to a git ref (default HEAD)                                                                                                                                                                                                                                 |
+| closeAllDiffTabs    | Close all pending diff tabs                                                                                                                                                                                                                                                                        |
+| listWindows         | List all maiTerm windows with IDs, labels, and workspace summaries                                                                                                                                                                                                                                 |
+| listWorkspaces      | List all workspaces with panes, tabs, archived tab count (IDs, display names, types, active state, notes, Claude state)                                                                                                                                                                            |
+| switchTab           | Navigate to a tab by ID (auto-resolves workspace/pane)                                                                                                                                                                                                                                             |
+| getTabNotes         | Read notes for a tab (optional tabId, defaults to active)                                                                                                                                                                                                                                          |
+| setTabNotes         | Write/clear notes for a tab                                                                                                                                                                                                                                                                        |
+| editTabNotes        | Precision edit: find old_string in notes, replace with new_string (must match uniquely)                                                                                                                                                                                                            |
+| listWorkspaceNotes  | List workspace-level notes (IDs, previews, timestamps)                                                                                                                                                                                                                                             |
+| readWorkspaceNote   | Read full content of a workspace note                                                                                                                                                                                                                                                              |
+| writeWorkspaceNote  | Create or update a workspace note                                                                                                                                                                                                                                                                  |
+| deleteWorkspaceNote | Delete a workspace note                                                                                                                                                                                                                                                                            |
+| moveNote            | Move note between tab and workspace (with conflict detection)                                                                                                                                                                                                                                      |
+| getTabContext       | Get recent terminal output/editor content for tab discovery                                                                                                                                                                                                                                        |
+| openNotesPanel      | Open/close/toggle the notes panel for the active tab                                                                                                                                                                                                                                               |
+| setNotesScope       | Switch notes panel between 'tab' and 'workspace' views                                                                                                                                                                                                                                             |
+| getActiveTab        | Get the currently active workspace, pane, and tab info                                                                                                                                                                                                                                             |
+| setTriggerVariable  | Set/clear a trigger variable (e.g. claudeSessionId) for a tab                                                                                                                                                                                                                                      |
+| getTriggerVariables | Read all trigger variables for a tab                                                                                                                                                                                                                                                               |
+| setAutoResume       | Enable/disable auto-resume with optional command/cwd/ssh overrides                                                                                                                                                                                                                                 |
+| getAutoResume       | Get current auto-resume configuration for a tab                                                                                                                                                                                                                                                    |
+| findNotes           | Search all tabs and workspaces for notes, returns previews                                                                                                                                                                                                                                         |
+| sendNotification    | Send in-app toast notification (title, body, type)                                                                                                                                                                                                                                                 |
+| readLogs            | Read recent maiTerm log entries (filterable by level, search string)                                                                                                                                                                                                                               |
+| getPreferences      | Return current preferences with metadata (filterable by query)                                                                                                                                                                                                                                     |
+| setPreference       | Update a single preference by key                                                                                                                                                                                                                                                                  |
+| createBackup        | Create gzip-compressed backup of entire maiTerm state                                                                                                                                                                                                                                              |
+| getClaudeSessions   | All active Claude sessions across tabs (state, tool, model, cwd) — multi-agent coordination                                                                                                                                                                                                        |
+| listArchivedTabs    | List archived (suspended) tabs with names, dates, restore context                                                                                                                                                                                                                                  |
+| restoreArchivedTab  | Restore an archived tab back into the active workspace                                                                                                                                                                                                                                             |
+| sendToBridgedAgent  | Send a message to a peer agent. 1:1 bridge: omit recipient/topic. Mesh Workspace: recipient (role/handle) + topic required. Async — reply arrives as a new prompt turn                                                                                                                             |
+| getBridgedAgent     | Report whether this tab is bridged and, if so, the partner's label/cwd (in a mesh, returns the roster)                                                                                                                                                                                             |
+| listBridgedPeers    | Mesh only: roster of reachable peers — handle (tabId), role, cwd, purpose, live                                                                                                                                                                                                                    |
+| listTopics          | Mesh only: conversation topics — id, label, state, owner, participants, turn count                                                                                                                                                                                                                 |
+| startTopic          | Mesh only: start/reuse a topic (caller becomes owner); returns the topic id                                                                                                                                                                                                                        |
+| completeTopic       | Mesh only: owner marks a topic complete; signals participants, rejects further sends                                                                                                                                                                                                               |
+| bindCommsThread     | Comms (/maiterm resolve): bind this tab to a Mattermost thread by permalink; returns the thread as a [REPORT]-tagged transcript, the bot's `bot_username`, and records `Tab.comms_binding`. Backend-only                                                                                           |
+| readCommsThread     | Comms: re-fetch the full bound thread on demand (only @mentions of the bot are auto-injected; the rest is read-on-demand). Backend-only                                                                                                                                                            |
+| postCommsReply      | Comms: post Mattermost markdown to the bound thread; `resolve: true` clears the binding after posting. Backend-only                                                                                                                                                                                |
+| startCommsThread    | Comms: open a NEW thread in one of this tab's monitored channels (agent-initiated) and bind to it; `bind: false` posts without binding. Backend-only                                                                                                                                               |
+| unbindCommsThread   | Comms: clear the tab's thread binding without posting (idempotent). Backend-only                                                                                                                                                                                                                   |
 
 ## Comms Integration (/maiterm resolve)
 
@@ -136,9 +136,9 @@ agent can pull a bug-report thread as a work item and post a resolution back. Mo
   agent can't ask for sign-off without knowing whom to @mention. Deliberately read-only exposure:
   `comms_authorized_users` remains absent from `preference_meta()`, so the list can be seen but
   never edited by anything the chat can reach. The support-tier rule the agent is given (SKILL.md
-  + every injected header) is **read vs. change**: read-only work on a support/pickup user's
-  say-so needs no confirmation (investigate, read code, explain, reproduce, confirm a bug, answer);
-  anything that changes code/data/config/scope requires an @mentioned authorized user's go-ahead.
+  - every injected header) is **read vs. change**: read-only work on a support/pickup user's
+    say-so needs no confirmation (investigate, read code, explain, reproduce, confirm a bug, answer);
+    anything that changes code/data/config/scope requires an @mentioned authorized user's go-ahead.
 - **Image attachments (both directions)**: incoming — `Post.file_ids`/`metadata.files` are
   deserialized; `comms::stage_attachments` downloads image files (png/jpg/gif/webp, ≤10 MB,
   ≤8/call) and stages them where the tab's agent can Read them (`staging_target_for_tab`:
@@ -324,6 +324,7 @@ when the tab is in a mesh workspace, else the 1:1 `agentBridgeStore`.
 Hooks registered in `~/.claude/settings.json` on MCP server startup, cleaned up on app exit and stale lockfile sweep.
 
 **Hooks registered:**
+
 - `SessionStart` (command): Echoes tab ID into Claude's context. Gated on `$MAITERM_PORT` matching server port (prevents dev/prod cross-talk). Output appears collapsed in TUI ("Ran 1 start hook") but injected into model context as system-reminder.
 - `SessionStart` (HTTP): POST to `/hooks` with `{session_id, cwd, source, model}`. Registers session→tab mapping in `AppState.agent_sessions`.
 - `SessionEnd` (HTTP): Removes session from mapping.
@@ -366,7 +367,7 @@ shows nothing for SSH-bridged tabs — no separate gating needed.
 
 **Subagent tracking (Task-tool fan-out):** Claude Code fires `SubagentStart`/`SubagentStop`
 around each subagent spawned via the Task tool, and tags `PreToolUse`/`PostToolUse` fired
-*inside* a subagent with `agent_id`/`agent_type` (same `session_id` as the parent — no
+_inside_ a subagent with `agent_id`/`agent_type` (same `session_id` as the parent — no
 separate routing). `hooks_handler` (`server.rs`) uses `agent_id`'s presence to route a
 tool-use update into `AgentSessionInfo::subagents` (keyed by `agent_id`, capped at
 `MAX_TRACKED_SUBAGENTS`, each entry's tool-call trail capped at `SUBAGENT_LOG_CAP`)
@@ -426,6 +427,7 @@ key; mint a per-request id instead so distinct agents can't merge.
 **SSE reconnect recovery:** SSE connections over SSH tunnels flap frequently (disconnect/reconnect every few seconds). Each reconnect creates a new SSE session ID, clearing the old `connection_tabs` entry. Without recovery, every tool call after a reconnect fails with "Session not initialized." Fix: when a tool call arrives with no connection affinity, `agent_sessions` is checked for active sessions. Recovery only binds when unambiguous — exactly one active session, or (with multiple bridged agents) exactly one of them currently lacks a live connection. With 2+ ambiguous candidates it declines and requires an explicit `initSession`, because guessing could bind one agent's call to another agent's tab (the same class of cross-agent corruption as the shared-key bug above).
 
 **Dev/prod isolation:**
+
 - PTY env vars: `MAITERM_TAB_ID` (tab ID), `MAITERM_PORT` (server port) — set at spawn in `pty/manager.rs`
 - Command hook gates on `$MAITERM_PORT` match
 - MCP tool guard in `server.rs` rejects `tabId` that doesn't exist in this instance
@@ -474,9 +476,10 @@ Remote Claude Code → discovers ~/.claude/ide/{port}.lock → connects through 
 
 **Remote setup:** Lockfile, `~/.claude.json`, hooks (`~/.claude/settings.json`), skill (`~/.claude/skills/maiterm/SKILL.md` + `bin/` statusline helper scripts, fetched via `get_maiterm_skill_scripts`), and `~/.aiterm` env file are written via a separate background SSH connection (`ssh_run_setup`), **not** through the user's interactive PTY. This prevents command injection into running programs (e.g. Claude Code). The setup script uses shell variables for JSON data to avoid nested quoting issues, and pipes JSON to python3/jq via stdin. After setup, `MAITERM_TAB_ID` and `MAITERM_PORT` env vars are injected into the remote shell via PTY write (leading space suppresses shell history).
 
-**`~/.aiterm` env file:** Written during bridge setup with `export MAITERM_TAB_ID=... MAITERM_PORT=...`. Sourced as a fallback by the SessionStart hook (and the Codex `agent-hook.sh` shim) when `$MAITERM_TAB_ID` is empty (e.g. inside tmux where env vars weren't inherited). Users can manually `source ~/.aiterm` in any shell. **Sole-tab gated:** the file is per-ACCOUNT, but all tabs on one host share ONE reverse tunnel/port, so an env-less agent on a shared account can't be disambiguated — a stale file would hand it whichever tab connected most recently, corrupting session/tab identity (the wrong tab gets the session registered + `claudeSessionId` + auto-resume repointed). So `buildSetupScript` writes it only when this maiTerm is the *sole* bridged tab on that host (`isSharedHost(hostKey, tabId)` false); on shared hosts it runs `rm -f ~/.aiterm` (also scrubbing stale pre-fix files) and env-less agents fail closed to a visible "needs init" rather than silently mis-registering.
+**`~/.aiterm` env file:** Written during bridge setup with `export MAITERM_TAB_ID=... MAITERM_PORT=...`. Sourced as a fallback by the SessionStart hook (and the Codex `agent-hook.sh` shim) when `$MAITERM_TAB_ID` is empty (e.g. inside tmux where env vars weren't inherited). Users can manually `source ~/.aiterm` in any shell. **Sole-tab gated:** the file is per-ACCOUNT, but all tabs on one host share ONE reverse tunnel/port, so an env-less agent on a shared account can't be disambiguated — a stale file would hand it whichever tab connected most recently, corrupting session/tab identity (the wrong tab gets the session registered + `claudeSessionId` + auto-resume repointed). So `buildSetupScript` writes it only when this maiTerm is the _sole_ bridged tab on that host (`isSharedHost(hostKey, tabId)` false); on shared hosts it runs `rm -f ~/.aiterm` (also scrubbing stale pre-fix files) and env-less agents fail closed to a visible "needs init" rather than silently mis-registering.
 
 **Context menu items (SSH tabs with active bridge):**
+
 - "Inject maiTerm Env Vars" — re-writes `export MAITERM_TAB_ID=... MAITERM_PORT=...` to the PTY for the current shell (useful after tmux attach, sudo, su)
 - "Install MCP for Current User" — writes the full setup script (lockfile, MCP, hooks, skill) to the PTY, executing as the current user. Needed after `sudo -i` or `su -l otheruser` where `~/` changed but the tunnel is still accessible on localhost.
 

@@ -18,10 +18,12 @@ function harness(roster: MeshMember[], deliverImpl: (tabId: string, text: string
   let persists = 0;
   const deps: MeshSendDeps = {
     router,
-    deliver: async (tabId, text) => { delivered.push({ tabId, text }); return deliverImpl(tabId, text); },
+    deliver: async (tabId, text) => {
+      delivered.push({ tabId, text });
+      return deliverImpl(tabId, text);
+    },
     // Mirror the real builder: stamp the SENDER's role (resolved from senderTabId), never the recipient's.
-    buildEnvelope: (senderTabId, topic, turn, msg) =>
-      `[${roster.find((m) => m.tabId === senderTabId)?.role ?? senderTabId}|${topic.label}|${turn}] ${msg}`,
+    buildEnvelope: (senderTabId, topic, turn, msg) => `[${roster.find((m) => m.tabId === senderTabId)?.role ?? senderTabId}|${topic.label}|${turn}] ${msg}`,
     emitEdge: (e) => edges.push(e),
     persistTopics: () => {
       persists++;
@@ -39,7 +41,10 @@ describe('performMeshSend', () => {
     const h = harness(ROSTER, async () => 'delivered');
     const r = await performMeshSend(h.deps, { senderTabId: 't-api', recipient: 'Mobile App', topic: 'Auth', message: 'hello' });
     expect(r.ok).toBe(true);
-    if (r.ok) { expect(r.delivered).toBe(true); expect(r.recipient).toBe('Mobile App'); }
+    if (r.ok) {
+      expect(r.delivered).toBe(true);
+      expect(r.recipient).toBe('Mobile App');
+    }
     // routed to the recipient handle (t-mob), but the envelope's "from" is the SENDER's role
     // (Backend API) — NOT the recipient's (Mobile App). This is the misroute-label regression guard.
     expect(h.delivered).toEqual([{ tabId: 't-mob', text: '[Backend API|Auth|1] hello' }]);

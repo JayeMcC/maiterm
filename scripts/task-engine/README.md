@@ -57,11 +57,7 @@ Two related helpers:
 ## Programmatic use
 
 ```ts
-import {
-  listTasks,
-  resolveTask,
-  type VariableContext,
-} from '@forwood/task-engine';
+import { listTasks, resolveTask, type VariableContext } from '@forwood/task-engine';
 
 const ctx: VariableContext = {
   workspaceFolder: '/path/to/forwood-one_developing',

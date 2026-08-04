@@ -8,7 +8,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = (name: string) => join(HERE, 'fixtures', name);
 
 function flatten(n: TaskTreeNode, acc: TaskTreeNode[] = []): TaskTreeNode[] {
-  n.dependsOn.forEach(c => flatten(c, acc));
+  n.dependsOn.forEach((c) => flatten(c, acc));
   acc.push(n);
   return acc;
 }
@@ -20,29 +20,21 @@ describe('resolveTask — per-context ${workspaceFolder} (PLAN-15)', () => {
     const tree = resolveTask(FIXTURE('contexts'), 'Both', ctx, {
       workspaceFolderHost: '/hosts/clone',
     });
-    const byLabel = new Map(flatten(tree).map(n => [n.task.label, n]));
+    const byLabel = new Map(flatten(tree).map((n) => [n.task.label, n]));
 
     // Container-context: command paths are the ones visible INSIDE the
     // container (devcontainer exec wraps it later).
-    expect(byLabel.get('Server')!.task.command).toContain(
-      '/workspaces/website/run-server.sh',
-    );
+    expect(byLabel.get('Server')!.task.command).toContain('/workspaces/website/run-server.sh');
     // Host-context: command runs bare on the host — container paths would
     // point nowhere.
-    expect(byLabel.get('Browser')!.task.command).toContain(
-      '/hosts/clone/open-browser.sh',
-    );
+    expect(byLabel.get('Browser')!.task.command).toContain('/hosts/clone/open-browser.sh');
     // The gate itself is host-context (on the host it IS the bring-up).
-    expect(byLabel.get('Require devcontainer')!.task.command).toContain(
-      '/hosts/clone/.vscode',
-    );
+    expect(byLabel.get('Require devcontainer')!.task.command).toContain('/hosts/clone/.vscode');
   });
 
   it('without the option, everything resolves against ctx.workspaceFolder (legacy)', () => {
     const tree = resolveTask(FIXTURE('contexts'), 'Both', ctx);
-    const byLabel = new Map(flatten(tree).map(n => [n.task.label, n]));
-    expect(byLabel.get('Browser')!.task.command).toContain(
-      '/workspaces/website/open-browser.sh',
-    );
+    const byLabel = new Map(flatten(tree).map((n) => [n.task.label, n]));
+    expect(byLabel.get('Browser')!.task.command).toContain('/workspaces/website/open-browser.sh');
   });
 });

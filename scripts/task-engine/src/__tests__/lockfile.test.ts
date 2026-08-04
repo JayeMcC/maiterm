@@ -8,11 +8,7 @@ function makeLockDir(): string {
   return mkdtempSync(join(tmpdir(), 'tengine-lock-'));
 }
 
-function writeLock(
-  dir: string,
-  port: number,
-  fields: Partial<{ pid: number; ideName: string; authToken: string }>,
-): void {
+function writeLock(dir: string, port: number, fields: Partial<{ pid: number; ideName: string; authToken: string }>): void {
   const lock = {
     authToken: fields.authToken ?? 'tok-' + port,
     ideName: fields.ideName ?? 'maiTerm',
@@ -89,7 +85,7 @@ describe('findLiveMaitermLock', () => {
     try {
       writeLock(dir, 11111, {});
       // Force a deterministic mtime gap.
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       writeLock(dir, 22222, {});
       const lock = findLiveMaitermLock(dir);
       expect(lock!.serverPort).toBe(22222);

@@ -119,9 +119,7 @@ export function validateClone(info: CloneInfo): CloneInfo {
   if (!existsSync(tasksFile)) {
     const known = KNOWN_CLONES.join(' / ');
     throw new Error(
-      `Clone '${info.name}' (source: ${info.source}) → ${info.path}\n` +
-        `tasks.json not found at ${tasksFile}.\n` +
-        `Known clone names: ${known}. Override with --clone <name> or set FORWOOD_CLONE.`,
+      `Clone '${info.name}' (source: ${info.source}) → ${info.path}\n` + `tasks.json not found at ${tasksFile}.\n` + `Known clone names: ${known}. Override with --clone <name> or set FORWOOD_CLONE.`,
     );
   }
   return info;

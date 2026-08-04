@@ -16,9 +16,7 @@ beforeEach(() => {
 });
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
-function recordingRunner(
-  map: Array<[RegExp, { stdout?: string; exitCode?: number }]>,
-): { runner: ExecRunner; commands: string[] } {
+function recordingRunner(map: Array<[RegExp, { stdout?: string; exitCode?: number }]>): { runner: ExecRunner; commands: string[] } {
   const commands: string[] = [];
   return {
     commands,
@@ -92,7 +90,7 @@ describe('runForwardMode', () => {
     const { runner, commands } = recordingRunner(upMap());
     const r = await runForwardMode(repo, 8123, { runner });
     expect(r.exitCode).toBe(0);
-    const run = commands.find(c => c.startsWith('docker run'));
+    const run = commands.find((c) => c.startsWith('docker run'));
     expect(run).toBeDefined();
     expect(run).toContain('--name f1-fwd-repo-8123');
     expect(run).toContain('--label forwood.sidecar-forward=8123');
@@ -115,7 +113,7 @@ describe('runUnforwardMode', () => {
     const { runner, commands } = recordingRunner(map);
     const r = await runUnforwardMode(repo, 8123, { runner });
     expect(r.exitCode).toBe(0);
-    expect(commands.some(c => c.startsWith('docker rm -f f1-fwd-repo-8123'))).toBe(true);
+    expect(commands.some((c) => c.startsWith('docker rm -f f1-fwd-repo-8123'))).toBe(true);
   });
 
   it('unknown forward → clean no-op: exit 0 with a stderr notice', async () => {
@@ -123,6 +121,6 @@ describe('runUnforwardMode', () => {
     const r = await runUnforwardMode(repo, 7777, { runner });
     expect(r.exitCode).toBe(0);
     expect(r.stderr).toMatch(/no forward/i);
-    expect(commands.some(c => c.startsWith('docker rm'))).toBe(false);
+    expect(commands.some((c) => c.startsWith('docker rm'))).toBe(false);
   });
 });

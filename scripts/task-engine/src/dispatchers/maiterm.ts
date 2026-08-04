@@ -10,10 +10,7 @@ import { shQuote } from './tmux.ts';
  * from a lockfile for real use.
  */
 export interface McpClientLike {
-  callTool(req: {
-    name: string;
-    arguments: Record<string, unknown>;
-  }): Promise<McpToolCallResult>;
+  callTool(req: { name: string; arguments: Record<string, unknown> }): Promise<McpToolCallResult>;
   close?(): Promise<void>;
 }
 
@@ -93,10 +90,7 @@ export interface MaitermDispatchStep {
  *
  * Throws on the first tool-level error so the launcher can surface it.
  */
-export async function dispatchMaiterm(
-  node: TaskTreeNode,
-  ctx: MaitermDispatchContext,
-): Promise<MaitermDispatchStep[]> {
+export async function dispatchMaiterm(node: TaskTreeNode, ctx: MaitermDispatchContext): Promise<MaitermDispatchStep[]> {
   const out: MaitermDispatchStep[] = [];
   const emitted = new Set<string>();
 
@@ -119,9 +113,7 @@ export async function dispatchMaiterm(
       arguments: args,
     });
     if (callResult.isError) {
-      const detail =
-        callResult.content?.find(c => c.type === 'text')?.text ??
-        '(no error message)';
+      const detail = callResult.content?.find((c) => c.type === 'text')?.text ?? '(no error message)';
       throw new Error(`openTab failed for task '${task.label}': ${detail}`);
     }
     const result = parseToolResult<OpenTabResult>(callResult, task.label);
@@ -196,15 +188,10 @@ export function buildOpenTabArgs(
     // `devcontainer exec` ("already in a container, going in again"). Either
     // starting context converges on the same end state — in the container with
     // the task running — so re-firing into the shell it leaves you in works.
-    command = hostRoot
-      ? `if [ -e ${shQuote(hostRoot)} ]; then ${hostBranch}; else ${containerInner}; fi`
-      : hostBranch;
+    command = hostRoot ? `if [ -e ${shQuote(hostRoot)} ]; then ${hostBranch}; else ${containerInner}; fi` : hostBranch;
   } else {
     // Host task: keep-alive is already host-side; land at the host project root.
-    command =
-      persistent && taskRoot
-        ? keepInteractiveShellAtRoot(task.command ?? '', taskRoot)
-        : (task.command ?? '');
+    command = persistent && taskRoot ? keepInteractiveShellAtRoot(task.command ?? '', taskRoot) : (task.command ?? '');
   }
 
   const args: Record<string, unknown> = {
@@ -221,15 +208,9 @@ export function buildOpenTabArgs(
  * <hostPath> bash -lc '<cmd>'`. When `hostPath` is undefined, returns the
  * command unchanged (caller wants plain host-side execution).
  */
-export function wrapForContainer(
-  command: string,
-  hostPath: string | undefined,
-): string {
+export function wrapForContainer(command: string, hostPath: string | undefined): string {
   if (!hostPath) return command;
-  return (
-    `devcontainer exec --workspace-folder ${shQuote(hostPath)} ` +
-    `bash -lc ${shQuote(command)}`
-  );
+  return `devcontainer exec --workspace-folder ${shQuote(hostPath)} ` + `bash -lc ${shQuote(command)}`;
 }
 
 /**
@@ -251,17 +232,13 @@ export function keepInteractiveShellAtRoot(command: string, root: string): strin
  * handler's return value into `content[0].text` as a JSON string.
  */
 function parseToolResult<T>(result: McpToolCallResult, taskLabel: string): T {
-  const text = result.content?.find(c => c.type === 'text')?.text;
+  const text = result.content?.find((c) => c.type === 'text')?.text;
   if (!text) {
-    throw new Error(
-      `openTab for '${taskLabel}': MCP result missing text content`,
-    );
+    throw new Error(`openTab for '${taskLabel}': MCP result missing text content`);
   }
   try {
     return JSON.parse(text) as T;
   } catch (err) {
-    throw new Error(
-      `openTab for '${taskLabel}': MCP result not JSON: ${String(err)}`,
-    );
+    throw new Error(`openTab for '${taskLabel}': MCP result not JSON: ${String(err)}`, { cause: err });
   }
 }

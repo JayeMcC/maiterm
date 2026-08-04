@@ -2,13 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-  resolveClone,
-  resolveCloneFromCwd,
-  validateClone,
-  clonePathFor,
-  KNOWN_CLONE_NAMES,
-} from '../clone-resolver.ts';
+import { resolveClone, resolveCloneFromCwd, validateClone, clonePathFor, KNOWN_CLONE_NAMES } from '../clone-resolver.ts';
 
 describe('clonePathFor', () => {
   it('maps `main` to forwood-one (no suffix)', () => {
@@ -139,8 +133,6 @@ describe('validateClone', () => {
   });
 
   it('throws an actionable error when tasks.json is missing', () => {
-    expect(() =>
-      validateClone({ name: 'nope', path: '/var/empty/missing', source: 'arg' }),
-    ).toThrow(/tasks\.json not found/);
+    expect(() => validateClone({ name: 'nope', path: '/var/empty/missing', source: 'arg' })).toThrow(/tasks\.json not found/);
   });
 });

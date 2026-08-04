@@ -25,9 +25,7 @@ describe('buildSessionName', () => {
   });
 
   it('fills each unknown field with its fallback, keeping all four positions', () => {
-    expect(buildSessionName({})).toBe(
-      [DEFAULT_FALLBACKS.stack, DEFAULT_FALLBACKS.location, DEFAULT_FALLBACKS.ticket, DEFAULT_FALLBACKS.workPart].join(SEPARATOR),
-    );
+    expect(buildSessionName({})).toBe([DEFAULT_FALLBACKS.stack, DEFAULT_FALLBACKS.location, DEFAULT_FALLBACKS.ticket, DEFAULT_FALLBACKS.workPart].join(SEPARATOR));
     expect(buildSessionName({})).toBe('local·session·no-ticket·wip');
   });
 
@@ -36,9 +34,7 @@ describe('buildSessionName', () => {
   });
 
   it('treats null / undefined / blank / whitespace as unknown', () => {
-    expect(buildSessionName({ stack: null, location: undefined, ticket: '', workPart: '   ' })).toBe(
-      'local·session·no-ticket·wip',
-    );
+    expect(buildSessionName({ stack: null, location: undefined, ticket: '', workPart: '   ' })).toBe('local·session·no-ticket·wip');
   });
 
   it('never lets an embedded separator forge extra fields', () => {
@@ -136,9 +132,7 @@ describe('resolveSessionNameParts + autoSessionName', () => {
   });
 
   it('autoSessionName produces the full convention string end-to-end', () => {
-    expect(autoSessionName({ cwd: '/Users/j/proj/s4/review', branch: 'feature/EAP-3007-get-it-green' })).toBe(
-      's4·review·EAP-3007·get-it-green',
-    );
+    expect(autoSessionName({ cwd: '/Users/j/proj/s4/review', branch: 'feature/EAP-3007-get-it-green' })).toBe('s4·review·EAP-3007·get-it-green');
   });
 
   it('degrades gracefully when branch is unknown (cwd-only)', () => {
@@ -147,8 +141,6 @@ describe('resolveSessionNameParts + autoSessionName', () => {
   });
 
   it('degrades gracefully when cwd is unknown (branch-only)', () => {
-    expect(autoSessionName({ cwd: null, branch: 'feature/EAP-3007-get-it-green' })).toBe(
-      'local·session·EAP-3007·get-it-green',
-    );
+    expect(autoSessionName({ cwd: null, branch: 'feature/EAP-3007-get-it-green' })).toBe('local·session·EAP-3007·get-it-green');
   });
 });
