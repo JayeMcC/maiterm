@@ -103,7 +103,9 @@ export function resolveTicketFromBranch(branch: string | null | undefined): stri
   if (!branch) return null;
   const m = branch.match(TICKET_RE);
   if (!m) return null;
-  return `${m[1].toUpperCase()}-${m[2]}`;
+  const [, key, num] = m;
+  if (!key || !num) return null;
+  return `${key.toUpperCase()}-${num}`;
 }
 
 /**
