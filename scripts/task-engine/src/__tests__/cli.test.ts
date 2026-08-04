@@ -71,13 +71,13 @@ describe('CLI: list', () => {
   it('omits hidden tasks by default', () => {
     const r = runCli(['list', FIXTURE('basic')]);
     const parsed = JSON.parse(r.stdout) as { label: string }[];
-    expect(parsed.map(t => t.label)).not.toContain('Hidden helper');
+    expect(parsed.map((t) => t.label)).not.toContain('Hidden helper');
   });
 
   it('--include-hidden surfaces hidden tasks', () => {
     const r = runCli(['list', FIXTURE('basic'), '--include-hidden']);
     const parsed = JSON.parse(r.stdout) as { label: string }[];
-    expect(parsed.map(t => t.label)).toContain('Hidden helper');
+    expect(parsed.map((t) => t.label)).toContain('Hidden helper');
   });
 
   it('fails when the clone path is missing', () => {
@@ -112,21 +112,11 @@ describe('CLI: resolve', () => {
     const tree = JSON.parse(r.stdout);
     expect(tree.task.label).toBe('Spin up dev servers');
     expect(tree.dependsOrder).toBe('parallel');
-    expect(tree.dependsOn.map((d: { task: { label: string } }) => d.task.label)).toEqual([
-      'Require devcontainer',
-      'API',
-      'WEB',
-    ]);
+    expect(tree.dependsOn.map((d: { task: { label: string } }) => d.task.label)).toEqual(['Require devcontainer', 'API', 'WEB']);
   });
 
   it('substitutes ${input:id} when --input id=value is passed', () => {
-    const r = runCli([
-      'resolve',
-      FIXTURE('inputs'),
-      'Lint branch diff',
-      '--input',
-      'lintBranchTarget=release/9.9.9',
-    ]);
+    const r = runCli(['resolve', FIXTURE('inputs'), 'Lint branch diff', '--input', 'lintBranchTarget=release/9.9.9']);
     expect(r.status).toBe(0);
     const tree = JSON.parse(r.stdout);
     expect(tree.task.command).toBe('lint --base release/9.9.9');
@@ -146,23 +136,10 @@ describe('CLI: resolve', () => {
 });
 
 describe('CLI: dispatch tmux', () => {
-  const HOST_ARGS = [
-    '--target-window',
-    'devcontainers:developing',
-    '--workspace-folder-host',
-    '/host/forwood-one_developing',
-    '--workspace-folder',
-    '/workspaces/website',
-  ];
+  const HOST_ARGS = ['--target-window', 'devcontainers:developing', '--workspace-folder-host', '/host/forwood-one_developing', '--workspace-folder', '/workspaces/website'];
 
   it('emits a bash dispatch script for a dedicated-panel task', () => {
-    const r = runCli([
-      'dispatch',
-      'tmux',
-      FIXTURE('basic'),
-      'API',
-      ...HOST_ARGS,
-    ]);
+    const r = runCli(['dispatch', 'tmux', FIXTURE('basic'), 'API', ...HOST_ARGS]);
     expect(r.status).toBe(0);
     expect(r.stderr).toBe('');
     expect(r.stdout).toMatch(/^# task: API$/m);
@@ -172,22 +149,14 @@ describe('CLI: dispatch tmux', () => {
     // split pane runs a plain host shell, no devcontainer exec wrapper, and
     // ${workspaceFolder} resolves against the HOST path (PLAN-15).
     expect(r.stdout).not.toContain('devcontainer exec');
-    expect(r.stdout).toContain(
-      'bash /host/forwood-one_developing/.vscode/scripts/tasks/dev-api.sh',
-    );
+    expect(r.stdout).toContain('bash /host/forwood-one_developing/.vscode/scripts/tasks/dev-api.sh');
     // Status footer present.
     expect(r.stdout).toContain('✓ task succeeded');
     expect(r.stdout).toContain('✗ task failed');
   });
 
   it('emits multiple steps in declaration order for a composite task', () => {
-    const r = runCli([
-      'dispatch',
-      'tmux',
-      FIXTURE('composite'),
-      'Spin up dev servers',
-      ...HOST_ARGS,
-    ]);
+    const r = runCli(['dispatch', 'tmux', FIXTURE('composite'), 'Spin up dev servers', ...HOST_ARGS]);
     expect(r.status).toBe(0);
     const idxReq = r.stdout.indexOf('# task: Require devcontainer');
     const idxApi = r.stdout.indexOf('# task: API');
@@ -200,27 +169,13 @@ describe('CLI: dispatch tmux', () => {
   });
 
   it('fails when --target-window is missing', () => {
-    const r = runCli([
-      'dispatch',
-      'tmux',
-      FIXTURE('basic'),
-      'API',
-      '--workspace-folder-host',
-      '/host',
-    ]);
+    const r = runCli(['dispatch', 'tmux', FIXTURE('basic'), 'API', '--workspace-folder-host', '/host']);
     expect(r.status).not.toBe(0);
     expect(r.stderr).toMatch(/--target-window required/);
   });
 
   it('fails when --workspace-folder-host is missing', () => {
-    const r = runCli([
-      'dispatch',
-      'tmux',
-      FIXTURE('basic'),
-      'API',
-      '--target-window',
-      'devcontainers:developing',
-    ]);
+    const r = runCli(['dispatch', 'tmux', FIXTURE('basic'), 'API', '--target-window', 'devcontainers:developing']);
     expect(r.status).not.toBe(0);
     expect(r.stderr).toMatch(/--workspace-folder-host required/);
   });
@@ -272,24 +227,14 @@ describe('CLI: dispatch maiterm', () => {
     // Force the lockfile dir to an empty location to simulate no live
     // maiTerm. We do this by pointing HOME at /var/empty and letting the
     // lockfile lookup fall through to "no candidates".
-    const r = spawnSync(
-      process.execPath,
-      [
-        CLI,
-        'dispatch',
-        'maiterm',
-        FIXTURE('basic'),
-        'API',
-      ],
-      {
-        encoding: 'utf8',
-        env: {
-          ...process.env,
-          HOME: '/var/empty',
-          NODE_NO_WARNINGS: '1',
-        },
+    const r = spawnSync(process.execPath, [CLI, 'dispatch', 'maiterm', FIXTURE('basic'), 'API'], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        HOME: '/var/empty',
+        NODE_NO_WARNINGS: '1',
       },
-    );
+    });
     expect(r.status).not.toBe(0);
     expect(r.stderr + r.stdout).toMatch(/No live maiTerm lockfile/);
   });

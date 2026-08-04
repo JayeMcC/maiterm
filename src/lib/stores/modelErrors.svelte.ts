@@ -62,14 +62,11 @@ function createModelErrorStore() {
     },
 
     async init() {
-      const u = await listen<{ tab_id: string | null; summaries: ModelErrorSummary[] }>(
-        'agent-model-errors-updated',
-        (e) => {
-          const { tab_id, summaries } = e.payload;
-          if (!tab_id) return;
-          applySummaries(tab_id, summaries);
-        },
-      );
+      const u = await listen<{ tab_id: string | null; summaries: ModelErrorSummary[] }>('agent-model-errors-updated', (e) => {
+        const { tab_id, summaries } = e.payload;
+        if (!tab_id) return;
+        applySummaries(tab_id, summaries);
+      });
       unlisteners.push(u);
     },
 

@@ -3,7 +3,7 @@
 **Status: removed 2026-07-03.** The e2e suite runs on GitHub Actions ONLY
 (see the repo rule + `e2e.yml` / `render-parity.yml`). On a headless CI runner
 there is no user to disturb, so the machinery below — which existed purely to
-stop *local* spawns from stealing keyboard focus — was dead weight on the CI
+stop _local_ spawns from stealing keyboard focus — was dead weight on the CI
 path and is gone. This file preserves what was tried in case someone wants to
 reapproach local runs.
 
@@ -29,7 +29,7 @@ each reducing but not eliminating the disruption:
    the re-show.
 4. **`window.focus = false` + `always_on_bottom = true`** in the window config.
 5. **`set_focusable(false)`** on every webview window after build.
-6. **`ActivationPolicy::Prohibited`** set on the `App` *before* `run()` — the
+6. **`ActivationPolicy::Prohibited`** set on the `App` _before_ `run()` — the
    only thing that neutralised tao's forced `activateIgnoringOtherApps` (an
    app that "may not be activated" makes that call a no-op).
 

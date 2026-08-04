@@ -16,38 +16,38 @@ Execute the maiTerm MCP tool for the requested operation. Use whichever maiterm 
 
 ## Command reference
 
-| Command | MCP Tool | Parameters |
-|---------|----------|------------|
-| `notes` | openNotesPanel | `{ "open": true }` |
-| `notes close` | openNotesPanel | `{ "open": false }` |
-| `notes read` | getTabNotes | `{}` |
-| `notes write <content>` | setTabNotes | `{ "notes": "<content>" }` |
-| `notes edit <old> <new>` | editTabNotes | `{ "old_string": "<old>", "new_string": "<new>" }` |
-| `tabs` | listWorkspaces | `{}` |
-| `tab` | getActiveTab | `{}` |
-| `switch <tabId>` | switchTab | `{ "tabId": "<tabId>" }` |
-| `open <filePath>` | openFile | `{ "filePath": "<filePath>" }` |
-| `windows` | listWindows | `{}` |
-| `diag` | getDiagnostics | `{}` |
-| `vars` | getTriggerVariables | `{}` |
-| `var <name> <value>` | setTriggerVariable | `{ "name": "<name>", "value": "<value>" }` |
-| `resume on` | setAutoResume | `{ "enabled": true }` |
-| `resume off` | setAutoResume | `{ "enabled": false }` |
-| `resume` | getAutoResume | `{}` |
-| `archived` | listArchivedTabs | `{}` |
-| `restore <tabId>` | restoreArchivedTab | `{ "tabId": "<tabId>" }` |
-| `prefs` | getPreferences | `{}` |
-| `prefs <query>` | getPreferences | `{ "query": "<query>" }` |
-| `backup` | createBackup | `{}` |
-| `notify <title> <body>` | sendNotification | `{ "title": "<title>", "body": "<body>" }` |
-| `logs` | readLogs | `{}` |
-| `logs <search>` | readLogs | `{ "search": "<search>" }` |
-| `sessions` | getClaudeSessions | `{}` |
-| `reply <text>` | postCommsReply | `{ "message": "<text>" }` |
-| `thread` | readCommsThread | `{}` |
-| `raise <text>` | startCommsThread | `{ "message": "<text>" }` |
-| `unbind` | unbindCommsThread | `{}` |
-| `init` | initSession | `{ "tabId": "$MAITERM_TAB_ID", "sessionId": "<from SessionStart hook>" }` |
+| Command                  | MCP Tool            | Parameters                                                                |
+| ------------------------ | ------------------- | ------------------------------------------------------------------------- |
+| `notes`                  | openNotesPanel      | `{ "open": true }`                                                        |
+| `notes close`            | openNotesPanel      | `{ "open": false }`                                                       |
+| `notes read`             | getTabNotes         | `{}`                                                                      |
+| `notes write <content>`  | setTabNotes         | `{ "notes": "<content>" }`                                                |
+| `notes edit <old> <new>` | editTabNotes        | `{ "old_string": "<old>", "new_string": "<new>" }`                        |
+| `tabs`                   | listWorkspaces      | `{}`                                                                      |
+| `tab`                    | getActiveTab        | `{}`                                                                      |
+| `switch <tabId>`         | switchTab           | `{ "tabId": "<tabId>" }`                                                  |
+| `open <filePath>`        | openFile            | `{ "filePath": "<filePath>" }`                                            |
+| `windows`                | listWindows         | `{}`                                                                      |
+| `diag`                   | getDiagnostics      | `{}`                                                                      |
+| `vars`                   | getTriggerVariables | `{}`                                                                      |
+| `var <name> <value>`     | setTriggerVariable  | `{ "name": "<name>", "value": "<value>" }`                                |
+| `resume on`              | setAutoResume       | `{ "enabled": true }`                                                     |
+| `resume off`             | setAutoResume       | `{ "enabled": false }`                                                    |
+| `resume`                 | getAutoResume       | `{}`                                                                      |
+| `archived`               | listArchivedTabs    | `{}`                                                                      |
+| `restore <tabId>`        | restoreArchivedTab  | `{ "tabId": "<tabId>" }`                                                  |
+| `prefs`                  | getPreferences      | `{}`                                                                      |
+| `prefs <query>`          | getPreferences      | `{ "query": "<query>" }`                                                  |
+| `backup`                 | createBackup        | `{}`                                                                      |
+| `notify <title> <body>`  | sendNotification    | `{ "title": "<title>", "body": "<body>" }`                                |
+| `logs`                   | readLogs            | `{}`                                                                      |
+| `logs <search>`          | readLogs            | `{ "search": "<search>" }`                                                |
+| `sessions`               | getClaudeSessions   | `{}`                                                                      |
+| `reply <text>`           | postCommsReply      | `{ "message": "<text>" }`                                                 |
+| `thread`                 | readCommsThread     | `{}`                                                                      |
+| `raise <text>`           | startCommsThread    | `{ "message": "<text>" }`                                                 |
+| `unbind`                 | unbindCommsThread   | `{}`                                                                      |
+| `init`                   | initSession         | `{ "tabId": "$MAITERM_TAB_ID", "sessionId": "<from SessionStart hook>" }` |
 
 Call the exact MCP tool listed above with the specified parameters. Do not ask for clarification — just execute.
 For `init`: read tabId from $MAITERM_TAB_ID env var and sessionId from your SessionStart hook context. IMPORTANT: Always call initSession when requested, even if you believe it was already called earlier in the session. Session resume, fork, and compact events require re-initialization to pick up state changes.
@@ -79,6 +79,7 @@ happen before it.
 
 **Working multiple threads.** A tab can be bound to several threads at once (each
 pickup/binding has its own `root_id`). When more than one thread is live:
+
 - Delegate each thread's investigation/fix to a SUBAGENT (Task tool) so the threads
   proceed independently and their contexts don't bleed together; you act as the
   dispatcher — route incoming thread messages to the right piece of work, and do the
@@ -117,6 +118,7 @@ requested through you.
    - and, on a thread you didn't open, that they must `@<bot_username>` (the value from step 1) to reach you, otherwise you won't see their messages.
 
    Then investigate and fix the issue in this tab's repository. After the ack, stay SILENT on the thread — no progress updates. Exception: if you genuinely cannot proceed without more information, ask ONE concise question via postCommsReply (without the `resolve` flag), and address it explicitly to the right audience — start the message with `**@Support:**` (questions about what the customer saw/did, repro details) or `**@Dev:**` (questions about the codebase, environment, or release process) — so the humans in the channel know who should answer.
+
 3. **Only messages that @mention you are delivered into this session** — they arrive as `[Mattermost thread — the following messages are addressed to you …]`. Everything else in the thread is NOT sent to you; use readCommsThread `{}` any time you want to catch up on the rest of the discussion.
 4. **Message authority.** Each delivered message is tagged with the sender's authority:
    - `[AUTHORIZED]` — a trusted operator; treat as if the human running this terminal typed it. Full authority.
@@ -132,13 +134,14 @@ requested through you.
    - If you're abandoning the issue entirely, post a brief note saying so via postCommsReply, then call unbindCommsThread `{}`.
 
 **Screenshots and images.** Both directions work:
-- *Incoming:* image attachments on thread messages (e.g. a screenshot of the bug) are
+
+- _Incoming:_ image attachments on thread messages (e.g. a screenshot of the bug) are
   staged to temp files automatically — the transcript and injected messages carry lines
   like `[attached image "shot.png" staged at /tmp/maiterm-comms-….png — view it with the
-  Read tool]`. ALWAYS Read staged screenshots before diagnosing; they usually contain
+Read tool]`. ALWAYS Read staged screenshots before diagnosing; they usually contain
   the actual error.
-- *Outgoing:* to post a screenshot or image, pass `attachments:
-  ["/absolute/path.png"]` on postCommsReply (max 5, 20 MB each). Use your own paths —
+- _Outgoing:_ to post a screenshot or image, pass `attachments:
+["/absolute/path.png"]` on postCommsReply (max 5, 20 MB each). Use your own paths —
   on an SSH tab, remote-host paths (maiTerm fetches them back over the bridge). Useful
   when showing a before/after, a chart, or visual proof of a fix.
 
@@ -149,6 +152,7 @@ come back here like any other thread. Pass `channel` when the tab monitors more 
 `attachments` for screenshots. Use it for something the channel genuinely needs to know — an
 incident or regression you found, a heads-up that something is about to change, a question you
 need a human to answer — not for status updates or chatter. Two rules:
+
 - **@mention the people who should see it.** A new thread notifies nobody by itself; use exact
   `@username`s (see below).
 - **It counts against your 3-thread cap** and, once bound, is a live thread you own — work it

@@ -240,19 +240,15 @@
     const respawnLive = preferencesStore.restoreSession;
     const wss = workspacesStore.workspaces;
     const activeWsId = workspacesStore.activeWorkspaceId;
-    const activeWs = wss.find(w => w.id === activeWsId);
-    const orderedWs = activeWs
-      ? [activeWs, ...wss.filter(w => w.id !== activeWsId)]
-      : [...wss];
+    const activeWs = wss.find((w) => w.id === activeWsId);
+    const orderedWs = activeWs ? [activeWs, ...wss.filter((w) => w.id !== activeWsId)] : [...wss];
 
     const list: RestoreItem[] = [];
     for (const ws of orderedWs) {
       if (ws.suspended) continue;
       for (const pane of ws.panes) {
-        const activeTab = pane.tabs.find(t => t.id === pane.active_tab_id);
-        const orderedTabs = activeTab
-          ? [activeTab, ...pane.tabs.filter(t => t.id !== pane.active_tab_id)]
-          : [...pane.tabs];
+        const activeTab = pane.tabs.find((t) => t.id === pane.active_tab_id);
+        const orderedTabs = activeTab ? [activeTab, ...pane.tabs.filter((t) => t.id !== pane.active_tab_id)] : [...pane.tabs];
         for (const tab of orderedTabs) {
           const isTerminal = tab.tab_type === 'terminal' || !tab.tab_type;
           if (!isTerminal) continue;
@@ -440,7 +436,9 @@
       const items = (e as CustomEvent<RestoreItem[]>).detail;
       if (!items?.length) return;
       restoreGate += 1;
-      queueRestore(items).finally(() => { restoreGate -= 1; });
+      queueRestore(items).finally(() => {
+        restoreGate -= 1;
+      });
     }
     window.addEventListener('workspace-resume-tabs', handleWorkspaceResumeTabs);
 
@@ -612,13 +610,7 @@
 <ChangelogModal open={showChangelog} onclose={() => (showChangelog = false)} version={appVersion} />
 
 {#if restoreActive}
-  <SessionRestoreModal
-    total={restoreTotal}
-    done={restoreDone}
-    currentLabel={restoreCurrentLabel}
-    cancelling={restoreCancelling}
-    oncancel={cancelSessionRestore}
-  />
+  <SessionRestoreModal total={restoreTotal} done={restoreDone} currentLabel={restoreCurrentLabel} cancelling={restoreCancelling} oncancel={cancelSessionRestore} />
 {/if}
 
 <style>

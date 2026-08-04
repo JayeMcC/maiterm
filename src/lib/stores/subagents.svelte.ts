@@ -97,26 +97,23 @@ function createSubagentStore() {
     },
 
     async init() {
-      const u1 = await listen<{ tab_id: string | null; agent_id: string; agent_type: string; runtime?: string }>(
-        'agent-hook-subagent-start',
-        (e) => {
-          const { tab_id, agent_id, agent_type } = e.payload;
-          if (!tab_id || !agent_id) return;
-          const now = Date.now();
-          sessions.set(agent_id, {
-            agentId: agent_id,
-            tabId: tab_id,
-            runtime: runtimeOf(e.payload),
-            agentType: agent_type || 'subagent',
-            state: 'running',
-            toolName: undefined,
-            toolDetail: undefined,
-            log: [],
-            startedAt: now,
-            updatedAt: now,
-          });
-        },
-      );
+      const u1 = await listen<{ tab_id: string | null; agent_id: string; agent_type: string; runtime?: string }>('agent-hook-subagent-start', (e) => {
+        const { tab_id, agent_id, agent_type } = e.payload;
+        if (!tab_id || !agent_id) return;
+        const now = Date.now();
+        sessions.set(agent_id, {
+          agentId: agent_id,
+          tabId: tab_id,
+          runtime: runtimeOf(e.payload),
+          agentType: agent_type || 'subagent',
+          state: 'running',
+          toolName: undefined,
+          toolDetail: undefined,
+          log: [],
+          startedAt: now,
+          updatedAt: now,
+        });
+      });
       unlisteners.push(u1);
 
       const u2 = await listen<{ tab_id: string | null; agent_id: string }>('agent-hook-subagent-stop', (e) => {

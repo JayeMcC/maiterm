@@ -33,11 +33,7 @@ const VAR_PATTERN = /\$\{([^}]+)\}/g;
  * Anything else is left untouched (`${file}`, `${selectedText}`, …): those
  * variables require editor context the engine doesn't have.
  */
-export function resolveString(
-  value: string,
-  ctx: VariableContext,
-  options?: { unresolvedInput?: (id: string) => string },
-): string {
+export function resolveString(value: string, ctx: VariableContext, options?: { unresolvedInput?: (id: string) => string }): string {
   return value.replace(VAR_PATTERN, (match, expr: string) => {
     if (expr === 'workspaceFolder') return ctx.workspaceFolder;
     if (expr === 'workspaceFolderBasename') {
@@ -66,16 +62,12 @@ export function resolveString(
  * Walk an arbitrary JSON-shaped value and resolve `${…}` in every string leaf.
  * Returns a structurally equivalent value with substituted strings.
  */
-export function resolveDeep<T>(
-  value: T,
-  ctx: VariableContext,
-  options?: { unresolvedInput?: (id: string) => string },
-): T {
+export function resolveDeep<T>(value: T, ctx: VariableContext, options?: { unresolvedInput?: (id: string) => string }): T {
   if (typeof value === 'string') {
     return resolveString(value, ctx, options) as unknown as T;
   }
   if (Array.isArray(value)) {
-    return value.map(v => resolveDeep(v, ctx, options)) as unknown as T;
+    return value.map((v) => resolveDeep(v, ctx, options)) as unknown as T;
   }
   if (value !== null && typeof value === 'object') {
     const out: Record<string, unknown> = {};
@@ -122,10 +114,7 @@ export function listRequiredInputs(value: unknown): string[] {
  * undefined if the input has no default or the type is `command` (which the
  * engine doesn't execute — caller would need its own resolver).
  */
-export function resolveInputDefault(
-  input: TaskInput,
-  ctx: VariableContext,
-): string | undefined {
+export function resolveInputDefault(input: TaskInput, ctx: VariableContext): string | undefined {
   if (input.type === 'command') return undefined;
   if (input.default === undefined) return undefined;
   return resolveString(input.default, ctx);

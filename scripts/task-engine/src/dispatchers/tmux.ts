@@ -71,10 +71,7 @@ const DEDICATED_FOOTER =
  * (blocking until each prereq finishes) would require execution-side
  * coordination the engine deliberately doesn't model — see ADR 0005.
  */
-export function emitTmuxDispatch(
-  node: TaskTreeNode,
-  ctx: TmuxDispatchContext,
-): string {
+export function emitTmuxDispatch(node: TaskTreeNode, ctx: TmuxDispatchContext): string {
   const lines: string[] = [];
   const emitted = new Set<string>();
 
@@ -99,9 +96,7 @@ export function emitTmuxDispatch(
 
     if (panel === 'shared') {
       const sendTarget = `${ctx.targetWindow}.0`;
-      lines.push(
-        `tmux send-keys -t ${shQuote(sendTarget)} ${shQuote(command)} Enter`,
-      );
+      lines.push(`tmux send-keys -t ${shQuote(sendTarget)} ${shQuote(command)} Enter`);
       return;
     }
 
@@ -111,25 +106,16 @@ export function emitTmuxDispatch(
     // host shell in their new pane.
     const title = paneTitle(group);
     const wrapper = '__t0=$SECONDS; ' + command + DEDICATED_FOOTER;
-    const inner =
-      n.executionContext === 'container'
-        ? `devcontainer exec --workspace-folder ${shQuote(ctx.workspaceFolderHost)} ` +
-          `bash -lc ${shQuote(wrapper)}`
-        : `bash -lc ${shQuote(wrapper)}`;
+    const inner = n.executionContext === 'container' ? `devcontainer exec --workspace-folder ${shQuote(ctx.workspaceFolderHost)} ` + `bash -lc ${shQuote(wrapper)}` : `bash -lc ${shQuote(wrapper)}`;
     const win = shQuote(ctx.targetWindow);
 
-    lines.push(
-      `pane_id=$(tmux list-panes -t ${win} -F "#{pane_id} #{pane_title}" ` +
-        `| awk -v t=${shQuote(title)} '$2==t {print $1; exit}')`,
-    );
+    lines.push(`pane_id=$(tmux list-panes -t ${win} -F "#{pane_id} #{pane_title}" ` + `| awk -v t=${shQuote(title)} '$2==t {print $1; exit}')`);
     lines.push('if [[ -n "$pane_id" ]]; then');
     lines.push('  tmux select-pane -t "$pane_id"');
     lines.push('  tmux send-keys -t "$pane_id" C-c 2>/dev/null || true');
     lines.push(`  tmux send-keys -t "$pane_id" ${shQuote(command)} Enter`);
     lines.push('else');
-    lines.push(
-      `  pane_id=$(tmux split-window -t ${win} -h -P -F "#{pane_id}" ${shQuote(inner)})`,
-    );
+    lines.push(`  pane_id=$(tmux split-window -t ${win} -h -P -F "#{pane_id}" ${shQuote(inner)})`);
     lines.push(`  tmux select-pane -t "$pane_id" -T ${shQuote(title)}`);
     lines.push('fi');
   }

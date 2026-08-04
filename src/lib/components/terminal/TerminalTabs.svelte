@@ -541,11 +541,7 @@
         const cmd = `tmux new-session -A -s ${name} -c "$PWD"\n`;
         await writeTerminal(tab.pty_id, Array.from(new TextEncoder().encode(cmd)));
       } else {
-        toastStore.addToast(
-          'tmux toggle blocked',
-          'A process is running in the foreground — exit it (or detach manually) first.',
-          'info',
-        );
+        toastStore.addToast('tmux toggle blocked', 'A process is running in the foreground — exit it (or detach manually) first.', 'info');
       }
     } catch (err) {
       toastStore.addToast('tmux toggle failed', String(err), 'error');
@@ -1071,9 +1067,9 @@
 
   function tabMenuItems(tabId: string) {
     const onlyTab = pane.tabs.length === 1;
-    const ws = workspacesStore.workspaces.find(w => w.id === workspaceId);
-    const otherPanes = (ws?.panes ?? []).filter(p => p.id !== pane.id);
-    const tabObj = pane.tabs.find(t => t.id === tabId);
+    const ws = workspacesStore.workspaces.find((w) => w.id === workspaceId);
+    const otherPanes = (ws?.panes ?? []).filter((p) => p.id !== pane.id);
+    const tabObj = pane.tabs.find((t) => t.id === tabId);
     const isPinned = !!tabObj?.pinned;
     const isTerminalTab = (tabObj?.tab_type ?? 'terminal') === 'terminal';
     const isAgentTab = !!tabObj?.runtime;
@@ -1102,18 +1098,22 @@
       }
     }
     const boundCount = tabObj?.comms_bindings?.length ?? 0;
-    const commsItem: MenuItem | null = boundCount > 0
-      ? {
-          label: boundCount > 1 ? `End thread bindings (${boundCount})` : 'End thread binding',
-          action: () => workspacesStore.clearTabCommsBinding(workspaceId, pane.id, tabId),
-        }
-      : null;
+    const commsItem: MenuItem | null =
+      boundCount > 0
+        ? {
+            label: boundCount > 1 ? `End thread bindings (${boundCount})` : 'End thread binding',
+            action: () => workspacesStore.clearTabCommsBinding(workspaceId, pane.id, tabId),
+          }
+        : null;
     const commsMonitorItem: MenuItem | null = isTerminalTab
       ? {
           label: tabObj?.comms_monitor ? 'Chat monitoring…' : 'Enable chat monitoring…',
-          action: () => window.dispatchEvent(new CustomEvent('open-comms-monitor', {
-            detail: { workspaceId, paneId: pane.id, tabId },
-          })),
+          action: () =>
+            window.dispatchEvent(
+              new CustomEvent('open-comms-monitor', {
+                detail: { workspaceId, paneId: pane.id, tabId },
+              }),
+            ),
         }
       : null;
     // Copy-path items for editor tabs. For SSH files "Copy Full Path" gives the
@@ -1121,9 +1121,7 @@
     const editorFile = tabObj?.tab_type === 'editor' ? tabObj.editor_file : null;
     const editorPathItems: MenuItem[] = [];
     if (editorFile) {
-      const fullPath = editorFile.is_remote
-        ? (editorFile.remote_path ?? editorFile.file_path)
-        : editorFile.file_path;
+      const fullPath = editorFile.is_remote ? (editorFile.remote_path ?? editorFile.file_path) : editorFile.file_path;
       editorPathItems.push({
         label: 'Copy Full Path',
         action: () => copyTextToClipboard(fullPath, 'Path copied'),
@@ -1175,10 +1173,7 @@
     const menuTab = pane.tabs.find((t) => t.id === tabId);
     const filePath = menuTab?.tab_type === 'editor' ? (menuTab.editor_file?.file_path ?? null) : null;
     if (filePath) {
-      items.unshift(
-        { label: 'Copy full file path', action: () => void clipboardWriteText(filePath) },
-        { label: '', separator: true, action: () => {} },
-      );
+      items.unshift({ label: 'Copy full file path', action: () => void clipboardWriteText(filePath) }, { label: '', separator: true, action: () => {} });
     }
     return items;
   }
@@ -1356,9 +1351,17 @@
             <Tooltip text={`Bridged to ${agentBridgeStore.getPartnerLabel(tab.id) ?? 'an agent'} — they can message this agent`}><span class="agent-bridge-indicator">⇄</span></Tooltip>
           {/if}
           {#if !isEditor && (tab.comms_bindings?.length ?? 0) > 0}
-            <Tooltip text={`Bound to ${tab.comms_bindings!.length > 1 ? `${tab.comms_bindings!.length} chat threads` : 'a chat thread'} — @mention replies steer this agent. Right-click → End thread binding to stop.`}><span class="comms-indicator">@{#if tab.comms_bindings!.length > 1}{tab.comms_bindings!.length}{/if}</span></Tooltip>
+            <Tooltip
+              text={`Bound to ${tab.comms_bindings!.length > 1 ? `${tab.comms_bindings!.length} chat threads` : 'a chat thread'} — @mention replies steer this agent. Right-click → End thread binding to stop.`}
+              ><span class="comms-indicator"
+                >@{#if tab.comms_bindings!.length > 1}{tab.comms_bindings!.length}{/if}</span
+              ></Tooltip
+            >
           {:else if !isEditor && tab.comms_monitor}
-            <Tooltip text={`Chat monitoring ${tab.comms_monitor.channels.length} channel${tab.comms_monitor.channels.length === 1 ? '' : 's'} — @bot summons land here. Right-click → Chat monitoring… to change.`}><span class="comms-indicator comms-monitoring">@</span></Tooltip>
+            <Tooltip
+              text={`Chat monitoring ${tab.comms_monitor.channels.length} channel${tab.comms_monitor.channels.length === 1 ? '' : 's'} — @bot summons land here. Right-click → Chat monitoring… to change.`}
+              ><span class="comms-indicator comms-monitoring">@</span></Tooltip
+            >
           {/if}
           <span class="tab-name">{displayName(tab)}</span>
           {@const hasRunningPty = !isEditor && !isDiff && !!terminalsStore.get(tab.id)}
@@ -1381,7 +1384,9 @@
                 ><Icon name="duplicate" size={11} /></IconButton
               >
               {#if terminalsStore.get(tab.id)}
-                <IconButton tooltip="Toggle tmux (attach/detach)" style="width:22px;height:18px;border-radius:3px" onclick={(e) => handleToggleTmux(tab.id, e)}><Icon name="tmux" size={11} /></IconButton>
+                <IconButton tooltip="Toggle tmux (attach/detach)" style="width:22px;height:18px;border-radius:3px" onclick={(e) => handleToggleTmux(tab.id, e)}
+                  ><Icon name="tmux" size={11} /></IconButton
+                >
                 <IconButton tooltip="Suspend tab" style="width:22px;height:18px;border-radius:3px" onclick={(e) => handleSuspendTab(tab.id, e)}><Icon name="pause" size={11} /></IconButton>
               {/if}
             {/if}

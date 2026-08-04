@@ -105,49 +105,49 @@
             </button>
 
             {#if !containerCollapsed}
-            {#if hotbarStore.containerError}
-              <p class="section-error" title={hotbarStore.containerError}>{hotbarStore.containerError}</p>
-            {/if}
-
-            {#if cs && cs.state === 'up'}
-              {#if cs.ports.length > 0}
-                <div class="port-list">
-                  {#each cs.ports as p (p.hostPort)}
-                    <button class="port-row" title="Open {p.scheme ?? 'http'}://localhost:{p.hostPort}" onclick={() => hotbarStore.openPort(p.hostPort, p.scheme)}>
-                      <span class="dot" class:live={p.listening}></span>
-                      <span class="port-label">{p.service}</span>
-                      <span class="port-num">:{p.hostPort}</span>
-                    </button>
-                  {/each}
-                </div>
+              {#if hotbarStore.containerError}
+                <p class="section-error" title={hotbarStore.containerError}>{hotbarStore.containerError}</p>
               {/if}
 
-              {#each cs.listeners.filter((l) => l.forwardable) as l (l.containerPort)}
-                <div class="fwd-row">
-                  <span class="port-num">:{l.containerPort}</span>
-                  <span class="fwd-note">in-container</span>
-                  <button class="fwd-btn" disabled={hotbarStore.containerBusy === l.containerPort} onclick={() => hotbarStore.forwardPort(l.containerPort)}>Forward</button>
-                </div>
-              {/each}
+              {#if cs && cs.state === 'up'}
+                {#if cs.ports.length > 0}
+                  <div class="port-list">
+                    {#each cs.ports as p (p.hostPort)}
+                      <button class="port-row" title="Open {p.scheme ?? 'http'}://localhost:{p.hostPort}" onclick={() => hotbarStore.openPort(p.hostPort, p.scheme)}>
+                        <span class="dot" class:live={p.listening}></span>
+                        <span class="port-label">{p.service}</span>
+                        <span class="port-num">:{p.hostPort}</span>
+                      </button>
+                    {/each}
+                  </div>
+                {/if}
 
-              {#each cs.forwards as f (f.port)}
-                <div class="fwd-row">
-                  <span class="dot" class:live={f.running}></span>
-                  <span class="port-num">:{f.port}</span>
-                  <span class="fwd-note">forwarded</span>
-                  <button class="fwd-btn stop" disabled={hotbarStore.containerBusy === f.port} onclick={() => hotbarStore.unforwardPort(f.port)}>Stop</button>
-                </div>
-              {/each}
+                {#each cs.listeners.filter((l) => l.forwardable) as l (l.containerPort)}
+                  <div class="fwd-row">
+                    <span class="port-num">:{l.containerPort}</span>
+                    <span class="fwd-note">in-container</span>
+                    <button class="fwd-btn" disabled={hotbarStore.containerBusy === l.containerPort} onclick={() => hotbarStore.forwardPort(l.containerPort)}>Forward</button>
+                  </div>
+                {/each}
 
-              <div class="fwd-row manual">
-                <input class="fwd-input" type="text" inputmode="numeric" placeholder="port…" bind:value={forwardInput} onkeydown={(e) => e.key === 'Enter' && submitForward()} />
-                <button class="fwd-btn" onclick={submitForward}>Forward</button>
-              </div>
-            {:else if cs && cs.state === 'down'}
-              <p class="section-empty">Container down — spin up dev servers</p>
-            {:else if cs && cs.state === 'runtime-unavailable'}
-              <p class="section-empty">Docker not running</p>
-            {/if}
+                {#each cs.forwards as f (f.port)}
+                  <div class="fwd-row">
+                    <span class="dot" class:live={f.running}></span>
+                    <span class="port-num">:{f.port}</span>
+                    <span class="fwd-note">forwarded</span>
+                    <button class="fwd-btn stop" disabled={hotbarStore.containerBusy === f.port} onclick={() => hotbarStore.unforwardPort(f.port)}>Stop</button>
+                  </div>
+                {/each}
+
+                <div class="fwd-row manual">
+                  <input class="fwd-input" type="text" inputmode="numeric" placeholder="port…" bind:value={forwardInput} onkeydown={(e) => e.key === 'Enter' && submitForward()} />
+                  <button class="fwd-btn" onclick={submitForward}>Forward</button>
+                </div>
+              {:else if cs && cs.state === 'down'}
+                <p class="section-empty">Container down — spin up dev servers</p>
+              {:else if cs && cs.state === 'runtime-unavailable'}
+                <p class="section-empty">Docker not running</p>
+              {/if}
             {/if}
           </section>
         {/if}

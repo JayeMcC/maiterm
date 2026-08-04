@@ -11,16 +11,11 @@ beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'status-'));
   repo = join(root, 'repo');
   mkdirSync(join(repo, '.devcontainer'), { recursive: true });
-  writeFileSync(
-    join(repo, '.devcontainer/devcontainer.json'),
-    '{ "workspaceFolder": "/workspaces/x" }\n',
-  );
+  writeFileSync(join(repo, '.devcontainer/devcontainer.json'), '{ "workspaceFolder": "/workspaces/x" }\n');
 });
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
-function fakeRunner(
-  map: Array<[RegExp, { stdout?: string; exitCode?: number }]>,
-): ExecRunner {
+function fakeRunner(map: Array<[RegExp, { stdout?: string; exitCode?: number }]>): ExecRunner {
   return {
     async run(cmd, args) {
       const s = [cmd, ...args].join(' ');
@@ -62,7 +57,7 @@ function upRunner(overrides: Array<[RegExp, { stdout?: string; exitCode?: number
     [/docker exec dev111 ss -tlnH/, { stdout: SS_OUT }],
     [/docker ps --format .* --filter label=forwood\.sidecar-clone=/, { stdout: FORWARD_PS_LINE.replace('REPO', 'repo') + '\n' }],
     [/lsof .*9999/, { exitCode: 0 }], // 9999 bound on host
-    [/lsof /, { exitCode: 1 }],       // everything else free
+    [/lsof /, { exitCode: 1 }], // everything else free
   ]);
 }
 

@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  resolveString,
-  resolveDeep,
-  listRequiredInputs,
-  resolveInputDefault,
-  type VariableContext,
-} from '../variables.ts';
+import { resolveString, resolveDeep, listRequiredInputs, resolveInputDefault, type VariableContext } from '../variables.ts';
 import type { TaskInput } from '../types.ts';
 
 const CTX: VariableContext = {
@@ -16,8 +10,7 @@ const CTX: VariableContext = {
 
 describe('resolveString', () => {
   it('substitutes ${workspaceFolder}', () => {
-    expect(resolveString('${workspaceFolder}/.vscode/tasks.json', CTX))
-      .toBe('/Users/jayemccracken/proj/forwood-one_developing/.vscode/tasks.json');
+    expect(resolveString('${workspaceFolder}/.vscode/tasks.json', CTX)).toBe('/Users/jayemccracken/proj/forwood-one_developing/.vscode/tasks.json');
   });
 
   it('substitutes ${env:NAME}', () => {
@@ -25,8 +18,7 @@ describe('resolveString', () => {
   });
 
   it('substitutes ${input:id}', () => {
-    expect(resolveString('lint --base ${input:lintBranchTarget}', CTX))
-      .toBe('lint --base release/1.8.0');
+    expect(resolveString('lint --base ${input:lintBranchTarget}', CTX)).toBe('lint --base release/1.8.0');
   });
 
   it('returns empty string for missing env var', () => {
@@ -38,11 +30,7 @@ describe('resolveString', () => {
   });
 
   it('uses unresolvedInput callback when input is missing', () => {
-    const result = resolveString(
-      '${input:nothere}',
-      { ...CTX, inputs: {} },
-      { unresolvedInput: id => `<missing:${id}>` },
-    );
+    const result = resolveString('${input:nothere}', { ...CTX, inputs: {} }, { unresolvedInput: (id) => `<missing:${id}>` });
     expect(result).toBe('<missing:nothere>');
   });
 
@@ -59,9 +47,7 @@ describe('resolveDeep', () => {
       options: { cwd: '${workspaceFolder}', env: { PORT: '${env:API_PORT}' } },
     };
     const out = resolveDeep(task, CTX);
-    expect(out.command).toBe(
-      'bash /Users/jayemccracken/proj/forwood-one_developing/run.sh',
-    );
+    expect(out.command).toBe('bash /Users/jayemccracken/proj/forwood-one_developing/run.sh');
     expect(out.args).toEqual(['4000', 'static']);
     expect(out.options.env.PORT).toBe('4000');
   });
@@ -78,10 +64,7 @@ describe('listRequiredInputs', () => {
       command: 'lint --base ${input:lintBranchTarget} --target ${input:hardSnapshotTarget}',
       args: ['${input:hardSnapshotTarget}'],
     };
-    expect(listRequiredInputs(task).sort()).toEqual([
-      'hardSnapshotTarget',
-      'lintBranchTarget',
-    ]);
+    expect(listRequiredInputs(task).sort()).toEqual(['hardSnapshotTarget', 'lintBranchTarget']);
   });
 
   it('returns empty array for tasks with no inputs', () => {

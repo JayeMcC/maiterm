@@ -25,9 +25,7 @@ const handle = await spawnMaiterm({ binary, timeoutMs: 90_000, env: passEnv });
 await new Promise((r) => setTimeout(r, 3000));
 try {
   const res = await waitForRender();
-  console.log(
-    `RENDER_RESULT label=${label} distinctColors=${res.distinctColors} rendered=${res.rendered}`,
-  );
+  console.log(`RENDER_RESULT label=${label} distinctColors=${res.distinctColors} rendered=${res.rendered}`);
   process.exitCode = res.rendered ? 0 : 1;
 } catch (err) {
   if (err instanceof CaptureUnavailableError) {

@@ -165,13 +165,7 @@ export async function isRemoteShellForeground(ptyId: string): Promise<boolean> {
  * This runs as a non-interactive command, not through the user's PTY.
  * Sets up: lockfile, MCP entry in ~/.claude.json, hooks in ~/.claude/settings.json.
  */
-function buildSetupScript(
-  remotePort: number,
-  authToken: string,
-  tabId: string,
-  scripts: commands.MaitermSkillScripts,
-  sharedHost: boolean,
-): string {
+function buildSetupScript(remotePort: number, authToken: string, tabId: string, scripts: commands.MaitermSkillScripts, sharedHost: boolean): string {
   const lockContent = JSON.stringify({
     pid: 0, // Background SSH — no persistent PID on remote
     transport: 'ws',
@@ -207,10 +201,12 @@ function buildSetupScript(
   // only exists on sole-tab hosts — on shared hosts it's removed to avoid handing this
   // env-less agent a sibling tab's identity, so those agents fail closed to "needs init".
   const sessionStartCmd =
-    "{ [ -z \"$MAITERM_TAB_ID\" ] && [ -f ~/.aiterm ] && . ~/.aiterm; } 2>/dev/null; " +
-    "{ [ \"$MAITERM_PORT\" = \"" + remotePort + "\" ] || [ -z \"$MAITERM_PORT\" ]; } && " +
-    "[ -n \"$MAITERM_TAB_ID\" ] && " +
-    "MAITERM_SID=$(cat | sed -n 's/.*\"session_id\" *: *\"\\([^\"]*\\)\".*/\\1/p' | head -1) && " +
+    '{ [ -z "$MAITERM_TAB_ID" ] && [ -f ~/.aiterm ] && . ~/.aiterm; } 2>/dev/null; ' +
+    '{ [ "$MAITERM_PORT" = "' +
+    remotePort +
+    '" ] || [ -z "$MAITERM_PORT" ]; } && ' +
+    '[ -n "$MAITERM_TAB_ID" ] && ' +
+    'MAITERM_SID=$(cat | sed -n \'s/.*"session_id" *: *"\\([^"]*\\)".*/\\1/p\' | head -1) && ' +
     "echo 'Your maiTerm tab ID is '$MAITERM_TAB_ID'. Your session ID is '$MAITERM_SID'. " +
     "You MUST immediately call the maiterm initSession tool with this tabId and sessionId before responding to the user. You can run it in parallel with your other opening tool calls to save a round-trip, but not alongside other maiterm calls. This is required for correct tab targeting.' || true";
 
@@ -306,9 +302,7 @@ function buildSetupScript(
     // env-less agent (session/tab identity cross-pollution), so write it only when this
     // tab is the sole bridge to the host; on shared hosts remove it (also scrubs stale
     // pre-fix files) and let those agents fail closed to a visible "needs init".
-    sharedHost
-      ? 'rm -f ~/.aiterm'
-      : `printf 'export MAITERM_TAB_ID=${tabId}\\nexport MAITERM_PORT=${remotePort}\\n' > ~/.aiterm`,
+    sharedHost ? 'rm -f ~/.aiterm' : `printf 'export MAITERM_TAB_ID=${tabId}\\nexport MAITERM_PORT=${remotePort}\\n' > ~/.aiterm`,
     // Install /maiterm skill on the remote (drop any legacy /aiterm one)
     'rm -rf ~/.claude/skills/aiterm',
     'mkdir -p ~/.claude/skills/maiterm',
@@ -401,20 +395,20 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
       // Already injected for this port — a prior attempt's export is still live in
       // the shell. Re-injecting on every failed-setup retry would spam the user's
       // interactive session with `export MAITERM_TAB_ID=…` lines, once per prompt.
-      logInfo("SSH MCP bridge: env vars already injected for tab " + tabId + " — skipping re-injection");
+      logInfo('SSH MCP bridge: env vars already injected for tab ' + tabId + ' — skipping re-injection');
     } else if (ptyId) {
       try {
         if (!(await isRemoteShellForeground(ptyId))) {
-          logInfo("SSH MCP bridge: skipping env-var injection — ssh no longer foreground for tab " + tabId);
+          logInfo('SSH MCP bridge: skipping env-var injection — ssh no longer foreground for tab ' + tabId);
         } else {
-          const envCmd = " export MAITERM_TAB_ID=" + tabId + " MAITERM_PORT=" + tunnelInfo.remote_port + "\n";
+          const envCmd = ' export MAITERM_TAB_ID=' + tabId + ' MAITERM_PORT=' + tunnelInfo.remote_port + '\n';
           const bytes = Array.from(new TextEncoder().encode(envCmd));
           await commands.writeTerminal(ptyId, bytes);
           injectedEnvPort.set(tabId, tunnelInfo.remote_port);
-          logInfo("SSH MCP bridge: injected env vars into remote shell for tab " + tabId);
+          logInfo('SSH MCP bridge: injected env vars into remote shell for tab ' + tabId);
         }
       } catch (e) {
-        logError("SSH MCP bridge: failed to inject env vars: " + e);
+        logError('SSH MCP bridge: failed to inject env vars: ' + e);
       }
     }
 
@@ -425,8 +419,7 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
     const setupPromises: Promise<void>[] = [];
     if (claudeOn) {
       const skillScripts = await commands.getMaitermSkillScripts();
-      const setupScript = buildSetupScript(
-        tunnelInfo.remote_port, authToken, tabId, skillScripts, isSharedHost(hostKey, tabId));
+      const setupScript = buildSetupScript(tunnelInfo.remote_port, authToken, tabId, skillScripts, isSharedHost(hostKey, tabId));
       setupPromises.push(commands.sshRunSetup(sshArgs, setupScript));
     }
     if (codexOn) {
@@ -532,8 +525,7 @@ export async function buildUserSetupScript(tabId: string): Promise<string | null
   const parts: string[] = [];
   if (claudeOn) {
     const skillScripts = await commands.getMaitermSkillScripts();
-    parts.push(buildSetupScript(
-      bridge.remotePort, authToken, tabId, skillScripts, isSharedHost(bridge.hostKey, tabId)));
+    parts.push(buildSetupScript(bridge.remotePort, authToken, tabId, skillScripts, isSharedHost(bridge.hostKey, tabId)));
   }
   if (codexOn) {
     parts.push(await commands.buildCodexSetupScript(bridge.remotePort, authToken, tabId));

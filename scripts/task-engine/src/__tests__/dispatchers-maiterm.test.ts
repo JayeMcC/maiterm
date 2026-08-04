@@ -2,13 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { resolveTask, buildTaskTree } from '../index.ts';
-import {
-  dispatchMaiterm,
-  buildOpenTabArgs,
-  wrapForContainer,
-  type McpClientLike,
-  type McpToolCallResult,
-} from '../dispatchers/maiterm.ts';
+import { dispatchMaiterm, buildOpenTabArgs, wrapForContainer, type McpClientLike, type McpToolCallResult } from '../dispatchers/maiterm.ts';
 import type { Task, ResolvedTask, TaskTreeNode } from '../types.ts';
 import type { VariableContext } from '../variables.ts';
 
@@ -20,9 +14,11 @@ const FIXTURE = (name: string) => join(HERE, 'fixtures', name);
  * replays a queued response (or a default-success response if the queue
  * is empty). Lets us assert on the *exact* arguments the dispatcher sent.
  */
-function makeFakeClient(opts: {
-  queuedResponses?: Array<Partial<McpToolCallResult>>;
-} = {}): {
+function makeFakeClient(
+  opts: {
+    queuedResponses?: Array<Partial<McpToolCallResult>>;
+  } = {},
+): {
   client: McpClientLike;
   calls: Array<{ name: string; arguments: Record<string, unknown> }>;
 } {
@@ -50,9 +46,7 @@ function makeFakeClient(opts: {
             },
           ],
         };
-        return next
-          ? ({ ...defaultResult, ...next } as McpToolCallResult)
-          : defaultResult;
+        return next ? ({ ...defaultResult, ...next } as McpToolCallResult) : defaultResult;
       },
     },
   };
@@ -106,9 +100,7 @@ describe('buildOpenTabArgs', () => {
 
   it('forwards workspaceName when provided', () => {
     const task: ResolvedTask = { label: 'X', command: 'echo' };
-    expect((buildOpenTabArgs(task, { workspaceName: 'developing' }) as any).workspaceName).toBe(
-      'developing',
-    );
+    expect((buildOpenTabArgs(task, { workspaceName: 'developing' }) as any).workspaceName).toBe('developing');
   });
 
   it('wraps command with devcontainer exec when workspaceFolderHost is set (idempotent host/container)', () => {
@@ -118,9 +110,7 @@ describe('buildOpenTabArgs', () => {
     });
     const cmd = String((args as any).command);
     expect(cmd).toMatch(/^if \[ -e '\/host\/path with space' \]; then /);
-    expect(cmd).toContain(
-      `devcontainer exec --workspace-folder '/host/path with space' bash -lc 'pnpm dev'`,
-    );
+    expect(cmd).toContain(`devcontainer exec --workspace-folder '/host/path with space' bash -lc 'pnpm dev'`);
     // else branch: run directly in the container, no devcontainer exec.
     expect(cmd).toContain('; else pnpm dev; fi');
   });
@@ -132,9 +122,7 @@ describe('wrapForContainer', () => {
   });
 
   it('wraps with devcontainer exec when host path is given', () => {
-    expect(wrapForContainer('pnpm dev', '/host')).toBe(
-      `devcontainer exec --workspace-folder '/host' bash -lc 'pnpm dev'`,
-    );
+    expect(wrapForContainer('pnpm dev', '/host')).toBe(`devcontainer exec --workspace-folder '/host' bash -lc 'pnpm dev'`);
   });
 });
 
@@ -150,13 +138,9 @@ describe('dispatchMaiterm', () => {
     // defaults to `shared`, so its tab name is the fixed `shared` rather
     // than the label. API and WEB declare panel:dedicated + group, so
     // they use their group names directly.
-    expect(calls.map(c => c.name)).toEqual(['openTab', 'openTab', 'openTab']);
-    expect(calls.map(c => c.arguments['name'])).toEqual([
-      'shared',
-      'API',
-      'WEB',
-    ]);
-    expect(steps.map(s => ({ label: s.taskLabel, skipped: s.skipped }))).toEqual([
+    expect(calls.map((c) => c.name)).toEqual(['openTab', 'openTab', 'openTab']);
+    expect(calls.map((c) => c.arguments['name'])).toEqual(['shared', 'API', 'WEB']);
+    expect(steps.map((s) => ({ label: s.taskLabel, skipped: s.skipped }))).toEqual([
       { label: 'Require devcontainer', skipped: false },
       { label: 'API', skipped: false },
       { label: 'WEB', skipped: false },
@@ -192,7 +176,7 @@ describe('dispatchMaiterm', () => {
     const { client, calls } = makeFakeClient();
     await dispatchMaiterm(tree, { client });
     // `shared` should only fire once, even though referenced twice.
-    expect(calls.filter(c => c.arguments['name'] === 'shared')).toHaveLength(1);
+    expect(calls.filter((c) => c.arguments['name'] === 'shared')).toHaveLength(1);
   });
 
   it('throws if the MCP tool returns isError', async () => {
@@ -205,9 +189,7 @@ describe('dispatchMaiterm', () => {
         },
       ],
     });
-    await expect(dispatchMaiterm(tree, { client: fake.client })).rejects.toThrow(
-      /openTab failed for task 'API'.*ghost/,
-    );
+    await expect(dispatchMaiterm(tree, { client: fake.client })).rejects.toThrow(/openTab failed for task 'API'.*ghost/);
   });
 
   it('returns the parsed openTab result on each step', async () => {
@@ -250,9 +232,7 @@ describe('dispatchMaiterm — execution context (PLAN-15 / ADR 0006)', () => {
     });
 
     const commandContaining = (needle: string): string => {
-      const hit = calls
-        .map(c => String(c.arguments['command']))
-        .find(c => c.includes(needle));
+      const hit = calls.map((c) => String(c.arguments['command'])).find((c) => c.includes(needle));
       if (!hit) throw new Error(`no openTab call whose command mentions ${needle}`);
       return hit;
     };
@@ -290,16 +270,14 @@ describe('dispatchMaiterm — containerPrelude (PLAN-15 cold-start)', () => {
       containerPrelude: "bash '/hosts/clone/.vscode/scripts/tasks/require-devcontainer.sh'",
     });
     const commandContaining = (needle: string): string => {
-      const hit = calls.map(c => String(c.arguments['command'])).find(c => c.includes(needle));
+      const hit = calls.map((c) => String(c.arguments['command'])).find((c) => c.includes(needle));
       if (!hit) throw new Error(`no openTab call whose command mentions ${needle}`);
       return hit;
     };
     // Container task: idempotent — host branch does prelude && devcontainer exec.
     const apiCmd = commandContaining('dev-api.sh');
     expect(apiCmd).toMatch(/^if \[ -e '\/hosts\/clone' \]; then /);
-    expect(apiCmd).toContain(
-      "bash '/hosts/clone/.vscode/scripts/tasks/require-devcontainer.sh' && devcontainer exec ",
-    );
+    expect(apiCmd).toContain("bash '/hosts/clone/.vscode/scripts/tasks/require-devcontainer.sh' && devcontainer exec ");
     // Host tasks: no prelude, no wrap.
     expect(commandContaining('gate.sh')).toBe('bash gate.sh');
     expect(commandContaining('open-browser.sh')).toBe('bash open-browser.sh');
@@ -311,9 +289,7 @@ describe('keepInteractiveShellAtRoot (dev-server tabs land at project root)', ()
     const { keepInteractiveShellAtRoot } = await import('../dispatchers/maiterm.ts');
     const out = keepInteractiveShellAtRoot('bash dev-api.sh', '/workspaces/website');
     // cd root; cmd; cd root; exec login shell — `;` so the return runs even on failure.
-    expect(out).toBe(
-      `cd '/workspaces/website' 2>/dev/null; bash dev-api.sh; cd '/workspaces/website' 2>/dev/null; exec "\${SHELL:-/bin/bash}" -l`,
-    );
+    expect(out).toBe(`cd '/workspaces/website' 2>/dev/null; bash dev-api.sh; cd '/workspaces/website' 2>/dev/null; exec "\${SHELL:-/bin/bash}" -l`);
   });
 
   it('dedicated container task: idempotent host/container dispatch, converges in-container', () => {
@@ -323,11 +299,7 @@ describe('keepInteractiveShellAtRoot (dev-server tabs land at project root)', ()
       options: { cwd: '/workspaces/website' },
       presentation: { panel: 'dedicated', group: 'API' },
     };
-    const args = buildOpenTabArgs(
-      task,
-      { workspaceFolderHost: '/host/clone', containerPrelude: "bash '/host/clone/gate.sh'" },
-      'container',
-    );
+    const args = buildOpenTabArgs(task, { workspaceFolderHost: '/host/clone', containerPrelude: "bash '/host/clone/gate.sh'" }, 'container');
     const cmd = String(args['command']);
     // Self-detecting: host clone path exists only on the host.
     expect(cmd).toMatch(/^if \[ -e '\/host\/clone' \]; then /);

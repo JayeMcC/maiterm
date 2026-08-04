@@ -6,46 +6,17 @@
  * invented fields, dispatchers do the surface-specific translation.
  */
 
-export type {
-  Task,
-  TaskFile,
-  TaskInput,
-  TaskOptions,
-  TaskPresentation,
-  TaskTreeNode,
-  ResolvedTask,
-  ExecutionContext,
-  PromptStringInput,
-  PickStringInput,
-  CommandInput,
-} from './types.ts';
+export type { Task, TaskFile, TaskInput, TaskOptions, TaskPresentation, TaskTreeNode, ResolvedTask, ExecutionContext, PromptStringInput, PickStringInput, CommandInput } from './types.ts';
 
 export { readTasksFile } from './reader.ts';
 
 export { resolveDir, type DirResolution } from './resolve-dir.ts';
 
-export {
-  resolveString,
-  resolveDeep,
-  resolveInputDefault,
-  listRequiredInputs,
-  type VariableContext,
-} from './variables.ts';
+export { resolveString, resolveDeep, resolveInputDefault, listRequiredInputs, type VariableContext } from './variables.ts';
 
-export {
-  buildTaskTree,
-  flattenSequential,
-  deriveExecutionContext,
-  REQUIRE_DEVCONTAINER_LABEL,
-  type ExecutionContextOptions,
-} from './graph.ts';
+export { buildTaskTree, flattenSequential, deriveExecutionContext, REQUIRE_DEVCONTAINER_LABEL, type ExecutionContextOptions } from './graph.ts';
 
-export {
-  emitTmuxDispatch,
-  shQuote,
-  paneTitle,
-  type TmuxDispatchContext,
-} from './dispatchers/tmux.ts';
+export { emitTmuxDispatch, shQuote, paneTitle, type TmuxDispatchContext } from './dispatchers/tmux.ts';
 
 export {
   dispatchMaiterm,
@@ -58,10 +29,7 @@ export {
   type MaitermDispatchStep,
 } from './dispatchers/maiterm.ts';
 
-export {
-  findLiveMaitermLock,
-  type MaitermLock,
-} from './dispatchers/lockfile.ts';
+export { findLiveMaitermLock, type MaitermLock } from './dispatchers/lockfile.ts';
 
 // `connectMaiterm` lives in a separate module so it (and the heavy SDK
 // it imports) can be tree-shaken out of test runs. Real callers import it
@@ -86,7 +54,7 @@ export interface ListTasksOptions {
 export function listTasks(clonePath: string, options: ListTasksOptions = {}): Task[] {
   const file = readTasksFile(clonePath);
   const tasks = file.tasks ?? [];
-  return options.includeHidden ? tasks : tasks.filter(t => !t.hide);
+  return options.includeHidden ? tasks : tasks.filter((t) => !t.hide);
 }
 
 export interface ResolveTaskOptions extends ExecutionContextOptions {
@@ -107,20 +75,13 @@ export interface ResolveTaskOptions extends ExecutionContextOptions {
  * already linked to the actual referenced task records, and every node
  * carries its derived execution context.
  */
-export function resolveTask(
-  clonePath: string,
-  taskLabel: string,
-  ctx: VariableContext,
-  options: ResolveTaskOptions = {},
-): TaskTreeNode {
+export function resolveTask(clonePath: string, taskLabel: string, ctx: VariableContext, options: ResolveTaskOptions = {}): TaskTreeNode {
   const file = readTasksFile(clonePath);
   const allTasks = file.tasks ?? [];
   // Build from RAW tasks (labels are never variable-bearing), so each node's
   // derived context can pick its own variable context for resolution.
   const tree = buildTaskTree(taskLabel, allTasks, options);
-  const hostCtx: VariableContext = options.workspaceFolderHost
-    ? { ...ctx, workspaceFolder: options.workspaceFolderHost }
-    : ctx;
+  const hostCtx: VariableContext = options.workspaceFolderHost ? { ...ctx, workspaceFolder: options.workspaceFolderHost } : ctx;
   const resolveNode = (n: TaskTreeNode): void => {
     n.task = resolveDeep(n.task, n.executionContext === 'host' ? hostCtx : ctx);
     n.dependsOn.forEach(resolveNode);

@@ -26,17 +26,16 @@ export interface MaitermConnection {
  *
  * Throws if no live lockfile is found.
  */
-export async function connectMaiterm(opts: {
-  lockDir?: string;
-  clientName?: string;
-  clientVersion?: string;
-} = {}): Promise<MaitermConnection> {
+export async function connectMaiterm(
+  opts: {
+    lockDir?: string;
+    clientName?: string;
+    clientVersion?: string;
+  } = {},
+): Promise<MaitermConnection> {
   const lock = findLiveMaitermLock(opts.lockDir);
   if (!lock) {
-    throw new Error(
-      `No live maiTerm lockfile found in ${opts.lockDir ?? '~/.claude/ide/'} — ` +
-        `is maiTerm running?`,
-    );
+    throw new Error(`No live maiTerm lockfile found in ${opts.lockDir ?? '~/.claude/ide/'} — ` + `is maiTerm running?`);
   }
 
   const url = new URL(`http://127.0.0.1:${lock.serverPort}/mcp`);

@@ -21,9 +21,7 @@ export function readTasksFile(clonePath: string): TaskFile {
     disallowComments: false,
   });
   if (errors.length > 0) {
-    const summary = errors
-      .map(e => `[offset ${e.offset}, length ${e.length}] error code ${e.error}`)
-      .join('; ');
+    const summary = errors.map((e) => `[offset ${e.offset}, length ${e.length}] error code ${e.error}`).join('; ');
     throw new Error(`Failed to parse ${path}: ${summary}`);
   }
   if (typeof parsed !== 'object' || parsed === null) {

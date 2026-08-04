@@ -86,23 +86,14 @@ async function handleStats(request, env) {
   // those aggregates are reported under explicit `*_machine_days_*` names, and the
   // real "how many people" signal comes from avg/peak DAU + the latest-day snapshot.
   const [dau, dauStats, latest, machineDays, mdByVersion, mdByOs] = await Promise.all([
+    env.DB.prepare('SELECT day, COUNT(*) AS users FROM pings GROUP BY day ORDER BY day DESC LIMIT 30').all(),
     env.DB.prepare(
-      "SELECT day, COUNT(*) AS users FROM pings GROUP BY day ORDER BY day DESC LIMIT 30"
-    ).all(),
-    env.DB.prepare(
-      "SELECT ROUND(AVG(u),1) AS avg_dau, MAX(u) AS peak_dau, COUNT(*) AS active_days " +
-      "FROM (SELECT day, COUNT(*) AS u FROM pings WHERE day > date('now','-30 days') GROUP BY day)"
+      'SELECT ROUND(AVG(u),1) AS avg_dau, MAX(u) AS peak_dau, COUNT(*) AS active_days ' + "FROM (SELECT day, COUNT(*) AS u FROM pings WHERE day > date('now','-30 days') GROUP BY day)",
     ).first(),
-    env.DB.prepare("SELECT MAX(day) AS day FROM pings").first(),
-    env.DB.prepare(
-      "SELECT COUNT(DISTINCT uhash) AS n FROM pings WHERE day > date('now','-30 days')"
-    ).first(),
-    env.DB.prepare(
-      "SELECT version, COUNT(DISTINCT uhash) AS machine_days FROM pings WHERE day > date('now','-30 days') GROUP BY version ORDER BY machine_days DESC"
-    ).all(),
-    env.DB.prepare(
-      "SELECT os, COUNT(DISTINCT uhash) AS machine_days FROM pings WHERE day > date('now','-30 days') GROUP BY os ORDER BY machine_days DESC"
-    ).all(),
+    env.DB.prepare('SELECT MAX(day) AS day FROM pings').first(),
+    env.DB.prepare("SELECT COUNT(DISTINCT uhash) AS n FROM pings WHERE day > date('now','-30 days')").first(),
+    env.DB.prepare("SELECT version, COUNT(DISTINCT uhash) AS machine_days FROM pings WHERE day > date('now','-30 days') GROUP BY version ORDER BY machine_days DESC").all(),
+    env.DB.prepare("SELECT os, COUNT(DISTINCT uhash) AS machine_days FROM pings WHERE day > date('now','-30 days') GROUP BY os ORDER BY machine_days DESC").all(),
   ]);
 
   const latestDay = latest?.day ?? null;
@@ -110,12 +101,8 @@ async function handleStats(request, env) {
   // machine per uhash), the honest snapshot of what versions/OSes are actually in use.
   const [latestByVersion, latestByOs] = latestDay
     ? await Promise.all([
-        env.DB.prepare(
-          "SELECT version, COUNT(*) AS machines FROM pings WHERE day = ? GROUP BY version ORDER BY machines DESC"
-        ).bind(latestDay).all(),
-        env.DB.prepare(
-          "SELECT os, COUNT(*) AS machines FROM pings WHERE day = ? GROUP BY os ORDER BY machines DESC"
-        ).bind(latestDay).all(),
+        env.DB.prepare('SELECT version, COUNT(*) AS machines FROM pings WHERE day = ? GROUP BY version ORDER BY machines DESC').bind(latestDay).all(),
+        env.DB.prepare('SELECT os, COUNT(*) AS machines FROM pings WHERE day = ? GROUP BY os ORDER BY machines DESC').bind(latestDay).all(),
       ])
     : [{ results: [] }, { results: [] }];
 
@@ -185,9 +172,9 @@ async function handleManifest(request, env, ctx, url) {
 // Stateless. The phone wakes, opens its WS over LAN/WireGuard, and pulls the real content.
 
 function b64urlFromBytes(bytes) {
-  let bin = "";
+  let bin = '';
   for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 function b64urlFromString(str) {
@@ -196,9 +183,9 @@ function b64urlFromString(str) {
 
 function pemToDer(pem) {
   const body = pem
-    .replace(/-----BEGIN [^-]+-----/, "")
-    .replace(/-----END [^-]+-----/, "")
-    .replace(/\s+/g, "");
+    .replace(/-----BEGIN [^-]+-----/, '')
+    .replace(/-----END [^-]+-----/, '')
+    .replace(/\s+/g, '');
   const bin = atob(body);
   const der = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) der[i] = bin.charCodeAt(i);
@@ -213,23 +200,13 @@ function pemToDer(pem) {
 // the desktop presents it on every /push. CAP_SECRET never leaves the relay, and a desktop
 // can't forge a cap for a token it never received from a real phone. Stateless — no DB.
 async function hmacCap(secret, platform, pushToken) {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const mac = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(`${platform}:${pushToken}`)
-  );
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${platform}:${pushToken}`));
   return b64urlFromBytes(new Uint8Array(mac));
 }
 
 function timingSafeEqual(a, b) {
-  if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
   let diff = 0;
   for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
@@ -246,22 +223,12 @@ async function apnsJwt(env) {
   if (_apnsJwtCache.token && _apnsJwtCache.kid === kid && now - _apnsJwtCache.iat < 1800) {
     return _apnsJwtCache.token;
   }
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    pemToDer(env.APNS_KEY_P8),
-    { name: "ECDSA", namedCurve: "P-256" },
-    false,
-    ["sign"]
-  );
-  const header = b64urlFromString(JSON.stringify({ alg: "ES256", kid }));
+  const key = await crypto.subtle.importKey('pkcs8', pemToDer(env.APNS_KEY_P8), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  const header = b64urlFromString(JSON.stringify({ alg: 'ES256', kid }));
   const claims = b64urlFromString(JSON.stringify({ iss, iat: now }));
   const signingInput = `${header}.${claims}`;
   // WebCrypto ECDSA returns the raw r||s (IEEE P1363) signature JWS ES256 expects.
-  const sig = await crypto.subtle.sign(
-    { name: "ECDSA", hash: "SHA-256" },
-    key,
-    new TextEncoder().encode(signingInput)
-  );
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, new TextEncoder().encode(signingInput));
   const token = `${signingInput}.${b64urlFromBytes(new Uint8Array(sig))}`;
   _apnsJwtCache = { token, iat: now, kid };
   return token;
@@ -269,39 +236,38 @@ async function apnsJwt(env) {
 
 async function sendApns(env, msg) {
   if (!env.APNS_KEY_P8 || !env.APNS_KEY_ID || !env.APNS_TEAM_ID || !env.APNS_TOPIC) {
-    return { ok: false, status: 503, detail: "apns not configured" };
+    return { ok: false, status: 503, detail: 'apns not configured' };
   }
   // gateway-by-env: only "production" tokens go to the prod gateway; everything else
   // (sandbox dev builds, or an unknown/missing env) uses the sandbox gateway.
-  const host =
-    msg.env === "production" ? "api.push.apple.com" : "api.sandbox.push.apple.com";
+  const host = msg.env === 'production' ? 'api.push.apple.com' : 'api.sandbox.push.apple.com';
   const jwt = await apnsJwt(env);
   const body = JSON.stringify({
     aps: {
       alert: {
-        title: msg.title || "maiTerm",
-        body: msg.kind === "permission" ? "Needs your approval" : "Agent finished",
+        title: msg.title || 'maiTerm',
+        body: msg.kind === 'permission' ? 'Needs your approval' : 'Agent finished',
       },
-      sound: "default",
-      "thread-id": msg.tab_id,
-      "interruption-level": msg.kind === "permission" ? "time-sensitive" : "active",
+      sound: 'default',
+      'thread-id': msg.tab_id,
+      'interruption-level': msg.kind === 'permission' ? 'time-sensitive' : 'active',
     },
     tabId: msg.tab_id,
     kind: msg.kind,
   });
   const resp = await fetch(`https://${host}/3/device/${msg.push_token}`, {
-    method: "POST",
+    method: 'POST',
     headers: {
       authorization: `bearer ${jwt}`,
-      "apns-topic": env.APNS_TOPIC,
-      "apns-push-type": "alert",
-      "apns-priority": "10",
-      "apns-collapse-id": String(msg.tab_id).slice(0, 64),
+      'apns-topic': env.APNS_TOPIC,
+      'apns-push-type': 'alert',
+      'apns-priority': '10',
+      'apns-collapse-id': String(msg.tab_id).slice(0, 64),
     },
     body,
   });
   const detail = await resp.text();
-  return { ok: resp.ok, status: resp.status, detail: detail || "" };
+  return { ok: resp.ok, status: resp.status, detail: detail || '' };
 }
 
 // FCM HTTP v1 needs an OAuth2 access token minted from the service-account JWT (RS256).
@@ -310,35 +276,25 @@ let _fcmTokenCache = { token: null, exp: 0 };
 async function fcmAccessToken(sa) {
   const now = Math.floor(Date.now() / 1000);
   if (_fcmTokenCache.token && now < _fcmTokenCache.exp - 60) return _fcmTokenCache.token;
-  const header = b64urlFromString(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const header = b64urlFromString(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const claims = b64urlFromString(
     JSON.stringify({
       iss: sa.client_email,
-      scope: "https://www.googleapis.com/auth/firebase.messaging",
+      scope: 'https://www.googleapis.com/auth/firebase.messaging',
       aud: sa.token_uri,
       iat: now,
       exp: now + 3600,
-    })
+    }),
   );
   const signingInput = `${header}.${claims}`;
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    pemToDer(sa.private_key),
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const sig = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    key,
-    new TextEncoder().encode(signingInput)
-  );
+  const key = await crypto.subtle.importKey('pkcs8', pemToDer(sa.private_key), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(signingInput));
   const assertion = `${signingInput}.${b64urlFromBytes(new Uint8Array(sig))}`;
   const tokResp = await fetch(sa.token_uri, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
       assertion,
     }),
   });
@@ -350,7 +306,7 @@ async function fcmAccessToken(sa) {
 
 async function sendFcm(env, msg) {
   if (!env.FCM_SERVICE_ACCOUNT) {
-    return { ok: false, status: 503, detail: "fcm not configured" };
+    return { ok: false, status: 503, detail: 'fcm not configured' };
   }
   const sa = JSON.parse(env.FCM_SERVICE_ACCOUNT);
   const accessToken = await fcmAccessToken(sa);
@@ -358,26 +314,23 @@ async function sendFcm(env, msg) {
     message: {
       token: msg.push_token,
       notification: {
-        title: msg.title || "maiTerm",
-        body: msg.kind === "permission" ? "Needs your approval" : "Agent finished",
+        title: msg.title || 'maiTerm',
+        body: msg.kind === 'permission' ? 'Needs your approval' : 'Agent finished',
       },
-      android: { collapse_key: String(msg.tab_id), priority: "high" },
+      android: { collapse_key: String(msg.tab_id), priority: 'high' },
       data: { tabId: String(msg.tab_id), kind: String(msg.kind) },
     },
   });
-  const resp = await fetch(
-    `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`,
-    {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${accessToken}`,
-        "content-type": "application/json",
-      },
-      body,
-    }
-  );
+  const resp = await fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+      'content-type': 'application/json',
+    },
+    body,
+  });
   const detail = await resp.text();
-  return { ok: resp.ok, status: resp.status, detail: detail || "" };
+  return { ok: resp.ok, status: resp.status, detail: detail || '' };
 }
 
 // POST /push-capability — a phone mints its per-device capability here, once, at pairing.
@@ -386,18 +339,18 @@ async function sendFcm(env, msg) {
 // /push from being a blind open proxy and lets us revoke en masse by rotating CAP_SECRET.
 async function handlePushCapability(request, env) {
   if (!env.CAP_SECRET) {
-    return new Response("relay not configured\n", { status: 503 });
+    return new Response('relay not configured\n', { status: 503 });
   }
   let body;
   try {
     body = await request.json();
   } catch {
-    return new Response("bad json\n", { status: 400 });
+    return new Response('bad json\n', { status: 400 });
   }
   if (!body || !body.push_token) {
-    return new Response("missing push_token\n", { status: 400 });
+    return new Response('missing push_token\n', { status: 400 });
   }
-  const platform = body.platform === "fcm" ? "fcm" : "apns";
+  const platform = body.platform === 'fcm' ? 'fcm' : 'apns';
   const cap = await hmacCap(env.CAP_SECRET, platform, body.push_token);
   return Response.json({ cap });
 }
@@ -407,54 +360,51 @@ async function handlePush(request, env, ctx) {
   // ring with the phone-minted capability instead. 503 (not 403) when CAP_SECRET is unset so
   // the desktop can tell "relay not provisioned yet" apart from "bad capability".
   if (!env.CAP_SECRET) {
-    return new Response("relay not configured\n", { status: 503 });
+    return new Response('relay not configured\n', { status: 503 });
   }
   let msg;
   try {
     msg = await request.json();
   } catch {
-    return new Response("bad json\n", { status: 400 });
+    return new Response('bad json\n', { status: 400 });
   }
   if (!msg || !msg.push_token || !msg.tab_id) {
-    return new Response("missing push_token or tab_id\n", { status: 400 });
+    return new Response('missing push_token or tab_id\n', { status: 400 });
   }
-  const platform = msg.platform === "fcm" ? "fcm" : "apns";
+  const platform = msg.platform === 'fcm' ? 'fcm' : 'apns';
   const expectedCap = await hmacCap(env.CAP_SECRET, platform, msg.push_token);
   if (!msg.cap || !timingSafeEqual(msg.cap, expectedCap)) {
-    return new Response("invalid capability\n", { status: 403 });
+    return new Response('invalid capability\n', { status: 403 });
   }
   try {
-    const result = platform === "fcm" ? await sendFcm(env, msg) : await sendApns(env, msg);
+    const result = platform === 'fcm' ? await sendFcm(env, msg) : await sendApns(env, msg);
     // 200 with the upstream status inside, so the desktop log shows APNs/FCM's own verdict
     // (e.g. BadDeviceToken) without us guessing what's retryable.
     return Response.json({ platform, ...result }, { status: result.ok ? 200 : 502 });
   } catch (e) {
-    return Response.json(
-      { platform, ok: false, status: 500, detail: String(e && e.message ? e.message : e) },
-      { status: 502 }
-    );
+    return Response.json({ platform, ok: false, status: 500, detail: String(e && e.message ? e.message : e) }, { status: 502 });
   }
 }
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (url.pathname === "/push") {
-      if (request.method !== "POST") {
-        return new Response("method not allowed\n", { status: 405 });
+    if (url.pathname === '/push') {
+      if (request.method !== 'POST') {
+        return new Response('method not allowed\n', { status: 405 });
       }
       return handlePush(request, env, ctx);
     }
-    if (url.pathname === "/push-capability") {
-      if (request.method !== "POST") {
-        return new Response("method not allowed\n", { status: 405 });
+    if (url.pathname === '/push-capability') {
+      if (request.method !== 'POST') {
+        return new Response('method not allowed\n', { status: 405 });
       }
       return handlePushCapability(request, env);
     }
-    if (request.method !== "GET" && request.method !== "HEAD") {
-      return new Response("method not allowed\n", { status: 405 });
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return new Response('method not allowed\n', { status: 405 });
     }
-    if (url.pathname === "/stats") return handleStats(request, env);
+    if (url.pathname === '/stats') return handleStats(request, env);
     // Everything else serves the manifest (the updater hits /latest.json).
     return handleManifest(request, env, ctx, url);
   },

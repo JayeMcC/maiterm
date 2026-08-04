@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  buildTaskTree,
-  deriveExecutionContext,
-  REQUIRE_DEVCONTAINER_LABEL,
-} from '../index.ts';
+import { buildTaskTree, deriveExecutionContext, REQUIRE_DEVCONTAINER_LABEL } from '../index.ts';
 import type { Task } from '../types.ts';
 
 // In-memory task set mirroring the forwood-one overlay shape (post-PLAN-15
@@ -78,7 +74,7 @@ describe('buildTaskTree executionContext annotation', () => {
   it('annotates every node with its own derived context', () => {
     const tree = buildTaskTree('Spin up dev servers', TASKS);
     expect(tree.executionContext).toBe('container');
-    const byLabel = new Map(tree.dependsOn.map(c => [c.task.label, c]));
+    const byLabel = new Map(tree.dependsOn.map((c) => [c.task.label, c]));
     expect(byLabel.get('Require devcontainer')?.executionContext).toBe('host');
     expect(byLabel.get('API')?.executionContext).toBe('container');
     expect(byLabel.get('Open browser to root dev')?.executionContext).toBe('host');

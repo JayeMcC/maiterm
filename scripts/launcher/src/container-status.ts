@@ -65,18 +65,18 @@ export interface ContainerStatusReport {
 
 export const realRunner: ExecRunner = {
   run(cmd, args) {
-    return new Promise(resolvePromise => {
+    return new Promise((resolvePromise) => {
       const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
       let stdout = '';
-      child.stdout.on('data', d => (stdout += String(d)));
+      child.stdout.on('data', (d) => (stdout += String(d)));
       child.on('error', () => resolvePromise({ stdout: '', exitCode: 127 }));
-      child.on('close', code => resolvePromise({ stdout, exitCode: code ?? 1 }));
+      child.on('close', (code) => resolvePromise({ stdout, exitCode: code ?? 1 }));
     });
   },
 };
 
 export function realProbeTcp(port: number): Promise<boolean> {
-  return new Promise(resolvePromise => {
+  return new Promise((resolvePromise) => {
     const sock = connect({ host: '127.0.0.1', port, timeout: 1500 });
     sock.once('connect', () => {
       sock.destroy();
@@ -96,41 +96,22 @@ export function devcontainerRoot(dir: string): string | null {
   return res.devcontainerConfigPath ? dirname(dirname(res.devcontainerConfigPath)) : null;
 }
 
-export async function findDevContainerId(
-  runner: ExecRunner,
-  root: string,
-): Promise<{ id: string | null; dockerOk: boolean }> {
-  const r = await runner.run('docker', [
-    'ps',
-    '-q',
-    '--filter',
-    `label=devcontainer.local_folder=${root}`,
-  ]);
+export async function findDevContainerId(runner: ExecRunner, root: string): Promise<{ id: string | null; dockerOk: boolean }> {
+  const r = await runner.run('docker', ['ps', '-q', '--filter', `label=devcontainer.local_folder=${root}`]);
   if (r.exitCode !== 0) return { id: null, dockerOk: false };
   const id = r.stdout.trim().split('\n')[0] || null;
   return { id, dockerOk: true };
 }
 
-export async function listForwards(
-  runner: ExecRunner,
-  root: string,
-): Promise<SidecarForward[]> {
-  const r = await runner.run('docker', [
-    'ps',
-    '--format',
-    '{{json .}}',
-    '--filter',
-    `label=forwood.sidecar-clone=${root}`,
-  ]);
+export async function listForwards(runner: ExecRunner, root: string): Promise<SidecarForward[]> {
+  const r = await runner.run('docker', ['ps', '--format', '{{json .}}', '--filter', `label=forwood.sidecar-clone=${root}`]);
   if (r.exitCode !== 0) return [];
   const out: SidecarForward[] = [];
   for (const line of r.stdout.trim().split('\n')) {
     if (!line.trim()) continue;
     try {
       const row = JSON.parse(line) as { Names: string; Labels: string; State: string };
-      const labels = Object.fromEntries(
-        row.Labels.split(',').map(kv => kv.split('=') as [string, string]),
-      );
+      const labels = Object.fromEntries(row.Labels.split(',').map((kv) => kv.split('=') as [string, string]));
       const port = Number(labels['forwood.sidecar-forward']);
       if (!Number.isFinite(port)) continue;
       out.push({ port, containerName: row.Names, running: row.State === 'running' });
@@ -172,10 +153,7 @@ function parseProcNetTcp(stdout: string): Set<number> {
   return ports;
 }
 
-export async function devContainerListeningPorts(
-  runner: ExecRunner,
-  devId: string,
-): Promise<Set<number>> {
+export async function devContainerListeningPorts(runner: ExecRunner, devId: string): Promise<Set<number>> {
   const ss = await runner.run('docker', ['exec', devId, 'ss', '-tlnH']);
   if (ss.exitCode === 0) return parseSsPorts(ss.stdout);
   const proc = await runner.run('docker', ['exec', devId, 'cat', '/proc/net/tcp']);
@@ -188,10 +166,7 @@ interface InspectRow {
   NetworkSettings?: { Ports?: Record<string, Array<{ HostPort?: string }> | null> };
 }
 
-export async function buildStatusReport(
-  dir: string,
-  deps: StatusDeps = {},
-): Promise<{ report: ContainerStatusReport | null; exitCode: number; error?: string }> {
+export async function buildStatusReport(dir: string, deps: StatusDeps = {}): Promise<{ report: ContainerStatusReport | null; exitCode: number; error?: string }> {
   const runner = deps.runner ?? realRunner;
   const probeTcp = deps.probeTcp ?? realProbeTcp;
 
@@ -213,20 +188,8 @@ export async function buildStatusReport(
     return { report: { state: 'down', ...empty, forwards }, exitCode: 0 };
   }
 
-  const proj = (
-    await runner.run('docker', [
-      'inspect',
-      devId,
-      '--format',
-      '{{ index .Config.Labels "com.docker.compose.project" }}',
-    ])
-  ).stdout.trim();
-  const idsOut = await runner.run('docker', [
-    'ps',
-    '-q',
-    '--filter',
-    `label=com.docker.compose.project=${proj}`,
-  ]);
+  const proj = (await runner.run('docker', ['inspect', devId, '--format', '{{ index .Config.Labels "com.docker.compose.project" }}'])).stdout.trim();
+  const idsOut = await runner.run('docker', ['ps', '-q', '--filter', `label=com.docker.compose.project=${proj}`]);
   const ids = idsOut.stdout.trim().split('\n').filter(Boolean);
   const inspect = await runner.run('docker', ['inspect', ...ids]);
   const rows = JSON.parse(inspect.stdout || '[]') as InspectRow[];
