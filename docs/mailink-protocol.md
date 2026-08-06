@@ -191,11 +191,22 @@ pub struct MailinkDevice {
     pub push_platform: PushPlatform,  // Apns | Fcm — which sender the relay uses
     pub push_env: PushEnv,            // Sandbox | Production (APNs); maps to project for FCM
     pub created_at: i64,
-    pub last_seen_at: i64,
+    pub last_seen_at: i64,   // any authenticated request or WS connect, throttled to one write
+                             //   per 5 min. It DOES mean liveness — it previously advanced only
+                             //   on pairing and push-token registration, so a phone talking to
+                             //   the desktop all day could read as two days gone.
 }
 ```
 
 Revocation = remove the record; its bearer token stops validating immediately.
+
+**Rejections are logged.** Every response ≥400 emits a WARN with method, path, status and who the
+caller claimed to be — the device name if the token matches a paired device, otherwise a short hash
+prefix and how many devices exist. Nothing is logged for successful requests (the phone polls every
+couple of seconds). This exists because a rotated or expired token was otherwise *completely*
+silent: the phone showed an empty inbox, the desktop log showed nothing at all, and that combination
+is indistinguishable from "the desktop genuinely has no chats" — which is exactly the wrong
+conclusion. A 401 in the log names the fix (re-pair) directly.
 
 ---
 
@@ -348,6 +359,25 @@ paths converge on the same backend handlers.
 Presence: while ≥1 device holds a live WS for a tab, that tab is "covered" and the doorbell
 is **suppressed** (no redundant push). On WS close, coverage drops and future attention
 events doorbell again.
+
+**Clients MUST answer WebSocket Pings.** The desktop pings every 20s and closes the socket after
+one unanswered ping. This is load-bearing rather than hygiene: coverage suppresses the doorbell, so
+a socket that is dead-but-ESTABLISHED — an iOS app suspended in the background, a phone that walked
+off the LAN — makes the desktop believe a phone is watching when nothing is. Worse than delaying
+the push, it *loses* it: the doorbell records each attention transition as it observes it and skips
+ringing while covered, so anything that happened during phantom coverage is never pushed even after
+the socket finally errors out minutes later. Exactly the away-from-the-desk case maiLink exists for.
+The first ping goes out **at connect**, not after an interval: a client is provably awake the
+instant it completes a handshake, which is the only moment a pong is guaranteed to be answerable.
+Ping-after-an-interval would routinely land in an app iOS had already suspended — open maiLink,
+glance, pocket the phone — so "this client has never ponged" would be a race with suspension rather
+than a fact about the client.
+
+An unanswered ping always closes the socket; there is no "maybe this client can't pong" escape
+hatch. A never-ponged connection is logged at WARN and closed anyway, because a reconnect loop is
+loud and self-announcing while phantom coverage is silent and eats notifications. Verified against
+both transports: iOS `URLSessionWebSocketTask` and Android OkHttp `RealWebSocket` answer at
+framework level, with control frames never reaching app code.
 
 ### 4.3 Shapes
 

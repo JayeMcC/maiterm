@@ -9,33 +9,7 @@
   import { CanvasAddon } from '@xterm/addon-canvas';
   import { Unicode11Addon } from '@xterm/addon-unicode11';
   import '@xterm/xterm/css/xterm.css';
-  import {
-    spawnTerminal,
-    writeTerminal,
-    resizeTerminal,
-    killTerminal,
-    getPtyInfo,
-    setTabRestoreContext,
-    cleanSshCommand,
-    normalizeSshInput,
-    buildSshCommand,
-    readClipboardFilePaths,
-    scrollTerminal,
-    scrollTerminalTo,
-    saveTerminalScrollback,
-    restoreTerminalFromSaved,
-    hasSavedScrollback,
-    getSavedTerminalSize,
-    getTerminalScrollbackInfo,
-    playBellSound,
-    saveClipboardImage,
-    startSelection,
-    updateSelection,
-    clearSelection,
-    copySelection,
-    selectAll,
-    scrollSelection,
-  } from '$lib/tauri/commands';
+  import { spawnTerminal, writeTerminal, resizeTerminal, killTerminal, setTabScrollback, getPtyInfo, getPtyForeground, setTabRestoreContext, cleanSshCommand, normalizeSshInput, buildSshCommand, shellEscapePath, readClipboardFilePaths, serializeTerminal, restoreTerminalScrollback, resizeTerminalGrid, scrollTerminal, scrollTerminalTo, saveTerminalScrollback, restoreTerminalFromSaved, hasSavedScrollback, getSavedTerminalSize, getTerminalScrollbackInfo, playBellSound, saveClipboardImage, startSelection, updateSelection, clearSelection, copySelection, selectAll, scrollSelection } from '$lib/tauri/commands';
   import type { TerminalFrame, OscCwdEvent, OscShellEvent } from '$lib/tauri/types';
   import { uploadWithProgress, AGENT_UPLOAD_DIR } from '$lib/utils/scpUpload';
   import { encodeClipboardImage } from '$lib/utils/clipboardImage';
@@ -625,29 +599,59 @@
       // commands (`ssh host 'cmd'`) which exit before the tunnel is ready —
       // their env-var injection would land in the local shell.
       if (preferencesStore.claudeCodeIde && preferencesStore.claudeCodeIdeSsh) {
-        getPtyInfo(ptyId)
-          .then((info) => {
-            const cmd = info.foreground_command;
-            const isInteractiveSsh = cmd && !cmd.includes('git@') && !cmd.includes('BatchMode=yes') && isInteractiveSshSession(cmd);
-            if (isInteractiveSsh) {
-              // Track the live ssh session + its remote title so we can preserve
-              // the title and replay the connection if it drops unexpectedly.
-              sshForeground = { cmd, host: parseSshHost(cmd) };
-              lastRemoteTitle = title;
-              // ssh is back (e.g. user reconnected manually) — clear any stale badge.
-              sshDisconnectStore.clear(tabId);
-            }
-            // Retry on 'failed' too, not just when there's no bridge — a failed
-            // attempt (host briefly down) otherwise wedges forever since hasBridge()
-            // stays true. Skip only while 'connected'/'pending' to avoid re-injecting.
-            const bridgeStatus = getBridgeStatus(tabId);
-            if (isInteractiveSsh && bridgeStatus !== 'connected' && bridgeStatus !== 'pending') {
-              enableBridge(tabId, cmd, ptyId).catch(() => {});
-            } else if (!cmd && hasBridge(tabId)) {
-              disableBridge(tabId).catch(() => {});
-            }
-          })
-          .catch(() => {});
+        // FRESH probe (bypasses the backend's 800ms process-snapshot cache). A
+        // manually typed `ssh` has no poll behind it — unlike the restore/clone path
+        // below — so this title event is the ONE detection opportunity. Answering it
+        // from a snapshot taken before the ssh existed loses the bridge for the whole
+        // session: no further title fires until the user redraws the prompt by typing,
+        // which is exactly why the export felt random (fast reconnects land inside the
+        // stale window; cold ones don't). Also drops the lsof cwd lookup getPtyInfo
+        // was doing on every single prompt, in every tab.
+        getPtyForeground(ptyId, true).then(cmd => {
+          const isInteractiveSsh = cmd
+            && !cmd.includes('git@')
+            && !cmd.includes('BatchMode=yes')
+            && isInteractiveSshSession(cmd);
+          if (isInteractiveSsh) {
+            // Track the live ssh session + its remote title so we can preserve
+            // the title and replay the connection if it drops unexpectedly.
+            sshForeground = { cmd, host: parseSshHost(cmd) };
+            lastRemoteTitle = title;
+            // ssh is back (e.g. user reconnected manually) — clear any stale badge.
+            sshDisconnectStore.clear(tabId);
+          }
+          // Retry on 'failed' too, not just when there's no bridge — a failed
+          // attempt (host briefly down) otherwise wedges forever since hasBridge()
+          // stays true. Skip only while 'connected'/'pending' to avoid re-injecting.
+          const bridgeStatus = getBridgeStatus(tabId);
+          // A bridge is keyed by TAB, so hopping hosts within one tab (log out of A,
+          // ssh into B) has to re-bridge. Status alone can't see that: it still reads
+          // 'connected' for A, which silently skips B forever. Compare the bridged
+          // host against the one actually in the foreground now.
+          // Compare parsed HOSTS, not raw arg strings: the bridge's hostKey comes from
+          // a stored/replayed command while this comes from ps, so flag order and
+          // extras differ harmlessly between them. A raw-string compare would fire on
+          // those cosmetic diffs and churn the tunnel (and, before the alt-screen
+          // guard, re-inject). Host-only keeps it to "this tab is now on a different
+          // machine", which is the case that actually needs a new bridge.
+          const bridgedHostKey = getBridgeInfo(tabId)?.hostKey;
+          const bridgedHost = bridgedHostKey ? parseSshHost(bridgedHostKey) : null;
+          const hostChanged =
+            !!isInteractiveSsh &&
+            bridgeStatus === 'connected' &&
+            !!bridgedHost &&
+            parseSshHost(cmd as string) !== bridgedHost;
+          if (hostChanged) {
+            logInfo(`SSH MCP bridge: tab ${tabId} moved to a different host — re-bridging`);
+            disableBridge(tabId)
+              .then(() => enableBridge(tabId, cmd as string, ptyId))
+              .catch(() => {});
+          } else if (isInteractiveSsh && bridgeStatus !== 'connected' && bridgeStatus !== 'pending') {
+            enableBridge(tabId, cmd, ptyId).catch(() => {});
+          } else if (!cmd && hasBridge(tabId)) {
+            disableBridge(tabId).catch(() => {});
+          }
+        }).catch(() => {});
       }
     });
 
@@ -664,36 +668,39 @@
         // Remote shells also emit OSC 133 A, so verify SSH is actually gone
         // before clearing Claude state, tearing down the bridge, or judging a drop.
         if (claudeStateStore.getState(tabId) || hasBridge(tabId) || sshForeground) {
-          getPtyInfo(ptyId)
-            .then((info) => {
-              if (!info.foreground_command) {
-                // Local shell prompt — Claude/SSH session truly ended.
-                // (Confirming no foreground command also rules out a *remote*
-                // shell's OSC 133 D;255 while ssh is still running.)
-                const wasSsh = !!sshForeground;
-                // Only Claude clears its dot on shell-prompt return. Non-Claude
-                // runtimes (Codex/Gemini) emit their OWN OSC 133 from their TUI, so
-                // prompt-return is ambiguous and would clear a live agent mid-turn —
-                // their dormancy is handled deterministically by the backend reaper.
-                const agentSess = claudeStateStore.getState(tabId);
-                if (agentSess && agentSess.runtime === 'claude') {
-                  claudeStateStore.clearSession(tabId);
-                }
-                if (hasBridge(tabId)) {
-                  disableBridge(tabId).catch(() => {});
-                }
-                if (wasSsh) {
-                  // ssh exits 255 only on a transport failure; a clean logout
-                  // forwards the remote shell's own exit code (0, 130, …).
-                  if (lastCommandExitCode === 255) {
-                    handleSshDrop('exit-255');
-                  } else {
-                    sshForeground = null;
-                  }
+          // Fresh probe: this is the ssh-EXIT edge. A stale positive (the cache still
+          // showing the ssh that just exited) leaves the old host's bridge registered
+          // on the tab, and that stale 'connected' is what then blocks bridging the
+          // next host you ssh into from this same tab.
+          getPtyForeground(ptyId, true).then(foregroundCmd => {
+            if (!foregroundCmd) {
+              // Local shell prompt — Claude/SSH session truly ended.
+              // (Confirming no foreground command also rules out a *remote*
+              // shell's OSC 133 D;255 while ssh is still running.)
+              const wasSsh = !!sshForeground;
+              // Only Claude clears its dot on shell-prompt return. Non-Claude
+              // runtimes (Codex/Gemini) emit their OWN OSC 133 from their TUI, so
+              // prompt-return is ambiguous and would clear a live agent mid-turn —
+              // their dormancy is handled deterministically by the backend reaper.
+              const agentSess = claudeStateStore.getState(tabId);
+              if (agentSess && agentSess.runtime === 'claude') {
+                claudeStateStore.clearSession(tabId);
+              }
+              if (hasBridge(tabId)) {
+                disableBridge(tabId).catch(() => {});
+              }
+              if (wasSsh) {
+                // ssh exits 255 only on a transport failure; a clean logout
+                // forwards the remote shell's own exit code (0, 130, …).
+                if (lastCommandExitCode === 255) {
+                  handleSshDrop('exit-255');
+                } else {
+                  sshForeground = null;
                 }
               }
-            })
-            .catch(() => {});
+            }
+          })
+          .catch(() => {});
         }
       } else if (cmd === 'D') {
         lastCommandExitCode = exit_code ?? 0;
@@ -1933,6 +1940,10 @@
                 dispatch('MCP Bridge', 'No SSH session in the foreground — not injecting env vars into the local shell', 'error', { tabId });
                 return;
               }
+              // No alternate-screen guard here on purpose: tmux holds the OUTER
+              // terminal on the alt screen while showing an ordinary inner shell, and
+              // "after tmux attach" is precisely what this action is for. Writing under
+              // tmux works — it forwards the keystrokes to the inner pane's shell.
               const bridge = getBridgeInfo(tabId);
               if (bridge?.remotePort) {
                 const envCmd = " export MAITERM_TAB_ID=" + tabId + " MAITERM_PORT=" + bridge.remotePort + "\n";
@@ -1953,6 +1964,8 @@
                 dispatch('MCP Bridge', 'No SSH session in the foreground — refusing to run the remote MCP setup in the local shell', 'error', { tabId });
                 return;
               }
+              // As with the env-var inject: no alt-screen guard, because tmux (the main
+              // reason to run this by hand) reads as alt-screen yet forwards to a shell.
               const script = await buildUserSetupScript(tabId);
               if (script) {
                 const cmd = ' ' + script + '\n';
@@ -1972,9 +1985,12 @@
             label: 'Enable Remote MCP Bridge',
             action: async () => {
               try {
-                const info = await getPtyInfo(ptyId);
-                if (info.foreground_command) {
-                  await enableBridge(tabId, info.foreground_command, ptyId);
+                // Fresh: this is the manual escape hatch when auto-detect missed, so a
+                // stale "no foreground" would tell the user they aren't connected while
+                // they're sitting at the remote prompt.
+                const foregroundCmd = await getPtyForeground(ptyId, true);
+                if (foregroundCmd) {
+                  await enableBridge(tabId, foregroundCmd, ptyId);
                 } else {
                   dispatch('MCP Bridge', 'No SSH session detected — connect via SSH first', 'info');
                 }

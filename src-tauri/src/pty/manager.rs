@@ -896,10 +896,39 @@ pub fn get_pty_info(state: &Arc<AppState>, pty_id: &str) -> Result<PtyInfo, Stri
 /// also does. Used on the SSH-bridge env-injection hot path, where the export
 /// races the user's first keystrokes: the cwd is irrelevant there, so paying for
 /// lsof would only widen that race.
-pub fn get_pty_foreground(state: &Arc<AppState>, pty_id: &str) -> Result<Option<String>, String> {
-    let registry = state.pty_registry.read();
-    let handle = registry.get(pty_id).ok_or("PTY not found")?;
-    let pid = handle.child_pid.ok_or("No child PID")?;
+///
+/// `fresh` bypasses the `PROC_SNAPSHOT_TTL` cache. Pass it for any EDGE-triggered
+/// ssh transition ("did an interactive ssh just come up / just exit in this tab?").
+/// The cache exists for high-frequency POLLING (mesh liveness), where sub-second
+/// staleness is invisible; on an edge it is actively wrong, and wrong in a way that
+/// doesn't recover: a title event is the only detection opportunity, so answering it
+/// from a snapshot taken up to 800ms ago — before the ssh existed — loses the bridge
+/// for the whole session, until the user happens to redraw the prompt by typing.
+pub fn get_pty_foreground(
+    state: &Arc<AppState>,
+    pty_id: &str,
+    fresh: bool,
+) -> Result<Option<String>, String> {
+    // Resolve the pid and DROP the registry lock before the (heavier) process sweep.
+    let pid = {
+        let registry = state.pty_registry.read();
+        let handle = registry.get(pty_id).ok_or("PTY not found")?;
+        handle.child_pid.ok_or("No child PID")?
+    };
+    #[cfg(unix)]
+    {
+        if fresh {
+            invalidate_stale_ps_snapshot();
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        // No-op on Windows: that path reads the separate sysinfo `proc_tree_snapshot`
+        // cache, which has no invalidation hook — so the stale-edge bug this flag
+        // exists to fix is still possible there. Unix is the only platform where the
+        // SSH bridge runs, so this is knowingly left alone rather than half-fixed.
+        let _ = fresh;
+    }
     Ok(get_foreground_command(pid))
 }
 
@@ -1080,6 +1109,32 @@ struct PsRow {
 
 #[cfg(unix)]
 static PS_SNAPSHOT: Mutex<Option<(std::time::Instant, Arc<Vec<PsRow>>)>> = Mutex::new(None);
+
+/// How recent a snapshot has to be to still answer a `fresh` probe. A single ssh
+/// transition fans out into several probes back-to-back (the title handler, the
+/// pre-write foreground guard, the OSC 133 handler); without a floor each would force
+/// its own full sweep. Anything this young necessarily postdates the transition we're
+/// reacting to — the stale-read bug needed a snapshot from before the ssh process
+/// existed, which is the whole connect duration (hundreds of ms at least) before the
+/// title event that triggers us — so honouring it costs no correctness.
+#[cfg(unix)]
+const FRESH_SNAPSHOT_MAX_AGE: Duration = Duration::from_millis(50);
+
+/// Drop the cached `ps` snapshot unless it is younger than `FRESH_SNAPSHOT_MAX_AGE`,
+/// so the next probe runs a real sweep. Used by edge-triggered ssh detection — see
+/// `get_pty_foreground`'s `fresh` flag for why a stale answer there is unrecoverable
+/// rather than merely late.
+#[cfg(unix)]
+fn invalidate_stale_ps_snapshot() {
+    let mut guard = PS_SNAPSHOT.lock().unwrap_or_else(|e| e.into_inner());
+    let too_old = guard
+        .as_ref()
+        .map(|(taken, _)| taken.elapsed() > FRESH_SNAPSHOT_MAX_AGE)
+        .unwrap_or(false);
+    if too_old {
+        *guard = None;
+    }
+}
 
 /// Full `ps` sweep, cached for PROC_SNAPSHOT_TTL. Holding the lock across the spawn
 /// intentionally serializes concurrent refreshers — the second caller blocks briefly

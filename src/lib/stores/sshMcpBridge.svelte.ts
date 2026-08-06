@@ -14,6 +14,7 @@ import { preferencesStore } from '$lib/stores/preferences.svelte';
 import { dispatch } from '$lib/stores/notificationDispatch';
 import { error as logError, info as logInfo } from '@tauri-apps/plugin-log';
 import { setVariable } from '$lib/stores/triggers.svelte';
+import { agentStateStore } from '$lib/stores/agentState.svelte';
 import { countedListen as listen } from '$lib/utils/listenCounter';
 import type { UnlistenFn } from '@tauri-apps/api/event';
 import { SvelteMap } from 'svelte/reactivity';
@@ -153,7 +154,11 @@ export async function isRemoteShellForeground(ptyId: string): Promise<boolean> {
   try {
     // Foreground-only probe (no lsof cwd) — this runs right before the env-var
     // injection, which races the user's first keystrokes at the remote prompt.
-    const cmd = await commands.getPtyForeground(ptyId);
+    // ALWAYS fresh: this is the guard that keeps the export out of the LOCAL
+    // shell, and the failure it prevents is caused by a *stale positive* — a
+    // cached snapshot still showing the ssh that just exited. Reading that from
+    // the 800ms poll cache is precisely how a remote-port export lands locally.
+    const cmd = await commands.getPtyForeground(ptyId, true);
     return !!cmd && isInteractiveSshSession(cmd);
   } catch {
     return false;
@@ -332,15 +337,40 @@ function buildSetupScript(
   return script.join('\n');
 }
 
+/** In-flight enableBridge attempts, keyed by tab. */
+const inFlightBridges = new Map<string, Promise<boolean>>();
+
+/** Bumped on every teardown so an in-flight setup can tell it was superseded. */
+const bridgeEpoch = new Map<string, number>();
+
 /**
  * Enable the MCP bridge for an SSH tab.
  * Spawns (or reuses) a reverse tunnel, writes lockfile + hooks via background SSH,
  * and injects MAITERM_TAB_ID / MAITERM_PORT env vars into the remote shell.
  *
+ * Concurrent calls for the same tab JOIN the in-flight attempt. That's load-bearing
+ * for ORDERING, not just efficiency: the restore path awaits this and then sends
+ * `claude --resume …`. A tab coming back after a restart gets two callers — the
+ * restore poll and the title event fired by the remote's login prompt — and whichever
+ * lost the race used to return instantly on the other's 'pending' status. The resume
+ * then fired while the injection was still pending, so the export landed as literal
+ * text inside the agent's TUI instead of its shell. Joining makes "bridge is up (and
+ * injected)" a real precondition for everything sequenced after it.
+ *
  * @param ptyId — if provided, injects env vars into the remote shell via PTY write.
  *   Leading space prevents the command from appearing in shell history.
  */
-export async function enableBridge(tabId: string, sshArgs: string, ptyId?: string): Promise<boolean> {
+export function enableBridge(tabId: string, sshArgs: string, ptyId?: string): Promise<boolean> {
+  const inflight = inFlightBridges.get(tabId);
+  if (inflight) return inflight;
+  const attempt = enableBridgeInner(tabId, sshArgs, ptyId).finally(() => {
+    inFlightBridges.delete(tabId);
+  });
+  inFlightBridges.set(tabId, attempt);
+  return attempt;
+}
+
+async function enableBridgeInner(tabId: string, sshArgs: string, ptyId?: string): Promise<boolean> {
   // Independent per-runtime gates: the tunnel + env injection are runtime-agnostic and
   // run for either; the remote setup writes Claude artifacts only when claudeOn and
   // Codex artifacts only when codexOn (so a Claude-only or Codex-only host both work).
@@ -364,15 +394,24 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
   const hostKey = extractHostKey(sshArgs);
   bridgeStates.set(tabId, { hostKey, remotePort: 0, status: 'pending' });
 
-  const localPort = await commands.getMcpPort();
-  const authToken = await commands.getMcpAuth();
-  if (!localPort || !authToken) {
-    logError('Cannot enable SSH MCP bridge: MCP server not running');
-    bridgeStates.delete(tabId);
-    return false;
-  }
+  // Snapshot the tab's teardown epoch. A disableBridge() landing while we're still
+  // setting up must win: without this, our completion would re-register 'connected'
+  // for a tab that has since logged out (and whose tunnel refcount was already
+  // decremented), and that resurrected state then blocks the next bridge attempt.
+  const epoch = bridgeEpoch.get(tabId) ?? 0;
 
   try {
+    // Inside the try: these can REJECT, not just return null, and a throw before the
+    // catch would strand the 'pending' status above forever — permanently blocking
+    // both the retry branch and hostChanged, which only act on non-pending states.
+    const localPort = await commands.getMcpPort();
+    const authToken = await commands.getMcpAuth();
+    if (!localPort || !authToken) {
+      logError('Cannot enable SSH MCP bridge: MCP server not running');
+      bridgeStates.delete(tabId);
+      return false;
+    }
+
     // Start or join existing tunnel
     const tunnelInfo = await commands.startSshTunnel(sshArgs, hostKey, tabId, localPort);
     logInfo(`SSH MCP bridge: tunnel to ${hostKey} on remote port ${tunnelInfo.remote_port}`);
@@ -406,6 +445,21 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
       try {
         if (!(await isRemoteShellForeground(ptyId))) {
           logInfo("SSH MCP bridge: skipping env-var injection — ssh no longer foreground for tab " + tabId);
+        } else if (agentStateStore.getState(tabId)) {
+          // An agent session is already live in this tab, so the PTY belongs to its
+          // prompt, not a shell: the write would be typed into the agent as a message
+          // (and the trailing newline would submit it). Skipping loses nothing — an
+          // export cannot change the environment of an ALREADY-RUNNING process — while
+          // the remote ~/.aiterm written by the background setup ssh still carries the
+          // tab id for the SessionStart hook to source.
+          //
+          // Deliberately NOT keyed on the alternate screen: Claude Code renders on the
+          // PRIMARY screen (that's why width changes duplicate its transcript into
+          // scrollback), so alt-screen misses the agent this is meant to protect, while
+          // catching tmux — where writing is fine, because tmux forwards keystrokes to
+          // the inner shell, and where the export is most needed since tmux shells
+          // don't inherit the spawn env.
+          logInfo("SSH MCP bridge: skipping env-var injection — an agent session owns tab " + tabId);
         } else {
           const envCmd = " export MAITERM_TAB_ID=" + tabId + " MAITERM_PORT=" + tunnelInfo.remote_port + "\n";
           const bytes = Array.from(new TextEncoder().encode(envCmd));
@@ -439,6 +493,12 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
     // Wait for remote setup(s) to finish before flipping to 'connected'.
     // If any setup failed, this throws and the outer catch marks the bridge as failed.
     await Promise.all(setupPromises);
+
+    // A teardown raced us (user logged out mid-setup) — don't resurrect the bridge.
+    if ((bridgeEpoch.get(tabId) ?? 0) !== epoch) {
+      logInfo("SSH MCP bridge: discarding setup result for tab " + tabId + " — bridge was disabled while connecting");
+      return false;
+    }
 
     bridgeStates.set(tabId, {
       hostKey,
@@ -475,6 +535,10 @@ export async function enableBridge(tabId: string, sshArgs: string, ptyId?: strin
  * Disable the MCP bridge for a tab (called on tab close or SSH disconnect).
  */
 export async function disableBridge(tabId: string): Promise<void> {
+  // Bump first and unconditionally: a setup may be in flight with no state to read
+  // yet, and it must still see that a teardown happened.
+  bridgeEpoch.set(tabId, (bridgeEpoch.get(tabId) ?? 0) + 1);
+
   const bridge = bridgeStates.get(tabId);
   if (!bridge) return;
 

@@ -104,11 +104,21 @@ pub fn detach_tmux_client(
 }
 
 #[tauri::command]
-pub fn get_pty_foreground(
+pub async fn get_pty_foreground(
     state: State<'_, Arc<AppState>>,
     pty_id: String,
+    fresh: Option<bool>,
 ) -> Result<Option<String>, String> {
-    pty::get_pty_foreground(&*state, &pty_id)
+    // Spawns `ps` (a full process list) on a cache miss, and `fresh` deliberately
+    // forces those misses. A sync command runs on Tauri's main event-loop thread, and
+    // this one is called from the terminal-title handler — potentially on every prompt
+    // redraw in every tab — so the sweep must stay off the event loop. Same rule (and
+    // same pinwheel lesson) as get_agent_liveness below.
+    let app_state = state.inner().clone();
+    let fresh = fresh.unwrap_or(false);
+    tauri::async_runtime::spawn_blocking(move || pty::get_pty_foreground(&app_state, &pty_id, fresh))
+        .await
+        .map_err(|e| format!("foreground probe failed to run: {}", e))?
 }
 
 #[tauri::command]
@@ -298,6 +308,7 @@ pub fn terminal_bracketed_paste(
         .mode()
         .contains(alacritty_terminal::term::TermMode::BRACKETED_PASTE))
 }
+
 
 /// Whether an agent CLI is still running in a tab (for the mesh readiness check).
 /// `agent_running` walks the PTY's local process tree for a claude/codex/gemini
