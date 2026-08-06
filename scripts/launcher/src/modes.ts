@@ -11,15 +11,13 @@ import { runForwardMode, runUnforwardMode } from './forwards.ts';
 const MODE_FLAGS = ['--list', '--fire', '--container-status', '--forward', '--unforward'];
 
 export function isNonInteractive(argv: string[]): boolean {
-  return MODE_FLAGS.some(f => argv.includes(f));
+  return MODE_FLAGS.some((f) => argv.includes(f));
 }
 
 export async function runNonInteractive(argv: string[]): Promise<number> {
   const dir = optValue(argv, '--dir');
   if (!dir) {
-    process.stderr.write(
-      `forwood-launcher: --dir <path> is required for ${MODE_FLAGS.join('/')}\n`,
-    );
+    process.stderr.write(`forwood-launcher: --dir <path> is required for ${MODE_FLAGS.join('/')}\n`);
     return 2;
   }
 

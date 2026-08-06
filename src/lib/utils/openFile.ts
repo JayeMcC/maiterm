@@ -76,18 +76,14 @@ export async function openFileFromTerminal(workspaceId: string, paneId: string, 
     // Already open? Focus the existing tab instead of duplicating it — and for
     // markdown, flip it (back) into preview: a re-⌘-click means "show me the
     // rendered doc", even if it was toggled to source since.
-    const existing = ws?.panes
-      .flatMap((p) => p.tabs)
-      .find((t) => t.tab_type === 'editor' && t.editor_file?.file_path === resolvedPath);
+    const existing = ws?.panes.flatMap((p) => p.tabs).find((t) => t.tab_type === 'editor' && t.editor_file?.file_path === resolvedPath);
     if (existing) {
       if (isMd) window.dispatchEvent(new CustomEvent('editor-markdown-preview', { detail: { tabId: existing.id } }));
       await navigateToTab(existing.id);
       return;
     }
 
-    const editorPane = ws?.panes.find(
-      (p) => p.id !== paneId && p.tabs.some((t) => t.tab_type === 'editor'),
-    );
+    const editorPane = ws?.panes.find((p) => p.id !== paneId && p.tabs.some((t) => t.tab_type === 'editor'));
     if (editorPane) {
       const tab = await workspacesStore.createEditorTab(workspaceId, editorPane.id, fileName, fileInfo);
       if (isMd) requestMarkdownPreview(tab.id);

@@ -546,12 +546,7 @@ export async function commsListBotChannels(): Promise<BotChannel[]> {
 }
 
 /** Enable/update (channels) or disable (null) chat monitoring on a tab. */
-export async function setTabCommsMonitor(
-  workspaceId: string,
-  paneId: string,
-  tabId: string,
-  channels: CommsMonitorChannel[] | null
-): Promise<void> {
+export async function setTabCommsMonitor(workspaceId: string, paneId: string, tabId: string, channels: CommsMonitorChannel[] | null): Promise<void> {
   return invoke('set_tab_comms_monitor', { workspaceId, paneId, tabId, channels });
 }
 
@@ -580,10 +575,7 @@ export async function mailinkRemoveDevice(deviceId: string): Promise<void> {
 }
 
 /** Test a comms (Mattermost) server URL + bot token before saving them. */
-export async function commsTestConnection(
-  serverUrl: string,
-  botToken: string
-): Promise<{ ok: boolean; bot_username: string }> {
+export async function commsTestConnection(serverUrl: string, botToken: string): Promise<{ ok: boolean; bot_username: string }> {
   return invoke('comms_test_connection', { serverUrl, botToken });
 }
 
@@ -707,6 +699,12 @@ export interface ReadFileBase64Result {
 
 export async function gitShowFile(filePath: string, gitRef: string): Promise<string> {
   return invoke('git_show_file', { filePath, gitRef });
+}
+
+/** Current git branch for a directory, or null when it isn't a repo / HEAD is detached.
+ *  Used by the session auto-namer; never throws for the not-a-repo case. */
+export async function gitCurrentBranch(cwd: string): Promise<string | null> {
+  return invoke('git_current_branch', { cwd });
 }
 
 export async function readFileBase64(path: string): Promise<ReadFileBase64Result> {
@@ -996,13 +994,7 @@ export interface ProviderResult {
  *  and capture stdout/stderr/exit code. Bounded by `timeoutSecs` (default 15).
  *  `loginShell` runs it via `$SHELL -lc` so a GUI-launched app inherits the
  *  user's real PATH (node, homebrew, user bins) — needed for the launcher. */
-export async function runRailProvider(
-  program: string,
-  args: string[],
-  cwd?: string,
-  timeoutSecs?: number,
-  loginShell?: boolean,
-): Promise<ProviderResult> {
+export async function runRailProvider(program: string, args: string[], cwd?: string, timeoutSecs?: number, loginShell?: boolean): Promise<ProviderResult> {
   return invoke('run_rail_provider', {
     program,
     args,

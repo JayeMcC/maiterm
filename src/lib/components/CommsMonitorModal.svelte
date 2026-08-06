@@ -22,10 +22,12 @@
 
   const tab = $derived.by(() => {
     if (!workspaceId || !paneId || !tabId) return null;
-    return workspacesStore.workspaces
-      .find(w => w.id === workspaceId)?.panes
-      .find(p => p.id === paneId)?.tabs
-      .find(t => t.id === tabId) ?? null;
+    return (
+      workspacesStore.workspaces
+        .find((w) => w.id === workspaceId)
+        ?.panes.find((p) => p.id === paneId)
+        ?.tabs.find((t) => t.id === tabId) ?? null
+    );
   });
   const wasEnabled = $derived(!!tab?.comms_monitor);
 
@@ -35,7 +37,7 @@
     loading = true;
     errorMsg = null;
     channels = [];
-    selected = new Set(tab?.comms_monitor?.channels.map(c => c.id) ?? []);
+    selected = new Set(tab?.comms_monitor?.channels.map((c) => c.id) ?? []);
     (async () => {
       try {
         channels = await commsListBotChannels();
@@ -62,9 +64,7 @@
     if (!workspaceId || !paneId || !tabId) return;
     busy = true;
     try {
-      const picked: CommsMonitorChannel[] = channels
-        .filter(c => selected.has(c.id))
-        .map(c => ({ id: c.id, name: c.display_name, team_name: c.team_name, last_seen_create_at: 0 }));
+      const picked: CommsMonitorChannel[] = channels.filter((c) => selected.has(c.id)).map((c) => ({ id: c.id, name: c.display_name, team_name: c.team_name, last_seen_create_at: 0 }));
       await workspacesStore.setTabCommsMonitor(workspaceId, paneId, tabId, picked.length > 0 ? picked : null);
       onclose();
     } catch (e) {
@@ -101,22 +101,13 @@
 
 {#if open}
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-  <div
-    class="backdrop"
-    onclick={handleBackdropClick}
-    onkeydown={handleKeydown}
-    role="dialog"
-    aria-modal="true"
-    tabindex="-1"
-  >
+  <div class="backdrop" onclick={handleBackdropClick} onkeydown={handleKeydown} role="dialog" aria-modal="true" tabindex="-1">
     <div class="palette">
       <div class="header">
         <div class="title">Chat Monitoring</div>
         <div class="subtitle">
-          Pick the channels this tab listens to. When a pickup-authorized user
-          @mentions the bot in one of them, the thread is assigned to
-          {#if tab}<strong>{tab.name}</strong>{:else}this tab{/if} and injected into its
-          agent session. Only channels the bot is a member of appear here.
+          Pick the channels this tab listens to. When a pickup-authorized user @mentions the bot in one of them, the thread is assigned to
+          {#if tab}<strong>{tab.name}</strong>{:else}this tab{/if} and injected into its agent session. Only channels the bot is a member of appear here.
         </div>
       </div>
       <div class="body">
@@ -127,11 +118,7 @@
         {:else}
           {#each channels as ch (ch.id)}
             <label class="channel-row">
-              <input
-                type="checkbox"
-                checked={selected.has(ch.id)}
-                onchange={() => toggle(ch.id)}
-              />
+              <input type="checkbox" checked={selected.has(ch.id)} onchange={() => toggle(ch.id)} />
               <span class="channel-name">{ch.display_name}</span>
               <span class="channel-team">{ch.team_display_name}</span>
             </label>
@@ -144,11 +131,7 @@
         {/if}
         <div class="spacer"></div>
         <button class="btn" onclick={onclose} disabled={busy}>Cancel</button>
-        <button
-          class="btn btn-primary"
-          onclick={save}
-          disabled={busy || loading || (selected.size === 0 && !wasEnabled)}
-        >{selected.size === 0 && wasEnabled ? 'Disable' : 'Save'}</button>
+        <button class="btn btn-primary" onclick={save} disabled={busy || loading || (selected.size === 0 && !wasEnabled)}>{selected.size === 0 && wasEnabled ? 'Disable' : 'Save'}</button>
       </div>
     </div>
   </div>

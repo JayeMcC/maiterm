@@ -77,8 +77,14 @@
   }
 
   @keyframes pop {
-    from { transform: scale(0.97); opacity: 0; }
-    to   { transform: scale(1); opacity: 1; }
+    from {
+      transform: scale(0.97);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
   }
 
   .header {
@@ -105,7 +111,9 @@
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .sub {

@@ -76,8 +76,7 @@ desktop can't forge a cap for a token it never got from a real phone; rotating
 `POST /push` request (from the desktop, `application/json`):
 
 ```json
-{ "push_token": "...", "platform": "apns", "env": "sandbox", "cap": "...",
-  "tab_id": "...", "kind": "permission", "title": "tab name" }
+{ "push_token": "...", "platform": "apns", "env": "sandbox", "cap": "...", "tab_id": "...", "kind": "permission", "title": "tab name" }
 ```
 
 - `cap`: the phone-minted capability for this `(platform, push_token)`. Required;

@@ -2,12 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { resolveTask, buildTaskTree } from '../index.ts';
-import {
-  emitTmuxDispatch,
-  shQuote,
-  paneTitle,
-  type TmuxDispatchContext,
-} from '../dispatchers/tmux.ts';
+import { emitTmuxDispatch, shQuote, paneTitle, type TmuxDispatchContext } from '../dispatchers/tmux.ts';
 import type { VariableContext } from '../variables.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -62,9 +57,7 @@ describe('emitTmuxDispatch — shared panel', () => {
       TMUX_CTX,
     );
     expect(out).toContain('# task: Helper');
-    expect(out).toContain(
-      `tmux send-keys -t 'devcontainers:developing.0' 'echo hi' Enter`,
-    );
+    expect(out).toContain(`tmux send-keys -t 'devcontainers:developing.0' 'echo hi' Enter`);
     // Suppress unused-var lint for the resolveTask call above (referenced for
     // signature coverage; real assertion is on the hand-built node).
     expect(tree.task.label).toBe('API');
@@ -73,11 +66,7 @@ describe('emitTmuxDispatch — shared panel', () => {
 
 describe('emitTmuxDispatch — dedicated panel', () => {
   it('emits find-or-create pane logic (host context — no gate edge in fixture)', () => {
-    const tree = resolveTask(
-      FIXTURE('basic'),
-      'API',
-      ctx('/workspaces/website'),
-    );
+    const tree = resolveTask(FIXTURE('basic'), 'API', ctx('/workspaces/website'));
     const out = emitTmuxDispatch(tree, TMUX_CTX);
 
     // Header comment present.
@@ -90,9 +79,7 @@ describe('emitTmuxDispatch — dedicated panel', () => {
 
     // If pane exists: select, Ctrl-C, send command.
     expect(out).toContain('tmux select-pane -t "$pane_id"');
-    expect(out).toContain(
-      'tmux send-keys -t "$pane_id" C-c 2>/dev/null || true',
-    );
+    expect(out).toContain('tmux send-keys -t "$pane_id" C-c 2>/dev/null || true');
 
     // If pane doesn't exist: split-window in a plain host shell — the basic
     // fixture's API has no gate edge, so it derives host context (ADR 0006).
@@ -107,9 +94,7 @@ describe('emitTmuxDispatch — dedicated panel', () => {
     expect(out).toContain('press any key to close');
 
     // The command itself was variable-substituted by resolveTask.
-    expect(out).toContain(
-      'bash /workspaces/website/.vscode/scripts/tasks/dev-api.sh',
-    );
+    expect(out).toContain('bash /workspaces/website/.vscode/scripts/tasks/dev-api.sh');
 
     // Pane title set on split.
     expect(out).toContain(`tmux select-pane -t "$pane_id" -T 'API'`);
@@ -118,11 +103,7 @@ describe('emitTmuxDispatch — dedicated panel', () => {
 
 describe('emitTmuxDispatch — composite task', () => {
   it('emits each dependency in declaration order, then the parent (if it has a command)', () => {
-    const tree = resolveTask(
-      FIXTURE('composite'),
-      'Spin up dev servers',
-      ctx('/workspaces/website'),
-    );
+    const tree = resolveTask(FIXTURE('composite'), 'Spin up dev servers', ctx('/workspaces/website'));
     const out = emitTmuxDispatch(tree, TMUX_CTX);
 
     // "Spin up dev servers" is an aggregator with no command of its own —
@@ -158,17 +139,13 @@ describe('emitTmuxDispatch — composite task', () => {
           task: tasks[1]!,
           dependsOrder: 'parallel' as const,
           executionContext: 'host' as const,
-          dependsOn: [
-            { task: tasks[3]!, dependsOrder: 'parallel' as const, executionContext: 'host' as const, dependsOn: [] },
-          ],
+          dependsOn: [{ task: tasks[3]!, dependsOrder: 'parallel' as const, executionContext: 'host' as const, dependsOn: [] }],
         },
         {
           task: tasks[2]!,
           dependsOrder: 'parallel' as const,
           executionContext: 'host' as const,
-          dependsOn: [
-            { task: tasks[3]!, dependsOrder: 'parallel' as const, executionContext: 'host' as const, dependsOn: [] },
-          ],
+          dependsOn: [{ task: tasks[3]!, dependsOrder: 'parallel' as const, executionContext: 'host' as const, dependsOn: [] }],
         },
       ],
     };

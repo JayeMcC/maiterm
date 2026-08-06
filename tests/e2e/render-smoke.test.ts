@@ -44,9 +44,6 @@ const RUN = !!BIN && !!process.env.CI;
       }
       throw err;
     }
-    expect(
-      result.rendered,
-      `window centre had only ${result.distinctColors} distinct colours — looks blank/white-screened`,
-    ).toBe(true);
+    expect(result.rendered, `window centre had only ${result.distinctColors} distinct colours — looks blank/white-screened`).toBe(true);
   });
 });

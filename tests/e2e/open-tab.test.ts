@@ -117,9 +117,7 @@ if (!BIN) {
       const opened: Array<{ tabId: string; marker: string }> = [];
       for (const n of [1, 2, 3]) {
         const marker = `e2e-burst-marker-${n}`;
-        const r = client.parseToolResult<{ tabId: string; ptyId: string | null; queued?: boolean }>(
-          await client.callTool('openTab', { name: `e2e-burst-${n}`, command: `echo ${marker}` }),
-        );
+        const r = client.parseToolResult<{ tabId: string; ptyId: string | null; queued?: boolean }>(await client.callTool('openTab', { name: `e2e-burst-${n}`, command: `echo ${marker}` }));
         expect(r.tabId).toBeTruthy();
         opened.push({ tabId: r.tabId, marker });
       }
@@ -207,9 +205,7 @@ if (!BIN) {
       try {
         const c1 = new McpClient(first.lock);
         await c1.initialize();
-        const created = c1.parseToolResult<{ tabId: string }>(
-          await c1.callTool('openTab', { name: 'e2e-restart-test', command: 'echo e2e-restart-first' }),
-        );
+        const created = c1.parseToolResult<{ tabId: string }>(await c1.callTool('openTab', { name: 'e2e-restart-test', command: 'echo e2e-restart-first' }));
         expect(created.tabId).toBeTruthy();
 
         // Wait for the tab to be persisted before killing, so the second
@@ -248,9 +244,7 @@ if (!BIN) {
           const start = Date.now();
           let seen = false;
           while (Date.now() - start < 20_000 && !seen) {
-            const res = c2.parseToolResult<{ tabs: Array<{ content?: string }> }>(
-              await c2.callTool('getTabContext', { tabIds: [reused.tabId], lines: 50 }),
-            );
+            const res = c2.parseToolResult<{ tabs: Array<{ content?: string }> }>(await c2.callTool('getTabContext', { tabIds: [reused.tabId], lines: 50 }));
             seen = !!res.tabs?.[0]?.content?.includes('e2e-restart-second');
             if (!seen) await new Promise((r) => setTimeout(r, 500));
           }

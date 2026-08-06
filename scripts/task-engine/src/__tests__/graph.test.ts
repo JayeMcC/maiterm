@@ -20,24 +20,16 @@ describe('buildTaskTree', () => {
     const node = buildTaskTree('Spin up dev servers', tasks);
     expect(node.task.label).toBe('Spin up dev servers');
     expect(node.dependsOrder).toBe('parallel');
-    expect(node.dependsOn.map(c => c.task.label)).toEqual([
-      'Require devcontainer',
-      'API',
-      'WEB',
-    ]);
+    expect(node.dependsOn.map((c) => c.task.label)).toEqual(['Require devcontainer', 'API', 'WEB']);
     // Each child is itself a leaf.
-    expect(node.dependsOn.every(c => c.dependsOn.length === 0)).toBe(true);
+    expect(node.dependsOn.every((c) => c.dependsOn.length === 0)).toBe(true);
   });
 
   it('builds nested chains (sequence-of-parallel)', () => {
     const { tasks } = readTasksFile(FIXTURE('composite'));
     const node = buildTaskTree('Kill all, branch setup, spin up dev', tasks);
     expect(node.dependsOrder).toBe('sequence');
-    expect(node.dependsOn.map(c => c.task.label)).toEqual([
-      'Kill all',
-      'Branch change setup',
-      'Spin up dev servers',
-    ]);
+    expect(node.dependsOn.map((c) => c.task.label)).toEqual(['Kill all', 'Branch change setup', 'Spin up dev servers']);
     // The third child is itself an aggregator with three parallel children.
     const aggregator = node.dependsOn[2];
     expect(aggregator?.task.label).toBe('Spin up dev servers');
@@ -84,7 +76,7 @@ describe('flattenSequential', () => {
   it('emits deepest-first, then siblings in declaration order', () => {
     const { tasks } = readTasksFile(FIXTURE('composite'));
     const node = buildTaskTree('Kill all, branch setup, spin up dev', tasks);
-    expect(flattenSequential(node).map(t => t.label)).toEqual([
+    expect(flattenSequential(node).map((t) => t.label)).toEqual([
       'Kill all',
       'Branch change setup',
       'Require devcontainer',
@@ -103,7 +95,7 @@ describe('flattenSequential', () => {
       { label: 'shared', command: 'echo once' },
     ];
     const node = buildTaskTree('root', tasks);
-    const labels = flattenSequential(node).map(t => t.label);
-    expect(labels.filter(l => l === 'shared')).toHaveLength(1);
+    const labels = flattenSequential(node).map((t) => t.label);
+    expect(labels.filter((l) => l === 'shared')).toHaveLength(1);
   });
 });

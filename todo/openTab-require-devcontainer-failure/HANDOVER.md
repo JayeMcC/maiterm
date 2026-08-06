@@ -40,8 +40,7 @@ from **VS Code / Cursor**, so this is maiTerm-task-engine-specific.
 
 ```ts
 if (callResult.isError) {
-  const detail =
-    callResult.content?.find(c => c.type === 'text')?.text ?? '(no error message)';
+  const detail = callResult.content?.find((c) => c.type === 'text')?.text ?? '(no error message)';
   throw new Error(`openTab failed for task '${task.label}': ${detail}`);
 }
 ```
@@ -63,10 +62,12 @@ That's why it couldn't be recovered from the logs (see Evidence).
 For "Require devcontainer" the dispatcher (`buildOpenTabArgs`) sends:
 
 ```jsonc
-{ "name": "shared",            // panel:'shared' (tasks.json) → name 'shared', reuseExisting:true
+{
+  "name": "shared", // panel:'shared' (tasks.json) → name 'shared', reuseExisting:true
   "command": "bash \"${workspaceFolder}/.vscode/scripts/tasks/require-devcontainer.sh\"",
   "reuseExisting": true,
-  "workspaceName": "<launcher ctx.workspaceName>" }
+  "workspaceName": "<launcher ctx.workspaceName>",
+}
 ```
 
 Note: the dispatcher **ignores** `presentation.reveal` and `presentation.close` —
@@ -84,7 +85,7 @@ the command at runtime).
   **situational**, not a blanket workspace-lookup break.
 - `aiterm-app-today.log.txt` — instance `com.aiterm.app` (the newest-active one at
   investigation time). No `openTab failed` / `Workspace not found` / `No active
-  workspace` string anywhere — confirming the launcher error is tab-only.
+workspace` string anywhere — confirming the launcher error is tab-only.
 - Grep across ALL instances (`com.aiterm.app`, `app2`/maiTerm2, `app3`) for
   `openTab failed for task` / `Workspace not found` / `No active workspace` /
   `Workspace has no panes` / `Require devcontainer` → **zero hits**. The `detail`

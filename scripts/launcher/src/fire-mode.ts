@@ -13,14 +13,7 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import {
-  resolveDir,
-  listTasks,
-  resolveTask,
-  dispatchMaiterm,
-  shQuote,
-  type McpClientLike,
-} from '@forwood/task-engine';
+import { resolveDir, listTasks, resolveTask, dispatchMaiterm, shQuote, type McpClientLike } from '@forwood/task-engine';
 import { messageOf, type ModeResult } from './list-mode.ts';
 
 export interface FireDeps {
@@ -28,11 +21,7 @@ export interface FireDeps {
   client?: McpClientLike;
 }
 
-export async function runFireMode(
-  dir: string,
-  label: string,
-  deps: FireDeps = {},
-): Promise<ModeResult> {
+export async function runFireMode(dir: string, label: string, deps: FireDeps = {}): Promise<ModeResult> {
   let resolution;
   try {
     resolution = resolveDir(dir);
@@ -50,30 +39,18 @@ export async function runFireMode(
   } catch (err) {
     return { exitCode: 1, stdout: '', stderr: messageOf(err) + '\n' };
   }
-  if (!tasks.some(t => t.label === label)) {
-    const labels = tasks.map(t => t.label);
-    const close = labels.filter(
-      l =>
-        l.toLowerCase().includes(label.toLowerCase()) ||
-        label.toLowerCase().includes(l.toLowerCase()),
-    );
-    const hint = close.length
-      ? `Close matches: ${close.join(', ')}`
-      : `Available: ${labels.join(', ')}`;
+  if (!tasks.some((t) => t.label === label)) {
+    const labels = tasks.map((t) => t.label);
+    const close = labels.filter((l) => l.toLowerCase().includes(label.toLowerCase()) || label.toLowerCase().includes(l.toLowerCase()));
+    const hint = close.length ? `Close matches: ${close.join(', ')}` : `Available: ${labels.join(', ')}`;
     return { exitCode: 1, stdout: '', stderr: `Task not found: ${label}. ${hint}\n` };
   }
 
-  const workspaceFolder =
-    containerWorkspaceFolder(resolution.devcontainerConfigPath) ?? repoRoot;
+  const workspaceFolder = containerWorkspaceFolder(resolution.devcontainerConfigPath) ?? repoRoot;
   const gateScript = join(repoRoot, '.vscode/scripts/tasks/require-devcontainer.sh');
   const containerPrelude = existsSync(gateScript) ? `bash ${shQuote(gateScript)}` : undefined;
 
-  const tree = resolveTask(
-    repoRoot,
-    label,
-    { workspaceFolder, env: process.env },
-    { workspaceFolderHost: repoRoot },
-  );
+  const tree = resolveTask(repoRoot, label, { workspaceFolder, env: process.env }, { workspaceFolderHost: repoRoot });
 
   let client = deps.client;
   let close: (() => Promise<void>) | undefined;

@@ -624,7 +624,7 @@ function createClaudeCodeStore() {
    *  writing its note into mesh A just because the human is looking at A (cross-workspace
    *  bleed). Human/UI callers have no tabId and correctly fall back to the active workspace. */
   function resolveWorkspaceForNote(args: { workspaceId?: string; tabId?: string }): Workspace | null {
-    if (args.workspaceId) return workspacesStore.workspaces.find(ws => ws.id === args.workspaceId) ?? null;
+    if (args.workspaceId) return workspacesStore.workspaces.find((ws) => ws.id === args.workspaceId) ?? null;
     if (args.tabId) {
       const loc = findTabLocation(args.tabId);
       if (loc) return loc.workspace;
@@ -870,9 +870,7 @@ function createClaudeCodeStore() {
           workspaceId: ws.id,
           paneId: existing.pane.id,
           displayName: tabDisplayName(existing.tab),
-          ...(queued
-            ? { queued: true, warning: 'PTY not ready within 5s; command queued and will run as soon as the tab mounts.' }
-            : {}),
+          ...(queued ? { queued: true, warning: 'PTY not ready within 5s; command queued and will run as soon as the tab mounts.' } : {}),
         };
       }
     }
@@ -926,9 +924,7 @@ function createClaudeCodeStore() {
       workspaceId: ws.id,
       paneId: pane.id,
       displayName: args.name,
-      ...(queued
-        ? { queued: true, warning: 'PTY not ready within 5s; command queued and will run as soon as the tab mounts.' }
-        : {}),
+      ...(queued ? { queued: true, warning: 'PTY not ready within 5s; command queued and will run as soon as the tab mounts.' } : {}),
     };
   }
 

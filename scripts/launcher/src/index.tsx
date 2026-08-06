@@ -69,10 +69,7 @@ if (args.help) {
 
 const cloneInfo = resolveClone({ arg: args.clone });
 if (!cloneInfo) {
-  process.stderr.write(
-    `forwood-launcher: no clone specified.\n` +
-      `Set FORWOOD_CLONE in this workspace's environment or pass --clone <name>.\n`,
-  );
+  process.stderr.write(`forwood-launcher: no clone specified.\n` + `Set FORWOOD_CLONE in this workspace's environment or pass --clone <name>.\n`);
   process.exit(2);
 }
 
@@ -87,7 +84,7 @@ const { unmount, waitUntilExit } = render(<App clone={cloneInfo} />, {
   exitOnCtrlC: true,
 });
 
-waitUntilExit().catch(err => {
+waitUntilExit().catch((err) => {
   process.stderr.write(`forwood-launcher: ${String(err)}\n`);
   process.exit(1);
 });

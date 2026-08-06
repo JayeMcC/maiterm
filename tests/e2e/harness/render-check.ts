@@ -61,11 +61,7 @@ function distinctColorsInCentre(bmp: Buffer, sampleFrac = 0.4, step = 7): number
  * is timing-flaky — this retries until a real frame lands. Returns the last
  * check either way; a CaptureUnavailableError propagates immediately.
  */
-export async function waitForRender(
-  minColors = 12,
-  timeoutMs = 25_000,
-  intervalMs = 1000,
-): Promise<RenderCheck> {
+export async function waitForRender(minColors = 12, timeoutMs = 25_000, intervalMs = 1000): Promise<RenderCheck> {
   const start = Date.now();
   let last = checkRendered(minColors);
   while (!last.rendered && Date.now() - start < timeoutMs) {
@@ -88,9 +84,7 @@ export function checkRendered(minColors = 12): RenderCheck {
       stdio: ['ignore', 'ignore', 'pipe'],
     });
   } catch (err) {
-    throw new CaptureUnavailableError(
-      `screencapture failed (Screen Recording permission not granted?): ${String(err)}`,
-    );
+    throw new CaptureUnavailableError(`screencapture failed (Screen Recording permission not granted?): ${String(err)}`);
   }
   try {
     const bmp = readFileSync(bmpPath);

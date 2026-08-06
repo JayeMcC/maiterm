@@ -91,86 +91,246 @@ function createPreferencesStore() {
 
   return {
     /** Resolves once the initial load() has completed. */
-    get ready() { return ready; },
-    get uiFontSize() { return uiFontSize; },
-    get fontSize() { return fontSize; },
-    get fontFamily() { return fontFamily; },
-    get cursorStyle() { return cursorStyle; },
-    get cursorBlink() { return cursorBlink; },
-    get autoSaveInterval() { return autoSaveInterval; },
-    get scrollbackLimit() { return scrollbackLimit; },
-    get promptPatterns() { return promptPatterns; },
-    get cloneCwd() { return cloneCwd; },
-    get cloneScrollback() { return cloneScrollback; },
-    get cloneSsh() { return cloneSsh; },
-    get cloneHistory() { return cloneHistory; },
-    get cloneNotes() { return cloneNotes; },
-    get cloneAutoResume() { return cloneAutoResume; },
-    get cloneVariables() { return cloneVariables; },
-    get numberDuplicatedTabs() { return numberDuplicatedTabs; },
-    get theme() { return theme; },
-    get shellTitleIntegration() { return shellTitleIntegration; },
-    get shellIntegration() { return shellIntegration; },
-    get customThemes() { return customThemes; },
-    get restoreSession() { return restoreSession; },
-    get sessionRestoreMode() { return sessionRestoreMode; },
-    get notificationMode() { return notificationMode; },
-    get notifyMinDuration() { return notifyMinDuration; },
-    get notesFontSize() { return notesFontSize; },
-    get notesFontFamily() { return notesFontFamily; },
-    get notesWidth() { return notesWidth; },
-    get notesWordWrap() { return notesWordWrap; },
-    get toastFontSize() { return toastFontSize; },
-    get toastWidth() { return toastWidth; },
-    get toastDuration() { return toastDuration; },
-    get notificationSound() { return notificationSound; },
-    get notificationVolume() { return notificationVolume; },
-    get migrateTabNotes() { return migrateTabNotes; },
-    get notesScope() { return notesScope; },
-    get showRecentWorkspaces() { return showRecentWorkspaces; },
-    get workspaceSortOrder() { return workspaceSortOrder; },
-    get showWorkspaceTabCount() { return showWorkspaceTabCount; },
-    get tabButtonStyle() { return tabButtonStyle; },
-    get terminalRenderer() { return terminalRenderer; },
-    get triggers() { return triggers; },
-    get hiddenDefaultTriggers() { return hiddenDefaultTriggers; },
-    get claudeTriggersPrompted() { return claudeTriggersPrompted; },
-    get claudeCodeIde() { return claudeCodeIde; },
-    get claudeCodeIdeSsh() { return claudeCodeIdeSsh; },
-    get claudeCodeHooks() { return claudeCodeHooks; },
-    get claudeCodeAutoResume() { return claudeCodeAutoResume; },
-    get voiceStatus() { return voiceStatus; },
-    get codexIde() { return codexIde; },
-    get codexIdeSsh() { return codexIdeSsh; },
-    get codexHooks() { return codexHooks; },
-    get codexAutoResume() { return codexAutoResume; },
-    get codexHooksBypassTrust() { return codexHooksBypassTrust; },
-    get mailinkEnabled() { return mailinkEnabled; },
-    get mailinkExposeAll() { return mailinkExposeAll; },
-    get mailinkRelayUrl() { return mailinkRelayUrl; },
-    get commsProvider() { return commsProvider; },
-    get commsServerUrl() { return commsServerUrl; },
-    get commsBotToken() { return commsBotToken; },
-    get commsAuthorizedUsers() { return commsAuthorizedUsers; },
-    get commsPickupUsers() { return commsPickupUsers; },
-    get commsInstructions() { return commsInstructions; },
-    get composerDefaultOpen() { return composerDefaultOpen; },
-    get windowsShell() { return windowsShell; },
-    get fileLinkAction() { return fileLinkAction; },
-    get backupDirectory() { return backupDirectory; },
-    get backupInterval() { return backupInterval; },
-    get backupExcludeScrollback() { return backupExcludeScrollback; },
-    get backupTrimEnabled() { return backupTrimEnabled; },
-    get backupTrimAge() { return backupTrimAge; },
-    get autoSuspendMinutes() { return autoSuspendMinutes; },
-    get groupActiveTabs() { return groupActiveTabs; },
-    get autoCheckUpdates() { return autoCheckUpdates; },
-    get quickOpenShowHidden() { return quickOpenShowHidden; },
-    get quickOpenShowIgnored() { return quickOpenShowIgnored; },
-    get meshSoftCap() { return meshSoftCap; },
-    get meshHardCap() { return meshHardCap; },
-    get meshTopicTtlMinutes() { return meshTopicTtlMinutes; },
-    get cursorReportApplyCommand() { return cursorReportApplyCommand; },
+    get ready() {
+      return ready;
+    },
+    get uiFontSize() {
+      return uiFontSize;
+    },
+    get fontSize() {
+      return fontSize;
+    },
+    get fontFamily() {
+      return fontFamily;
+    },
+    get cursorStyle() {
+      return cursorStyle;
+    },
+    get cursorBlink() {
+      return cursorBlink;
+    },
+    get autoSaveInterval() {
+      return autoSaveInterval;
+    },
+    get scrollbackLimit() {
+      return scrollbackLimit;
+    },
+    get promptPatterns() {
+      return promptPatterns;
+    },
+    get cloneCwd() {
+      return cloneCwd;
+    },
+    get cloneScrollback() {
+      return cloneScrollback;
+    },
+    get cloneSsh() {
+      return cloneSsh;
+    },
+    get cloneHistory() {
+      return cloneHistory;
+    },
+    get cloneNotes() {
+      return cloneNotes;
+    },
+    get cloneAutoResume() {
+      return cloneAutoResume;
+    },
+    get cloneVariables() {
+      return cloneVariables;
+    },
+    get numberDuplicatedTabs() {
+      return numberDuplicatedTabs;
+    },
+    get theme() {
+      return theme;
+    },
+    get shellTitleIntegration() {
+      return shellTitleIntegration;
+    },
+    get shellIntegration() {
+      return shellIntegration;
+    },
+    get customThemes() {
+      return customThemes;
+    },
+    get restoreSession() {
+      return restoreSession;
+    },
+    get sessionRestoreMode() {
+      return sessionRestoreMode;
+    },
+    get notificationMode() {
+      return notificationMode;
+    },
+    get notifyMinDuration() {
+      return notifyMinDuration;
+    },
+    get notesFontSize() {
+      return notesFontSize;
+    },
+    get notesFontFamily() {
+      return notesFontFamily;
+    },
+    get notesWidth() {
+      return notesWidth;
+    },
+    get notesWordWrap() {
+      return notesWordWrap;
+    },
+    get toastFontSize() {
+      return toastFontSize;
+    },
+    get toastWidth() {
+      return toastWidth;
+    },
+    get toastDuration() {
+      return toastDuration;
+    },
+    get notificationSound() {
+      return notificationSound;
+    },
+    get notificationVolume() {
+      return notificationVolume;
+    },
+    get migrateTabNotes() {
+      return migrateTabNotes;
+    },
+    get notesScope() {
+      return notesScope;
+    },
+    get showRecentWorkspaces() {
+      return showRecentWorkspaces;
+    },
+    get workspaceSortOrder() {
+      return workspaceSortOrder;
+    },
+    get showWorkspaceTabCount() {
+      return showWorkspaceTabCount;
+    },
+    get tabButtonStyle() {
+      return tabButtonStyle;
+    },
+    get terminalRenderer() {
+      return terminalRenderer;
+    },
+    get triggers() {
+      return triggers;
+    },
+    get hiddenDefaultTriggers() {
+      return hiddenDefaultTriggers;
+    },
+    get claudeTriggersPrompted() {
+      return claudeTriggersPrompted;
+    },
+    get claudeCodeIde() {
+      return claudeCodeIde;
+    },
+    get claudeCodeIdeSsh() {
+      return claudeCodeIdeSsh;
+    },
+    get claudeCodeHooks() {
+      return claudeCodeHooks;
+    },
+    get claudeCodeAutoResume() {
+      return claudeCodeAutoResume;
+    },
+    get voiceStatus() {
+      return voiceStatus;
+    },
+    get codexIde() {
+      return codexIde;
+    },
+    get codexIdeSsh() {
+      return codexIdeSsh;
+    },
+    get codexHooks() {
+      return codexHooks;
+    },
+    get codexAutoResume() {
+      return codexAutoResume;
+    },
+    get codexHooksBypassTrust() {
+      return codexHooksBypassTrust;
+    },
+    get mailinkEnabled() {
+      return mailinkEnabled;
+    },
+    get mailinkExposeAll() {
+      return mailinkExposeAll;
+    },
+    get mailinkRelayUrl() {
+      return mailinkRelayUrl;
+    },
+    get commsProvider() {
+      return commsProvider;
+    },
+    get commsServerUrl() {
+      return commsServerUrl;
+    },
+    get commsBotToken() {
+      return commsBotToken;
+    },
+    get commsAuthorizedUsers() {
+      return commsAuthorizedUsers;
+    },
+    get commsPickupUsers() {
+      return commsPickupUsers;
+    },
+    get commsInstructions() {
+      return commsInstructions;
+    },
+    get composerDefaultOpen() {
+      return composerDefaultOpen;
+    },
+    get windowsShell() {
+      return windowsShell;
+    },
+    get fileLinkAction() {
+      return fileLinkAction;
+    },
+    get backupDirectory() {
+      return backupDirectory;
+    },
+    get backupInterval() {
+      return backupInterval;
+    },
+    get backupExcludeScrollback() {
+      return backupExcludeScrollback;
+    },
+    get backupTrimEnabled() {
+      return backupTrimEnabled;
+    },
+    get backupTrimAge() {
+      return backupTrimAge;
+    },
+    get autoSuspendMinutes() {
+      return autoSuspendMinutes;
+    },
+    get groupActiveTabs() {
+      return groupActiveTabs;
+    },
+    get autoCheckUpdates() {
+      return autoCheckUpdates;
+    },
+    get quickOpenShowHidden() {
+      return quickOpenShowHidden;
+    },
+    get quickOpenShowIgnored() {
+      return quickOpenShowIgnored;
+    },
+    get meshSoftCap() {
+      return meshSoftCap;
+    },
+    get meshHardCap() {
+      return meshHardCap;
+    },
+    get meshTopicTtlMinutes() {
+      return meshTopicTtlMinutes;
+    },
+    get cursorReportApplyCommand() {
+      return cursorReportApplyCommand;
+    },
 
     async load() {
       const prefs = await commands.getPreferences();

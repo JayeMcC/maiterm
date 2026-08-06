@@ -26,10 +26,7 @@ function makeRepo(): string {
   writeFileSync(join(repo, '.vscode/tasks.json'), TASKS_JSONC);
   writeFileSync(join(repo, '.vscode/scripts/tasks/require-devcontainer.sh'), '#!/bin/bash\n');
   mkdirSync(join(repo, '.devcontainer'), { recursive: true });
-  writeFileSync(
-    join(repo, '.devcontainer/devcontainer.json'),
-    '{ "workspaceFolder": "/workspaces/x" }\n',
-  );
+  writeFileSync(join(repo, '.devcontainer/devcontainer.json'), '{ "workspaceFolder": "/workspaces/x" }\n');
   mkdirSync(join(repo, 'web/app'), { recursive: true });
   return repo;
 }
@@ -73,9 +70,7 @@ describe('runFireMode', () => {
     const r = await runFireMode(join(repo, 'web/app'), 'API', { client });
     expect(r.exitCode).toBe(0);
 
-    const apiCall = calls
-      .map(c => String(c.arguments['command']))
-      .find(c => c.includes('api.sh'));
+    const apiCall = calls.map((c) => String(c.arguments['command'])).find((c) => c.includes('api.sh'));
     expect(apiCall).toBeDefined();
     // Container-side ${workspaceFolder} inside the exec'd command.
     expect(apiCall).toContain('/workspaces/x/api.sh');
@@ -86,7 +81,7 @@ describe('runFireMode', () => {
     expect(apiCall).toMatch(new RegExp(`^if \\[ -e '${repo}' \\]; then `));
     expect(apiCall).toMatch(/bash '.*require-devcontainer\.sh' && devcontainer exec /);
     // The invoking context is never the target: dispatch goes via openTab.
-    expect(calls.every(c => c.name === 'openTab')).toBe(true);
+    expect(calls.every((c) => c.name === 'openTab')).toBe(true);
   });
 
   it('unknown label → non-zero with available labels on stderr', async () => {

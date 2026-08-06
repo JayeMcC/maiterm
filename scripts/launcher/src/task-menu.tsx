@@ -16,12 +16,7 @@ import type { Task } from '@forwood/task-engine';
  * The component does not own dispatch — it surfaces user intent and
  * leaves the side-effect to the parent.
  */
-export function TaskMenu(props: {
-  cloneName: string;
-  tasks: Task[];
-  onSelect: (task: Task) => void;
-  onQuit: () => void;
-}): React.JSX.Element {
+export function TaskMenu(props: { cloneName: string; tasks: Task[]; onSelect: (task: Task) => void; onQuit: () => void }): React.JSX.Element {
   const { cloneName, tasks, onSelect, onQuit } = props;
   const [cursor, setCursor] = useState(0);
 
@@ -31,11 +26,11 @@ export function TaskMenu(props: {
       return;
     }
     if (key.upArrow || input === 'k') {
-      setCursor(c => (c <= 0 ? tasks.length - 1 : c - 1));
+      setCursor((c) => (c <= 0 ? tasks.length - 1 : c - 1));
       return;
     }
     if (key.downArrow || input === 'j') {
-      setCursor(c => (c >= tasks.length - 1 ? 0 : c + 1));
+      setCursor((c) => (c >= tasks.length - 1 ? 0 : c + 1));
       return;
     }
     if (key.return) {
@@ -47,10 +42,11 @@ export function TaskMenu(props: {
   return (
     <Box flexDirection="column">
       <Box marginBottom={1}>
-        <Text bold>
-          {cloneName}
+        <Text bold>{cloneName}</Text>
+        <Text dimColor>
+          {' '}
+          — {tasks.length} task{tasks.length === 1 ? '' : 's'}
         </Text>
-        <Text dimColor> — {tasks.length} task{tasks.length === 1 ? '' : 's'}</Text>
       </Box>
       <Box flexDirection="column">
         {tasks.map((task, i) => {
@@ -62,17 +58,13 @@ export function TaskMenu(props: {
                 {focused ? '▸ ' : '  '}
                 {task.label}
               </Text>
-              {group ? (
-                <Text dimColor>  [{group}]</Text>
-              ) : null}
+              {group ? <Text dimColor> [{group}]</Text> : null}
             </Box>
           );
         })}
       </Box>
       <Box marginTop={1}>
-        <Text dimColor>
-          ↑/↓ or j/k · Enter to fire · q/Esc to quit
-        </Text>
+        <Text dimColor>↑/↓ or j/k · Enter to fire · q/Esc to quit</Text>
       </Box>
     </Box>
   );

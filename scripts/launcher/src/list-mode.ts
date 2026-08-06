@@ -33,7 +33,7 @@ export function runListMode(dir: string): ModeResult {
 
   try {
     const tasks = listTasks(resolution.repoRoot);
-    const annotated = tasks.map(t => ({
+    const annotated = tasks.map((t) => ({
       ...t,
       executionContext: deriveExecutionContext(t.label, tasks),
     }));

@@ -49,6 +49,7 @@ Cursor 1.7+ has hooks (`~/.cursor/hooks.json`), same shape as Claude's. **But th
 CLI (`cursor-agent`) reliably fires only `beforeShellExecution` /
 `afterShellExecution`** — the lifecycle hooks (sessionStart/stop/sessionEnd) are
 buggy/omitted today (Cursor forum). So:
+
 - `before/afterShellExecution` → `ToolPre`/`ToolPost` → **"working" (blue) dot**.
 - session-end → the **dormancy reaper** (already built for Codex) → **idle
   (green) dot**.
@@ -59,9 +60,9 @@ buggy/omitted today (Cursor forum). So:
 ## Phased plan
 
 - **Phase 1 — Tools + presence** (small; ~2-3 files, low risk). Plug-in points 1
-  + 2. Result: `cursor-agent` connects via MCP, gets every terminal tool
-  (openTab, getTabContext, initSession, bridge), appears in `getClaudeSessions`,
-  and is detected as "an agent is running." Mostly reuses Codex/Gemini scaffolding.
+  - 2. Result: `cursor-agent` connects via MCP, gets every terminal tool
+    (openTab, getTabContext, initSession, bridge), appears in `getClaudeSessions`,
+    and is detected as "an agent is running." Mostly reuses Codex/Gemini scaffolding.
 - **Phase 2 — Status dots** (medium). Plug-in point 3 + dormancy reaper wiring +
   Cursor tool summarizer. Result: working/idle dots for `cursor-agent`.
 - **Phase 3 — Polish / gaps.** The permission dot (blocked on Cursor CLI hooks);
