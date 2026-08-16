@@ -166,6 +166,10 @@
   let resizePtyTimeout: ReturnType<typeof setTimeout> | undefined;
   let lastFrameAlternateScreen = false;
   let lastFrameKittyKeyboard = false; // app enabled the kitty keyboard protocol
+  // Latest frame withheld while this tab is hidden — see the term-frame listener.
+  // Frames are idempotent full-viewport repaints, so only the newest one matters;
+  // it is flushed into xterm when the tab becomes visible.
+  let pendingHiddenFrame: TerminalFrame | null = null;
   // Scrollback scrollbar state
   let scrollDisplayOffset = $state(0);
   let scrollTotalLines = $state(0);
@@ -564,6 +568,20 @@
       lastFrameKittyKeyboard = frame.kitty_keyboard;
       scrollTotalLines = frame.total_lines;
       scrollViewportRows = terminal.rows;
+
+      // Hidden tabs: do NOT parse/paint this frame into xterm. The xterm.js write
+      // (VTE parse + DOM mutation) runs on the window's single shared WebContent
+      // main thread, and every hidden agent streaming full-viewport repaints at
+      // ~60fps piles onto it — the load multiplier that starves the thread and
+      // blanks the window under heavy load (see docs/split-pane-performance.md).
+      // Frames are idempotent full-viewport repaints, so we only need the newest
+      // one; stash it and flush on becoming visible (see the visibility $effect).
+      // Bookkeeping above stays live so scrollbar/keyboard state is correct on show.
+      if (!visible) {
+        pendingHiddenFrame = frame;
+        return;
+      }
+      pendingHiddenFrame = null;
 
       // Alternate screen (TUI apps like Claude/vim) has no scrollback — clear hold
       if (frame.alternate_screen) {
@@ -1398,6 +1416,33 @@
 
   $effect(() => {
     if (visible && initialized && fitAddon) {
+      // Flush the latest frame withheld while hidden. It is a full-viewport
+      // repaint, so this single write restores the correct on-screen state that
+      // was skipped for every intermediate hidden frame. Nothing to flush when
+      // the tab was idle (no frame arrived) or was already visible. Mirrors the
+      // term-frame listener's paint branches so scroll-hold isn't regressed.
+      if (pendingHiddenFrame) {
+        const frame = pendingHiddenFrame;
+        pendingHiddenFrame = null;
+        if (frame.alternate_screen) userScrollOffset = 0;
+        if (!frame.alternate_screen && userScrollOffset > 0) {
+          // User had scrolled back before hiding — re-hold their offset instead
+          // of snapping to the bottom of the latest frame.
+          scrollTerminalTo(ptyId, userScrollOffset)
+            .then((held) => {
+              userScrollOffset = held.display_offset;
+              scrollDisplayOffset = held.display_offset;
+              scrollTotalLines = held.total_lines;
+              terminal.write(new Uint8Array(held.ansi));
+            })
+            .catch(() => {});
+        } else {
+          scrollDisplayOffset = frame.display_offset;
+          if (frame.display_offset === 0) userScrollOffset = 0;
+          hasRustSelection = frame.has_selection;
+          terminal.write(new Uint8Array(frame.ansi));
+        }
+      }
       // Delay fit to ensure container is visible
       requestAnimationFrame(() => {
         fitWithPadding();
