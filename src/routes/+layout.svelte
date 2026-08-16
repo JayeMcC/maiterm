@@ -12,7 +12,7 @@
   import { seedDefaultTriggers } from '$lib/triggers/defaults';
   import { preferencesStore } from '$lib/stores/preferences.svelte';
   import { getTheme, applyUiTheme } from '$lib/themes';
-  import { error as logError, info as logInfo } from '@tauri-apps/plugin-log';
+  import { error as logError, info as logInfo, warn as logWarn } from '@tauri-apps/plugin-log';
   import { attachConsole } from '@tauri-apps/plugin-log';
   import { onAction as onNotificationAction } from '@tauri-apps/plugin-notification';
   import * as commands from '$lib/tauri/commands';
@@ -38,6 +38,7 @@
   import MeshCockpit from '$lib/components/MeshCockpit.svelte';
   import MeshSetupModal from '$lib/components/MeshSetupModal.svelte';
   import SubagentPanel from '$lib/components/SubagentPanel.svelte';
+  import BugReportModal from '$lib/components/BugReportModal.svelte';
   import ModelErrorPanel from '$lib/components/ModelErrorPanel.svelte';
   import { detectLanguageFromPath, isImageFile, isPdfFile } from '$lib/utils/languageDetect';
   import { readFile } from '$lib/tauri/commands';
@@ -62,6 +63,14 @@
   let agentBridgeCallerTabId = $state<string | null>(null);
   let showSubagentPanel = $state(false);
   let showModelErrorPanel = $state(false);
+
+  // In-app bug report: snapshot captured when the modal opens (i.e. when the
+  // bug is noticed), filed on submit via commands.fileBugReport.
+  let showBugReport = $state(false);
+  let filingBug = $state(false);
+  let bugSnapshot = $state<Record<string, unknown> | null>(null);
+  let bugSnapshotAt = $state('');
+  let bugSnapshotNote = $state('');
 
   // Cmd+W two-press confirmation: first press arms closeConfirmTabId for 2s,
   // a second press while armed (on the same tab) actually closes.
@@ -136,6 +145,44 @@
   // keeps firing even when this webview hangs. Manual "Backup now" buttons
   // and the Claude Code MCP createBackup tool still go through the existing
   // run_scheduled_backup / trim_old_backups commands.
+
+  /**
+   * Open the bug-report modal, capturing a diagnostics snapshot up front so it
+   * reflects program state at the moment the bug was noticed (before the user
+   * spends time typing). A capture failure still lets the report proceed with a
+   * null snapshot rather than blocking the user.
+   */
+  async function openBugReport() {
+    bugSnapshot = null;
+    bugSnapshotAt = new Date().toISOString();
+    bugSnapshotNote = 'Capturing state snapshot…';
+    showBugReport = true;
+    try {
+      bugSnapshot = await commands.getAppDiagnostics();
+      bugSnapshotNote = 'State snapshot captured.';
+    } catch (e) {
+      bugSnapshotNote = 'State snapshot unavailable (diagnostics failed).';
+      logWarn(`[bug-report] diagnostics capture failed: ${String(e)}`);
+    }
+  }
+
+  async function handleFileBug(description: string) {
+    if (filingBug) return;
+    filingBug = true;
+    try {
+      const res = await commands.fileBugReport(description, bugSnapshot ?? {}, bugSnapshotAt || new Date().toISOString());
+      showBugReport = false;
+      const where = res.section_found ? res.todo_file : `${res.todo_file} (new ## maiterm section)`;
+      toastStore.addToast('Bug filed', `Added to ${where}`, 'success');
+      const tab = workspacesStore.activeTab;
+      if (tab?.tab_type === 'terminal') terminalsStore.focusTerminal(tab.id);
+    } catch (e) {
+      toastStore.addToast('Bug report failed', String(e), 'error');
+      logError(`[bug-report] file failed: ${String(e)}`);
+    } finally {
+      filingBug = false;
+    }
+  }
 
   onMount(() => {
     // [BOOT] trace — white-screen diagnosis. If NONE of these lines appear in
@@ -1121,6 +1168,18 @@
         return;
       }
 
+      // Cmd+Shift+B - Open the in-app bug report modal (snapshots state + files a todo)
+      if (isMeta && e.shiftKey && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (showBugReport) {
+          showBugReport = false;
+        } else {
+          openBugReport();
+        }
+        return;
+      }
+
       // Cmd+, - Open preferences window
       if (isMeta && e.key === ',') {
         e.preventDefault();
@@ -1354,6 +1413,23 @@
   >
 {/if}
 
+<!-- Left-edge pull-tab: always available; snapshots state + opens the bug report modal. -->
+{#if !showBugReport}
+  <button class="bug-lip" onclick={openBugReport} title="Report a bug (⌘⇧B)" aria-label="Report a bug">BUG</button>
+{/if}
+
+<BugReportModal
+  open={showBugReport}
+  submitting={filingBug}
+  snapshotNote={bugSnapshotNote}
+  onsubmit={handleFileBug}
+  onclose={() => {
+    showBugReport = false;
+    const tab = workspacesStore.activeTab;
+    if (tab?.tab_type === 'terminal') terminalsStore.focusTerminal(tab.id);
+  }}
+/>
+
 <Toast />
 
 {#if closeConfirmTabId && closeConfirmTabId === workspacesStore.activeTab?.id}
@@ -1391,6 +1467,34 @@
   .mesh-lip:hover {
     opacity: 1;
     padding-right: 6px;
+  }
+
+  .bug-lip {
+    position: fixed;
+    left: 0;
+    top: 70%;
+    transform: translateY(-50%);
+    z-index: 900; /* below modals (1000), above content */
+    background: var(--bg-light);
+    color: var(--fg);
+    border: none;
+    border-radius: 0 6px 6px 0;
+    padding: 14px 3px;
+    cursor: pointer;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    opacity: 0.4;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+    transition:
+      opacity 0.15s ease,
+      padding-left 0.15s ease;
+  }
+  .bug-lip:hover {
+    opacity: 1;
+    padding-left: 6px;
   }
 
   .close-confirm-backdrop {

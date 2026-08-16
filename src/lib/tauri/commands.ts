@@ -914,6 +914,26 @@ export async function readAppLogs(opts?: { lines?: number; level?: string; searc
   return invoke('read_app_logs', { lines: opts?.lines ?? null, level: opts?.level ?? null, search: opts?.search ?? null });
 }
 
+export interface BugReportResult {
+  /** The todo file the item was filed into. */
+  todo_file: string;
+  /** The sidecar JSON file the diagnostics snapshot was written to. */
+  sidecar_path: string;
+  /** Whether an existing `## maiterm` section was found (vs created at EOF). */
+  section_found: boolean;
+}
+
+/**
+ * File an in-app bug report: writes the diagnostics snapshot to a sidecar file
+ * and appends a `- [ ]` item under the `## maiterm` section of the shared todo.
+ * @param description free-text from the modal (may be multi-line / empty)
+ * @param diagnostics the getAppDiagnostics() snapshot captured at report time
+ * @param createdAt an ISO timestamp string (e.g. new Date().toISOString())
+ */
+export async function fileBugReport(description: string, diagnostics: Record<string, unknown>, createdAt: string): Promise<BugReportResult> {
+  return invoke('file_bug_report', { description, diagnostics, createdAt });
+}
+
 // SSH MCP tunnel commands
 export interface SshTunnelInfo {
   tunnel_id: string;

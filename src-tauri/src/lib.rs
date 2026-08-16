@@ -748,6 +748,7 @@ pub fn run() {
             commands::workspace::pick_backup_directory,
             commands::workspace::get_app_diagnostics,
             commands::workspace::read_app_logs,
+            commands::bug_report::file_bug_report,
             commands::system::check_full_disk_access,
             commands::system::open_full_disk_access_settings,
         ])
