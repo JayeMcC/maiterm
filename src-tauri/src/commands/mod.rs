@@ -1,3 +1,4 @@
+pub mod bug_report;
 pub mod claude_code;
 pub mod comms;
 pub mod editor;
